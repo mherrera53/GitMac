@@ -23,6 +23,10 @@ let package = Package(
                 "Splash"
             ],
             path: "GitMac"
+        ),
+        .testTarget(
+            name: "GitMacTests",
+            path: "Tests/GitMacTests"
         )
     ]
 )
