@@ -1011,60 +1011,45 @@ struct StagingAreaPanel: View {
     @Binding var selectedFileDiff: FileDiff?
     @Binding var commitMessage: String
     @EnvironmentObject var appState: AppState
+    @State private var viewMode: StagingViewMode = .tree
+    @State private var extensionFilter: String? = nil
 
     var body: some View {
         VStack(spacing: 0) {
+            // Toolbar with view mode and filter
+            stagingToolbar
+
             // Unstaged Files
-            StagingSection(
+            StagingSectionWithTree(
                 title: "Unstaged Files",
-                count: stagingVM.unstagedFiles.count,
-                actionIcon: "plus.circle",
+                count: filteredUnstagedFiles.count,
+                actionIcon: "plus.circle.fill",
                 actionColor: GitKrakenTheme.accentGreen,
-                onAction: { stagingVM.stageAll() }
-            ) {
-                ForEach(stagingVM.unstagedFiles) { file in
-                    ClickableFileRow(
-                        file: file,
-                        isStaged: false,
-                        onSelect: { loadDiff(for: file) },
-                        onStage: { stagingVM.stage(file: file) }
-                    )
-                }
-                if stagingVM.unstagedFiles.isEmpty {
-                    Text("No unstaged changes")
-                        .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.textMuted)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                }
-            }
+                onAction: { stagingVM.stageAll() },
+                viewMode: viewMode,
+                files: filteredUnstagedFiles,
+                isStaged: false,
+                onSelect: loadDiff,
+                onStage: { stagingVM.stage(file: $0) },
+                onStageFolder: { stagingVM.stageFolder($0) }
+            )
 
             Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
 
             // Staged Files
-            StagingSection(
+            StagingSectionWithTree(
                 title: "Staged Files",
-                count: stagingVM.stagedFiles.count,
-                actionIcon: "minus.circle",
+                count: filteredStagedFiles.count,
+                actionIcon: "minus.circle.fill",
                 actionColor: GitKrakenTheme.accentRed,
-                onAction: { stagingVM.unstageAll() }
-            ) {
-                ForEach(stagingVM.stagedFiles) { file in
-                    ClickableFileRow(
-                        file: file,
-                        isStaged: true,
-                        onSelect: { loadDiff(for: file) },
-                        onStage: { stagingVM.unstage(file: file) }
-                    )
-                }
-                if stagingVM.stagedFiles.isEmpty {
-                    Text("No staged changes")
-                        .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.textMuted)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                }
-            }
+                onAction: { stagingVM.unstageAll() },
+                viewMode: viewMode,
+                files: filteredStagedFiles,
+                isStaged: true,
+                onSelect: loadDiff,
+                onStage: { stagingVM.unstage(file: $0) },
+                onStageFolder: { stagingVM.unstageFolder($0) }
+            )
 
             Spacer()
 
@@ -1077,12 +1062,443 @@ struct StagingAreaPanel: View {
         }
     }
 
+    private var stagingToolbar: some View {
+        HStack(spacing: 8) {
+            // View mode toggle
+            Picker("", selection: $viewMode) {
+                Image(systemName: "list.bullet").tag(StagingViewMode.flat)
+                Image(systemName: "folder.fill").tag(StagingViewMode.tree)
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 60)
+
+            // Extension filter
+            Menu {
+                Button("All Files") { extensionFilter = nil }
+                if !availableExtensions.isEmpty {
+                    Divider()
+                    ForEach(availableExtensions, id: \.self) { ext in
+                        Button {
+                            extensionFilter = ext
+                        } label: {
+                            HStack {
+                                Text(".\(ext)")
+                                Spacer()
+                                Text("\(fileCountForExtension(ext))")
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .font(.system(size: 11))
+                    Text(extensionFilter.map { ".\($0)" } ?? "All")
+                        .font(.system(size: 10))
+                }
+            }
+            .menuStyle(.borderlessButton)
+            .frame(maxWidth: 70)
+
+            Spacer()
+
+            Text("\(stagingVM.unstagedFiles.count + stagingVM.stagedFiles.count)")
+                .font(.system(size: 10))
+                .foregroundColor(GitKrakenTheme.textMuted)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(GitKrakenTheme.backgroundSecondary)
+    }
+
+    private var availableExtensions: [String] {
+        var exts = Set<String>()
+        for file in stagingVM.unstagedFiles + stagingVM.stagedFiles {
+            let ext = (file.path as NSString).pathExtension.lowercased()
+            if !ext.isEmpty { exts.insert(ext) }
+        }
+        return exts.sorted()
+    }
+
+    private func fileCountForExtension(_ ext: String) -> Int {
+        (stagingVM.unstagedFiles + stagingVM.stagedFiles).filter {
+            ($0.path as NSString).pathExtension.lowercased() == ext
+        }.count
+    }
+
+    private var filteredUnstagedFiles: [StagingFile] {
+        guard let ext = extensionFilter else { return stagingVM.unstagedFiles }
+        return stagingVM.unstagedFiles.filter {
+            ($0.path as NSString).pathExtension.lowercased() == ext
+        }
+    }
+
+    private var filteredStagedFiles: [StagingFile] {
+        guard let ext = extensionFilter else { return stagingVM.stagedFiles }
+        return stagingVM.stagedFiles.filter {
+            ($0.path as NSString).pathExtension.lowercased() == ext
+        }
+    }
+
     private func loadDiff(for file: StagingFile) {
         guard let path = appState.currentRepository?.path else { return }
         Task {
             if let diff = await stagingVM.getDiff(for: file, at: path) {
                 selectedFileDiff = diff
             }
+        }
+    }
+}
+
+// MARK: - Staging View Mode
+enum StagingViewMode {
+    case flat
+    case tree
+}
+
+// MARK: - Staging Section with Tree Support
+struct StagingSectionWithTree: View {
+    let title: String
+    let count: Int
+    let actionIcon: String
+    let actionColor: Color
+    let onAction: () -> Void
+    let viewMode: StagingViewMode
+    let files: [StagingFile]
+    let isStaged: Bool
+    let onSelect: (StagingFile) -> Void
+    let onStage: (StagingFile) -> Void
+    let onStageFolder: (String) -> Void
+
+    @State private var isExpanded = true
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack(spacing: 8) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() }
+                } label: {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(GitKrakenTheme.textMuted)
+                }
+                .buttonStyle(.plain)
+
+                Text(title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(GitKrakenTheme.textMuted)
+
+                Text("\(count)")
+                    .font(.system(size: 10))
+                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(GitKrakenTheme.backgroundTertiary)
+                    .cornerRadius(4)
+
+                Spacer()
+
+                Button(action: onAction) {
+                    Image(systemName: actionIcon)
+                        .font(.system(size: 14))
+                        .foregroundColor(actionColor)
+                }
+                .buttonStyle(.plain)
+                .help(isStaged ? "Unstage All" : "Stage All")
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(GitKrakenTheme.backgroundSecondary)
+
+            // Content
+            if isExpanded {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        if files.isEmpty {
+                            Text(isStaged ? "No staged changes" : "No unstaged changes")
+                                .font(.system(size: 11))
+                                .foregroundColor(GitKrakenTheme.textMuted)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                        } else if viewMode == .tree {
+                            StagingTreeView(
+                                files: files,
+                                isStaged: isStaged,
+                                onSelect: onSelect,
+                                onStage: onStage,
+                                onStageFolder: onStageFolder
+                            )
+                        } else {
+                            ForEach(files) { file in
+                                ClickableFileRow(
+                                    file: file,
+                                    isStaged: isStaged,
+                                    onSelect: { onSelect(file) },
+                                    onStage: { onStage(file) }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Staging Tree View
+struct StagingTreeView: View {
+    let files: [StagingFile]
+    let isStaged: Bool
+    let onSelect: (StagingFile) -> Void
+    let onStage: (StagingFile) -> Void
+    let onStageFolder: (String) -> Void
+
+    var body: some View {
+        let tree = buildTree()
+        ForEach(tree.children.sorted(by: sortNodes)) { node in
+            StagingTreeNodeView(
+                node: node,
+                isStaged: isStaged,
+                onSelect: onSelect,
+                onStage: onStage,
+                onStageFolder: onStageFolder
+            )
+        }
+    }
+
+    private func buildTree() -> StagingTreeNode {
+        let root = StagingTreeNode(name: "", path: "", isFolder: true)
+        for file in files {
+            addToTree(root: root, file: file)
+        }
+        return root
+    }
+
+    private func addToTree(root: StagingTreeNode, file: StagingFile) {
+        let components = file.path.split(separator: "/").map(String.init)
+        var current = root
+
+        for (index, component) in components.enumerated() {
+            let isLast = index == components.count - 1
+            let currentPath = components[0...index].joined(separator: "/")
+
+            if isLast {
+                let fileNode = StagingTreeNode(name: component, path: currentPath, isFolder: false, file: file)
+                current.children.append(fileNode)
+            } else {
+                if let existing = current.children.first(where: { $0.name == component && $0.isFolder }) {
+                    current = existing
+                } else {
+                    let folderNode = StagingTreeNode(name: component, path: currentPath, isFolder: true)
+                    current.children.append(folderNode)
+                    current = folderNode
+                }
+            }
+        }
+    }
+
+    private func sortNodes(_ a: StagingTreeNode, _ b: StagingTreeNode) -> Bool {
+        if a.isFolder && !b.isFolder { return true }
+        if !a.isFolder && b.isFolder { return false }
+        return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
+    }
+}
+
+// MARK: - Staging Tree Node
+class StagingTreeNode: Identifiable, ObservableObject {
+    let id = UUID()
+    let name: String
+    let path: String
+    let isFolder: Bool
+    var file: StagingFile?
+    var children: [StagingTreeNode] = []
+
+    init(name: String, path: String, isFolder: Bool, file: StagingFile? = nil) {
+        self.name = name
+        self.path = path
+        self.isFolder = isFolder
+        self.file = file
+    }
+
+    var fileCount: Int {
+        isFolder ? children.reduce(0) { $0 + $1.fileCount } : 1
+    }
+}
+
+// MARK: - Staging Tree Node View
+struct StagingTreeNodeView: View {
+    @ObservedObject var node: StagingTreeNode
+    let isStaged: Bool
+    let onSelect: (StagingFile) -> Void
+    let onStage: (StagingFile) -> Void
+    let onStageFolder: (String) -> Void
+
+    @State private var isExpanded = true
+    @State private var isHovered = false
+
+    var body: some View {
+        if node.isFolder {
+            folderView
+        } else {
+            fileView
+        }
+    }
+
+    private var folderView: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() }
+                } label: {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 8))
+                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .frame(width: 10)
+                }
+                .buttonStyle(.plain)
+
+                Image(systemName: isExpanded ? "folder.fill" : "folder")
+                    .font(.system(size: 12))
+                    .foregroundColor(.yellow)
+
+                Text(node.name)
+                    .font(.system(size: 11))
+                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .lineLimit(1)
+
+                Text("(\(node.fileCount))")
+                    .font(.system(size: 10))
+                    .foregroundColor(GitKrakenTheme.textMuted)
+
+                Spacer()
+
+                if isHovered {
+                    Button {
+                        onStageFolder(node.path)
+                    } label: {
+                        Image(systemName: isStaged ? "minus.circle" : "plus.circle")
+                            .font(.system(size: 12))
+                            .foregroundColor(isStaged ? GitKrakenTheme.accentRed : GitKrakenTheme.accentGreen)
+                    }
+                    .buttonStyle(.plain)
+                    .help(isStaged ? "Unstage Folder" : "Stage Folder")
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+            .onHover { isHovered = $0 }
+            .contextMenu {
+                Button {
+                    onStageFolder(node.path)
+                } label: {
+                    Label(isStaged ? "Unstage Folder" : "Stage Folder",
+                          systemImage: isStaged ? "minus.circle" : "plus.circle")
+                }
+            }
+
+            if isExpanded {
+                ForEach(node.children.sorted(by: { sortNodes($0, $1) })) { child in
+                    StagingTreeNodeView(
+                        node: child,
+                        isStaged: isStaged,
+                        onSelect: onSelect,
+                        onStage: onStage,
+                        onStageFolder: onStageFolder
+                    )
+                    .padding(.leading, 14)
+                }
+            }
+        }
+    }
+
+    private var fileView: some View {
+        HStack(spacing: 6) {
+            // Status icon
+            if let file = node.file {
+                FileStatusBadge(status: file.status)
+            }
+
+            // File icon
+            Image(systemName: FileTypeIcon.systemIcon(for: node.name))
+                .font(.system(size: 11))
+                .foregroundColor(FileTypeIcon.color(for: node.name))
+
+            // Filename
+            Text(node.name)
+                .font(.system(size: 11))
+                .foregroundColor(GitKrakenTheme.textPrimary)
+                .lineLimit(1)
+
+            Spacer()
+
+            if isHovered, let file = node.file {
+                Button {
+                    onStage(file)
+                } label: {
+                    Image(systemName: isStaged ? "minus.circle" : "plus.circle")
+                        .font(.system(size: 12))
+                        .foregroundColor(isStaged ? GitKrakenTheme.accentRed : GitKrakenTheme.accentGreen)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 3)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if let file = node.file { onSelect(file) }
+        }
+        .onHover { isHovered = $0 }
+        .contextMenu {
+            if let file = node.file {
+                Button {
+                    onStage(file)
+                } label: {
+                    Label(isStaged ? "Unstage File" : "Stage File",
+                          systemImage: isStaged ? "minus.circle" : "plus.circle")
+                }
+                Divider()
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(file.path, forType: .string)
+                } label: {
+                    Label("Copy Path", systemImage: "doc.on.doc")
+                }
+            }
+        }
+    }
+
+    private func sortNodes(_ a: StagingTreeNode, _ b: StagingTreeNode) -> Bool {
+        if a.isFolder && !b.isFolder { return true }
+        if !a.isFolder && b.isFolder { return false }
+        return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
+    }
+}
+
+// MARK: - File Status Badge
+struct FileStatusBadge: View {
+    let status: StagingFile.StagingFileStatus
+
+    var body: some View {
+        Text(statusText)
+            .font(.system(size: 9, weight: .bold, design: .monospaced))
+            .foregroundColor(status.color)
+            .frame(width: 14, height: 14)
+            .background(status.color.opacity(0.2))
+            .cornerRadius(3)
+    }
+
+    private var statusText: String {
+        switch status {
+        case .added: return "A"
+        case .modified: return "M"
+        case .deleted: return "D"
+        case .renamed: return "R"
+        case .untracked: return "?"
+        case .conflicted: return "!"
         }
     }
 }
@@ -1418,6 +1834,40 @@ class StagingViewModel: ObservableObject {
         }
     }
 
+    func stageFolder(_ folder: String) {
+        guard let path = currentPath else { return }
+        Task {
+            do {
+                let filesToStage = unstagedFiles.filter {
+                    $0.path.hasPrefix(folder + "/") || $0.path == folder
+                }.map { $0.path }
+                if !filesToStage.isEmpty {
+                    try await engine.stage(files: filesToStage, at: path)
+                    await loadStatus(at: path)
+                }
+            } catch {
+                print("Error staging folder: \(error)")
+            }
+        }
+    }
+
+    func unstageFolder(_ folder: String) {
+        guard let path = currentPath else { return }
+        Task {
+            do {
+                let filesToUnstage = stagedFiles.filter {
+                    $0.path.hasPrefix(folder + "/") || $0.path == folder
+                }.map { $0.path }
+                if !filesToUnstage.isEmpty {
+                    try await engine.unstage(files: filesToUnstage, at: path)
+                    await loadStatus(at: path)
+                }
+            } catch {
+                print("Error unstaging folder: \(error)")
+            }
+        }
+    }
+
     func commit(message: String, onSuccess: @escaping () -> Void) {
         guard let path = currentPath, !message.isEmpty else { return }
         Task {
@@ -1451,7 +1901,7 @@ struct StagingFile: Identifiable {
     var isStaged: Bool = false
 
     enum StagingFileStatus {
-        case added, modified, deleted, renamed, untracked
+        case added, modified, deleted, renamed, untracked, conflicted
 
         var color: Color {
             switch self {
@@ -1460,6 +1910,7 @@ struct StagingFile: Identifiable {
             case .deleted: return GitKrakenTheme.accentRed
             case .renamed: return GitKrakenTheme.accent
             case .untracked: return GitKrakenTheme.textMuted
+            case .conflicted: return GitKrakenTheme.accentRed
             }
         }
 
@@ -1470,6 +1921,7 @@ struct StagingFile: Identifiable {
             case .deleted: return "minus"
             case .renamed: return "arrow.right"
             case .untracked: return "questionmark"
+            case .conflicted: return "exclamationmark.triangle"
             }
         }
     }
