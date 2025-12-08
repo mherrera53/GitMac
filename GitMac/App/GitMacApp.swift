@@ -109,6 +109,21 @@ class AppState: ObservableObject {
         isLoading = false
     }
 
+    func refresh() async {
+        guard let path = currentRepository?.path else { return }
+        do {
+            let repo = try await gitService.openRepository(at: path)
+            // Update the tab with refreshed data
+            if let index = openTabs.firstIndex(where: { $0.id == activeTabId }) {
+                var updatedTab = openTabs[index]
+                updatedTab.repository = repo
+                openTabs[index] = updatedTab
+            }
+        } catch {
+            errorMessage = "Error refreshing: \(error.localizedDescription)"
+        }
+    }
+
     func cloneRepository(from url: String, to path: String) async {
         isLoading = true
         errorMessage = nil

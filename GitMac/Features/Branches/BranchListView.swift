@@ -117,6 +117,31 @@ struct BranchListView: View {
         } message: {
             Text("Are you sure you want to delete '\(selectedBranch?.name ?? "")'? This cannot be undone.")
         }
+        .alert("Uncommitted Changes", isPresented: $viewModel.showUncommittedWarning) {
+            Button("Cancel", role: .cancel) {
+                viewModel.showUncommittedWarning = false
+                viewModel.pendingCheckoutBranch = nil
+            }
+            Button("Stash & Checkout") {
+                Task {
+                    try? await viewModel.gitService.stash()
+                    await viewModel.forceCheckout()
+                }
+            }
+            Button("Force Checkout", role: .destructive) {
+                Task { await viewModel.forceCheckout() }
+            }
+        } message: {
+            VStack {
+                Text("You have uncommitted changes that may be lost:")
+                Text(viewModel.uncommittedFiles.prefix(5).joined(separator: "\n"))
+                    .font(.caption)
+                if viewModel.uncommittedFiles.count > 5 {
+                    Text("... and \(viewModel.uncommittedFiles.count - 5) more files")
+                        .font(.caption)
+                }
+            }
+        }
         .task {
             if let repo = appState.currentRepository {
                 viewModel.loadBranches(from: repo)
@@ -154,7 +179,7 @@ class BranchListViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
 
-    private let gitService = GitService()
+    let gitService = GitService()
 
     func loadBranches(from repo: Repository) {
         localBranches = repo.branches.sorted { lhs, rhs in
@@ -165,14 +190,52 @@ class BranchListViewModel: ObservableObject {
         remoteBranches = repo.remoteBranches.sorted { $0.name < $1.name }
     }
 
+    @Published var uncommittedFiles: [String] = []
+    @Published var showUncommittedWarning = false
+    @Published var pendingCheckoutBranch: Branch?
+
     func checkout(_ branch: Branch) async {
+        // Check for uncommitted changes first
+        let changes = await checkUncommittedChanges()
+        if !changes.isEmpty {
+            uncommittedFiles = changes
+            pendingCheckoutBranch = branch
+            showUncommittedWarning = true
+            return
+        }
+
+        await performCheckout(branch.name)
+    }
+
+    func forceCheckout() async {
+        guard let branch = pendingCheckoutBranch else { return }
+        await performCheckout(branch.name)
+        showUncommittedWarning = false
+        pendingCheckoutBranch = nil
+    }
+
+    private func performCheckout(_ branchName: String) async {
         isLoading = true
         do {
-            try await gitService.checkout(branch.name)
+            try await gitService.checkout(branchName)
         } catch {
             self.error = error.localizedDescription
         }
         isLoading = false
+    }
+
+    private func checkUncommittedChanges() async -> [String] {
+        guard let path = gitService.currentRepository?.path else { return [] }
+        let result = await ShellExecutor().execute("git", arguments: ["status", "--porcelain"], workingDirectory: path)
+        guard result.isSuccess else { return [] }
+
+        return result.stdout
+            .components(separatedBy: CharacterSet.newlines)
+            .filter { !$0.isEmpty }
+            .map { line in
+                let trimmed = line.trimmingCharacters(in: CharacterSet.whitespaces)
+                return String(trimmed.dropFirst(2)).trimmingCharacters(in: CharacterSet.whitespaces)
+            }
     }
 
     func checkoutRemote(_ branch: Branch) async {
@@ -299,6 +362,9 @@ struct BranchRow: View {
         .padding(.vertical, 6)
         .background(isSelected ? Color.accentColor.opacity(0.2) : (isHovered ? Color.secondary.opacity(0.1) : Color.clear))
         .contentShape(Rectangle())
+        .onTapGesture(count: 2) {
+            if !branch.isHead { onCheckout() }
+        }
         .onTapGesture { onSelect() }
         .onHover { isHovered = $0 }
         .contextMenu {

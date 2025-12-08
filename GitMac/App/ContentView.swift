@@ -58,12 +58,88 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .cloneRepository)) { _ in
             showCloneSheet = true
         }
+        // Git operation notifications
+        .onReceive(NotificationCenter.default.publisher(for: .fetch)) { _ in
+            handleFetch()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .pull)) { _ in
+            handlePull()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .push)) { _ in
+            handlePush()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .stash)) { _ in
+            handleStash()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .popStash)) { _ in
+            handlePopStash()
+        }
         .alert("Error", isPresented: .constant(appState.errorMessage != nil)) {
             Button("OK") {
                 appState.errorMessage = nil
             }
         } message: {
             Text(appState.errorMessage ?? "")
+        }
+    }
+
+    private func handleFetch() {
+        guard appState.currentRepository != nil else { return }
+        Task {
+            do {
+                try await appState.gitService.fetch()
+                await appState.refresh()
+            } catch {
+                appState.errorMessage = "Fetch failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func handlePull() {
+        guard appState.currentRepository != nil else { return }
+        Task {
+            do {
+                try await appState.gitService.pull()
+                await appState.refresh()
+            } catch {
+                appState.errorMessage = "Pull failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func handlePush() {
+        guard appState.currentRepository != nil else { return }
+        Task {
+            do {
+                try await appState.gitService.push()
+                await appState.refresh()
+            } catch {
+                appState.errorMessage = "Push failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func handleStash() {
+        guard appState.currentRepository != nil else { return }
+        Task {
+            do {
+                try await appState.gitService.stash()
+                await appState.refresh()
+            } catch {
+                appState.errorMessage = "Stash failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func handlePopStash() {
+        guard appState.currentRepository != nil else { return }
+        Task {
+            do {
+                try await appState.gitService.stashPop()
+                await appState.refresh()
+            } catch {
+                appState.errorMessage = "Stash pop failed: \(error.localizedDescription)"
+            }
         }
     }
 }

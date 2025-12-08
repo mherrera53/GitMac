@@ -10,8 +10,13 @@ actor GitHubOAuth {
     // GitHub Settings > Developer settings > OAuth Apps > New OAuth App
     // Device Flow doesn't require a client secret
     private var clientId: String {
-        get { UserDefaults.standard.string(forKey: "GitHubOAuthClientId") ?? "" }
-        set { UserDefaults.standard.set(newValue, forKey: "GitHubOAuthClientId") }
+        get {
+            (UserDefaults.standard.string(forKey: "GitHubOAuthClientId") ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        set {
+            UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: "GitHubOAuthClientId")
+        }
     }
 
     // Scopes to request
