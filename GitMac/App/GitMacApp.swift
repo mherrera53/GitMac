@@ -102,6 +102,9 @@ class AppState: ObservableObject {
                 openTabs.append(newTab)
                 activeTabId = newTab.id
             }
+
+            // Save to recent repositories
+            RecentRepositoriesManager.shared.addRecent(path: repo.path, name: repo.name)
         } catch {
             errorMessage = "Error opening repository: \(error.localizedDescription)"
         }
@@ -249,6 +252,11 @@ class RecentRepositoriesManager: ObservableObject {
     func removeFavorite(path: String) {
         favoriteRepos.removeAll { $0.path == path }
         saveFavorites()
+    }
+
+    func removeRecent(path: String) {
+        recentRepos.removeAll { $0.path == path }
+        saveRecent()
     }
 
     private func saveRecent() {

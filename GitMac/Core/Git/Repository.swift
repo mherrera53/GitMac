@@ -85,12 +85,16 @@ struct FileStatus: Identifiable, Equatable {
     let path: String
     let status: FileStatusType
     let oldPath: String? // For renamed files
+    var additions: Int = 0
+    var deletions: Int = 0
 
-    init(path: String, status: FileStatusType, oldPath: String? = nil) {
+    init(path: String, status: FileStatusType, oldPath: String? = nil, additions: Int = 0, deletions: Int = 0) {
         self.id = UUID()
         self.path = path
         self.status = status
         self.oldPath = oldPath
+        self.additions = additions
+        self.deletions = deletions
     }
 
     var filename: String {
@@ -103,6 +107,10 @@ struct FileStatus: Identifiable, Equatable {
 
     var fileExtension: String {
         URL(fileURLWithPath: path).pathExtension.lowercased()
+    }
+
+    var hasChanges: Bool {
+        additions > 0 || deletions > 0
     }
 }
 
