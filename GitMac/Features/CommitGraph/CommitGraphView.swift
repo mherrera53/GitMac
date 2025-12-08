@@ -56,8 +56,7 @@ struct CommitGraphView: View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 uncommittedChangesSection
-                stashesSection
-                commitsSection
+                timelineSection
                 loadMoreSection
             }
         }
@@ -80,31 +79,31 @@ struct CommitGraphView: View {
         }
     }
 
-    private var stashesSection: some View {
-        ForEach(vm.stashNodes) { stashNode in
-            GraphStashRow(
-                stash: stashNode,
-                isSelected: selectedId == stashNode.id,
-                isHovered: hoveredId == stashNode.id
-            )
-            .onHover { h in hoveredId = h ? stashNode.id : nil }
-            .onTapGesture {
-                selectedId = stashNode.id
-            }
-        }
-    }
-
-    private var commitsSection: some View {
-        ForEach(vm.nodes) { node in
-            GraphRow(
-                node: node,
-                isSelected: selectedId == node.commit.sha,
-                isHovered: hoveredId == node.commit.sha
-            )
-            .onHover { h in hoveredId = h ? node.commit.sha : nil }
-            .onTapGesture {
-                selectedId = node.commit.sha
-                appState.selectedCommit = node.commit
+    // Merged timeline of commits and stashes, sorted chronologically
+    private var timelineSection: some View {
+        ForEach(vm.timelineItems) { item in
+            switch item {
+            case .commit(let node):
+                GraphRow(
+                    node: node,
+                    isSelected: selectedId == node.commit.sha,
+                    isHovered: hoveredId == node.commit.sha
+                )
+                .onHover { h in hoveredId = h ? node.commit.sha : nil }
+                .onTapGesture {
+                    selectedId = node.commit.sha
+                    appState.selectedCommit = node.commit
+                }
+            case .stash(let stashNode):
+                GraphStashRow(
+                    stash: stashNode,
+                    isSelected: selectedId == stashNode.id,
+                    isHovered: hoveredId == stashNode.id
+                )
+                .onHover { h in hoveredId = h ? stashNode.id : nil }
+                .onTapGesture {
+                    selectedId = stashNode.id
+                }
             }
         }
     }
@@ -114,6 +113,26 @@ struct CommitGraphView: View {
         if vm.hasMore {
             ProgressView().frame(height: 40)
                 .onAppear { Task { await vm.loadMore() } }
+        }
+    }
+}
+
+// MARK: - Timeline Item (Commit or Stash)
+enum TimelineItem: Identifiable {
+    case commit(GraphNode)
+    case stash(StashNode)
+
+    var id: String {
+        switch self {
+        case .commit(let node): return node.id
+        case .stash(let stash): return stash.id
+        }
+    }
+
+    var date: Date {
+        switch self {
+        case .commit(let node): return node.commit.authorDate
+        case .stash(let stash): return stash.stash.date
         }
     }
 }
@@ -504,6 +523,7 @@ struct GraphNode: Identifiable {
 class GraphViewModel: ObservableObject {
     @Published var nodes: [GraphNode] = []
     @Published var stashNodes: [StashNode] = []
+    @Published var timelineItems: [TimelineItem] = []
     @Published var isLoading = false
     @Published var hasMore = true
 
@@ -551,6 +571,9 @@ class GraphViewModel: ObservableObject {
             // Build nodes on background thread
             let newNodes = await buildNodes()
             nodes = newNodes
+
+            // Build merged timeline (commits + stashes sorted by date)
+            buildTimeline()
         } catch {
             print("Error loading graph: \(error)")
         }
@@ -570,6 +593,9 @@ class GraphViewModel: ObservableObject {
             // Build on background thread
             let newNodes = await buildNodes()
             nodes = newNodes
+
+            // Rebuild merged timeline
+            buildTimeline()
         } catch {
             print("Error loading more: \(error)")
         }
@@ -584,6 +610,26 @@ class GraphViewModel: ObservableObject {
         return await Task.detached(priority: .userInitiated) {
             buildCommitGraph(commits: localCommits, branchHeads: localBranchHeads)
         }.value
+    }
+
+    private func buildTimeline() {
+        // Merge commits and stashes into a single timeline sorted by date (newest first)
+        var items: [TimelineItem] = []
+
+        // Add all commits
+        for node in nodes {
+            items.append(.commit(node))
+        }
+
+        // Add all stashes
+        for stash in stashNodes {
+            items.append(.stash(stash))
+        }
+
+        // Sort by date (newest first)
+        items.sort { $0.date > $1.date }
+
+        timelineItems = items
     }
 }
 
