@@ -100,6 +100,10 @@ struct FileStatus: Identifiable, Equatable {
     var directory: String {
         URL(fileURLWithPath: path).deletingLastPathComponent().path
     }
+
+    var fileExtension: String {
+        URL(fileURLWithPath: path).pathExtension.lowercased()
+    }
 }
 
 /// Type of file status

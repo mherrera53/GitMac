@@ -10,115 +10,28 @@ struct StagingAreaView: View {
     @State private var showAICommitSheet = false
     @State private var showConflictResolver = false
     @State private var conflictFileToResolve: FileStatus?
+    @State private var viewMode: FileViewMode = .tree
+    @State private var extensionFilter: String? = nil
 
     var body: some View {
         HSplitView {
             // Left: File lists
             VStack(spacing: 0) {
+                // View mode and filter toolbar
+                fileToolbar
+
                 // Conflicted files (if any)
                 if !viewModel.conflictedFiles.isEmpty {
-                    FileListSection(
-                        title: "Conflicts",
-                        count: viewModel.conflictedFiles.count,
-                        icon: "exclamationmark.triangle.fill",
-                        headerColor: .red
-                    ) {
-                        EmptyView()
-                    } content: {
-                        ForEach(viewModel.conflictedFiles) { file in
-                            ConflictedFileRow(
-                                file: file,
-                                isSelected: selectedFile == file.path,
-                                onSelect: { selectedFile = file.path },
-                                onResolve: {
-                                    conflictFileToResolve = file
-                                    showConflictResolver = true
-                                }
-                            )
-                        }
-                    }
-
+                    conflictsSection
                     Divider()
                 }
 
                 // Unstaged changes
-                FileListSection(
-                    title: "Unstaged Changes",
-                    count: viewModel.unstagedFiles.count + viewModel.untrackedFiles.count,
-                    icon: "square",
-                    headerColor: .orange
-                ) {
-                    HStack {
-                        Button("Stage All") {
-                            Task { await viewModel.stageAll() }
-                        }
-                        .buttonStyle(.borderless)
-
-                        Button("Discard All") {
-                            Task { await viewModel.discardAll() }
-                        }
-                        .buttonStyle(.borderless)
-                        .foregroundColor(.red)
-                    }
-                } content: {
-                    if viewModel.unstagedFiles.isEmpty && viewModel.untrackedFiles.isEmpty {
-                        Text("No unstaged changes")
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding()
-                    } else {
-                        ForEach(viewModel.unstagedFiles) { file in
-                            FileRow(
-                                file: file,
-                                isSelected: selectedFile == file.path,
-                                onSelect: { selectedFile = file.path },
-                                onStage: { Task { await viewModel.stage(file: file.path) } },
-                                onDiscard: { Task { await viewModel.discardChanges(file: file.path) } }
-                            )
-                        }
-
-                        ForEach(viewModel.untrackedFiles, id: \.self) { path in
-                            UntrackedFileRow(
-                                path: path,
-                                isSelected: selectedFile == path,
-                                onSelect: { selectedFile = path },
-                                onStage: { Task { await viewModel.stage(file: path) } }
-                            )
-                        }
-                    }
-                }
-
+                unstagedSection
                 Divider()
 
                 // Staged changes
-                FileListSection(
-                    title: "Staged Changes",
-                    count: viewModel.stagedFiles.count,
-                    icon: "checkmark.square.fill",
-                    headerColor: .green
-                ) {
-                    Button("Unstage All") {
-                        Task { await viewModel.unstageAll() }
-                    }
-                    .buttonStyle(.borderless)
-                } content: {
-                    if viewModel.stagedFiles.isEmpty {
-                        Text("No staged changes")
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding()
-                    } else {
-                        ForEach(viewModel.stagedFiles) { file in
-                            FileRow(
-                                file: file,
-                                isSelected: selectedFile == file.path,
-                                onSelect: { selectedFile = file.path },
-                                onUnstage: { Task { await viewModel.unstage(file: file.path) } }
-                            )
-                        }
-                    }
-                }
-
+                stagedSection
                 Divider()
 
                 // Commit message area
@@ -178,11 +91,9 @@ struct StagingAreaView: View {
                     repositoryPath: repoPath,
                     isPresented: $showConflictResolver,
                     onResolved: {
-                        // Refresh status after resolving
                         if let repo = appState.currentRepository {
                             Task {
                                 await viewModel.loadStatus(for: repo)
-                                // Stage the resolved file
                                 await viewModel.stage(file: file.path)
                             }
                         }
@@ -197,12 +108,242 @@ struct StagingAreaView: View {
         }
         .onChange(of: appState.currentRepository?.status) { _, _ in
             if let repo = appState.currentRepository {
-                Task {
-                    await viewModel.loadStatus(for: repo)
-                }
+                Task { await viewModel.loadStatus(for: repo) }
             }
         }
     }
+
+    // MARK: - Toolbar
+
+    private var fileToolbar: some View {
+        HStack(spacing: 8) {
+            // View mode picker
+            Picker("View", selection: $viewMode) {
+                Image(systemName: "list.bullet").tag(FileViewMode.flat)
+                Image(systemName: "folder.fill").tag(FileViewMode.tree)
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 70)
+            .help("Toggle flat/tree view")
+
+            Divider().frame(height: 16)
+
+            // Extension filter menu
+            Menu {
+                Button("All Files") {
+                    extensionFilter = nil
+                }
+                Divider()
+                ForEach(viewModel.availableExtensions, id: \.self) { ext in
+                    Button {
+                        extensionFilter = ext
+                    } label: {
+                        HStack {
+                            Image(systemName: FileTypeIcon.systemIcon(for: "file.\(ext)"))
+                            Text(".\(ext)")
+                            Spacer()
+                            Text("\(viewModel.fileCountForExtension(ext))")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                    Text(extensionFilter ?? "All")
+                        .lineLimit(1)
+                }
+            }
+            .menuStyle(.borderlessButton)
+            .frame(maxWidth: 100)
+
+            Spacer()
+
+            // File count
+            Text("\(viewModel.totalFileCount) files")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    // MARK: - Sections
+
+    private var conflictsSection: some View {
+        FileListSection(
+            title: "Conflicts",
+            count: viewModel.conflictedFiles.count,
+            icon: "exclamationmark.triangle.fill",
+            headerColor: .red
+        ) {
+            EmptyView()
+        } content: {
+            ForEach(viewModel.conflictedFiles) { file in
+                ConflictedFileRow(
+                    file: file,
+                    isSelected: selectedFile == file.path,
+                    onSelect: { selectedFile = file.path },
+                    onResolve: {
+                        conflictFileToResolve = file
+                        showConflictResolver = true
+                    }
+                )
+            }
+        }
+    }
+
+    private var unstagedSection: some View {
+        FileListSection(
+            title: "Unstaged Files",
+            count: viewModel.unstagedFiles.count + viewModel.untrackedFiles.count,
+            icon: "square",
+            headerColor: .orange
+        ) {
+            HStack(spacing: 8) {
+                Button {
+                    Task { await viewModel.stageAll() }
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                }
+                .buttonStyle(.borderless)
+                .help("Stage All")
+
+                Button {
+                    Task { await viewModel.discardAll() }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.red)
+                }
+                .buttonStyle(.borderless)
+                .help("Discard All")
+            }
+        } content: {
+            if viewModel.unstagedFiles.isEmpty && viewModel.untrackedFiles.isEmpty {
+                emptyStateView("No unstaged changes")
+            } else {
+                unstagedContent
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var unstagedContent: some View {
+        if viewMode == .tree {
+            FileTreeView(
+                files: filteredUnstagedFiles,
+                untrackedFiles: filteredUntrackedFiles,
+                selectedFile: $selectedFile,
+                onStage: { path in Task { await viewModel.stage(file: path) } },
+                onDiscard: { path in Task { await viewModel.discardChanges(file: path) } },
+                onStageFolder: { folder in Task { await viewModel.stageFolder(folder) } }
+            )
+        } else {
+            flatUnstagedList
+        }
+    }
+
+    private var flatUnstagedList: some View {
+        Group {
+            ForEach(filteredUnstagedFiles) { file in
+                FileRow(
+                    file: file,
+                    isSelected: selectedFile == file.path,
+                    onSelect: { selectedFile = file.path },
+                    onStage: { Task { await viewModel.stage(file: file.path) } },
+                    onDiscard: { Task { await viewModel.discardChanges(file: file.path) } }
+                )
+            }
+
+            ForEach(filteredUntrackedFiles, id: \.self) { path in
+                UntrackedFileRow(
+                    path: path,
+                    isSelected: selectedFile == path,
+                    onSelect: { selectedFile = path },
+                    onStage: { Task { await viewModel.stage(file: path) } }
+                )
+            }
+        }
+    }
+
+    private var stagedSection: some View {
+        FileListSection(
+            title: "Staged Files",
+            count: viewModel.stagedFiles.count,
+            icon: "checkmark.square.fill",
+            headerColor: .green
+        ) {
+            Button {
+                Task { await viewModel.unstageAll() }
+            } label: {
+                Image(systemName: "minus.circle.fill")
+            }
+            .buttonStyle(.borderless)
+            .help("Unstage All")
+        } content: {
+            if viewModel.stagedFiles.isEmpty {
+                emptyStateView("No staged changes")
+            } else {
+                stagedContent
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var stagedContent: some View {
+        if viewMode == .tree {
+            FileTreeView(
+                files: filteredStagedFiles,
+                untrackedFiles: [],
+                selectedFile: $selectedFile,
+                isStaged: true,
+                onUnstage: { path in Task { await viewModel.unstage(file: path) } },
+                onUnstageFolder: { folder in Task { await viewModel.unstageFolder(folder) } }
+            )
+        } else {
+            ForEach(filteredStagedFiles) { file in
+                FileRow(
+                    file: file,
+                    isSelected: selectedFile == file.path,
+                    onSelect: { selectedFile = file.path },
+                    onUnstage: { Task { await viewModel.unstage(file: file.path) } }
+                )
+            }
+        }
+    }
+
+    private func emptyStateView(_ text: String) -> some View {
+        Text(text)
+            .foregroundColor(.secondary)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding()
+    }
+
+    // MARK: - Filtered Files
+
+    private var filteredUnstagedFiles: [FileStatus] {
+        guard let ext = extensionFilter else { return viewModel.unstagedFiles }
+        return viewModel.unstagedFiles.filter { $0.fileExtension == ext }
+    }
+
+    private var filteredUntrackedFiles: [String] {
+        guard let ext = extensionFilter else { return viewModel.untrackedFiles }
+        return viewModel.untrackedFiles.filter {
+            (URL(fileURLWithPath: $0).pathExtension.lowercased()) == ext
+        }
+    }
+
+    private var filteredStagedFiles: [FileStatus] {
+        guard let ext = extensionFilter else { return viewModel.stagedFiles }
+        return viewModel.stagedFiles.filter { $0.fileExtension == ext }
+    }
+}
+
+// MARK: - View Mode
+enum FileViewMode {
+    case flat
+    case tree
 }
 
 // MARK: - View Model
@@ -260,6 +401,45 @@ class StagingAreaViewModel: ObservableObject {
     private var currentPath: String?
     private let gitService = GitService()
 
+    // MARK: - Computed Properties
+
+    var totalFileCount: Int {
+        stagedFiles.count + unstagedFiles.count + untrackedFiles.count
+    }
+
+    var availableExtensions: [String] {
+        var extensions = Set<String>()
+
+        for file in stagedFiles {
+            if !file.fileExtension.isEmpty {
+                extensions.insert(file.fileExtension)
+            }
+        }
+        for file in unstagedFiles {
+            if !file.fileExtension.isEmpty {
+                extensions.insert(file.fileExtension)
+            }
+        }
+        for path in untrackedFiles {
+            let ext = URL(fileURLWithPath: path).pathExtension.lowercased()
+            if !ext.isEmpty {
+                extensions.insert(ext)
+            }
+        }
+
+        return extensions.sorted()
+    }
+
+    func fileCountForExtension(_ ext: String) -> Int {
+        var count = 0
+        count += stagedFiles.filter { $0.fileExtension == ext }.count
+        count += unstagedFiles.filter { $0.fileExtension == ext }.count
+        count += untrackedFiles.filter { URL(fileURLWithPath: $0).pathExtension.lowercased() == ext }.count
+        return count
+    }
+
+    // MARK: - Load Status
+
     func loadStatus(for repo: Repository) async {
         currentPath = repo.path
         stagedFiles = repo.status.staged
@@ -275,18 +455,35 @@ class StagingAreaViewModel: ObservableObject {
         showError = false
     }
 
+    // MARK: - Stage/Unstage
+
     func stage(file: String) async {
-        guard let _ = currentPath else { return }
+        guard currentPath != nil else { return }
         try? await gitService.stage(files: [file])
     }
 
     func stageAll() async {
-        guard let _ = currentPath else { return }
+        guard currentPath != nil else { return }
         try? await gitService.stageAll()
     }
 
+    func stageFolder(_ folder: String) async {
+        guard currentPath != nil else { return }
+        // Get all files in this folder (unstaged + untracked)
+        var filesToStage: [String] = []
+        for file in unstagedFiles where file.path.hasPrefix(folder + "/") || file.path.hasPrefix(folder) {
+            filesToStage.append(file.path)
+        }
+        for path in untrackedFiles where path.hasPrefix(folder + "/") || path.hasPrefix(folder) {
+            filesToStage.append(path)
+        }
+        if !filesToStage.isEmpty {
+            try? await gitService.stage(files: filesToStage)
+        }
+    }
+
     func unstage(file: String) async {
-        guard let _ = currentPath else { return }
+        guard currentPath != nil else { return }
         try? await gitService.unstage(files: [file])
     }
 
@@ -295,8 +492,19 @@ class StagingAreaViewModel: ObservableObject {
         try? await gitService.unstage(files: allStaged)
     }
 
+    func unstageFolder(_ folder: String) async {
+        guard currentPath != nil else { return }
+        var filesToUnstage: [String] = []
+        for file in stagedFiles where file.path.hasPrefix(folder + "/") || file.path.hasPrefix(folder) {
+            filesToUnstage.append(file.path)
+        }
+        if !filesToUnstage.isEmpty {
+            try? await gitService.unstage(files: filesToUnstage)
+        }
+    }
+
     func discardChanges(file: String) async {
-        guard let _ = currentPath else { return }
+        guard currentPath != nil else { return }
         try? await gitService.discardChanges(files: [file])
     }
 
@@ -305,46 +513,28 @@ class StagingAreaViewModel: ObservableObject {
         try? await gitService.discardChanges(files: allUnstaged)
     }
 
-    /// Validate commit before executing
+    // MARK: - Validation
+
     func validateCommit(message: String, amend: Bool = false) -> CommitValidationError? {
-        // Check repository
-        guard currentPath != nil else {
-            return .noRepository
-        }
+        guard currentPath != nil else { return .noRepository }
+        if !conflictedFiles.isEmpty { return .conflictsExist }
+        if !amend && stagedFiles.isEmpty { return .noStagedFiles }
 
-        // Check for conflicts
-        if !conflictedFiles.isEmpty {
-            return .conflictsExist
-        }
-
-        // Check for staged files (unless amending)
-        if !amend && stagedFiles.isEmpty {
-            return .noStagedFiles
-        }
-
-        // Validate message
         let trimmedMessage = message.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmedMessage.isEmpty {
-            return .emptyMessage
-        }
-
-        if trimmedMessage.count < 3 {
-            return .messageTooShort
-        }
+        if trimmedMessage.isEmpty { return .emptyMessage }
+        if trimmedMessage.count < 3 { return .messageTooShort }
 
         return nil
     }
 
-    /// Commit with validation
     func commit(message: String, amend: Bool = false) async -> Bool {
-        // Validate first
         if let error = validateCommit(message: message, amend: amend) {
             commitError = error
             showError = true
             return false
         }
 
-        guard let _ = currentPath else { return false }
+        guard currentPath != nil else { return false }
 
         do {
             _ = try await gitService.commit(message: message, amend: amend)
@@ -352,12 +542,10 @@ class StagingAreaViewModel: ObservableObject {
             showError = false
             return true
         } catch {
-            // Handle git errors
             return false
         }
     }
 
-    /// Check if can commit (for UI enabling/disabling)
     func canCommit(message: String, amend: Bool = false) -> Bool {
         return validateCommit(message: message, amend: amend) == nil
     }
@@ -1052,6 +1240,365 @@ struct AICommitMessageSheet: View {
         }
 
         isGenerating = false
+    }
+}
+
+// MARK: - File Tree View
+
+struct FileTreeView: View {
+    let files: [FileStatus]
+    let untrackedFiles: [String]
+    @Binding var selectedFile: String?
+    var isStaged: Bool = false
+
+    // Callbacks for unstaged files
+    var onStage: ((String) -> Void)? = nil
+    var onDiscard: ((String) -> Void)? = nil
+    var onStageFolder: ((String) -> Void)? = nil
+
+    // Callbacks for staged files
+    var onUnstage: ((String) -> Void)? = nil
+    var onUnstageFolder: ((String) -> Void)? = nil
+
+    var body: some View {
+        let tree = buildTree()
+        ForEach(tree.children.sorted(by: { $0.name < $1.name })) { node in
+            TreeNodeView(
+                node: node,
+                selectedFile: $selectedFile,
+                isStaged: isStaged,
+                onStage: onStage,
+                onDiscard: onDiscard,
+                onStageFolder: onStageFolder,
+                onUnstage: onUnstage,
+                onUnstageFolder: onUnstageFolder
+            )
+        }
+    }
+
+    private func buildTree() -> FileTreeNode {
+        let root = FileTreeNode(name: "", path: "", isFolder: true)
+
+        // Add FileStatus files
+        for file in files {
+            addToTree(root: root, path: file.path, file: file, isUntracked: false)
+        }
+
+        // Add untracked files
+        for path in untrackedFiles {
+            addToTree(root: root, path: path, file: nil, isUntracked: true)
+        }
+
+        return root
+    }
+
+    private func addToTree(root: FileTreeNode, path: String, file: FileStatus?, isUntracked: Bool) {
+        let components = path.split(separator: "/").map(String.init)
+        var current = root
+
+        for (index, component) in components.enumerated() {
+            let isLast = index == components.count - 1
+            let currentPath = components[0...index].joined(separator: "/")
+
+            if isLast {
+                // This is a file
+                let fileNode = FileTreeNode(
+                    name: component,
+                    path: currentPath,
+                    isFolder: false,
+                    file: file,
+                    isUntracked: isUntracked
+                )
+                current.children.append(fileNode)
+            } else {
+                // This is a folder - find or create
+                if let existing = current.children.first(where: { $0.name == component && $0.isFolder }) {
+                    current = existing
+                } else {
+                    let folderNode = FileTreeNode(name: component, path: currentPath, isFolder: true)
+                    current.children.append(folderNode)
+                    current = folderNode
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Tree Node Model
+
+class FileTreeNode: Identifiable, ObservableObject {
+    let id = UUID()
+    let name: String
+    let path: String
+    let isFolder: Bool
+    var file: FileStatus?
+    var isUntracked: Bool
+    var children: [FileTreeNode] = []
+
+    init(name: String, path: String, isFolder: Bool, file: FileStatus? = nil, isUntracked: Bool = false) {
+        self.name = name
+        self.path = path
+        self.isFolder = isFolder
+        self.file = file
+        self.isUntracked = isUntracked
+    }
+
+    var fileCount: Int {
+        if isFolder {
+            return children.reduce(0) { $0 + $1.fileCount }
+        }
+        return 1
+    }
+}
+
+// MARK: - Tree Node View
+
+struct TreeNodeView: View {
+    @ObservedObject var node: FileTreeNode
+    @Binding var selectedFile: String?
+    var isStaged: Bool
+    var onStage: ((String) -> Void)?
+    var onDiscard: ((String) -> Void)?
+    var onStageFolder: ((String) -> Void)?
+    var onUnstage: ((String) -> Void)?
+    var onUnstageFolder: ((String) -> Void)?
+
+    @State private var isExpanded = true
+    @State private var isHovered = false
+
+    var body: some View {
+        if node.isFolder {
+            folderView
+        } else {
+            fileView
+        }
+    }
+
+    private var folderView: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Folder header
+            HStack(spacing: 6) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        isExpanded.toggle()
+                    }
+                } label: {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .frame(width: 12)
+                }
+                .buttonStyle(.plain)
+
+                Image(systemName: isExpanded ? "folder.fill" : "folder")
+                    .foregroundColor(.yellow)
+                    .frame(width: 16)
+
+                Text(node.name)
+                    .lineLimit(1)
+
+                Text("(\(node.fileCount))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                // Folder actions on hover
+                if isHovered {
+                    if isStaged {
+                        if let unstageFolder = onUnstageFolder {
+                            Button {
+                                unstageFolder(node.path)
+                            } label: {
+                                Image(systemName: "minus.circle")
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Unstage Folder")
+                        }
+                    } else {
+                        if let stageFolder = onStageFolder {
+                            Button {
+                                stageFolder(node.path)
+                            } label: {
+                                Image(systemName: "plus.circle")
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Stage Folder")
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+            .onHover { isHovered = $0 }
+            .contextMenu {
+                if isStaged {
+                    Button {
+                        onUnstageFolder?(node.path)
+                    } label: {
+                        Label("Unstage Folder", systemImage: "minus.circle")
+                    }
+                } else {
+                    Button {
+                        onStageFolder?(node.path)
+                    } label: {
+                        Label("Stage Folder", systemImage: "plus.circle")
+                    }
+                }
+
+                Divider()
+
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(node.path, forType: .string)
+                } label: {
+                    Label("Copy Path", systemImage: "doc.on.doc")
+                }
+            }
+
+            // Children
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(node.children.sorted(by: sortNodes)) { child in
+                        TreeNodeView(
+                            node: child,
+                            selectedFile: $selectedFile,
+                            isStaged: isStaged,
+                            onStage: onStage,
+                            onDiscard: onDiscard,
+                            onStageFolder: onStageFolder,
+                            onUnstage: onUnstage,
+                            onUnstageFolder: onUnstageFolder
+                        )
+                        .padding(.leading, 16)
+                    }
+                }
+            }
+        }
+    }
+
+    private var fileView: some View {
+        HStack(spacing: 6) {
+            // Indent space for alignment
+            Color.clear.frame(width: 12)
+
+            // Status icon
+            if let file = node.file {
+                StatusIcon(status: file.status)
+            } else if node.isUntracked {
+                StatusIcon(status: .untracked)
+            }
+
+            // File icon
+            Image(systemName: FileTypeIcon.systemIcon(for: node.name))
+                .foregroundColor(FileTypeIcon.color(for: node.name))
+                .frame(width: 16)
+
+            // Filename
+            Text(node.name)
+                .lineLimit(1)
+
+            Spacer()
+
+            // Actions on hover
+            if isHovered {
+                if isStaged {
+                    if let unstage = onUnstage {
+                        Button {
+                            unstage(node.path)
+                        } label: {
+                            Image(systemName: "minus.circle")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Unstage")
+                    }
+                } else {
+                    if let stage = onStage {
+                        Button {
+                            stage(node.path)
+                        } label: {
+                            Image(systemName: "plus.circle")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Stage")
+                    }
+
+                    if let discard = onDiscard, !node.isUntracked {
+                        Button {
+                            discard(node.path)
+                        } label: {
+                            Image(systemName: "xmark.circle")
+                                .foregroundColor(.red)
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Discard")
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .background(selectedFile == node.path ? Color.accentColor.opacity(0.2) : Color.clear)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            selectedFile = node.path
+        }
+        .onHover { isHovered = $0 }
+        .contextMenu {
+            if isStaged {
+                Button {
+                    onUnstage?(node.path)
+                } label: {
+                    Label("Unstage File", systemImage: "minus.circle")
+                }
+            } else {
+                Button {
+                    onStage?(node.path)
+                } label: {
+                    Label("Stage File", systemImage: "plus.circle")
+                }
+
+                if !node.isUntracked {
+                    Button(role: .destructive) {
+                        onDiscard?(node.path)
+                    } label: {
+                        Label("Discard Changes", systemImage: "xmark.circle")
+                    }
+                }
+            }
+
+            Divider()
+
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(node.path, forType: .string)
+            } label: {
+                Label("Copy Path", systemImage: "doc.on.doc")
+            }
+
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(node.name, forType: .string)
+            } label: {
+                Label("Copy Filename", systemImage: "doc.text")
+            }
+
+            Divider()
+
+            Button {
+                NSWorkspace.shared.selectFile(node.path, inFileViewerRootedAtPath: "")
+            } label: {
+                Label("Reveal in Finder", systemImage: "folder")
+            }
+        }
+    }
+
+    // Sort: folders first, then files alphabetically
+    private func sortNodes(_ a: FileTreeNode, _ b: FileTreeNode) -> Bool {
+        if a.isFolder && !b.isFolder { return true }
+        if !a.isFolder && b.isFolder { return false }
+        return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
     }
 }
 
