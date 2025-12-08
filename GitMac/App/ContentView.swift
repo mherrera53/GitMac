@@ -6,6 +6,10 @@ struct ContentView: View {
     @StateObject private var themeManager = ThemeManager.shared
     @State private var showCloneSheet = false
     @State private var showOpenPanel = false
+    @State private var showNewBranchSheet = false
+    @State private var showMergeSheet = false
+    @State private var isOperationInProgress = false
+    @State private var operationMessage = ""
     @State private var leftPanelWidth: CGFloat = 220
     @State private var rightPanelWidth: CGFloat = 380
 
@@ -74,6 +78,25 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .popStash)) { _ in
             handlePopStash()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .newBranch)) { _ in
+            showNewBranchSheet = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .merge)) { _ in
+            showMergeSheet = true
+        }
+        .sheet(isPresented: $showNewBranchSheet) {
+            CreateBranchSheet(isPresented: $showNewBranchSheet)
+                .environmentObject(appState)
+        }
+        .sheet(isPresented: $showMergeSheet) {
+            MergeBranchSheet(isPresented: $showMergeSheet)
+                .environmentObject(appState)
+        }
+        .overlay {
+            if isOperationInProgress {
+                OperationProgressOverlay(message: operationMessage)
+            }
+        }
         .alert("Error", isPresented: .constant(appState.errorMessage != nil)) {
             Button("OK") {
                 appState.errorMessage = nil
@@ -85,6 +108,8 @@ struct ContentView: View {
 
     private func handleFetch() {
         guard appState.currentRepository != nil else { return }
+        isOperationInProgress = true
+        operationMessage = "Fetching from remote..."
         Task {
             do {
                 try await appState.gitService.fetch()
@@ -92,11 +117,16 @@ struct ContentView: View {
             } catch {
                 appState.errorMessage = "Fetch failed: \(error.localizedDescription)"
             }
+            await MainActor.run {
+                isOperationInProgress = false
+            }
         }
     }
 
     private func handlePull() {
         guard appState.currentRepository != nil else { return }
+        isOperationInProgress = true
+        operationMessage = "Pulling changes..."
         Task {
             do {
                 try await appState.gitService.pull()
@@ -104,17 +134,25 @@ struct ContentView: View {
             } catch {
                 appState.errorMessage = "Pull failed: \(error.localizedDescription)"
             }
+            await MainActor.run {
+                isOperationInProgress = false
+            }
         }
     }
 
     private func handlePush() {
         guard appState.currentRepository != nil else { return }
+        isOperationInProgress = true
+        operationMessage = "Pushing to remote..."
         Task {
             do {
                 try await appState.gitService.push()
                 await appState.refresh()
             } catch {
                 appState.errorMessage = "Push failed: \(error.localizedDescription)"
+            }
+            await MainActor.run {
+                isOperationInProgress = false
             }
         }
     }
@@ -123,7 +161,7 @@ struct ContentView: View {
         guard appState.currentRepository != nil else { return }
         Task {
             do {
-                try await appState.gitService.stash()
+                _ = try await appState.gitService.stash()
                 await appState.refresh()
             } catch {
                 appState.errorMessage = "Stash failed: \(error.localizedDescription)"
@@ -150,8 +188,11 @@ struct GitKrakenLayout: View {
     @Binding var leftPanelWidth: CGFloat
     @Binding var rightPanelWidth: CGFloat
     @State private var selectedFileDiff: FileDiff?
+    @State private var isLoadingDiff = false
     @State private var showTerminal = false
+    @State private var showTaiga = false
     @State private var terminalHeight: CGFloat = 200
+    @State private var taigaHeight: CGFloat = 250
 
     var body: some View {
         VStack(spacing: 0) {
@@ -165,7 +206,7 @@ struct GitKrakenLayout: View {
                 PanelResizer(width: $leftPanelWidth, minWidth: 180, maxWidth: 350)
 
                 // Center Panel - Graph OR Diff
-                CenterPanel(selectedFileDiff: $selectedFileDiff, showTerminal: $showTerminal)
+                CenterPanel(selectedFileDiff: $selectedFileDiff, isLoadingDiff: $isLoadingDiff, showTerminal: $showTerminal, showTaiga: $showTaiga)
                     .frame(maxWidth: .infinity)
                     .background(GitKrakenTheme.background)
 
@@ -173,7 +214,7 @@ struct GitKrakenLayout: View {
                 PanelResizer(width: $rightPanelWidth, minWidth: 300, maxWidth: 500, isRight: true)
 
                 // Right Panel - Staging/Commit
-                RightStagingPanel(selectedFileDiff: $selectedFileDiff)
+                RightStagingPanel(selectedFileDiff: $selectedFileDiff, isLoadingDiff: $isLoadingDiff)
                     .frame(width: rightPanelWidth)
                     .background(GitKrakenTheme.panel)
             }
@@ -181,6 +222,11 @@ struct GitKrakenLayout: View {
             // Terminal Panel (togglable)
             if showTerminal {
                 TerminalPanel(height: $terminalHeight, onClose: { showTerminal = false })
+            }
+
+            // Taiga Panel (togglable)
+            if showTaiga {
+                TaigaTicketsPanel(height: $taigaHeight, onClose: { showTaiga = false })
             }
         }
     }
@@ -239,18 +285,31 @@ struct TerminalResizer: View {
 struct CenterPanel: View {
     @EnvironmentObject var appState: AppState
     @Binding var selectedFileDiff: FileDiff?
+    @Binding var isLoadingDiff: Bool
     @Binding var showTerminal: Bool
+    @Binding var showTaiga: Bool
 
     var body: some View {
         VStack(spacing: 0) {
-            if let fileDiff = selectedFileDiff {
+            if isLoadingDiff {
+                // Loading indicator
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text("Loading preview...")
+                        .font(.system(size: 13))
+                        .foregroundColor(GitKrakenTheme.textSecondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(GitKrakenTheme.background)
+            } else if let fileDiff = selectedFileDiff {
                 // Diff View with close button
-                DiffViewWithClose(fileDiff: fileDiff) {
+                DiffViewWithClose(fileDiff: fileDiff, repoPath: appState.currentRepository?.path) {
                     selectedFileDiff = nil
                 }
             } else {
                 // Graph View
-                GraphToolbar(showTerminal: $showTerminal)
+                GraphToolbar(showTerminal: $showTerminal, showTaiga: $showTaiga)
                 if appState.currentRepository != nil {
                     CommitGraphView()
                 } else {
@@ -264,6 +323,7 @@ struct CenterPanel: View {
 // MARK: - Diff View with Close
 struct DiffViewWithClose: View {
     let fileDiff: FileDiff
+    var repoPath: String? = nil
     let onClose: () -> Void
 
     var body: some View {
@@ -306,7 +366,7 @@ struct DiffViewWithClose: View {
             Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
 
             // Diff content
-            GitKrakenDiffContent(fileDiff: fileDiff)
+            GitKrakenDiffContent(fileDiff: fileDiff, repoPath: repoPath)
         }
     }
 }
@@ -314,17 +374,11 @@ struct DiffViewWithClose: View {
 // MARK: - GitKraken Diff Content
 struct GitKrakenDiffContent: View {
     let fileDiff: FileDiff
+    var repoPath: String? = nil
 
     var body: some View {
         if fileDiff.isBinary {
-            VStack(spacing: 16) {
-                Image(systemName: "doc.fill")
-                    .font(.system(size: 48))
-                    .foregroundColor(GitKrakenTheme.textMuted)
-                Text("Binary file - cannot display diff")
-                    .foregroundColor(GitKrakenTheme.textSecondary)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            BinaryFileView(filename: fileDiff.displayPath, repoPath: repoPath)
         } else {
             ScrollView([.vertical, .horizontal]) {
                 VStack(alignment: .leading, spacing: 0) {
@@ -445,7 +499,7 @@ struct PanelResizer: View {
 // MARK: - Left Sidebar Panel (GitKraken style)
 struct LeftSidebarPanel: View {
     @EnvironmentObject var appState: AppState
-    @State private var expandedSections: Set<String> = ["local", "remote"]
+    @State private var expandedSections: Set<String> = ["repos", "local", "remote"]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -466,6 +520,13 @@ struct LeftSidebarPanel: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 2) {
+                    // REPOSITORIES Section - Recently opened repos
+                    SidebarSection(title: "REPOSITORIES", isExpanded: expandedSections.contains("repos")) {
+                        expandedSections.toggle("repos")
+                    } content: {
+                        RecentRepositoriesList()
+                    }
+
                     // LOCAL Section - Show master/main + 3 most recent branches
                     SidebarSection(title: "LOCAL", isExpanded: expandedSections.contains("local")) {
                         expandedSections.toggle("local")
@@ -655,6 +716,104 @@ struct WorktreeSidebarRow: View {
     }
 }
 
+// MARK: - Recent Repositories List
+struct RecentRepositoriesList: View {
+    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var recentReposManager: RecentRepositoriesManager
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(recentReposManager.recentRepos) { repo in
+                SidebarRecentRepoRow(repo: repo, isActive: appState.currentRepository?.path == repo.path)
+            }
+
+            if recentReposManager.recentRepos.isEmpty {
+                Text("No recent repositories")
+                    .font(.system(size: 10))
+                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+            }
+
+            // Open folder button
+            Button {
+                let panel = NSOpenPanel()
+                panel.canChooseFiles = false
+                panel.canChooseDirectories = true
+                panel.allowsMultipleSelection = false
+                panel.message = "Select a Git repository folder"
+
+                if panel.runModal() == .OK, let url = panel.url {
+                    Task {
+                        await appState.openRepository(at: url.path)
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "folder.badge.plus")
+                        .font(.system(size: 10))
+                    Text("Open Repository")
+                        .font(.system(size: 10))
+                }
+                .foregroundColor(GitKrakenTheme.textMuted)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+        }
+    }
+}
+
+struct SidebarRecentRepoRow: View {
+    let repo: RecentRepository
+    let isActive: Bool
+    @EnvironmentObject var appState: AppState
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "folder.fill.badge.gearshape")
+                .font(.system(size: 11))
+                .foregroundColor(isActive ? GitKrakenTheme.accent : GitKrakenTheme.accentCyan)
+
+            Text(repo.name)
+                .font(.system(size: 11))
+                .foregroundColor(isActive ? GitKrakenTheme.accent : GitKrakenTheme.textSecondary)
+                .lineLimit(1)
+
+            Spacer()
+
+            if isActive {
+                Circle()
+                    .fill(GitKrakenTheme.accentGreen)
+                    .frame(width: 6, height: 6)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .background(isHovered ? GitKrakenTheme.hover : (isActive ? GitKrakenTheme.hover.opacity(0.5) : Color.clear))
+        .onHover { isHovered = $0 }
+        .onTapGesture {
+            Task {
+                await appState.openRepository(at: repo.path)
+            }
+        }
+        .contextMenu {
+            Button("Open in Finder") {
+                NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: repo.path)
+            }
+            Button("Copy Path") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(repo.path, forType: .string)
+            }
+            Divider()
+            Button("Remove from List", role: .destructive) {
+                RecentRepositoriesManager.shared.removeRecent(path: repo.path)
+            }
+        }
+    }
+}
+
 // MARK: - Sidebar Section
 struct SidebarSection<Content: View>: View {
     let title: String
@@ -821,6 +980,7 @@ struct TagSidebarRow: View {
 struct GraphToolbar: View {
     @EnvironmentObject var appState: AppState
     @Binding var showTerminal: Bool
+    @Binding var showTaiga: Bool
     @State private var searchText = ""
 
     var body: some View {
@@ -878,6 +1038,15 @@ struct GraphToolbar: View {
                 isActive: showTerminal
             ) {
                 showTerminal.toggle()
+            }
+
+            // Taiga button
+            ToolbarIconButton(
+                icon: showTaiga ? "ticket.fill" : "ticket",
+                tooltip: showTaiga ? "Hide Taiga" : "Show Taiga",
+                isActive: showTaiga
+            ) {
+                showTaiga.toggle()
             }
 
             Spacer()
@@ -964,6 +1133,7 @@ struct ToolbarButton: View {
 struct RightStagingPanel: View {
     @EnvironmentObject var appState: AppState
     @Binding var selectedFileDiff: FileDiff?
+    @Binding var isLoadingDiff: Bool
     @State private var commitMessage = ""
     @StateObject private var stagingVM = StagingViewModel()
     @StateObject private var commitDetailVM = CommitDetailViewModel()
@@ -983,6 +1153,7 @@ struct RightStagingPanel: View {
                 StagingAreaPanel(
                     stagingVM: stagingVM,
                     selectedFileDiff: $selectedFileDiff,
+                    isLoadingDiff: $isLoadingDiff,
                     commitMessage: $commitMessage
                 )
             }
@@ -1009,6 +1180,7 @@ struct RightStagingPanel: View {
 struct StagingAreaPanel: View {
     @ObservedObject var stagingVM: StagingViewModel
     @Binding var selectedFileDiff: FileDiff?
+    @Binding var isLoadingDiff: Bool
     @Binding var commitMessage: String
     @EnvironmentObject var appState: AppState
     @State private var viewMode: StagingViewMode = .tree
@@ -1027,8 +1199,10 @@ struct StagingAreaPanel: View {
                 actionColor: GitKrakenTheme.accentGreen,
                 onAction: { stagingVM.stageAll() },
                 viewMode: viewMode,
-                files: filteredUnstagedFiles,
+                files: stagingVM.unstagedFiles,  // Pass ALL files
                 isStaged: false,
+                selectedFilePath: selectedFileDiff?.newPath,
+                extensionFilter: extensionFilter,  // Pass filter separately
                 onSelect: loadDiff,
                 onStage: { stagingVM.stage(file: $0) },
                 onStageFolder: { stagingVM.stageFolder($0) }
@@ -1044,8 +1218,10 @@ struct StagingAreaPanel: View {
                 actionColor: GitKrakenTheme.accentRed,
                 onAction: { stagingVM.unstageAll() },
                 viewMode: viewMode,
-                files: filteredStagedFiles,
+                files: stagingVM.stagedFiles,  // Pass ALL files
                 isStaged: true,
+                selectedFilePath: selectedFileDiff?.newPath,
+                extensionFilter: extensionFilter,  // Pass filter separately
                 onSelect: loadDiff,
                 onStage: { stagingVM.unstage(file: $0) },
                 onStageFolder: { stagingVM.unstageFolder($0) }
@@ -1143,10 +1319,13 @@ struct StagingAreaPanel: View {
 
     private func loadDiff(for file: StagingFile) {
         guard let path = appState.currentRepository?.path else { return }
+        isLoadingDiff = true
+        selectedFileDiff = nil
         Task {
             if let diff = await stagingVM.getDiff(for: file, at: path) {
                 selectedFileDiff = diff
             }
+            isLoadingDiff = false
         }
     }
 }
@@ -1167,11 +1346,19 @@ struct StagingSectionWithTree: View {
     let viewMode: StagingViewMode
     let files: [StagingFile]
     let isStaged: Bool
+    let selectedFilePath: String?
+    let extensionFilter: String?
     let onSelect: (StagingFile) -> Void
     let onStage: (StagingFile) -> Void
     let onStageFolder: (String) -> Void
 
     @State private var isExpanded = true
+
+    /// Files filtered by extension (for flat view and empty check)
+    private var filteredFiles: [StagingFile] {
+        guard let ext = extensionFilter else { return files }
+        return files.filter { ($0.path as NSString).pathExtension.lowercased() == ext.lowercased() }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1216,7 +1403,7 @@ struct StagingSectionWithTree: View {
             if isExpanded {
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        if files.isEmpty {
+                        if filteredFiles.isEmpty {
                             Text(isStaged ? "No staged changes" : "No unstaged changes")
                                 .font(.system(size: 11))
                                 .foregroundColor(GitKrakenTheme.textMuted)
@@ -1224,17 +1411,20 @@ struct StagingSectionWithTree: View {
                                 .padding(.vertical, 16)
                         } else if viewMode == .tree {
                             StagingTreeView(
-                                files: files,
+                                files: files,  // Pass ALL files to build full tree
                                 isStaged: isStaged,
+                                selectedFilePath: selectedFilePath,
+                                extensionFilter: extensionFilter,  // Filter applied in tree
                                 onSelect: onSelect,
                                 onStage: onStage,
                                 onStageFolder: onStageFolder
                             )
                         } else {
-                            ForEach(files) { file in
+                            ForEach(filteredFiles) { file in
                                 ClickableFileRow(
                                     file: file,
                                     isStaged: isStaged,
+                                    isSelected: file.path == selectedFilePath,
                                     onSelect: { onSelect(file) },
                                     onStage: { onStage(file) }
                                 )
@@ -1251,16 +1441,20 @@ struct StagingSectionWithTree: View {
 struct StagingTreeView: View {
     let files: [StagingFile]
     let isStaged: Bool
+    let selectedFilePath: String?
+    let extensionFilter: String?
     let onSelect: (StagingFile) -> Void
     let onStage: (StagingFile) -> Void
     let onStageFolder: (String) -> Void
 
     var body: some View {
         let tree = buildTree()
-        ForEach(tree.children.sorted(by: sortNodes)) { node in
+        ForEach(tree.children.sorted(by: sortNodes).filter { nodeMatchesFilter($0) }) { node in
             StagingTreeNodeView(
                 node: node,
                 isStaged: isStaged,
+                selectedFilePath: selectedFilePath,
+                extensionFilter: extensionFilter,
                 onSelect: onSelect,
                 onStage: onStage,
                 onStageFolder: onStageFolder
@@ -1304,6 +1498,20 @@ struct StagingTreeView: View {
         if !a.isFolder && b.isFolder { return false }
         return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
     }
+
+    /// Check if a node or any of its descendants match the extension filter
+    private func nodeMatchesFilter(_ node: StagingTreeNode) -> Bool {
+        guard let ext = extensionFilter else { return true }
+
+        if node.isFolder {
+            // Folder matches if any child matches
+            return node.children.contains { nodeMatchesFilter($0) }
+        } else {
+            // File matches if extension matches
+            let fileExt = (node.path as NSString).pathExtension.lowercased()
+            return fileExt == ext.lowercased()
+        }
+    }
 }
 
 // MARK: - Staging Tree Node
@@ -1331,12 +1539,29 @@ class StagingTreeNode: Identifiable, ObservableObject {
 struct StagingTreeNodeView: View {
     @ObservedObject var node: StagingTreeNode
     let isStaged: Bool
+    let selectedFilePath: String?
+    let extensionFilter: String?
     let onSelect: (StagingFile) -> Void
     let onStage: (StagingFile) -> Void
     let onStageFolder: (String) -> Void
 
     @State private var isExpanded = true
     @State private var isHovered = false
+
+    private var isSelected: Bool {
+        guard let file = node.file, let selectedPath = selectedFilePath else { return false }
+        return file.path == selectedPath
+    }
+
+    /// Filtered children based on extension filter
+    private var filteredChildren: [StagingTreeNode] {
+        node.children.sorted(by: { sortNodes($0, $1) }).filter { nodeMatchesFilter($0) }
+    }
+
+    /// Count of files matching the filter
+    private var filteredFileCount: Int {
+        countMatchingFiles(in: node)
+    }
 
     var body: some View {
         if node.isFolder {
@@ -1368,7 +1593,7 @@ struct StagingTreeNodeView: View {
                     .foregroundColor(GitKrakenTheme.textPrimary)
                     .lineLimit(1)
 
-                Text("(\(node.fileCount))")
+                Text("(\(filteredFileCount))")
                     .font(.system(size: 10))
                     .foregroundColor(GitKrakenTheme.textMuted)
 
@@ -1400,10 +1625,12 @@ struct StagingTreeNodeView: View {
             }
 
             if isExpanded {
-                ForEach(node.children.sorted(by: { sortNodes($0, $1) })) { child in
+                ForEach(filteredChildren) { child in
                     StagingTreeNodeView(
                         node: child,
                         isStaged: isStaged,
+                        selectedFilePath: selectedFilePath,
+                        extensionFilter: extensionFilter,
                         onSelect: onSelect,
                         onStage: onStage,
                         onStageFolder: onStageFolder
@@ -1411,6 +1638,27 @@ struct StagingTreeNodeView: View {
                     .padding(.leading, 14)
                 }
             }
+        }
+    }
+
+    /// Check if a node or any of its descendants match the extension filter
+    private func nodeMatchesFilter(_ node: StagingTreeNode) -> Bool {
+        guard let ext = extensionFilter else { return true }
+
+        if node.isFolder {
+            return node.children.contains { nodeMatchesFilter($0) }
+        } else {
+            let fileExt = (node.path as NSString).pathExtension.lowercased()
+            return fileExt == ext.lowercased()
+        }
+    }
+
+    /// Count files matching the filter in a node and its descendants
+    private func countMatchingFiles(in node: StagingTreeNode) -> Int {
+        if node.isFolder {
+            return node.children.reduce(0) { $0 + countMatchingFiles(in: $1) }
+        } else {
+            return nodeMatchesFilter(node) ? 1 : 0
         }
     }
 
@@ -1447,6 +1695,10 @@ struct StagingTreeNodeView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(isSelected ? Color.accentColor.opacity(0.3) : (isHovered ? GitKrakenTheme.hover : Color.clear))
+        )
         .contentShape(Rectangle())
         .onTapGesture {
             if let file = node.file { onSelect(file) }
@@ -1882,6 +2134,11 @@ class StagingViewModel: ObservableObject {
     }
 
     func getDiff(for file: StagingFile, at path: String) async -> FileDiff? {
+        // For untracked files, show file content as new additions
+        if file.status == .untracked {
+            return await getUntrackedFileDiff(for: file, at: path)
+        }
+
         do {
             let diffString = try await engine.getDiff(for: file.path, staged: file.isStaged, at: path)
             let diffs = DiffParser.parse(diffString)
@@ -1890,6 +2147,66 @@ class StagingViewModel: ObservableObject {
             print("Error getting diff: \(error)")
             return nil
         }
+    }
+
+    private func getUntrackedFileDiff(for file: StagingFile, at repoPath: String) async -> FileDiff? {
+        let fullPath = (repoPath as NSString).appendingPathComponent(file.path)
+
+        // Read file content
+        guard let content = try? String(contentsOfFile: fullPath, encoding: .utf8) else {
+            // Try to read as binary/image indicator
+            if FileManager.default.fileExists(atPath: fullPath) {
+                return FileDiff(
+                    oldPath: "/dev/null",
+                    newPath: file.path,
+                    status: .untracked,
+                    hunks: [DiffHunk(
+                        header: "@@ -0,0 +1 @@",
+                        oldStart: 0,
+                        oldLines: 0,
+                        newStart: 1,
+                        newLines: 1,
+                        lines: [DiffLine(type: .context, content: "[Binary or unreadable file]", oldLineNumber: nil, newLineNumber: 1)]
+                    )],
+                    isBinary: true,
+                    additions: 0,
+                    deletions: 0
+                )
+            }
+            return nil
+        }
+
+        // Create diff lines showing all content as additions
+        let lines = content.components(separatedBy: .newlines)
+        var diffLines: [DiffLine] = []
+
+        for (index, line) in lines.enumerated() {
+            diffLines.append(DiffLine(
+                type: .addition,
+                content: line,
+                oldLineNumber: nil,
+                newLineNumber: index + 1
+            ))
+        }
+
+        let hunk = DiffHunk(
+            header: "@@ -0,0 +1,\(lines.count) @@",
+            oldStart: 0,
+            oldLines: 0,
+            newStart: 1,
+            newLines: lines.count,
+            lines: diffLines
+        )
+
+        return FileDiff(
+            oldPath: "/dev/null",
+            newPath: file.path,
+            status: .untracked,
+            hunks: [hunk],
+            isBinary: false,
+            additions: lines.count,
+            deletions: 0
+        )
     }
 }
 
@@ -1993,6 +2310,7 @@ struct StagingSection<Content: View>: View {
 struct ClickableFileRow: View {
     let file: StagingFile
     let isStaged: Bool
+    var isSelected: Bool = false
     let onSelect: () -> Void
     let onStage: () -> Void
     @State private var isHovered = false
@@ -2030,7 +2348,10 @@ struct ClickableFileRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(isHovered ? GitKrakenTheme.hover : Color.clear)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(isSelected ? Color.accentColor.opacity(0.3) : (isHovered ? GitKrakenTheme.hover : Color.clear))
+        )
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
         .onTapGesture { onSelect() }
@@ -2043,8 +2364,68 @@ struct CommitSection: View {
     let canCommit: Bool
     let onCommit: () -> Void
 
+    @State private var linkedTaigaRef: String?
+    @State private var linkedTaigaSubject: String?
+    @State private var showStatusPicker = false
+
     var body: some View {
         VStack(spacing: 8) {
+            // Linked Taiga ticket indicator
+            if let ref = linkedTaigaRef {
+                HStack(spacing: 6) {
+                    Image(systemName: "ticket.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.green)
+
+                    Text(ref)
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundColor(.green)
+
+                    if let subject = linkedTaigaSubject {
+                        Text(subject)
+                            .font(.system(size: 10))
+                            .foregroundColor(GitKrakenTheme.textSecondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    // Status picker
+                    Menu {
+                        Button("No status change") {
+                            updateCommitWithTaiga(ref: ref, status: nil)
+                        }
+                        Divider()
+                        Button("#new") { updateCommitWithTaiga(ref: ref, status: "new") }
+                        Button("#in-progress") { updateCommitWithTaiga(ref: ref, status: "in-progress") }
+                        Button("#ready-for-test") { updateCommitWithTaiga(ref: ref, status: "ready-for-test") }
+                        Button("#closed") { updateCommitWithTaiga(ref: ref, status: "closed") }
+                    } label: {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 10))
+                            .foregroundColor(GitKrakenTheme.accent)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .frame(width: 20)
+                    .help("Change status with commit")
+
+                    // Remove link
+                    Button {
+                        removeTaigaLink()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(GitKrakenTheme.textMuted)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Remove Taiga link")
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(Color.green.opacity(0.1))
+                .cornerRadius(4)
+            }
+
             ZStack(alignment: .topLeading) {
                 if commitMessage.isEmpty {
                     Text("Commit message...")
@@ -2080,6 +2461,54 @@ struct CommitSection: View {
         }
         .padding(12)
         .background(GitKrakenTheme.backgroundSecondary)
+        .onReceive(NotificationCenter.default.publisher(for: .insertTaigaRef)) { notification in
+            if let userInfo = notification.userInfo,
+               let ref = userInfo["ref"] as? String {
+                linkedTaigaRef = ref
+                linkedTaigaSubject = userInfo["subject"] as? String
+
+                // Insert at the end of commit message
+                if !commitMessage.contains(ref) {
+                    if commitMessage.isEmpty {
+                        commitMessage = "\(ref) "
+                    } else {
+                        commitMessage += " \(ref)"
+                    }
+                }
+            }
+        }
+    }
+
+    private func updateCommitWithTaiga(ref: String, status: String?) {
+        // Remove any existing TG reference with status
+        let pattern = "\(ref)(\\s+#[a-z-]+)?"
+        if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+            let range = NSRange(commitMessage.startIndex..., in: commitMessage)
+            commitMessage = regex.stringByReplacingMatches(in: commitMessage, range: range, withTemplate: "")
+            commitMessage = commitMessage.trimmingCharacters(in: .whitespaces)
+        }
+
+        // Add new reference with status
+        let newRef = status != nil ? "\(ref) #\(status!)" : ref
+        if commitMessage.isEmpty {
+            commitMessage = "\(newRef) "
+        } else {
+            commitMessage += " \(newRef)"
+        }
+    }
+
+    private func removeTaigaLink() {
+        if let ref = linkedTaigaRef {
+            // Remove TG reference from message
+            let pattern = "\(ref)(\\s+#[a-z-]+)?"
+            if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+                let range = NSRange(commitMessage.startIndex..., in: commitMessage)
+                commitMessage = regex.stringByReplacingMatches(in: commitMessage, range: range, withTemplate: "")
+                commitMessage = commitMessage.trimmingCharacters(in: .whitespaces)
+            }
+        }
+        linkedTaigaRef = nil
+        linkedTaigaSubject = nil
     }
 }
 
@@ -2700,6 +3129,330 @@ extension Set where Element == String {
             remove(element)
         } else {
             insert(element)
+        }
+    }
+}
+
+// MARK: - Create Branch Sheet (Standalone)
+struct CreateBranchSheet: View {
+    @EnvironmentObject var appState: AppState
+    @Binding var isPresented: Bool
+
+    @State private var branchName = ""
+    @State private var baseBranch = "HEAD"
+    @State private var checkoutAfterCreate = true
+    @State private var isCreating = false
+    @State private var errorMessage: String?
+
+    var localBranches: [Branch] {
+        appState.currentRepository?.branches ?? []
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Create New Branch")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(GitKrakenTheme.textPrimary)
+                Spacer()
+                Button {
+                    isPresented = false
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(GitKrakenTheme.textMuted)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(16)
+            .background(GitKrakenTheme.toolbar)
+
+            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+
+            // Content
+            VStack(alignment: .leading, spacing: 16) {
+                // Branch name
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Branch Name")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(GitKrakenTheme.textSecondary)
+
+                    TextField("feature/my-branch", text: $branchName)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 13))
+                        .padding(8)
+                        .background(GitKrakenTheme.backgroundSecondary)
+                        .cornerRadius(6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(GitKrakenTheme.border, lineWidth: 1)
+                        )
+                }
+
+                // Base branch
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Based On")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(GitKrakenTheme.textSecondary)
+
+                    Picker("", selection: $baseBranch) {
+                        Text("Current HEAD").tag("HEAD")
+                        ForEach(localBranches) { branch in
+                            Text(branch.name).tag(branch.name)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                }
+
+                // Checkout toggle
+                Toggle(isOn: $checkoutAfterCreate) {
+                    Text("Checkout after creating")
+                        .font(.system(size: 12))
+                        .foregroundColor(GitKrakenTheme.textSecondary)
+                }
+                .toggleStyle(.checkbox)
+
+                if let error = errorMessage {
+                    Text(error)
+                        .font(.system(size: 11))
+                        .foregroundColor(GitKrakenTheme.accentRed)
+                }
+            }
+            .padding(16)
+
+            Spacer()
+
+            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+
+            // Footer
+            HStack {
+                Button("Cancel") {
+                    isPresented = false
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(GitKrakenTheme.textSecondary)
+
+                Spacer()
+
+                Button {
+                    createBranch()
+                } label: {
+                    if isCreating {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                            .frame(width: 60)
+                    } else {
+                        Text("Create")
+                            .frame(minWidth: 60)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(branchName.isEmpty || isCreating)
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(16)
+        }
+        .frame(width: 380, height: 320)
+        .background(GitKrakenTheme.panel)
+    }
+
+    private func createBranch() {
+        isCreating = true
+        errorMessage = nil
+
+        Task {
+            do {
+                _ = try await appState.gitService.createBranch(
+                    named: branchName,
+                    from: baseBranch,
+                    checkout: checkoutAfterCreate
+                )
+                await appState.refresh()
+                await MainActor.run {
+                    isPresented = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    isCreating = false
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Operation Progress Overlay
+struct OperationProgressOverlay: View {
+    let message: String
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .progressViewStyle(.circular)
+
+                Text(message)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(GitKrakenTheme.textPrimary)
+            }
+            .padding(32)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(GitKrakenTheme.panel)
+                    .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+            )
+        }
+    }
+}
+
+// MARK: - Merge Branch Sheet
+struct MergeBranchSheet: View {
+    @EnvironmentObject var appState: AppState
+    @Binding var isPresented: Bool
+
+    @State private var selectedBranch: String = ""
+    @State private var noFastForward = false
+    @State private var isMerging = false
+    @State private var errorMessage: String?
+
+    var localBranches: [Branch] {
+        appState.currentRepository?.branches.filter { !$0.isHead } ?? []
+    }
+
+    var currentBranchName: String {
+        appState.currentRepository?.currentBranch?.name ?? "current branch"
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Merge Branch")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(GitKrakenTheme.textPrimary)
+                Spacer()
+                Button {
+                    isPresented = false
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(GitKrakenTheme.textMuted)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(16)
+            .background(GitKrakenTheme.toolbar)
+
+            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+
+            // Content
+            VStack(alignment: .leading, spacing: 16) {
+                // Source branch
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Merge Branch")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(GitKrakenTheme.textSecondary)
+
+                    Picker("", selection: $selectedBranch) {
+                        Text("Select a branch...").tag("")
+                        ForEach(localBranches) { branch in
+                            Text(branch.name).tag(branch.name)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                }
+
+                // Info
+                if !selectedBranch.isEmpty {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.triangle.merge")
+                            .foregroundColor(GitKrakenTheme.accent)
+                        Text("Merge '\(selectedBranch)' into '\(currentBranchName)'")
+                            .font(.system(size: 12))
+                            .foregroundColor(GitKrakenTheme.textSecondary)
+                    }
+                    .padding(10)
+                    .background(GitKrakenTheme.backgroundSecondary)
+                    .cornerRadius(6)
+                }
+
+                // Options
+                Toggle(isOn: $noFastForward) {
+                    Text("Create merge commit (no fast-forward)")
+                        .font(.system(size: 12))
+                        .foregroundColor(GitKrakenTheme.textSecondary)
+                }
+                .toggleStyle(.checkbox)
+
+                if let error = errorMessage {
+                    Text(error)
+                        .font(.system(size: 11))
+                        .foregroundColor(GitKrakenTheme.accentRed)
+                }
+            }
+            .padding(16)
+
+            Spacer()
+
+            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+
+            // Footer
+            HStack {
+                Button("Cancel") {
+                    isPresented = false
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(GitKrakenTheme.textSecondary)
+
+                Spacer()
+
+                Button {
+                    mergeBranch()
+                } label: {
+                    if isMerging {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                            .frame(width: 60)
+                    } else {
+                        Text("Merge")
+                            .frame(minWidth: 60)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(selectedBranch.isEmpty || isMerging)
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(16)
+        }
+        .frame(width: 400, height: 300)
+        .background(GitKrakenTheme.panel)
+    }
+
+    private func mergeBranch() {
+        guard !selectedBranch.isEmpty else { return }
+        isMerging = true
+        errorMessage = nil
+
+        Task {
+            do {
+                try await appState.gitService.merge(branch: selectedBranch, noFastForward: noFastForward)
+                await appState.refresh()
+                await MainActor.run {
+                    isPresented = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    isMerging = false
+                }
+            }
         }
     }
 }
