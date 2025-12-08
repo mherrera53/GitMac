@@ -124,7 +124,7 @@ struct BranchListView: View {
             }
             Button("Stash & Checkout") {
                 Task {
-                    try? await viewModel.gitService.stash()
+                    _ = try? await viewModel.gitService.stash()
                     await viewModel.forceCheckout()
                 }
             }

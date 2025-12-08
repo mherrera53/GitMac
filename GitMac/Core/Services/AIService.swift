@@ -45,9 +45,11 @@ actor AIService {
                 ]
             case .gemini:
                 return [
-                    AIModel(id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", provider: self),
-                    AIModel(id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", provider: self),
-                    AIModel(id: "gemini-pro", name: "Gemini Pro", provider: self)
+                    AIModel(id: "gemini-3-pro-preview", name: "Gemini 3 Pro (Latest)", provider: self),
+                    AIModel(id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", provider: self),
+                    AIModel(id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", provider: self),
+                    AIModel(id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", provider: self),
+                    AIModel(id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", provider: self)
                 ]
             }
         }

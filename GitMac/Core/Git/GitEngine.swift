@@ -364,14 +364,40 @@ actor GitEngine {
 
     /// Get repository status
     func getStatus(at path: String) async throws -> RepositoryStatus {
-        let result = await shellExecutor.execute(
+        // Get status and diff stats in parallel
+        async let statusResult = shellExecutor.execute(
             "git",
             arguments: ["status", "--porcelain=v1", "-uall"],
             workingDirectory: path
         )
+        async let unstagedStats = shellExecutor.execute(
+            "git",
+            arguments: ["diff", "--numstat"],
+            workingDirectory: path
+        )
+        async let stagedStats = shellExecutor.execute(
+            "git",
+            arguments: ["diff", "--cached", "--numstat"],
+            workingDirectory: path
+        )
 
+        let result = await statusResult
         guard result.exitCode == 0 else {
             throw GitError.commandFailed("git status", result.stderr)
+        }
+
+        // Parse diff stats into dictionaries
+        let unstagedOutput = await unstagedStats.stdout
+        let stagedOutput = await stagedStats.stdout
+        let unstagedDiffStats = parseDiffStats(unstagedOutput)
+        let stagedDiffStats = parseDiffStats(stagedOutput)
+
+        // Debug logging
+        if !unstagedDiffStats.isEmpty || !stagedDiffStats.isEmpty {
+            print("📊 Diff stats - Unstaged: \(unstagedDiffStats.count) files, Staged: \(stagedDiffStats.count) files")
+            for (path, stats) in unstagedDiffStats.prefix(3) {
+                print("   📄 \(path): +\(stats.0) -\(stats.1)")
+            }
         }
 
         var status = RepositoryStatus()
@@ -381,7 +407,7 @@ actor GitEngine {
 
             let index = line.index(line.startIndex, offsetBy: 0)
             let worktree = line.index(line.startIndex, offsetBy: 1)
-            let path = String(line.dropFirst(3))
+            let filePath = String(line.dropFirst(3))
 
             let indexStatus = String(line[index])
             let worktreeStatus = String(line[worktree])
@@ -389,29 +415,50 @@ actor GitEngine {
             // Handle staged changes
             if indexStatus != " " && indexStatus != "?" {
                 if let statusType = FileStatusType(rawValue: indexStatus) {
-                    status.staged.append(FileStatus(path: path, status: statusType))
+                    let stats = stagedDiffStats[filePath] ?? (0, 0)
+                    status.staged.append(FileStatus(path: filePath, status: statusType, additions: stats.0, deletions: stats.1))
                 }
             }
 
             // Handle unstaged changes
             if worktreeStatus != " " && worktreeStatus != "?" {
                 if let statusType = FileStatusType(rawValue: worktreeStatus) {
-                    status.unstaged.append(FileStatus(path: path, status: statusType))
+                    let stats = unstagedDiffStats[filePath] ?? (0, 0)
+                    status.unstaged.append(FileStatus(path: filePath, status: statusType, additions: stats.0, deletions: stats.1))
                 }
             }
 
             // Handle untracked files
             if indexStatus == "?" && worktreeStatus == "?" {
-                status.untracked.append(path)
+                status.untracked.append(filePath)
             }
 
             // Handle conflicts
             if indexStatus == "U" || worktreeStatus == "U" {
-                status.conflicted.append(FileStatus(path: path, status: .unmerged))
+                status.conflicted.append(FileStatus(path: filePath, status: .unmerged))
             }
         }
 
         return status
+    }
+
+    /// Parse git diff --numstat output into a dictionary of [path: (additions, deletions)]
+    private func parseDiffStats(_ output: String) -> [String: (Int, Int)] {
+        var stats: [String: (Int, Int)] = [:]
+
+        for line in output.components(separatedBy: .newlines) where !line.isEmpty {
+            let parts = line.split(separator: "\t", omittingEmptySubsequences: false)
+            guard parts.count >= 3 else { continue }
+
+            // Binary files show "-" for additions/deletions
+            let additions = Int(parts[0]) ?? 0
+            let deletions = Int(parts[1]) ?? 0
+            let filePath = String(parts[2])
+
+            stats[filePath] = (additions, deletions)
+        }
+
+        return stats
     }
 
     /// Stage files
