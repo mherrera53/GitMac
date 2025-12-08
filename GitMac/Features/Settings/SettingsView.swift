@@ -14,6 +14,11 @@ struct SettingsView: View {
                     Label("Accounts", systemImage: "person.circle")
                 }
 
+            IntegrationsSettingsView()
+                .tabItem {
+                    Label("Integrations", systemImage: "square.grid.2x2")
+                }
+
             AISettingsView()
                 .tabItem {
                     Label("AI", systemImage: "brain")
@@ -28,8 +33,13 @@ struct SettingsView: View {
                 .tabItem {
                     Label("Shortcuts", systemImage: "keyboard")
                 }
+
+            SubscriptionSettingsView()
+                .tabItem {
+                    Label("Subscription", systemImage: "star.fill")
+                }
         }
-        .frame(width: 600, height: 450)
+        .frame(width: 650, height: 550)
     }
 }
 
@@ -726,6 +736,702 @@ struct ShortcutRow: View {
                 .padding(.vertical, 2)
                 .background(Color.secondary.opacity(0.2))
                 .cornerRadius(4)
+        }
+    }
+}
+
+// MARK: - Integrations Settings
+
+struct IntegrationsSettingsView: View {
+    @StateObject private var workspaceManager = WorkspaceSettingsManager.shared
+    @StateObject private var recentReposManager = RecentRepositoriesManager.shared
+
+    // Taiga state
+    @State private var isTaigaConnected = false
+    @State private var taigaUsername = ""
+    @State private var taigaPassword = ""
+    @State private var taigaProjects: [TaigaProject] = []
+    @State private var isLoadingTaiga = false
+    @State private var taigaError: String?
+
+    // Microsoft Planner state
+    @State private var isPlannerConnected = false
+    @State private var plannerPlans: [PlannerPlan] = []
+    @State private var isLoadingPlanner = false
+    @State private var plannerError: String?
+
+    // Current repo
+    @State private var selectedRepoPath: String?
+
+    var body: some View {
+        Form {
+            // Repository selection
+            Section("Repository") {
+                if recentReposManager.recentRepos.isEmpty {
+                    Text("Open a repository to configure integrations")
+                        .foregroundColor(.secondary)
+                } else {
+                    Picker("Configure for", selection: $selectedRepoPath) {
+                        ForEach(recentReposManager.recentRepos) { repo in
+                            Text(repo.name).tag(Optional(repo.path))
+                        }
+                    }
+                    .onAppear {
+                        if selectedRepoPath == nil {
+                            selectedRepoPath = recentReposManager.recentRepos.first?.path
+                        }
+                    }
+                }
+            }
+
+            // Taiga Integration
+            Section("Taiga") {
+                if isTaigaConnected {
+                    TaigaConnectedView(
+                        selectedRepoPath: selectedRepoPath,
+                        projects: taigaProjects,
+                        workspaceManager: workspaceManager,
+                        onDisconnect: disconnectTaiga
+                    )
+                } else {
+                    TaigaLoginView(
+                        username: $taigaUsername,
+                        password: $taigaPassword,
+                        isLoading: isLoadingTaiga,
+                        error: taigaError,
+                        onLogin: loginTaiga
+                    )
+                }
+            }
+
+            // Microsoft Planner Integration
+            Section("Microsoft Planner") {
+                if isPlannerConnected {
+                    PlannerConnectedView(
+                        selectedRepoPath: selectedRepoPath,
+                        plans: plannerPlans,
+                        workspaceManager: workspaceManager,
+                        onDisconnect: disconnectPlanner
+                    )
+                } else {
+                    PlannerLoginView(
+                        isLoading: isLoadingPlanner,
+                        error: plannerError,
+                        onLogin: loginPlanner
+                    )
+                }
+            }
+
+            // Available integrations
+            Section("Other Integrations") {
+                ForEach(IntegrationType.allCases.filter { !$0.isAvailable }) { integration in
+                    HStack {
+                        Image(systemName: integration.icon)
+                            .foregroundColor(Color(hex: integration.color))
+                            .frame(width: 24)
+                        Text(integration.rawValue)
+                        Spacer()
+                        Text("Coming Soon")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(Color.secondary.opacity(0.2))
+                            .cornerRadius(4)
+                    }
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .padding()
+        .task {
+            await loadState()
+        }
+    }
+
+    private func repoName(_ path: String) -> String {
+        URL(fileURLWithPath: path).lastPathComponent
+    }
+
+    private func loadState() async {
+        // Set initial selected repo
+        if selectedRepoPath == nil, let first = recentReposManager.recentRepos.first {
+            selectedRepoPath = first.path
+        }
+
+        // Check Taiga connection
+        if let token = try? await KeychainManager.shared.getTaigaToken(), !token.isEmpty {
+            isTaigaConnected = true
+            await TaigaService.shared.setToken(token)
+            if let userId = try? await KeychainManager.shared.getTaigaUserId() {
+                await TaigaService.shared.setUserId(userId)
+            }
+            await loadTaigaProjects()
+        }
+
+        // Check Planner connection
+        if let token = try? await KeychainManager.shared.getPlannerToken(), !token.isEmpty {
+            await MicrosoftPlannerService.shared.setAccessToken(token)
+            isPlannerConnected = true
+            await loadPlannerPlans()
+        }
+    }
+
+    private func loginTaiga() {
+        isLoadingTaiga = true
+        taigaError = nil
+
+        Task {
+            do {
+                try await TaigaService.shared.authenticate(username: taigaUsername, password: taigaPassword)
+                isTaigaConnected = true
+                taigaPassword = ""
+                await loadTaigaProjects()
+            } catch {
+                taigaError = error.localizedDescription
+            }
+            isLoadingTaiga = false
+        }
+    }
+
+    private func loadTaigaProjects() async {
+        do {
+            taigaProjects = try await TaigaService.shared.listProjects()
+        } catch {
+            taigaError = "Failed to load projects"
+        }
+    }
+
+    private func disconnectTaiga() {
+        Task {
+            try? await KeychainManager.shared.deleteTaigaToken()
+            isTaigaConnected = false
+            taigaProjects = []
+        }
+    }
+
+    private func loginPlanner() {
+        isLoadingPlanner = true
+        plannerError = nil
+
+        Task {
+            // For Microsoft OAuth, we need to implement device flow
+            // For now, show info about how to get a token
+            plannerError = "Use Microsoft Azure AD to obtain an access token"
+            isLoadingPlanner = false
+        }
+    }
+
+    private func loadPlannerPlans() async {
+        do {
+            plannerPlans = try await MicrosoftPlannerService.shared.listPlans()
+        } catch {
+            plannerError = "Failed to load plans"
+        }
+    }
+
+    private func disconnectPlanner() {
+        Task {
+            try? await KeychainManager.shared.deletePlannerToken()
+            isPlannerConnected = false
+            plannerPlans = []
+        }
+    }
+}
+
+// MARK: - Taiga Views
+
+struct TaigaLoginView: View {
+    @Binding var username: String
+    @Binding var password: String
+    let isLoading: Bool
+    let error: String?
+    let onLogin: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "ticket.fill")
+                    .foregroundColor(Color(hex: "4DC8A8"))
+                Text("Connect to Taiga")
+                    .font(.headline)
+            }
+
+            Text("Link your Taiga account to sync user stories, tasks, and issues.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            TextField("Username or Email", text: $username)
+                .textFieldStyle(.roundedBorder)
+
+            SecureField("Password", text: $password)
+                .textFieldStyle(.roundedBorder)
+
+            HStack {
+                Button("Create Account") {
+                    NSWorkspace.shared.open(URL(string: "https://tree.taiga.io/register")!)
+                }
+                .font(.caption)
+
+                Spacer()
+
+                Button("Sign In") {
+                    onLogin()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(username.isEmpty || password.isEmpty || isLoading)
+            }
+
+            if let error = error {
+                Text(error)
+                    .foregroundColor(.red)
+                    .font(.caption)
+            }
+        }
+    }
+}
+
+struct TaigaConnectedView: View {
+    let selectedRepoPath: String?
+    let projects: [TaigaProject]
+    @ObservedObject var workspaceManager: WorkspaceSettingsManager
+    let onDisconnect: () -> Void
+
+    @State private var selectedProjectId: Int?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                Text("Connected to Taiga")
+                    .fontWeight(.medium)
+                Spacer()
+                Button("Disconnect") {
+                    onDisconnect()
+                }
+                .foregroundColor(.red)
+            }
+
+            if let repoPath = selectedRepoPath {
+                let config = workspaceManager.getConfig(for: repoPath)
+
+                Picker("Project for this repository", selection: $selectedProjectId) {
+                    Text("None").tag(nil as Int?)
+                    ForEach(projects) { project in
+                        Text(project.name).tag(Optional(project.id))
+                    }
+                }
+                .onChange(of: selectedProjectId) { _, newValue in
+                    let projectName = projects.first(where: { $0.id == newValue })?.name
+                    workspaceManager.setTaigaProject(for: repoPath, projectId: newValue, projectName: projectName)
+                }
+                .onAppear {
+                    selectedProjectId = config.taigaProjectId
+                }
+
+                if let projectName = config.taigaProjectName {
+                    HStack {
+                        Image(systemName: "folder.fill")
+                            .foregroundColor(Color(hex: "4DC8A8"))
+                        Text("Linked to: \(projectName)")
+                            .font(.caption)
+                    }
+                }
+            } else {
+                Text("Select a repository to assign a project")
+                    .foregroundColor(.secondary)
+                    .font(.caption)
+            }
+        }
+    }
+}
+
+// MARK: - Planner Views
+
+struct PlannerLoginView: View {
+    let isLoading: Bool
+    let error: String?
+    let onLogin: () -> Void
+
+    @State private var clientId = ""
+    @State private var hasClientId = false
+    @State private var isAuthenticating = false
+    @State private var deviceCode: MicrosoftOAuth.DeviceCodeResponse?
+    @State private var authError: String?
+
+    private let microsoftOAuth = MicrosoftOAuth.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "calendar.badge.checkmark")
+                    .foregroundColor(Color(hex: "0078D4"))
+                Text("Connect to Microsoft Planner")
+                    .font(.headline)
+            }
+
+            Text("Link your Microsoft 365 account to sync Planner tasks and boards.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            if let deviceCode = deviceCode {
+                // Waiting for user authorization
+                MicrosoftOAuthWaitingView(
+                    userCode: deviceCode.userCode,
+                    verificationUri: deviceCode.verificationUri,
+                    onCancel: {
+                        Task { await microsoftOAuth.cancelAuthentication() }
+                        self.deviceCode = nil
+                        isAuthenticating = false
+                    }
+                )
+            } else if !hasClientId {
+                // Need to configure Client ID
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Configure Azure AD App")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+
+                    Text("Register an app in Azure AD and enter the Client ID.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    TextField("Application (client) ID", text: $clientId)
+                        .textFieldStyle(.roundedBorder)
+
+                    HStack {
+                        Button("Register App in Azure") {
+                            NSWorkspace.shared.open(URL(string: "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade")!)
+                        }
+                        .font(.caption)
+
+                        Spacer()
+
+                        Button("Save") {
+                            Task {
+                                await microsoftOAuth.setClientId(clientId)
+                                hasClientId = true
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(clientId.isEmpty)
+                    }
+
+                    Text("Required: Enable 'Allow public client flows' in Azure AD")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            } else {
+                // Ready to authenticate
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text("Azure AD configured")
+                            .font(.caption)
+
+                        Spacer()
+
+                        Button("Change") {
+                            hasClientId = false
+                            clientId = ""
+                        }
+                        .font(.caption)
+                    }
+
+                    Button {
+                        startOAuth()
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.up.forward.app")
+                            Text("Sign in with Microsoft")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color(hex: "0078D4"))
+                    .disabled(isAuthenticating)
+                }
+            }
+
+            if let error = authError ?? error {
+                Text(error)
+                    .foregroundColor(.red)
+                    .font(.caption)
+            }
+
+            Text("Required scopes: Tasks.ReadWrite, Group.Read.All, User.Read")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .task {
+            hasClientId = await microsoftOAuth.hasClientId
+        }
+    }
+
+    private func startOAuth() {
+        isAuthenticating = true
+        authError = nil
+
+        Task {
+            do {
+                let response = try await microsoftOAuth.startAuthentication()
+                deviceCode = response
+
+                // Open browser
+                microsoftOAuth.openVerificationPage(uri: response.verificationUri)
+
+                // Wait for authorization
+                _ = try await microsoftOAuth.waitForAuthentication(deviceCode: response)
+
+                // Success!
+                deviceCode = nil
+                isAuthenticating = false
+                onLogin()
+            } catch let error as MicrosoftOAuthError {
+                authError = error.localizedDescription
+                deviceCode = nil
+                isAuthenticating = false
+            } catch {
+                authError = error.localizedDescription
+                deviceCode = nil
+                isAuthenticating = false
+            }
+        }
+    }
+}
+
+// MARK: - Microsoft OAuth Waiting View
+
+struct MicrosoftOAuthWaitingView: View {
+    let userCode: String
+    let verificationUri: String
+    let onCancel: () -> Void
+
+    @State private var copied = false
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "link.circle.fill")
+                .font(.system(size: 40))
+                .foregroundColor(Color(hex: "0078D4"))
+
+            Text("Enter this code on Microsoft")
+                .font(.headline)
+
+            HStack(spacing: 12) {
+                Text(userCode)
+                    .font(.system(size: 24, weight: .bold, design: .monospaced))
+
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(userCode, forType: .string)
+                    copied = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        copied = false
+                    }
+                } label: {
+                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                }
+                .buttonStyle(.borderless)
+            }
+            .padding()
+            .background(Color.secondary.opacity(0.1))
+            .cornerRadius(8)
+
+            if copied {
+                Text("Copied!")
+                    .font(.caption)
+                    .foregroundColor(.green)
+            }
+
+            ProgressView()
+                .scaleEffect(0.8)
+
+            Text("Waiting for authorization...")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            HStack {
+                Button("Open Microsoft") {
+                    if let url = URL(string: verificationUri) {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+
+                Button("Cancel", role: .cancel) {
+                    onCancel()
+                }
+            }
+        }
+        .padding()
+    }
+}
+
+struct PlannerConnectedView: View {
+    let selectedRepoPath: String?
+    let plans: [PlannerPlan]
+    @ObservedObject var workspaceManager: WorkspaceSettingsManager
+    let onDisconnect: () -> Void
+
+    @State private var selectedPlanId: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                Text("Connected to Microsoft Planner")
+                    .fontWeight(.medium)
+                Spacer()
+                Button("Disconnect") {
+                    onDisconnect()
+                }
+                .foregroundColor(.red)
+            }
+
+            if let repoPath = selectedRepoPath {
+                let config = workspaceManager.getConfig(for: repoPath)
+
+                Picker("Plan for this repository", selection: $selectedPlanId) {
+                    Text("None").tag(nil as String?)
+                    ForEach(plans) { plan in
+                        Text(plan.title).tag(Optional(plan.id))
+                    }
+                }
+                .onChange(of: selectedPlanId) { _, newValue in
+                    let planName = plans.first(where: { $0.id == newValue })?.title
+                    workspaceManager.setPlannerPlan(for: repoPath, planId: newValue, planName: planName)
+                }
+                .onAppear {
+                    selectedPlanId = config.plannerPlanId
+                }
+
+                if let planName = config.plannerPlanName {
+                    HStack {
+                        Image(systemName: "checklist")
+                            .foregroundColor(Color(hex: "0078D4"))
+                        Text("Linked to: \(planName)")
+                            .font(.caption)
+                    }
+                }
+            } else {
+                Text("Select a repository to assign a plan")
+                    .foregroundColor(.secondary)
+                    .font(.caption)
+            }
+        }
+    }
+}
+
+// MARK: - Subscription Settings
+
+struct SubscriptionSettingsView: View {
+    @StateObject private var storeManager = StoreManager.shared
+    @State private var showSubscriptionSheet = false
+
+    var body: some View {
+        Form {
+            Section("Current Plan") {
+                if storeManager.isProUser {
+                    HStack {
+                        Image(systemName: "star.fill")
+                            .foregroundColor(.yellow)
+                        VStack(alignment: .leading) {
+                            Text("GitMac Pro")
+                                .fontWeight(.semibold)
+                            Text(storeManager.subscriptionStatus.description)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Button("Manage") {
+                            if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
+                    }
+                } else {
+                    HStack {
+                        Image(systemName: "person.fill")
+                            .foregroundColor(.secondary)
+                        VStack(alignment: .leading) {
+                            Text("Free Plan")
+                                .fontWeight(.semibold)
+                            Text("Limited features")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Button("Upgrade to Pro") {
+                            showSubscriptionSheet = true
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                }
+            }
+
+            Section("Pro Features") {
+                ForEach(StoreManager.ProFeature.allCases, id: \.self) { feature in
+                    HStack {
+                        Image(systemName: feature.icon)
+                            .foregroundColor(.accentColor)
+                            .frame(width: 24)
+                        VStack(alignment: .leading) {
+                            Text(feature.rawValue)
+                            Text(feature.description)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        if storeManager.isProUser {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                        } else {
+                            Image(systemName: "lock.fill")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
+
+            Section("Pricing") {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Annual")
+                        Spacer()
+                        Text(storeManager.formattedAnnualPrice + "/year")
+                            .foregroundColor(.secondary)
+                    }
+                    HStack {
+                        Text("Monthly")
+                        Spacer()
+                        Text(storeManager.formattedMonthlyPrice + "/month")
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Text("Subscriptions auto-renew unless cancelled 24 hours before the end of the current period.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Section {
+                Button("Restore Purchases") {
+                    Task {
+                        await storeManager.restorePurchases()
+                    }
+                }
+
+                Link("Terms of Service", destination: URL(string: "https://gitmac.app/terms")!)
+                Link("Privacy Policy", destination: URL(string: "https://gitmac.app/privacy")!)
+            }
+        }
+        .formStyle(.grouped)
+        .padding()
+        .sheet(isPresented: $showSubscriptionSheet) {
+            SubscriptionView()
         }
     }
 }

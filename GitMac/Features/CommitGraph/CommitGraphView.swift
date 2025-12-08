@@ -220,6 +220,7 @@ struct GraphStashRow: View {
     private let H: CGFloat = 42
     private let W: CGFloat = 24
     private let R: CGFloat = 8
+    private let LW: CGFloat = 3
 
     var body: some View {
         HStack(spacing: 0) {
@@ -236,25 +237,30 @@ struct GraphStashRow: View {
             .frame(width: 140)
             .padding(.leading, 8)
 
-            // Graph - dotted node without exit line
+            // Graph - stash in separate column to the right
             ZStack {
                 Canvas { ctx, size in
                     let cy = size.height / 2
-                    let myX: CGFloat = W / 2 + 6
+                    let mainLaneX: CGFloat = W / 2 + 6  // Lane 0 - main branch
+                    let stashLaneX: CGFloat = mainLaneX + W  // Lane 1 - stash column (to the right)
 
-                    // NO line to bottom (stash doesn't continue)
+                    // 1) Draw main branch line passing through (uninterrupted)
+                    var mainLine = Path()
+                    mainLine.move(to: CGPoint(x: mainLaneX, y: 0))
+                    mainLine.addLine(to: CGPoint(x: mainLaneX, y: size.height))
+                    ctx.stroke(mainLine, with: .color(Color.branchColor(0)), lineWidth: LW)
 
-                    // Dotted circle
-                    let nodeRect = CGRect(x: myX - R, y: cy - R, width: R * 2, height: R * 2)
+                    // 2) Draw dotted stash node in the right column
+                    let nodeRect = CGRect(x: stashLaneX - R, y: cy - R, width: R * 2, height: R * 2)
                     ctx.stroke(Circle().path(in: nodeRect), with: .color(.purple), style: StrokeStyle(lineWidth: 2, dash: [3, 2]))
                 }
                 .frame(width: 110, height: H)
 
-                // Archive icon inside node
+                // Archive icon inside stash node (positioned in lane 1)
                 Image(systemName: "archivebox")
                     .font(.system(size: 9, weight: .bold))
                     .foregroundColor(.purple)
-                    .offset(x: -43)
+                    .offset(x: -43 + W)  // Offset by one lane width to the right
             }
 
             // Info

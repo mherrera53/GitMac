@@ -246,23 +246,70 @@ struct StagingAreaView: View {
 
     private var flatUnstagedList: some View {
         Group {
-            ForEach(filteredUnstagedFiles) { file in
-                FileRow(
-                    file: file,
-                    isSelected: selectedFile == file.path,
-                    onSelect: { selectedFile = file.path },
-                    onStage: { Task { await viewModel.stage(file: file.path) } },
-                    onDiscard: { Task { await viewModel.discardChanges(file: file.path) } }
-                )
-            }
+            // When filtering, show grouped by status type
+            if extensionFilter != nil {
+                // Modified files
+                let modifiedFiles = filteredUnstagedFiles.filter { $0.status == .modified }
+                if !modifiedFiles.isEmpty {
+                    FileStatusSeparator(title: "Modified", count: modifiedFiles.count, color: .orange)
+                    ForEach(modifiedFiles) { file in
+                        FileRow(
+                            file: file,
+                            isSelected: selectedFile == file.path,
+                            onSelect: { selectedFile = file.path },
+                            onStage: { Task { await viewModel.stage(file: file.path) } },
+                            onDiscard: { Task { await viewModel.discardChanges(file: file.path) } }
+                        )
+                    }
+                }
 
-            ForEach(filteredUntrackedFiles, id: \.self) { path in
-                UntrackedFileRow(
-                    path: path,
-                    isSelected: selectedFile == path,
-                    onSelect: { selectedFile = path },
-                    onStage: { Task { await viewModel.stage(file: path) } }
-                )
+                // Added/New files (untracked)
+                if !filteredUntrackedFiles.isEmpty {
+                    FileStatusSeparator(title: "Added", count: filteredUntrackedFiles.count, color: .green)
+                    ForEach(filteredUntrackedFiles, id: \.self) { path in
+                        UntrackedFileRow(
+                            path: path,
+                            isSelected: selectedFile == path,
+                            onSelect: { selectedFile = path },
+                            onStage: { Task { await viewModel.stage(file: path) } }
+                        )
+                    }
+                }
+
+                // Other statuses (deleted, renamed, etc)
+                let otherFiles = filteredUnstagedFiles.filter { $0.status != .modified }
+                if !otherFiles.isEmpty {
+                    FileStatusSeparator(title: "Other Changes", count: otherFiles.count, color: .blue)
+                    ForEach(otherFiles) { file in
+                        FileRow(
+                            file: file,
+                            isSelected: selectedFile == file.path,
+                            onSelect: { selectedFile = file.path },
+                            onStage: { Task { await viewModel.stage(file: file.path) } },
+                            onDiscard: { Task { await viewModel.discardChanges(file: file.path) } }
+                        )
+                    }
+                }
+            } else {
+                // No filter - show all files together
+                ForEach(filteredUnstagedFiles) { file in
+                    FileRow(
+                        file: file,
+                        isSelected: selectedFile == file.path,
+                        onSelect: { selectedFile = file.path },
+                        onStage: { Task { await viewModel.stage(file: file.path) } },
+                        onDiscard: { Task { await viewModel.discardChanges(file: file.path) } }
+                    )
+                }
+
+                ForEach(filteredUntrackedFiles, id: \.self) { path in
+                    UntrackedFileRow(
+                        path: path,
+                        isSelected: selectedFile == path,
+                        onSelect: { selectedFile = path },
+                        onStage: { Task { await viewModel.stage(file: path) } }
+                    )
+                }
             }
         }
     }
@@ -642,6 +689,11 @@ struct FileRow: View {
 
             Spacer()
 
+            // Line change counters
+            if file.hasChanges {
+                DiffStatsView(additions: file.additions, deletions: file.deletions)
+            }
+
             // Actions (shown on hover)
             if isHovered {
                 HStack(spacing: 4) {
@@ -692,6 +744,37 @@ struct FileRow: View {
                 onUnstage: onUnstage,
                 onDiscard: onDiscard
             )
+        }
+    }
+}
+
+// MARK: - Diff Stats View
+
+struct DiffStatsView: View {
+    let additions: Int
+    let deletions: Int
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if additions > 0 {
+                HStack(spacing: 1) {
+                    Text("+")
+                        .foregroundColor(.green)
+                    Text("\(additions)")
+                        .foregroundColor(.green)
+                }
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+            }
+
+            if deletions > 0 {
+                HStack(spacing: 1) {
+                    Text("−")
+                        .foregroundColor(.red)
+                    Text("\(deletions)")
+                        .foregroundColor(.red)
+                }
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+            }
         }
     }
 }
@@ -959,6 +1042,38 @@ struct StatusIcon: View {
         case .typeChanged: return .purple
         case .unmerged: return .red
         }
+    }
+}
+
+// MARK: - File Status Separator
+
+struct FileStatusSeparator: View {
+    let title: String
+    let count: Int
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Rectangle()
+                .fill(color)
+                .frame(width: 3, height: 14)
+                .cornerRadius(1.5)
+
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(color)
+
+            Text("(\(count))")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+
+            Rectangle()
+                .fill(color.opacity(0.3))
+                .frame(height: 1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(color.opacity(0.05))
     }
 }
 
@@ -1324,10 +1439,40 @@ struct FileTreeView: View {
     }
 }
 
+// MARK: - Tree Expansion State (shared across all tree views)
+
+class TreeExpansionState: ObservableObject {
+    static let shared = TreeExpansionState()
+
+    @Published var expandedPaths: Set<String> = []
+
+    func isExpanded(_ path: String) -> Bool {
+        // Default to expanded for new paths
+        if !expandedPaths.contains(path) && !collapsedPaths.contains(path) {
+            expandedPaths.insert(path)
+            return true
+        }
+        return expandedPaths.contains(path)
+    }
+
+    func toggle(_ path: String) {
+        if expandedPaths.contains(path) {
+            expandedPaths.remove(path)
+            collapsedPaths.insert(path)
+        } else {
+            expandedPaths.insert(path)
+            collapsedPaths.remove(path)
+        }
+    }
+
+    // Track explicitly collapsed paths to distinguish from "never seen"
+    private var collapsedPaths: Set<String> = []
+}
+
 // MARK: - Tree Node Model
 
 class FileTreeNode: Identifiable, ObservableObject {
-    let id = UUID()
+    var id: String { path.isEmpty ? UUID().uuidString : path }
     let name: String
     let path: String
     let isFolder: Bool
@@ -1363,8 +1508,12 @@ struct TreeNodeView: View {
     var onUnstage: ((String) -> Void)?
     var onUnstageFolder: ((String) -> Void)?
 
-    @State private var isExpanded = true
+    @ObservedObject private var expansionState = TreeExpansionState.shared
     @State private var isHovered = false
+
+    private var isExpanded: Bool {
+        expansionState.isExpanded(node.path)
+    }
 
     var body: some View {
         if node.isFolder {
@@ -1378,30 +1527,38 @@ struct TreeNodeView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Folder header
             HStack(spacing: 6) {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.15)) {
-                        isExpanded.toggle()
-                    }
-                } label: {
+                // Clickable folder name area
+                HStack(spacing: 6) {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                         .frame(width: 12)
+
+                    Image(systemName: isExpanded ? "folder.fill" : "folder")
+                        .foregroundColor(.yellow)
+                        .frame(width: 16)
+
+                    Text(node.name)
+                        .lineLimit(1)
+
+                    Text("(\(node.fileCount))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
-                .buttonStyle(.plain)
-
-                Image(systemName: isExpanded ? "folder.fill" : "folder")
-                    .foregroundColor(.yellow)
-                    .frame(width: 16)
-
-                Text(node.name)
-                    .lineLimit(1)
-
-                Text("(\(node.fileCount))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        expansionState.toggle(node.path)
+                    }
+                }
 
                 Spacer()
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            expansionState.toggle(node.path)
+                        }
+                    }
 
                 // Folder actions on hover
                 if isHovered {
@@ -1430,7 +1587,8 @@ struct TreeNodeView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
-            .contentShape(Rectangle())
+            .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading)
+            .background(isHovered ? Color.secondary.opacity(0.1) : Color.clear)
             .onHover { isHovered = $0 }
             .contextMenu {
                 if isStaged {
@@ -1500,6 +1658,11 @@ struct TreeNodeView: View {
                 .lineLimit(1)
 
             Spacer()
+
+            // Line change counters
+            if let file = node.file, file.hasChanges {
+                DiffStatsView(additions: file.additions, deletions: file.deletions)
+            }
 
             // Actions on hover
             if isHovered {
