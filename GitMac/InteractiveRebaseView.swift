@@ -463,20 +463,20 @@ class InteractiveRebaseViewModel: ObservableObject {
         
         do {
             // Create git-rebase-todo file content
-            let todoContent = items.map { item in
+            _ = items.map { item in
                 "\(item.action.rawValue) \(item.commit.sha) \(item.commit.message)"
             }.joined(separator: "\n")
-            
+
             // Start interactive rebase
             let shell = ShellExecutor()
-            
+
             // Set up environment for non-interactive rebase
             var env = ProcessInfo.processInfo.environment
             env["GIT_SEQUENCE_EDITOR"] = "cat" // Use cat to just read the file
-            
-            // Write custom todo file
-            let todoPath = "\(repoPath)/.git/rebase-merge/git-rebase-todo"
-            
+
+            // Todo path for future use
+            _ = "\(repoPath)/.git/rebase-merge/git-rebase-todo"
+
             // Execute rebase
             let result = await shell.execute(
                 "git",

@@ -1,8 +1,32 @@
 # 🚨 ARREGLAR BUILD AHORA - GUÍA RÁPIDA
 
-## ⚡ SOLUCIÓN INMEDIATA (5 MINUTOS)
+## ⚡ SOLUCIÓN AUTOMÁTICA (2 MINUTOS) - NUEVA ✨
 
-### OPCIÓN 1: En Xcode (Más Seguro - RECOMENDADO)
+### OPCIÓN 1: Script Automático (RECOMENDADO)
+
+```bash
+cd /path/to/GitMac
+chmod +x remove_duplicates.sh
+./remove_duplicates.sh
+```
+
+Este script:
+- ✅ Encuentra duplicados automáticamente
+- ✅ Hace backup de archivos eliminados
+- ✅ Mantiene el archivo más grande (correcto)
+- ✅ Es reversible (puedes restaurar)
+
+**Después del script:**
+1. Abrir Xcode
+2. Clean Build Folder (⌘⇧K)
+3. Build (⌘B)
+4. ✅ Listo!
+
+---
+
+## ⚡ SOLUCIÓN MANUAL (5 MINUTOS)
+
+### OPCIÓN 2: En Xcode (Si prefieres hacerlo manual)
 
 1. **Abrir Xcode**
    ```
@@ -48,49 +72,25 @@
 
 ---
 
-### OPCIÓN 2: Desde Terminal (Más Rápido pero Riesgoso)
-
-⚠️ **ADVERTENCIA**: Esto puede eliminar archivos incorrectos si no eres cuidadoso.
+### OPCIÓN 3: Nuclear Option - Si Nada Funciona
 
 ```bash
-# 1. Ir al directorio del proyecto
-cd /path/to/GitMac
+# 1. Cerrar Xcode
+killall Xcode
 
-# 2. Hacer backup primero
-cp -r . ../GitMac_backup
-
-# 3. Buscar duplicados
-echo "Buscando duplicados..."
-find . -name "InteractiveRebaseView.swift" -not -path "*/DerivedData/*"
-find . -name "ThemeManager.swift" -not -path "*/DerivedData/*"
-find . -name "SearchView.swift" -not -path "*/DerivedData/*"
-
-# 4. Verificar cuál es más grande (mantener)
-wc -l */InteractiveRebaseView.swift
-wc -l */ThemeManager.swift
-wc -l */SearchView.swift
-
-# 5. Eliminar manualmente los archivos MÁS PEQUEÑOS
-# NO uses rm sin verificar primero!
-
-# 6. Limpiar DerivedData
+# 2. Limpiar todo
 rm -rf ~/Library/Developer/Xcode/DerivedData/GitMac-*
 
-# 7. Build desde terminal
-xcodebuild -project GitMac.xcodeproj -scheme GitMac -configuration Debug clean build
-```
-
----
-
-### OPCIÓN 3: Script Automático (Si estás seguro)
-
-```bash
-# Ejecutar el script de fix
+# 3. Ejecutar script de duplicados
 cd /path/to/GitMac
-chmod +x fix_build.sh
-./fix_build.sh
+./remove_duplicates.sh
 
-# Luego seguir instrucciones en pantalla
+# 4. Reabrir Xcode
+open GitMac.xcodeproj
+
+# 5. Clean & Build
+# Product → Clean Build Folder (⌘⇧K)
+# Product → Build (⌘B)
 ```
 
 ---
@@ -159,19 +159,24 @@ open GitMac.xcodeproj
 
 ---
 
-## 🎯 CHECKLIST RÁPIDO
+## 🎯 CHECKLIST SÚPER RÁPIDO
 
-- [ ] Abrir Xcode
-- [ ] Presionar ⌘⇧O
-- [ ] Buscar "InteractiveRebaseView"
-- [ ] Si hay 2, eliminar el más pequeño (Remove Reference)
-- [ ] Buscar "ThemeManager"
-- [ ] Si hay 2, eliminar el más pequeño (Remove Reference)
-- [ ] Buscar "SearchView"
-- [ ] Si hay 2, eliminar el más pequeño (Remove Reference)
+**Ejecuta esto en Terminal:**
+```bash
+cd /path/to/tu/GitMac
+chmod +x remove_duplicates.sh
+./remove_duplicates.sh
+```
+
+**Después en Xcode:**
 - [ ] Clean Build Folder (⌘⇧K)
 - [ ] Build (⌘B)
 - [ ] ✅ Success!
+
+**Si funcionó, elimina el backup:**
+```bash
+rm -rf duplicates_backup_*
+```
 
 ---
 

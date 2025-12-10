@@ -56,18 +56,15 @@ struct LightweightDiffView: NSViewRepresentable {
         let diff = fileDiff
         let dark = isDarkMode
 
-        Task.detached(priority: .userInitiated) {
+        Task {
             let attributed = Self.renderDiffText(diff, isDarkMode: dark)
-
-            await MainActor.run {
-                // Disable layout during update for performance
-                textView.layoutManager?.allowsNonContiguousLayout = true
-                textView.textStorage?.setAttributedString(attributed)
-            }
+            textView.layoutManager?.allowsNonContiguousLayout = true
+            textView.textStorage?.setAttributedString(attributed)
         }
     }
 
-    /// Render diff to NSAttributedString (called on background thread)
+    /// Render diff to NSAttributedString
+    @MainActor
     private static func renderDiffText(_ diff: FileDiff, isDarkMode: Bool) -> NSAttributedString {
         let result = NSMutableAttributedString()
         let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
