@@ -680,10 +680,244 @@ struct LeftSidebarPanel: View {
                     } content: {
                         WorktreeSidebarSection()
                     }
+
+                    // CI/CD Section
+                    SidebarSection(title: "CI/CD", isExpanded: expandedSections.contains("cicd")) {
+                        expandedSections.toggle("cicd")
+                    } content: {
+                        CICDSidebarSection()
+                    }
                 }
                 .padding(.top, 8)
             }
         }
+    }
+}
+
+// MARK: - CI/CD Sidebar Section
+struct CICDSidebarSection: View {
+    @EnvironmentObject var appState: AppState
+    @StateObject private var viewModel = CICDSidebarViewModel()
+    @State private var showWorkflowsPanel = false
+    @State private var showAWSPanel = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            // GitHub Actions
+            if viewModel.hasGitHub {
+                CICDProviderRow(
+                    icon: "bolt.circle.fill",
+                    name: "GitHub Actions",
+                    status: viewModel.githubStatus,
+                    statusColor: viewModel.githubStatusColor,
+                    count: viewModel.githubRunningCount
+                ) {
+                    showWorkflowsPanel = true
+                }
+            }
+
+            // AWS CodeBuild
+            if viewModel.hasAWS {
+                CICDProviderRow(
+                    icon: "cloud.fill",
+                    name: "AWS CodeBuild",
+                    status: viewModel.awsStatus,
+                    statusColor: viewModel.awsStatusColor,
+                    count: viewModel.awsRunningCount
+                ) {
+                    showAWSPanel = true
+                }
+            }
+
+            if !viewModel.hasGitHub && !viewModel.hasAWS {
+                HStack {
+                    Text("No CI/CD configured")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+            }
+        }
+        .task {
+            await viewModel.refresh(appState: appState)
+        }
+        .sheet(isPresented: $showWorkflowsPanel) {
+            WorkflowsPanel()
+                .environmentObject(appState)
+        }
+        .sheet(isPresented: $showAWSPanel) {
+            AWSCodeBuildPanel()
+                .environmentObject(appState)
+        }
+    }
+}
+
+struct CICDProviderRow: View {
+    let icon: String
+    let name: String
+    let status: String
+    let statusColor: Color
+    let count: Int
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 11))
+                    .foregroundColor(.orange)
+
+                Text(name)
+                    .font(.system(size: 11))
+                    .foregroundColor(.primary)
+
+                Spacer()
+
+                if count > 0 {
+                    HStack(spacing: 2) {
+                        ProgressView()
+                            .scaleEffect(0.4)
+                        Text("\(count)")
+                            .font(.system(size: 9, weight: .medium))
+                    }
+                    .foregroundColor(.blue)
+                }
+
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 8, height: 8)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(isHovered ? Color.gray.opacity(0.1) : Color.clear)
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+    }
+}
+
+// MARK: - CI/CD Sidebar ViewModel
+@MainActor
+class CICDSidebarViewModel: ObservableObject {
+    @Published var hasGitHub = false
+    @Published var hasAWS = false
+    @Published var githubStatus = "unknown"
+    @Published var awsStatus = "unknown"
+    @Published var githubRunningCount = 0
+    @Published var awsRunningCount = 0
+
+    var githubStatusColor: Color {
+        switch githubStatus {
+        case "success": return .green
+        case "failure": return .red
+        case "running": return .blue
+        default: return .gray
+        }
+    }
+
+    var awsStatusColor: Color {
+        switch awsStatus {
+        case "success": return .green
+        case "failure": return .red
+        case "running": return .blue
+        default: return .gray
+        }
+    }
+
+    func refresh(appState: AppState) async {
+        // Check GitHub
+        let githubToken = (try? await KeychainManager.shared.getGitHubToken()) ?? ""
+        hasGitHub = !githubToken.isEmpty
+
+        // Check AWS (look for AWS credentials)
+        let awsConfigured = FileManager.default.fileExists(atPath: NSHomeDirectory() + "/.aws/credentials")
+        hasAWS = awsConfigured
+
+        if hasGitHub {
+            await fetchGitHubStatus(appState: appState, token: githubToken)
+        }
+    }
+
+    private func fetchGitHubStatus(appState: AppState, token: String) async {
+        guard let remote = appState.currentRepository?.remotes.first,
+              let url = URL(string: remote.fetchURL) else { return }
+
+        let pathComponents = url.path
+            .replacingOccurrences(of: ".git", with: "")
+            .split(separator: "/")
+            .map(String.init)
+
+        guard pathComponents.count >= 2 else { return }
+
+        let owner = pathComponents[pathComponents.count - 2]
+        let repo = pathComponents[pathComponents.count - 1]
+
+        let urlString = "https://api.github.com/repos/\(owner)/\(repo)/actions/runs?per_page=10"
+        guard let apiURL = URL(string: urlString) else { return }
+
+        var request = URLRequest(url: apiURL)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+
+        do {
+            let (data, _) = try await URLSession.shared.data(for: request)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+
+            struct Response: Codable {
+                let workflowRuns: [Run]
+                enum CodingKeys: String, CodingKey { case workflowRuns = "workflow_runs" }
+                struct Run: Codable {
+                    let status: String
+                    let conclusion: String?
+                }
+            }
+
+            let response = try decoder.decode(Response.self, from: data)
+
+            // Count running
+            githubRunningCount = response.workflowRuns.filter { $0.status == "in_progress" || $0.status == "queued" }.count
+
+            // Get latest status
+            if let latest = response.workflowRuns.first {
+                if latest.status == "in_progress" || latest.status == "queued" {
+                    githubStatus = "running"
+                } else if latest.conclusion == "success" {
+                    githubStatus = "success"
+                } else if latest.conclusion == "failure" {
+                    githubStatus = "failure"
+                }
+            }
+        } catch {
+            // Ignore errors silently
+        }
+    }
+}
+
+// MARK: - Workflows Panel (Sheet)
+struct WorkflowsPanel: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("GitHub Actions")
+                    .font(.headline)
+                Spacer()
+                Button("Done") { dismiss() }
+                    .buttonStyle(.bordered)
+            }
+            .padding()
+            .background(Color.gray.opacity(0.1))
+
+            WorkflowsView()
+        }
+        .frame(width: 700, height: 500)
     }
 }
 
