@@ -1456,7 +1456,7 @@ struct SyntaxHighlightedText: View {
     let language: String
 
     private var highlightedCode: AttributedString {
-        guard let grammar = grammar(for: language) else {
+        guard grammar(for: language) != nil else {
             return AttributedString(code)
         }
 

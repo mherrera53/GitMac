@@ -132,13 +132,15 @@ struct OutlineFileBrowserView: NSViewRepresentable {
             let view = outlineView.makeView(withIdentifier: id, owner: self) as? NSTableCellView ?? {
                 let v = NSTableCellView()
                 v.identifier = id
-                v.imageView = NSImageView()
-                v.textField = NSTextField(labelWithString: "")
-                v.textField?.lineBreakMode = .byTruncatingMiddle
-                v.textField?.translatesAutoresizingMaskIntoConstraints = false
-                v.imageView?.translatesAutoresizingMaskIntoConstraints = false
-                v.addSubview(v.imageView!)
-                v.addSubview(v.textField!)
+                let img = NSImageView()
+                let txt = NSTextField(labelWithString: "")
+                txt.lineBreakMode = .byTruncatingMiddle
+                txt.translatesAutoresizingMaskIntoConstraints = false
+                img.translatesAutoresizingMaskIntoConstraints = false
+                v.addSubview(img)
+                v.addSubview(txt)
+                v.imageView = img
+                v.textField = txt
                 NSLayoutConstraint.activate([
                     v.imageView!.leadingAnchor.constraint(equalTo: v.leadingAnchor, constant: 4),
                     v.imageView!.centerYAnchor.constraint(equalTo: v.centerYAnchor),
