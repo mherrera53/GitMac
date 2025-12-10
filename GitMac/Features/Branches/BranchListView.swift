@@ -233,6 +233,8 @@ class BranchListViewModel: ObservableObject {
         isLoading = true
         do {
             try await gitService.checkout(branchName)
+            try await gitService.refresh()
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
         } catch {
             self.error = error.localizedDescription
         }
@@ -272,6 +274,10 @@ class BranchListViewModel: ObservableObject {
                     self.error = "Checkout successful but stash pop failed. Your changes are in stash. Run 'git stash pop' manually after resolving conflicts."
                 }
             }
+
+            // 4. Refresh UI to update graph and branch indicator
+            try await gitService.refresh()
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
         } catch {
             // Checkout failed - restore stash if we made one
             if didStash {
