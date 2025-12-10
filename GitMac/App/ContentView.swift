@@ -1087,6 +1087,8 @@ struct SidebarBranchRow: View {
         // No changes, proceed with checkout
         do {
             try await appState.gitService.checkout(branch.name)
+            await appState.refresh()
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: appState.currentRepository?.path)
         } catch {
             print("Checkout failed: \(error)")
         }
@@ -1122,6 +1124,10 @@ struct SidebarBranchRow: View {
                     print("Stash pop failed - changes remain in stash")
                 }
             }
+
+            // 4. Refresh UI to update graph and branch indicator
+            await appState.refresh()
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
         } catch {
             // Checkout failed - restore stash if we made one
             if didStash {
