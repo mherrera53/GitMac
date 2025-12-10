@@ -150,6 +150,21 @@ actor GitHubService {
         )
     }
 
+    /// Close a pull request
+    func closePullRequest(
+        owner: String,
+        repo: String,
+        number: Int
+    ) async throws {
+        let payload: [String: Any] = ["state": "closed"]
+
+        _ = try await request(
+            endpoint: "/repos/\(owner)/\(repo)/pulls/\(number)",
+            method: "PATCH",
+            body: payload
+        )
+    }
+
     /// Get PR reviews
     func getPullRequestReviews(owner: String, repo: String, number: Int) async throws -> [GitHubReview] {
         let data = try await request(endpoint: "/repos/\(owner)/\(repo)/pulls/\(number)/reviews")

@@ -397,11 +397,7 @@ struct GitOperation: Identifiable {
     }
 }
 
-enum ResetMode: String {
-    case soft
-    case mixed
-    case hard
-}
+// ResetMode is defined in ResetView.swift
 
 // MARK: - Undo History View
 

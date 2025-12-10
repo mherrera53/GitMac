@@ -12,7 +12,7 @@ struct WorktreeListView: View {
             HStack {
                 Text("WORKTREES")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(Color.secondary)
 
                 Spacer()
 
@@ -22,7 +22,7 @@ struct WorktreeListView: View {
                     } label: {
                         Image(systemName: "arrow.clockwise")
                             .font(.system(size: 11))
-                            .foregroundColor(GitKrakenTheme.textMuted)
+                            .foregroundColor(Color.secondary)
                     }
                     .buttonStyle(.plain)
 
@@ -31,14 +31,14 @@ struct WorktreeListView: View {
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 11))
-                            .foregroundColor(GitKrakenTheme.textMuted)
+                            .foregroundColor(Color.secondary)
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(GitKrakenTheme.backgroundSecondary)
+            .background(Color.gray.opacity(0.1))
 
             // Worktree list
             if viewModel.isLoading {
@@ -53,10 +53,10 @@ struct WorktreeListView: View {
                 VStack(spacing: 8) {
                     Image(systemName: "folder.badge.plus")
                         .font(.system(size: 24))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(Color.secondary)
                     Text("No worktrees")
                         .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(Color.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)
@@ -131,28 +131,28 @@ struct WorktreeRow: View {
             // Status icon
             Image(systemName: worktree.isMain ? "house.fill" : "folder.fill")
                 .font(.system(size: 12))
-                .foregroundColor(worktree.isMain ? GitKrakenTheme.accent : GitKrakenTheme.accentPurple)
+                .foregroundColor(worktree.isMain ? Color.blue : Color.purple)
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Text(worktree.name)
                         .font(.system(size: 12, weight: worktree.isMain ? .semibold : .regular))
-                        .foregroundColor(GitKrakenTheme.textPrimary)
+                        .foregroundColor(Color.primary)
                         .lineLimit(1)
 
                     if worktree.isLocked {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 9))
-                            .foregroundColor(GitKrakenTheme.accentOrange)
+                            .foregroundColor(Color.orange)
                     }
 
                     if worktree.isMain {
                         Text("main")
                             .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(GitKrakenTheme.accent)
+                            .foregroundColor(Color.blue)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
-                            .background(GitKrakenTheme.accent.opacity(0.2))
+                            .background(Color.blue.opacity(0.2))
                             .cornerRadius(3)
                     }
                 }
@@ -173,7 +173,7 @@ struct WorktreeRow: View {
                     Text(worktree.shortSHA)
                         .font(.system(size: 10, design: .monospaced))
                 }
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(Color.secondary)
             }
 
             Spacer()
@@ -184,7 +184,7 @@ struct WorktreeRow: View {
                     Button(action: onOpen) {
                         Image(systemName: "arrow.up.forward.square")
                             .font(.system(size: 11))
-                            .foregroundColor(GitKrakenTheme.textSecondary)
+                            .foregroundColor(Color.secondary)
                     }
                     .buttonStyle(.plain)
                     .help("Open in new tab")
@@ -192,7 +192,7 @@ struct WorktreeRow: View {
                     Button(action: onLock) {
                         Image(systemName: worktree.isLocked ? "lock.open" : "lock")
                             .font(.system(size: 11))
-                            .foregroundColor(GitKrakenTheme.textSecondary)
+                            .foregroundColor(Color.secondary)
                     }
                     .buttonStyle(.plain)
                     .help(worktree.isLocked ? "Unlock" : "Lock")
@@ -200,7 +200,7 @@ struct WorktreeRow: View {
                     Button(action: onRemove) {
                         Image(systemName: "trash")
                             .font(.system(size: 11))
-                            .foregroundColor(GitKrakenTheme.accentRed)
+                            .foregroundColor(Color.red)
                     }
                     .buttonStyle(.plain)
                     .help("Remove worktree")
@@ -209,7 +209,7 @@ struct WorktreeRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(isSelected ? GitKrakenTheme.selection : (isHovered ? GitKrakenTheme.hover : Color.clear))
+        .background(isSelected ? Color.blue.opacity(0.2) : (isHovered ? Color.gray.opacity(0.1) : Color.clear))
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
         .onTapGesture { onSelect() }
@@ -233,19 +233,19 @@ struct AddWorktreeSheet: View {
         VStack(spacing: 20) {
             Text("Add Worktree")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(Color.primary)
 
             VStack(alignment: .leading, spacing: 12) {
                 // Worktree path
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Worktree Path")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(Color.secondary)
                     HStack {
                         TextField("Path for new worktree", text: $worktreePath)
                             .textFieldStyle(.plain)
                             .padding(10)
-                            .background(GitKrakenTheme.backgroundTertiary)
+                            .background(Color.gray.opacity(0.15))
                             .cornerRadius(6)
 
                         Button("Browse") {
@@ -269,7 +269,7 @@ struct AddWorktreeSheet: View {
                         TextField("New branch name", text: $newBranchName)
                             .textFieldStyle(.plain)
                             .padding(10)
-                            .background(GitKrakenTheme.backgroundTertiary)
+                            .background(Color.gray.opacity(0.15))
                             .cornerRadius(6)
                     } else {
                         // Select existing branch
@@ -304,7 +304,7 @@ struct AddWorktreeSheet: View {
         }
         .padding(24)
         .frame(width: 450)
-        .background(GitKrakenTheme.panel)
+        .background(Color.gray.opacity(0.05))
     }
 
     private func createWorktree() {

@@ -275,6 +275,18 @@ actor GitEngine {
         }
     }
 
+    func checkoutForce(_ ref: String, at path: String) async throws {
+        let result = await shellExecutor.execute(
+            "git",
+            arguments: ["checkout", "-f", ref],
+            workingDirectory: path
+        )
+
+        guard result.exitCode == 0 else {
+            throw GitError.checkoutFailed(ref, result.stderr)
+        }
+    }
+
     // MARK: - Commit Operations
 
     /// Get commits with pagination
@@ -835,8 +847,9 @@ actor GitEngine {
 
         let result = await shellExecutor.execute("git", arguments: args, workingDirectory: path)
 
-        guard result.exitCode == 0 else {
-            throw GitError.stashApplyFailed(result.stderr)
+        // Exit code 1 with empty stderr can mean "nothing to apply" which is OK
+        guard result.exitCode == 0 || (result.exitCode == 1 && result.stderr.isEmpty) else {
+            throw GitError.stashApplyFailed(result.stderr.isEmpty ? "Failed to apply stash" : result.stderr)
         }
     }
 
@@ -864,6 +877,97 @@ actor GitEngine {
         guard result.exitCode == 0 else {
             throw GitError.stashDropFailed(result.stderr)
         }
+    }
+
+    /// Get files changed in a stash (including untracked files)
+    func getStashFiles(stashRef: String, at path: String) async throws -> [StashFile] {
+        var allFiles: [StashFile] = []
+
+        // 1. Get tracked file changes
+        let result = await shellExecutor.execute(
+            "git",
+            arguments: ["stash", "show", "--name-status", stashRef],
+            workingDirectory: path
+        )
+
+        if result.exitCode == 0 && !result.stdout.isEmpty {
+            let trackedFiles = result.stdout
+                .components(separatedBy: .newlines)
+                .filter { !$0.isEmpty }
+                .compactMap { line -> StashFile? in
+                    let parts = line.split(separator: "\t", maxSplits: 1)
+                    guard parts.count == 2 else { return nil }
+
+                    let statusChar = String(parts[0]).trimmingCharacters(in: .whitespaces)
+                    let filePath = String(parts[1])
+                    let filename = URL(fileURLWithPath: filePath).lastPathComponent
+
+                    let status: FileStatusType
+                    switch statusChar {
+                    case "A": status = .added
+                    case "M": status = .modified
+                    case "D": status = .deleted
+                    case "R": status = .renamed
+                    case "C": status = .copied
+                    default: status = .modified
+                    }
+
+                    return StashFile(path: filePath, filename: filename, status: status)
+                }
+            allFiles.append(contentsOf: trackedFiles)
+        }
+
+        // 2. Get untracked files (stored in stash^3)
+        let untrackedResult = await shellExecutor.execute(
+            "git",
+            arguments: ["show", "--name-status", "--format=", "\(stashRef)^3"],
+            workingDirectory: path
+        )
+
+        if untrackedResult.exitCode == 0 && !untrackedResult.stdout.isEmpty {
+            let untrackedFiles = untrackedResult.stdout
+                .components(separatedBy: .newlines)
+                .filter { !$0.isEmpty }
+                .compactMap { line -> StashFile? in
+                    let parts = line.split(separator: "\t", maxSplits: 1)
+                    guard parts.count == 2 else { return nil }
+
+                    let filePath = String(parts[1])
+                    let filename = URL(fileURLWithPath: filePath).lastPathComponent
+
+                    // Untracked files are always "added"
+                    return StashFile(path: filePath, filename: filename, status: .added)
+                }
+            allFiles.append(contentsOf: untrackedFiles)
+        }
+
+        return allFiles
+    }
+
+    /// Get stash stat summary (additions/deletions)
+    func getStashStats(stashRef: String, at path: String) async throws -> (additions: Int, deletions: Int) {
+        let result = await shellExecutor.execute(
+            "git",
+            arguments: ["stash", "show", "--numstat", stashRef],
+            workingDirectory: path
+        )
+
+        guard result.exitCode == 0 else {
+            return (0, 0)
+        }
+
+        var totalAdditions = 0
+        var totalDeletions = 0
+
+        for line in result.stdout.components(separatedBy: .newlines) {
+            let parts = line.split(separator: "\t")
+            if parts.count >= 2 {
+                totalAdditions += Int(parts[0]) ?? 0
+                totalDeletions += Int(parts[1]) ?? 0
+            }
+        }
+
+        return (totalAdditions, totalDeletions)
     }
 
     // MARK: - Diff Operations

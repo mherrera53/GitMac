@@ -2,7 +2,10 @@ import Foundation
 
 /// AI Service for commit message generation and more
 actor AIService {
+    static let shared = AIService()
+
     private let keychainManager = KeychainManager.shared
+    private var preferencesLoaded = false
 
     // MARK: - Provider Configuration
 
@@ -65,6 +68,28 @@ actor AIService {
 
     private var currentProvider: AIProvider = .anthropic
     private var currentModel: String = "claude-3-haiku-20240307"
+
+    /// Load saved preferences from keychain
+    private func loadPreferencesIfNeeded() async {
+        guard !preferencesLoaded else { return }
+        preferencesLoaded = true
+
+        // Try to load saved preferences
+        if let prefs = await keychainManager.getPreferredAIProvider(),
+           let provider = AIProvider(rawValue: prefs.provider.rawValue) {
+            currentProvider = provider
+            currentModel = prefs.model
+        } else {
+            // Find first configured provider
+            for provider in AIProvider.allCases {
+                if await hasAPIKey(for: provider) {
+                    currentProvider = provider
+                    currentModel = provider.models.first?.id ?? currentModel
+                    break
+                }
+            }
+        }
+    }
 
     func setProvider(_ provider: AIProvider, model: String) async throws {
         // Verify we have an API key for this provider
@@ -198,6 +223,186 @@ actor AIService {
         return try await sendMessage(prompt)
     }
 
+    // MARK: - Terminal Suggestions
+
+    /// Suggest git/terminal commands based on natural language input
+    func suggestTerminalCommands(
+        input: String,
+        repoPath: String?,
+        recentCommands: [String] = []
+    ) async throws -> [TerminalSuggestion] {
+        let context = repoPath.map { "Working in git repository at: \($0)" } ?? "No repository context"
+        let historyContext = recentCommands.isEmpty ? "" : "Recent commands: \(recentCommands.suffix(5).joined(separator: ", "))"
+
+        let prompt = """
+        You are a Git and terminal command assistant. Given the user's partial input, suggest 3-5 relevant commands.
+
+        Context: \(context)
+        \(historyContext)
+
+        User input: "\(input)"
+
+        Rules:
+        - If input looks like natural language, translate to git/terminal commands
+        - If input is partial command, complete it with common variations
+        - Include brief descriptions
+        - Focus on git, gh (GitHub CLI), and common dev commands
+        - Be concise and practical
+
+        Respond ONLY with JSON array (no markdown):
+        [{"command": "git status", "description": "Show working tree status", "confidence": 0.9}]
+        """
+
+        let response = try await sendQuickMessage(prompt, maxTokens: 300)
+        return parseTerminalSuggestions(response)
+    }
+
+    /// Explain a terminal error and suggest fixes
+    func explainTerminalError(
+        command: String,
+        error: String,
+        repoPath: String?
+    ) async throws -> String {
+        let prompt = """
+        A terminal command failed. Explain the error briefly and suggest a fix.
+
+        Command: \(command)
+        Error: \(error.prefix(500))
+        Repository: \(repoPath ?? "unknown")
+
+        Be concise. Format: 1-2 sentence explanation + suggested fix command if applicable.
+        """
+
+        return try await sendQuickMessage(prompt, maxTokens: 200)
+    }
+
+    /// Fast message for quick responses (terminal autocomplete)
+    private func sendQuickMessage(_ message: String, maxTokens: Int = 200) async throws -> String {
+        await loadPreferencesIfNeeded()
+
+        guard let kcProvider = KeychainManager.AIProvider(rawValue: currentProvider.rawValue),
+              let apiKey = try await keychainManager.getAIKey(provider: kcProvider) else {
+            throw AIError.noAPIKey(currentProvider)
+        }
+
+        switch currentProvider {
+        case .openai:
+            return try await sendOpenAIQuick(message, apiKey: apiKey, maxTokens: maxTokens)
+        case .anthropic:
+            return try await sendAnthropicQuick(message, apiKey: apiKey, maxTokens: maxTokens)
+        case .gemini:
+            return try await sendGeminiQuick(message, apiKey: apiKey, maxTokens: maxTokens)
+        }
+    }
+
+    private func sendOpenAIQuick(_ message: String, apiKey: String, maxTokens: Int) async throws -> String {
+        let url = URL(string: "https://api.openai.com/v1/chat/completions")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 10
+
+        let body: [String: Any] = [
+            "model": "gpt-3.5-turbo", // Use faster model for autocomplete
+            "messages": [["role": "user", "content": message]],
+            "max_tokens": maxTokens,
+            "temperature": 0.3
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let choices = json["choices"] as? [[String: Any]],
+              let first = choices.first,
+              let msg = first["message"] as? [String: Any],
+              let content = msg["content"] as? String else {
+            throw AIError.invalidResponse
+        }
+        return content.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func sendAnthropicQuick(_ message: String, apiKey: String, maxTokens: Int) async throws -> String {
+        let url = URL(string: "https://api.anthropic.com/v1/messages")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 10
+
+        let body: [String: Any] = [
+            "model": "claude-3-haiku-20240307", // Use fastest model
+            "max_tokens": maxTokens,
+            "messages": [["role": "user", "content": message]]
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let content = json["content"] as? [[String: Any]],
+              let first = content.first,
+              let text = first["text"] as? String else {
+            throw AIError.invalidResponse
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func sendGeminiQuick(_ message: String, apiKey: String, maxTokens: Int) async throws -> String {
+        let model = "gemini-2.0-flash" // Use fast model
+        let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(apiKey)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 10
+
+        let body: [String: Any] = [
+            "contents": [["parts": [["text": message]]]],
+            "generationConfig": ["maxOutputTokens": maxTokens, "temperature": 0.3]
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let candidates = json["candidates"] as? [[String: Any]],
+              let first = candidates.first,
+              let content = first["content"] as? [String: Any],
+              let parts = content["parts"] as? [[String: Any]],
+              let firstPart = parts.first,
+              let text = firstPart["text"] as? String else {
+            throw AIError.invalidResponse
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func parseTerminalSuggestions(_ response: String) -> [TerminalSuggestion] {
+        // Clean up response - remove markdown code blocks if present
+        var cleaned = response
+        if cleaned.hasPrefix("```") {
+            if let endIndex = cleaned.range(of: "\n") {
+                cleaned = String(cleaned[endIndex.upperBound...])
+            }
+            if cleaned.hasSuffix("```") {
+                cleaned = String(cleaned.dropLast(3))
+            }
+        }
+        cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let data = cleaned.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return []
+        }
+
+        return json.compactMap { item -> TerminalSuggestion? in
+            guard let command = item["command"] as? String,
+                  let description = item["description"] as? String else {
+                return nil
+            }
+            let confidence = item["confidence"] as? Double ?? 0.5
+            return TerminalSuggestion(command: command, description: description, confidence: confidence)
+        }
+    }
+
     /// Suggest a conflict resolution
     func suggestConflictResolution(
         ours: String,
@@ -277,6 +482,9 @@ actor AIService {
     // MARK: - Private API Methods
 
     private func sendMessage(_ message: String) async throws -> String {
+        // Load preferences on first use
+        await loadPreferencesIfNeeded()
+
         guard let kcProvider = KeychainManager.AIProvider(rawValue: currentProvider.rawValue),
               let apiKey = try await keychainManager.getAIKey(provider: kcProvider) else {
             throw AIError.noAPIKey(currentProvider)
@@ -459,5 +667,19 @@ enum AIError: LocalizedError {
         case .invalidResponse:
             return "Invalid response from AI service"
         }
+    }
+}
+
+// MARK: - Terminal Suggestion Model
+
+struct TerminalSuggestion: Identifiable, Equatable {
+    let id = UUID()
+    let command: String
+    let description: String
+    let confidence: Double
+    var isFromAI: Bool = true
+
+    static func == (lhs: TerminalSuggestion, rhs: TerminalSuggestion) -> Bool {
+        lhs.command == rhs.command
     }
 }

@@ -76,13 +76,13 @@ class FileWatcher: ObservableObject {
     }
 }
 
-/// Watches a Git repository's .git directory for changes
+/// Watches a Git repository's .git directory and working directory for changes
 class GitRepositoryWatcher: ObservableObject {
     @Published var hasChanges = false
     @Published var headChanged = false
 
     private var gitDirWatcher: FileWatcher?
-    private var workingDirWatcher: FileWatcher?
+    private var workingDirWatcher: RecursiveDirectoryWatcher?
     private var headWatcher: FileWatcher?
     private var indexWatcher: FileWatcher?
 
@@ -129,6 +129,15 @@ class GitRepositoryWatcher: ObservableObject {
                 self?.hasChanges = true
             }
             .store(in: &cancellables)
+
+        // Watch working directory for file changes (detects edits to tracked files)
+        workingDirWatcher = RecursiveDirectoryWatcher(
+            paths: [repositoryPath],
+            latency: 0.3,
+            excludePaths: [".git", "node_modules", ".build", "DerivedData", "Pods", ".swiftpm"]
+        ) { [weak self] in
+            self?.hasChanges = true
+        }
     }
 
     /// Start all watchers
@@ -136,6 +145,7 @@ class GitRepositoryWatcher: ObservableObject {
         gitDirWatcher?.start()
         headWatcher?.start()
         indexWatcher?.start()
+        workingDirWatcher?.start()
     }
 
     /// Stop all watchers
@@ -143,6 +153,7 @@ class GitRepositoryWatcher: ObservableObject {
         gitDirWatcher?.stop()
         headWatcher?.stop()
         indexWatcher?.stop()
+        workingDirWatcher?.stop()
     }
 
     /// Reset change flags
@@ -156,10 +167,14 @@ class GitRepositoryWatcher: ObservableObject {
 class RecursiveDirectoryWatcher {
     private var eventStream: FSEventStreamRef?
     private let paths: [String]
+    private let latency: TimeInterval
+    private let excludePaths: [String]
     private let callback: () -> Void
 
-    init(paths: [String], callback: @escaping () -> Void) {
+    init(paths: [String], latency: TimeInterval = 0.3, excludePaths: [String] = [], callback: @escaping () -> Void) {
         self.paths = paths
+        self.latency = latency
+        self.excludePaths = excludePaths
         self.callback = callback
     }
 
@@ -187,12 +202,26 @@ class RecursiveDirectoryWatcher {
             { _, info, numEvents, eventPaths, _, _ in
                 guard let info = info else { return }
                 let watcher = Unmanaged<RecursiveDirectoryWatcher>.fromOpaque(info).takeUnretainedValue()
-                watcher.callback()
+
+                // Filter out excluded paths
+                if let cfPaths = eventPaths as? NSArray {
+                    for i in 0..<numEvents {
+                        if let path = cfPaths[Int(i)] as? String {
+                            let shouldExclude = watcher.excludePaths.contains { excludePath in
+                                path.contains("/\(excludePath)/") || path.hasSuffix("/\(excludePath)")
+                            }
+                            if !shouldExclude {
+                                watcher.callback()
+                                return
+                            }
+                        }
+                    }
+                }
             },
             &context,
             paths as CFArray,
             FSEventStreamEventId(kFSEventStreamEventIdSinceNow),
-            0.5, // Latency in seconds
+            latency,
             flags
         )
 
