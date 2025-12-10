@@ -55,24 +55,34 @@ actor KeychainManager {
 
     /// Save GitHub personal access token
     func saveGitHubToken(_ token: String, username: String? = nil) throws {
+        cache[githubTokenKey] = token
         try keychain.set(token, key: githubTokenKey)
         if let username = username {
+            cache[githubUsernameKey] = username
             try keychain.set(username, key: githubUsernameKey)
         }
     }
 
-    /// Get GitHub token
+    /// Get GitHub token (cached to avoid repeated password prompts)
     func getGitHubToken() throws -> String? {
-        try keychain.get(githubTokenKey)
+        if let cached = cache[githubTokenKey] { return cached }
+        let value = try keychain.get(githubTokenKey)
+        if let value = value { cache[githubTokenKey] = value }
+        return value
     }
 
-    /// Get GitHub username
+    /// Get GitHub username (cached)
     func getGitHubUsername() throws -> String? {
-        try keychain.get(githubUsernameKey)
+        if let cached = cache[githubUsernameKey] { return cached }
+        let value = try keychain.get(githubUsernameKey)
+        if let value = value { cache[githubUsernameKey] = value }
+        return value
     }
 
     /// Delete GitHub credentials
     func deleteGitHubCredentials() throws {
+        cache.removeValue(forKey: githubTokenKey)
+        cache.removeValue(forKey: githubUsernameKey)
         try keychain.remove(githubTokenKey)
         try keychain.remove(githubUsernameKey)
     }
@@ -115,16 +125,21 @@ actor KeychainManager {
 
     /// Save AI API key
     func saveAIKey(provider: AIProvider, key: String) throws {
+        cache[provider.keyName] = key
         try keychain.set(key, key: provider.keyName)
     }
 
-    /// Get AI API key
+    /// Get AI API key (cached)
     func getAIKey(provider: AIProvider) throws -> String? {
-        try keychain.get(provider.keyName)
+        if let cached = cache[provider.keyName] { return cached }
+        let value = try keychain.get(provider.keyName)
+        if let value = value { cache[provider.keyName] = value }
+        return value
     }
 
     /// Delete AI API key
     func deleteAIKey(provider: AIProvider) throws {
+        cache.removeValue(forKey: provider.keyName)
         try keychain.remove(provider.keyName)
     }
 
@@ -145,18 +160,35 @@ actor KeychainManager {
 
     /// Save preferred AI provider
     func savePreferredAIProvider(_ provider: AIProvider, model: String) throws {
+        cache[preferredAIProviderKey] = provider.rawValue
+        cache[preferredAIModelKey] = model
         try keychain.set(provider.rawValue, key: preferredAIProviderKey)
         try keychain.set(model, key: preferredAIModelKey)
     }
 
-    /// Get preferred AI provider
+    /// Get preferred AI provider (cached)
     func getPreferredAIProvider() -> (provider: AIProvider, model: String)? {
-        guard let providerStr = try? keychain.get(preferredAIProviderKey),
-              let provider = AIProvider(rawValue: providerStr),
-              let model = try? keychain.get(preferredAIModelKey) else {
+        let providerStr: String?
+        let model: String?
+
+        if let cached = cache[preferredAIProviderKey] {
+            providerStr = cached
+        } else {
+            providerStr = try? keychain.get(preferredAIProviderKey)
+            if let p = providerStr { cache[preferredAIProviderKey] = p }
+        }
+
+        if let cached = cache[preferredAIModelKey] {
+            model = cached
+        } else {
+            model = try? keychain.get(preferredAIModelKey)
+            if let m = model { cache[preferredAIModelKey] = m }
+        }
+
+        guard let pStr = providerStr, let provider = AIProvider(rawValue: pStr), let m = model else {
             return nil
         }
-        return (provider, model)
+        return (provider, m)
     }
 
     // MARK: - Git Credentials
@@ -194,14 +226,19 @@ actor KeychainManager {
     private let linearTokenKey = "linear_token"
 
     func saveLinearToken(_ token: String) throws {
+        cache[linearTokenKey] = token
         try keychain.set(token, key: linearTokenKey)
     }
 
     func getLinearToken() throws -> String? {
-        try keychain.get(linearTokenKey)
+        if let cached = cache[linearTokenKey] { return cached }
+        let value = try keychain.get(linearTokenKey)
+        if let value = value { cache[linearTokenKey] = value }
+        return value
     }
 
     func deleteLinearToken() throws {
+        cache.removeValue(forKey: linearTokenKey)
         try keychain.remove(linearTokenKey)
     }
 
@@ -212,38 +249,55 @@ actor KeychainManager {
     private let jiraSiteUrlKey = "jira_site_url"
 
     func saveJiraToken(_ token: String) throws {
+        cache[jiraTokenKey] = token
         try keychain.set(token, key: jiraTokenKey)
     }
 
     func getJiraToken() throws -> String? {
-        try keychain.get(jiraTokenKey)
+        if let cached = cache[jiraTokenKey] { return cached }
+        let value = try keychain.get(jiraTokenKey)
+        if let value = value { cache[jiraTokenKey] = value }
+        return value
     }
 
     func saveJiraCloudId(_ cloudId: String) throws {
+        cache[jiraCloudIdKey] = cloudId
         try keychain.set(cloudId, key: jiraCloudIdKey)
     }
 
     func getJiraCloudId() throws -> String? {
-        try keychain.get(jiraCloudIdKey)
+        if let cached = cache[jiraCloudIdKey] { return cached }
+        let value = try keychain.get(jiraCloudIdKey)
+        if let value = value { cache[jiraCloudIdKey] = value }
+        return value
     }
 
     func saveJiraSiteUrl(_ url: String) throws {
+        cache[jiraSiteUrlKey] = url
         try keychain.set(url, key: jiraSiteUrlKey)
     }
 
     func getJiraSiteUrl() throws -> String? {
-        try keychain.get(jiraSiteUrlKey)
+        if let cached = cache[jiraSiteUrlKey] { return cached }
+        let value = try keychain.get(jiraSiteUrlKey)
+        if let value = value { cache[jiraSiteUrlKey] = value }
+        return value
     }
 
     func deleteJiraToken() throws {
+        cache.removeValue(forKey: jiraTokenKey)
         try keychain.remove(jiraTokenKey)
     }
 
     func deleteJiraCloudId() throws {
+        cache.removeValue(forKey: jiraCloudIdKey)
         try keychain.remove(jiraCloudIdKey)
     }
 
     func deleteJiraCredentials() throws {
+        cache.removeValue(forKey: jiraTokenKey)
+        cache.removeValue(forKey: jiraCloudIdKey)
+        cache.removeValue(forKey: jiraSiteUrlKey)
         try keychain.remove(jiraTokenKey)
         try keychain.remove(jiraCloudIdKey)
         try keychain.remove(jiraSiteUrlKey)
@@ -254,14 +308,19 @@ actor KeychainManager {
     private let notionTokenKey = "notion_token"
 
     func saveNotionToken(_ token: String) throws {
+        cache[notionTokenKey] = token
         try keychain.set(token, key: notionTokenKey)
     }
 
     func getNotionToken() throws -> String? {
-        try keychain.get(notionTokenKey)
+        if let cached = cache[notionTokenKey] { return cached }
+        let value = try keychain.get(notionTokenKey)
+        if let value = value { cache[notionTokenKey] = value }
+        return value
     }
 
     func deleteNotionToken() throws {
+        cache.removeValue(forKey: notionTokenKey)
         try keychain.remove(notionTokenKey)
     }
 }
