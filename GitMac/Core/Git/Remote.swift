@@ -210,13 +210,13 @@ struct CloneOptions {
 /// Remote operation progress
 struct RemoteProgress: Identifiable {
     let id: UUID
-    let operation: RemoteOperation
+    let operation: RemoteOperationKind
     let phase: String
     let current: Int
     let total: Int
     let message: String?
 
-    init(operation: RemoteOperation, phase: String, current: Int, total: Int, message: String? = nil) {
+    init(operation: RemoteOperationKind, phase: String, current: Int, total: Int, message: String? = nil) {
         self.id = UUID()
         self.operation = operation
         self.phase = phase
@@ -235,7 +235,7 @@ struct RemoteProgress: Identifiable {
     }
 }
 
-enum RemoteOperation: String {
+enum RemoteOperationKind: String {
     case fetch = "Fetching"
     case pull = "Pulling"
     case push = "Pushing"

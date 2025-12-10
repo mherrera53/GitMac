@@ -113,3 +113,28 @@ struct StashContent {
     var totalDeletions: Int { stats.deletions }
     var filesChanged: Int { files.count }
 }
+
+/// Represents a file in a stash
+struct StashFile: Identifiable {
+    let id = UUID()
+    let path: String
+    let filename: String
+    let status: FileStatusType
+
+    var statusLetter: String {
+        status.rawValue
+    }
+
+    var statusColor: Color {
+        switch status {
+        case .added: return .green
+        case .modified: return .orange
+        case .deleted: return .red
+        case .renamed: return .blue
+        case .copied: return .blue
+        default: return .gray
+        }
+    }
+}
+
+import SwiftUI

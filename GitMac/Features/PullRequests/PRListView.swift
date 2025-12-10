@@ -48,8 +48,21 @@ struct PRListView: View {
                     EmptyPRView(state: filterState)
                 } else {
                     List(viewModel.pullRequests, selection: $selectedPR) { pr in
-                        PRRow(pr: pr, isSelected: selectedPR?.id == pr.id)
-                            .tag(pr)
+                        PRRow(
+                            pr: pr,
+                            isSelected: selectedPR?.id == pr.id,
+                            onMerge: { method in
+                                Task {
+                                    await viewModel.mergePR(pr, method: method)
+                                }
+                            },
+                            onClose: {
+                                Task {
+                                    await viewModel.closePR(pr)
+                                }
+                            }
+                        )
+                        .tag(pr)
                     }
                     .listStyle(.plain)
                 }
@@ -151,6 +164,19 @@ class PRListViewModel: ObservableObject {
         }
     }
 
+    func closePR(_ pr: GitHubPullRequest) async {
+        do {
+            try await githubService.closePullRequest(
+                owner: owner,
+                repo: repo,
+                number: pr.number
+            )
+            await loadPullRequests()
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
     func createPR(title: String, body: String, head: String, base: String, draft: Bool) async {
         do {
             _ = try await githubService.createPullRequest(
@@ -174,6 +200,8 @@ class PRListViewModel: ObservableObject {
 struct PRRow: View {
     let pr: GitHubPullRequest
     let isSelected: Bool
+    var onMerge: ((MergeMethod) -> Void)?
+    var onClose: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -257,6 +285,51 @@ struct PRRow: View {
         .padding(.horizontal, 4)
         .background(isSelected ? Color.accentColor.opacity(0.1) : Color.clear)
         .cornerRadius(4)
+        .contextMenu {
+            if pr.state == "open" && !pr.draft {
+                Menu {
+                    Button {
+                        onMerge?(.merge)
+                    } label: {
+                        Label("Create a merge commit", systemImage: "arrow.triangle.merge")
+                    }
+
+                    Button {
+                        onMerge?(.squash)
+                    } label: {
+                        Label("Squash and merge", systemImage: "square.stack.3d.up")
+                    }
+
+                    Button {
+                        onMerge?(.rebase)
+                    } label: {
+                        Label("Rebase and merge", systemImage: "arrow.triangle.branch")
+                    }
+                } label: {
+                    Label("Merge Pull Request", systemImage: "arrow.triangle.merge")
+                }
+
+                Divider()
+            }
+
+            Button {
+                if let url = URL(string: pr.htmlUrl) {
+                    NSWorkspace.shared.open(url)
+                }
+            } label: {
+                Label("Open in GitHub", systemImage: "safari")
+            }
+
+            if pr.state == "open" {
+                Divider()
+
+                Button(role: .destructive) {
+                    onClose?()
+                } label: {
+                    Label("Close Pull Request", systemImage: "xmark.circle")
+                }
+            }
+        }
     }
 
     var statusColor: Color {
@@ -465,8 +538,8 @@ struct PRFileRow: View {
         HStack(spacing: 8) {
             StatusIcon(status: statusType)
 
-            Image(systemName: FileTypeIcon.systemIcon(for: file.filename))
-                .foregroundColor(FileTypeIcon.color(for: file.filename))
+            Image(systemName: "doc.fill")
+                .foregroundColor(.blue)
 
             Text(file.filename)
                 .lineLimit(1)
