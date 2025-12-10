@@ -760,6 +760,29 @@ struct IntegrationsSettingsView: View {
     @State private var isLoadingPlanner = false
     @State private var plannerError: String?
 
+    // Linear state
+    @State private var isLinearConnected = false
+    @State private var linearApiKey = ""
+    @State private var linearTeams: [LinearTeam] = []
+    @State private var isLoadingLinear = false
+    @State private var linearError: String?
+
+    // Jira state
+    @State private var isJiraConnected = false
+    @State private var jiraSiteUrl = ""
+    @State private var jiraEmail = ""
+    @State private var jiraApiToken = ""
+    @State private var jiraProjects: [JiraProject] = []
+    @State private var isLoadingJira = false
+    @State private var jiraError: String?
+
+    // Notion state
+    @State private var isNotionConnected = false
+    @State private var notionToken = ""
+    @State private var notionDatabases: [NotionDatabase] = []
+    @State private var isLoadingNotion = false
+    @State private var notionError: String?
+
     // Current repo
     @State private var selectedRepoPath: String?
 
@@ -822,6 +845,59 @@ struct IntegrationsSettingsView: View {
                 }
             }
 
+            // Linear Integration
+            Section("Linear") {
+                if isLinearConnected {
+                    LinearConnectedView(
+                        teams: linearTeams,
+                        onDisconnect: disconnectLinear
+                    )
+                } else {
+                    LinearLoginSettingsView(
+                        apiKey: $linearApiKey,
+                        isLoading: isLoadingLinear,
+                        error: linearError,
+                        onLogin: loginLinear
+                    )
+                }
+            }
+
+            // Jira Integration
+            Section("Jira") {
+                if isJiraConnected {
+                    JiraConnectedView(
+                        projects: jiraProjects,
+                        onDisconnect: disconnectJira
+                    )
+                } else {
+                    JiraLoginSettingsView(
+                        siteUrl: $jiraSiteUrl,
+                        email: $jiraEmail,
+                        apiToken: $jiraApiToken,
+                        isLoading: isLoadingJira,
+                        error: jiraError,
+                        onLogin: loginJira
+                    )
+                }
+            }
+
+            // Notion Integration
+            Section("Notion") {
+                if isNotionConnected {
+                    NotionConnectedView(
+                        databases: notionDatabases,
+                        onDisconnect: disconnectNotion
+                    )
+                } else {
+                    NotionLoginSettingsView(
+                        token: $notionToken,
+                        isLoading: isLoadingNotion,
+                        error: notionError,
+                        onLogin: loginNotion
+                    )
+                }
+            }
+
             // Available integrations
             Section("Other Integrations") {
                 ForEach(IntegrationType.allCases.filter { !$0.isAvailable }) { integration in
@@ -874,6 +950,30 @@ struct IntegrationsSettingsView: View {
             await MicrosoftPlannerService.shared.setAccessToken(token)
             isPlannerConnected = true
             await loadPlannerPlans()
+        }
+
+        // Check Linear connection
+        if let token = try? await KeychainManager.shared.getLinearToken(), !token.isEmpty {
+            await LinearService.shared.setAccessToken(token)
+            isLinearConnected = true
+            await loadLinearTeams()
+        }
+
+        // Check Jira connection
+        if let token = try? await KeychainManager.shared.getJiraToken(),
+           let cloudId = try? await KeychainManager.shared.getJiraCloudId(),
+           !token.isEmpty, !cloudId.isEmpty {
+            await JiraService.shared.setAccessToken(token)
+            await JiraService.shared.setCloudId(cloudId)
+            isJiraConnected = true
+            await loadJiraProjects()
+        }
+
+        // Check Notion connection
+        if let token = try? await KeychainManager.shared.getNotionToken(), !token.isEmpty {
+            await NotionService.shared.setAccessToken(token)
+            isNotionConnected = true
+            await loadNotionDatabases()
         }
     }
 
@@ -936,6 +1036,356 @@ struct IntegrationsSettingsView: View {
             isPlannerConnected = false
             plannerPlans = []
         }
+    }
+
+    // MARK: - Linear Functions
+
+    private func loginLinear() {
+        isLoadingLinear = true
+        linearError = nil
+
+        Task {
+            do {
+                try await KeychainManager.shared.saveLinearToken(linearApiKey)
+                await LinearService.shared.setAccessToken(linearApiKey)
+                // Test connection
+                _ = try await LinearService.shared.listTeams()
+                isLinearConnected = true
+                linearApiKey = ""
+                await loadLinearTeams()
+            } catch {
+                linearError = error.localizedDescription
+            }
+            isLoadingLinear = false
+        }
+    }
+
+    private func loadLinearTeams() async {
+        do {
+            linearTeams = try await LinearService.shared.listTeams()
+        } catch {
+            linearError = "Failed to load teams"
+        }
+    }
+
+    private func disconnectLinear() {
+        Task {
+            try? await KeychainManager.shared.deleteLinearToken()
+            isLinearConnected = false
+            linearTeams = []
+        }
+    }
+
+    // MARK: - Jira Functions
+
+    private func loginJira() {
+        isLoadingJira = true
+        jiraError = nil
+
+        Task {
+            do {
+                // Create Basic auth token
+                let credentials = "\(jiraEmail):\(jiraApiToken)"
+                let encodedCredentials = Data(credentials.utf8).base64EncodedString()
+                let basicToken = "Basic \(encodedCredentials)"
+
+                var cleanSiteUrl = jiraSiteUrl.trimmingCharacters(in: .whitespaces)
+                if !cleanSiteUrl.hasPrefix("https://") {
+                    cleanSiteUrl = "https://\(cleanSiteUrl)"
+                }
+
+                let cloudId = cleanSiteUrl
+                    .replacingOccurrences(of: "https://", with: "")
+                    .replacingOccurrences(of: ".atlassian.net", with: "")
+                    .replacingOccurrences(of: "/", with: "")
+
+                try await KeychainManager.shared.saveJiraToken(basicToken)
+                try await KeychainManager.shared.saveJiraCloudId(cloudId)
+                try await KeychainManager.shared.saveJiraSiteUrl(cleanSiteUrl)
+
+                await JiraService.shared.setAccessToken(basicToken, cloudId: cloudId, siteUrl: cleanSiteUrl)
+
+                isJiraConnected = true
+                jiraApiToken = ""
+                await loadJiraProjects()
+            } catch {
+                jiraError = error.localizedDescription
+            }
+            isLoadingJira = false
+        }
+    }
+
+    private func loadJiraProjects() async {
+        do {
+            jiraProjects = try await JiraService.shared.listProjects()
+        } catch {
+            jiraError = "Failed to load projects"
+        }
+    }
+
+    private func disconnectJira() {
+        Task {
+            try? await KeychainManager.shared.deleteJiraCredentials()
+            isJiraConnected = false
+            jiraProjects = []
+        }
+    }
+
+    // MARK: - Notion Functions
+
+    private func loginNotion() {
+        isLoadingNotion = true
+        notionError = nil
+
+        Task {
+            do {
+                try await KeychainManager.shared.saveNotionToken(notionToken)
+                await NotionService.shared.setAccessToken(notionToken)
+                // Test connection
+                _ = try await NotionService.shared.search()
+                isNotionConnected = true
+                notionToken = ""
+                await loadNotionDatabases()
+            } catch {
+                notionError = error.localizedDescription
+            }
+            isLoadingNotion = false
+        }
+    }
+
+    private func loadNotionDatabases() async {
+        do {
+            notionDatabases = try await NotionService.shared.listDatabases()
+        } catch {
+            notionError = "Failed to load databases"
+        }
+    }
+
+    private func disconnectNotion() {
+        Task {
+            try? await KeychainManager.shared.deleteNotionToken()
+            isNotionConnected = false
+            notionDatabases = []
+        }
+    }
+}
+
+// MARK: - Linear Settings Views
+
+struct LinearConnectedView: View {
+    let teams: [LinearTeam]
+    let onDisconnect: () -> Void
+
+    var body: some View {
+        HStack {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.green)
+            Text("Connected")
+            Spacer()
+            if !teams.isEmpty {
+                Text("\(teams.count) teams")
+                    .foregroundColor(.secondary)
+            }
+            Button("Disconnect", role: .destructive, action: onDisconnect)
+        }
+
+        if !teams.isEmpty {
+            ForEach(teams) { team in
+                HStack {
+                    Text(team.key)
+                        .font(.caption.monospaced())
+                        .foregroundColor(.secondary)
+                    Text(team.name)
+                }
+            }
+        }
+
+        Link("Open Linear", destination: URL(string: "https://linear.app")!)
+            .font(.caption)
+    }
+}
+
+struct LinearLoginSettingsView: View {
+    @Binding var apiKey: String
+    let isLoading: Bool
+    let error: String?
+    let onLogin: () -> Void
+
+    var body: some View {
+        SecureField("API Key", text: $apiKey)
+            .textFieldStyle(.roundedBorder)
+
+        if let error = error {
+            Text(error)
+                .foregroundColor(.red)
+                .font(.caption)
+        }
+
+        HStack {
+            Button(action: onLogin) {
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Text("Connect")
+                }
+            }
+            .disabled(apiKey.isEmpty || isLoading)
+
+            Link("Get API Key", destination: URL(string: "https://linear.app/settings/api")!)
+                .font(.caption)
+        }
+    }
+}
+
+// MARK: - Jira Settings Views
+
+struct JiraConnectedView: View {
+    let projects: [JiraProject]
+    let onDisconnect: () -> Void
+
+    var body: some View {
+        HStack {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.green)
+            Text("Connected")
+            Spacer()
+            if !projects.isEmpty {
+                Text("\(projects.count) projects")
+                    .foregroundColor(.secondary)
+            }
+            Button("Disconnect", role: .destructive, action: onDisconnect)
+        }
+
+        if !projects.isEmpty {
+            ForEach(projects.prefix(5)) { project in
+                HStack {
+                    Text(project.key)
+                        .font(.caption.monospaced())
+                        .foregroundColor(.secondary)
+                    Text(project.name)
+                }
+            }
+            if projects.count > 5 {
+                Text("and \(projects.count - 5) more...")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+}
+
+struct JiraLoginSettingsView: View {
+    @Binding var siteUrl: String
+    @Binding var email: String
+    @Binding var apiToken: String
+    let isLoading: Bool
+    let error: String?
+    let onLogin: () -> Void
+
+    var body: some View {
+        TextField("Site URL (e.g. yourcompany.atlassian.net)", text: $siteUrl)
+            .textFieldStyle(.roundedBorder)
+
+        TextField("Email", text: $email)
+            .textFieldStyle(.roundedBorder)
+
+        SecureField("API Token", text: $apiToken)
+            .textFieldStyle(.roundedBorder)
+
+        if let error = error {
+            Text(error)
+                .foregroundColor(.red)
+                .font(.caption)
+        }
+
+        HStack {
+            Button(action: onLogin) {
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Text("Connect")
+                }
+            }
+            .disabled(siteUrl.isEmpty || email.isEmpty || apiToken.isEmpty || isLoading)
+
+            Link("Get API Token", destination: URL(string: "https://id.atlassian.com/manage-profile/security/api-tokens")!)
+                .font(.caption)
+        }
+    }
+}
+
+// MARK: - Notion Settings Views
+
+struct NotionConnectedView: View {
+    let databases: [NotionDatabase]
+    let onDisconnect: () -> Void
+
+    var body: some View {
+        HStack {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.green)
+            Text("Connected")
+            Spacer()
+            if !databases.isEmpty {
+                Text("\(databases.count) databases")
+                    .foregroundColor(.secondary)
+            }
+            Button("Disconnect", role: .destructive, action: onDisconnect)
+        }
+
+        if !databases.isEmpty {
+            ForEach(databases.prefix(5)) { db in
+                Text(db.displayTitle)
+            }
+            if databases.count > 5 {
+                Text("and \(databases.count - 5) more...")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        } else {
+            Text("Share databases with your integration to see them here")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+struct NotionLoginSettingsView: View {
+    @Binding var token: String
+    let isLoading: Bool
+    let error: String?
+    let onLogin: () -> Void
+
+    var body: some View {
+        SecureField("Integration Token", text: $token)
+            .textFieldStyle(.roundedBorder)
+
+        if let error = error {
+            Text(error)
+                .foregroundColor(.red)
+                .font(.caption)
+        }
+
+        HStack {
+            Button(action: onLogin) {
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Text("Connect")
+                }
+            }
+            .disabled(token.isEmpty || isLoading)
+
+            Link("Create Integration", destination: URL(string: "https://www.notion.so/my-integrations")!)
+                .font(.caption)
+        }
+
+        Text("Remember to share your databases with the integration")
+            .font(.caption)
+            .foregroundColor(.secondary)
     }
 }
 

@@ -1,14 +1,29 @@
 import SwiftUI
 
+// MARK: - Color Extension for Branch Colors
+private extension Color {
+    static func branchColor(_ index: Int) -> Color {
+        let colors: [Color] = [.blue, .green, .orange, .purple, .red, .cyan, .pink, .yellow]
+        return colors[index % colors.count]
+    }
+}
+
 // MARK: - Commit Graph View
 struct CommitGraphView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var vm = GraphViewModel()
+    @StateObject private var tracker = RemoteOperationTracker.shared
     @State private var selectedId: String?
     @State private var hoveredId: String?
 
     var body: some View {
         VStack(spacing: 0) {
+            // Remote operation status bar (if exists)
+            if let operation = lastOperationForCurrentBranch {
+                remoteStatusBar(operation: operation)
+                Divider()
+            }
+            
             graphHeader
             Divider()
             graphContent
@@ -22,6 +37,71 @@ struct CommitGraphView: View {
         .onChange(of: appState.currentRepository?.path) { _, p in
             if let p { Task { await vm.load(at: p) } }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { notification in
+            if let path = notification.object as? String,
+               path == appState.currentRepository?.path {
+                Task { await vm.load(at: path) }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .remoteOperationCompleted)) { _ in
+            // Force refresh when operation completes
+        }
+    }
+    
+    private var lastOperationForCurrentBranch: RemoteOperation? {
+        guard let branch = appState.currentRepository?.currentBranch?.name else { return nil }
+        return tracker.getLastOperation(for: branch)
+    }
+    
+    private func remoteStatusBar(operation: RemoteOperation) -> some View {
+        HStack(spacing: 12) {
+            // Status icon and info
+            RemoteStatusBadge(operation: operation, compact: false)
+            
+            // Time ago
+            Text(operation.timestamp.formatted(.relative(presentation: .named)))
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            Spacer()
+            
+            // Error details button
+            if !operation.success, let error = operation.error {
+                Button {
+                    NotificationManager.shared.error(
+                        "\(operation.type.displayName) failed",
+                        detail: error
+                    )
+                } label: {
+                    Label("Details", systemImage: "info.circle")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+            }
+            
+            // Dismiss button
+            Button {
+                // Clear this specific operation from being shown
+                // (but keep in history)
+                withAnimation {
+                    tracker.lastOperation = nil
+                }
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.borderless)
+            .help("Dismiss")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(operation.color.opacity(0.08))
+        .overlay(
+            Rectangle()
+                .frame(height: 2)
+                .foregroundColor(operation.color.opacity(0.4)),
+            alignment: .bottom
+        )
     }
 
     private var graphHeader: some View {
@@ -39,6 +119,8 @@ struct CommitGraphView: View {
         .foregroundColor(GitKrakenTheme.textMuted)
         .frame(height: 28)
         .background(GitKrakenTheme.backgroundSecondary)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Graph Header: Branch, Graph, Commit Message")
     }
 
     @ViewBuilder
@@ -75,6 +157,7 @@ struct CommitGraphView: View {
             .onTapGesture {
                 selectedId = "uncommitted"
                 appState.selectedCommit = nil
+                appState.selectedStash = nil
             }
         }
     }
@@ -93,7 +176,11 @@ struct CommitGraphView: View {
                 .onTapGesture {
                     selectedId = node.commit.sha
                     appState.selectedCommit = node.commit
+                    appState.selectedStash = nil  // Clear stash selection
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Commit \(node.commit.shortSha) by \(node.commit.author): \(node.commit.summary)")
+                .accessibilityHint("Double tap to view details, context click for more actions")
             case .stash(let stashNode):
                 GraphStashRow(
                     stash: stashNode,
@@ -103,6 +190,8 @@ struct CommitGraphView: View {
                 .onHover { h in hoveredId = h ? stashNode.id : nil }
                 .onTapGesture {
                     selectedId = stashNode.id
+                    appState.selectedCommit = nil  // Clear commit selection
+                    appState.selectedStash = stashNode.stash  // Set stash selection
                 }
             }
         }
@@ -144,9 +233,9 @@ struct UncommittedChangesRow: View {
     let isSelected: Bool
     let isHovered: Bool
 
-    private let H: CGFloat = 42
-    private let W: CGFloat = 24
-    private let R: CGFloat = 8
+    private let H: CGFloat = 44
+    private let W: CGFloat = 26
+    private let R: CGFloat = 14
 
     var body: some View {
         HStack(spacing: 0) {
@@ -174,13 +263,15 @@ struct UncommittedChangesRow: View {
 
                     // Dotted circle
                     let nodeRect = CGRect(x: myX - R, y: cy - R, width: R * 2, height: R * 2)
-                    ctx.stroke(Circle().path(in: nodeRect), with: .color(.orange), style: StrokeStyle(lineWidth: 2, dash: [3, 2]))
+                    // Fill with background to hide line passing through
+                    ctx.fill(Circle().path(in: nodeRect), with: .color(GitKrakenTheme.background))
+                    ctx.stroke(Circle().path(in: nodeRect), with: .color(.orange), style: StrokeStyle(lineWidth: 2, dash: [3, 3]))
                 }
                 .frame(width: 110, height: H)
 
                 // Pencil icon inside node
                 Image(systemName: "pencil")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.orange)
                     .offset(x: -43)
             }
@@ -211,68 +302,83 @@ struct UncommittedChangesRow: View {
     }
 }
 
-// MARK: - Graph Stash Row
+// MARK: - Graph Stash Row (GitKraken style)
 struct GraphStashRow: View {
     let stash: StashNode
     let isSelected: Bool
     let isHovered: Bool
 
-    private let H: CGFloat = 42
-    private let W: CGFloat = 24
-    private let R: CGFloat = 8
-    private let LW: CGFloat = 3
+    private let H: CGFloat = 44
+    private let W: CGFloat = 26
+    private let boxSize: CGFloat = 18
+    private let LW: CGFloat = 2
+    private let stashColor = Color(hex: "009999") // Teal/Cyan like GitKraken
 
     var body: some View {
         HStack(spacing: 0) {
-            // Label
-            HStack {
-                BranchBadge(
-                    name: stash.stash.reference,
-                    color: .purple,
-                    isHead: false,
-                    isTag: false
-                )
+            // Label - stash badge
+            HStack(spacing: 4) {
+                StashBadge(name: stash.stash.reference)
                 Spacer()
             }
             .frame(width: 140)
             .padding(.leading, 8)
 
-            // Graph - stash in separate column to the right
+            // Graph area
             ZStack {
                 Canvas { ctx, size in
                     let cy = size.height / 2
-                    let mainLaneX: CGFloat = W / 2 + 6  // Lane 0 - main branch
-                    let stashLaneX: CGFloat = mainLaneX + W  // Lane 1 - stash column (to the right)
+                    let mainLaneX: CGFloat = W / 2 + 6
+                    let stashX: CGFloat = mainLaneX + W + 8
 
-                    // 1) Draw main branch line passing through (uninterrupted)
+                    // 1) Main branch line (continues through)
                     var mainLine = Path()
                     mainLine.move(to: CGPoint(x: mainLaneX, y: 0))
                     mainLine.addLine(to: CGPoint(x: mainLaneX, y: size.height))
                     ctx.stroke(mainLine, with: .color(Color.branchColor(0)), lineWidth: LW)
 
-                    // 2) Draw dotted stash node in the right column
-                    let nodeRect = CGRect(x: stashLaneX - R, y: cy - R, width: R * 2, height: R * 2)
-                    ctx.stroke(Circle().path(in: nodeRect), with: .color(.purple), style: StrokeStyle(lineWidth: 2, dash: [3, 2]))
+                    // 2) Stash connection line
+                    var connLine = Path()
+                    connLine.move(to: CGPoint(x: stashX, y: cy))
+                    connLine.addLine(to: CGPoint(x: mainLaneX, y: size.height)) // Connects down-left
+                    ctx.stroke(connLine, with: .color(stashColor),
+                              style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [4, 4]))
+
+                    // 3) Stash node (Box)
+                    let boxRect = CGRect(x: stashX - boxSize/2, y: cy - boxSize/2,
+                                        width: boxSize, height: boxSize)
+                    let roundedBox = RoundedRectangle(cornerRadius: 3).path(in: boxRect)
+                    ctx.fill(roundedBox, with: .color(stashColor))
+                    ctx.stroke(roundedBox, with: .color(stashColor.opacity(0.8)), lineWidth: 1)
                 }
                 .frame(width: 110, height: H)
 
-                // Archive icon inside stash node (positioned in lane 1)
-                Image(systemName: "archivebox")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(.purple)
-                    .offset(x: -43 + W)  // Offset by one lane width to the right
+                // Box icon
+                Image(systemName: "shippingbox.fill")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(.white)
+                    .offset(x: -5) // Adjust based on stashX calculation
             }
 
             // Info
             HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(stash.stash.displayMessage)
                         .font(.system(size: 12))
                         .foregroundColor(GitKrakenTheme.textPrimary)
                         .lineLimit(1)
-                    Text(stash.stash.reference)
-                        .font(.system(size: 10))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+
+                    HStack(spacing: 6) {
+                        Text(stash.stash.reference)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(stashColor)
+
+                        if let branch = stash.stash.branchName {
+                            Text("on \(branch)")
+                                .font(.system(size: 10))
+                                .foregroundColor(GitKrakenTheme.textMuted)
+                        }
+                    }
                 }
 
                 Spacer()
@@ -304,6 +410,27 @@ struct GraphStashRow: View {
                 Label("Drop Stash", systemImage: "trash")
             }
         }
+    }
+}
+
+// MARK: - Stash Badge (GitKraken style - solid background)
+struct StashBadge: View {
+    let name: String
+    private let stashColor = Color(red: 0.3, green: 0.7, blue: 0.7)
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "shippingbox.fill")
+                .font(.system(size: 8, weight: .bold))
+            Text(name)
+                .font(.system(size: 10, weight: .semibold))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(stashColor)
+        .foregroundColor(.white)
+        .clipShape(RoundedRectangle(cornerRadius: 3))
     }
 }
 
@@ -363,10 +490,10 @@ struct GraphRow: View {
     let isSelected: Bool
     let isHovered: Bool
 
-    private let H: CGFloat = 42      // Mayor altura de fila
-    private let W: CGFloat = 24      // Mayor espaciado entre carriles
-    private let R: CGFloat = 8       // Nodos más grandes
-    private let LW: CGFloat = 3      // Líneas más gruesas
+    private let H: CGFloat = 44      // Mayor altura de fila
+    private let W: CGFloat = 26      // Mayor espaciado entre carriles
+    private let R: CGFloat = 14      // Node radius (bigger for avatar visibility)
+    private let LW: CGFloat = 2      // Line width
 
     var body: some View {
         HStack(spacing: 0) {
@@ -413,17 +540,29 @@ struct GraphRow: View {
                         drawBezier(ctx, from: CGPoint(x: myX, y: cy), to: CGPoint(x: toX, y: size.height), color: color(toLane))
                     }
 
-                    // 4) Node circle background (drawn LAST to cover intersections)
+                    // 4) Node circle background
                     let nodeRect = CGRect(x: myX - R, y: cy - R, width: R * 2, height: R * 2)
                     ctx.fill(Circle().path(in: nodeRect), with: .color(c))
+                    // Add a white/background stroke to separate node from lines
+                    ctx.stroke(Circle().path(in: nodeRect), with: .color(GitKrakenTheme.background), lineWidth: 2)
                 }
                 .frame(width: 110, height: H)
 
-                // Avatar overlay on top of the node
+                // Avatar overlay INSIDE the node
                 avatarView
-                    .frame(width: R * 2 - 2, height: R * 2 - 2)
+                    .frame(width: R * 2 - 2, height: R * 2 - 2) // Slightly smaller than node
                     .clipShape(Circle())
-                    .offset(x: x(node.lane) - 55) // Center on node position
+                    .overlay(
+                        Circle()
+                            .stroke(color(node.lane), lineWidth: 2)
+                    )
+                    .background(
+                        Circle()
+                            .fill(GitKrakenTheme.background)
+                    )
+                    .offset(x: x(node.lane) - 55) // Center on node position (55 is half of 110 width)
+                    .scaleEffect(isHovered ? 1.15 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHovered)
             }
 
             // Commit info
@@ -460,28 +599,11 @@ struct GraphRow: View {
 
     @ViewBuilder
     private var avatarView: some View {
-        if let gravatarURL = node.commit.gravatarURL {
-            AsyncImage(url: gravatarURL) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                case .failure, .empty:
-                    initialView
-                @unknown default:
-                    initialView
-                }
-            }
-        } else {
-            initialView
-        }
-    }
-
-    private var initialView: some View {
-        Text(String(node.commit.author.prefix(1)).uppercased())
-            .font(.system(size: 8, weight: .bold))
-            .foregroundColor(.white)
+        AvatarImageView(
+            email: node.commit.authorEmail,
+            size: R * 2 - 2,
+            fallbackInitial: String(node.commit.author.prefix(1))
+        )
     }
 
     func x(_ lane: Int) -> CGFloat { CGFloat(lane) * W + W / 2 + 6 }
@@ -497,11 +619,12 @@ struct GraphRow: View {
     func drawBezier(_ ctx: GraphicsContext, from: CGPoint, to: CGPoint, color: Color) {
         var p = Path()
         p.move(to: from)
-        // Smooth S-curve
+        // More GitKraken-like smooth curve (less S-shape, more like railroad tracks that merge)
+        let controlY = from.y + (to.y - from.y) * 0.6 // Push control point further down
         p.addCurve(
             to: to,
-            control1: CGPoint(x: from.x, y: from.y + (to.y - from.y) * 0.5),
-            control2: CGPoint(x: to.x, y: from.y + (to.y - from.y) * 0.5)
+            control1: CGPoint(x: from.x, y: controlY),
+            control2: CGPoint(x: to.x, y: from.y + (to.y - from.y) * 0.4)
         )
         ctx.stroke(p, with: .color(color), style: StrokeStyle(lineWidth: LW, lineCap: .round))
     }
@@ -882,6 +1005,48 @@ struct CommitContextMenu: View {
 
             Divider()
 
+            // Rebase actions
+            Button {
+                NotificationCenter.default.post(
+                    name: .rebaseOntoCommit,
+                    object: commit.sha
+                )
+            } label: {
+                Label("Rebase current branch onto this...", systemImage: "arrow.triangle.pull")
+            }
+
+            Button {
+                NotificationCenter.default.post(
+                    name: .interactiveRebase,
+                    object: commit.sha
+                )
+            } label: {
+                Label("Interactive Rebase...", systemImage: "list.bullet.rectangle.portrait")
+            }
+
+            Divider()
+
+            Button {
+                // Implementation for Diff with HEAD
+                NotificationCenter.default.post(
+                    name: .diffWithHead,
+                    object: commit.sha
+                )
+            } label: {
+                Label("Diff with HEAD", systemImage: "arrow.left.arrow.right")
+            }
+
+            Button {
+                 let process = Process()
+                 process.launchPath = "/usr/bin/open"
+                 process.arguments = ["-a", "Terminal", appState.currentRepository?.path ?? "."]
+                 try? process.run()
+            } label: {
+                Label("Open in Terminal", systemImage: "terminal")
+            }
+
+            Divider()
+
             // Reset operations
             Menu {
                 Button("Soft (keep changes staged)") {
@@ -916,4 +1081,7 @@ extension Notification.Name {
     static let cherryPickCommit = Notification.Name("cherryPickCommit")
     static let revertCommit = Notification.Name("revertCommit")
     static let resetToCommit = Notification.Name("resetToCommit")
+    static let rebaseOntoCommit = Notification.Name("rebaseOntoCommit")
+    static let interactiveRebase = Notification.Name("interactiveRebase")
+    static let diffWithHead = Notification.Name("diffWithHead")
 }

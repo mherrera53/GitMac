@@ -26,11 +26,17 @@ struct ConflictResolverView: View {
                 )
                 .frame(minWidth: 200, maxWidth: 300)
 
-                // Right: Three-way merge view
+                // Right: Resolution View
                 if let file = selectedFile {
-                    ThreeWayMergeView(
-                        file: file,
-                        viewModel: viewModel
+                    // Use InlineConflictResolver for better UX (VS Code style)
+                    InlineConflictResolver(
+                        filePath: file.path,
+                        repositoryPath: appState.currentRepository?.path ?? "",
+                        onResolved: {
+                            Task {
+                                await viewModel.markResolved(file)
+                            }
+                        }
                     )
                 } else {
                     EmptyConflictView()
@@ -159,6 +165,14 @@ class ConflictResolverViewModel: ObservableObject {
         } catch {
             self.error = error.localizedDescription
         }
+    }
+
+    func markResolved(_ file: ConflictFile) async {
+        if let index = conflictFiles.firstIndex(where: { $0.id == file.id }) {
+            conflictFiles[index].isResolved = true
+        }
+        // Stage the file
+        try? await gitService.stage(files: [file.path])
     }
 
     func abortMerge() async {
@@ -407,8 +421,8 @@ struct ConflictFileRow: View {
             Image(systemName: file.isResolved ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
                 .foregroundColor(file.isResolved ? .green : .red)
 
-            Image(systemName: FileTypeIcon.systemIcon(for: file.filename))
-                .foregroundColor(FileTypeIcon.color(for: file.filename))
+            Image(systemName: "doc.fill")
+                .foregroundColor(.blue)
 
             VStack(alignment: .leading) {
                 Text(file.filename)
@@ -697,58 +711,56 @@ struct EmptyConflictView: View {
     }
 }
 
-// MARK: - Inline Conflict Resolution View (VS Code style)
+// MARK: - Inline Conflict Resolver (VS Code style)
 
-/// View that shows conflicts inline with action buttons like VS Code
-struct InlineConflictResolverView: View {
+struct InlineConflictResolver: View {
     let filePath: String
     let repositoryPath: String
-    @Binding var isPresented: Bool
     var onResolved: () -> Void = {}
 
     @State private var fileContent: String = ""
     @State private var chunks: [ConflictChunk] = []
     @State private var isLoading = true
     @State private var error: String?
+    @Namespace private var animation
 
     var body: some View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.orange)
-
-                Text("Resolve Conflicts: \(URL(fileURLWithPath: filePath).lastPathComponent)")
+                Image(systemName: "doc.text")
+                    .foregroundColor(.secondary)
+                
+                Text(URL(fileURLWithPath: filePath).lastPathComponent)
                     .font(.headline)
 
                 Spacer()
 
                 let resolvedCount = chunks.filter(\.isResolved).count
-                Text("\(resolvedCount)/\(chunks.count) resolved")
+                Text("\(resolvedCount)/\(chunks.count) conflicts resolved")
                     .font(.caption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(resolvedCount == chunks.count ? Color.green.opacity(0.2) : Color.orange.opacity(0.2))
                     .foregroundColor(resolvedCount == chunks.count ? .green : .orange)
                     .cornerRadius(10)
+                    .animation(.spring(), value: resolvedCount)
 
-                Button("Cancel") {
-                    isPresented = false
+                if chunks.allSatisfy(\.isResolved) {
+                    Button("Save & Stage") {
+                        saveResolution()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .transition(.scale.combined(with: .opacity))
                 }
-
-                Button("Save & Mark Resolved") {
-                    saveResolution()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!chunks.allSatisfy(\.isResolved))
             }
             .padding()
-            .background(Color.orange.opacity(0.1))
+            .background(Color(nsColor: .controlBackgroundColor))
 
             Divider()
 
             if isLoading {
-                ProgressView("Loading file...")
+                ProgressView("Loading conflicts...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error = error {
                 VStack {
@@ -760,22 +772,25 @@ struct InlineConflictResolverView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                // Inline conflict view
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(renderContent().enumerated()), id: \.offset) { _, item in
                             switch item {
                             case .normal(let line, let lineNumber):
                                 NormalLineView(line: line, lineNumber: lineNumber)
-
                             case .conflict(let chunkIndex):
                                 if chunkIndex < chunks.count {
                                     ConflictChunkView(
                                         chunk: chunks[chunkIndex],
+                                        namespace: animation,
                                         onResolve: { resolution in
-                                            chunks[chunkIndex].resolution = resolution
+                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                                chunks[chunkIndex].resolution = resolution
+                                            }
                                         }
                                     )
+                                    .padding(.vertical, 8)
+                                    .id("chunk-\(chunks[chunkIndex].id)")
                                 }
                             }
                         }
@@ -784,8 +799,7 @@ struct InlineConflictResolverView: View {
                 }
             }
         }
-        .frame(minWidth: 800, minHeight: 500)
-        .task {
+        .task(id: filePath) {
             await loadFile()
         }
     }
@@ -811,7 +825,6 @@ struct InlineConflictResolverView: View {
         do {
             try resolvedContent.write(toFile: fullPath, atomically: true, encoding: .utf8)
             onResolved()
-            isPresented = false
         } catch {
             self.error = error.localizedDescription
         }
@@ -865,18 +878,58 @@ struct NormalLineView: View {
 
 struct ConflictChunkView: View {
     let chunk: ConflictChunk
+    var namespace: Namespace.ID? = nil
     var onResolve: (ConflictChunk.ChunkResolution) -> Void = { _ in }
+
+    @State private var isHovered = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ConflictActionBar(chunk: chunk, onResolve: onResolve)
-            OursSection(chunk: chunk)
-            SeparatorSection()
-            TheirsSection(chunk: chunk)
+            if chunk.isResolved {
+                // Resolved state
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("Resolved")
+                        .fontWeight(.medium)
+                        .foregroundColor(.green)
+                    
+                    Spacer()
+                    
+                    Button("Undo") {
+                        onResolve(.unresolved)
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.caption)
+                }
+                .padding(8)
+                .background(Color.green.opacity(0.1))
+                
+                // Show resolved content
+                Text(chunk.resolvedContent)
+                    .font(.system(.caption, design: .monospaced))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(Color.green.opacity(0.05))
+            } else {
+                // Unresolved state
+                VStack(spacing: 0) {
+                    ConflictActionBar(chunk: chunk, onResolve: onResolve)
+                    OursSection(chunk: chunk)
+                    SeparatorSection()
+                    TheirsSection(chunk: chunk)
+                }
+            }
         }
         .background(Color.orange.opacity(chunk.isResolved ? 0 : 0.05))
         .cornerRadius(4)
-        .padding(.vertical, 4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(chunk.isResolved ? Color.green : Color.orange, lineWidth: 1)
+        )
+        .shadow(color: isHovered ? Color.black.opacity(0.1) : Color.clear, radius: 4, x: 0, y: 2)
+        .scaleEffect(isHovered && !chunk.isResolved ? 1.01 : 1.0)
+        .onHover { isHovered = $0 }
     }
 }
 
@@ -1018,11 +1071,13 @@ struct QuickConflictResolverSheet: View {
     var onResolved: () -> Void = {}
 
     var body: some View {
-        InlineConflictResolverView(
+        InlineConflictResolver(
             filePath: conflictedFile.path,
             repositoryPath: repositoryPath,
-            isPresented: $isPresented,
-            onResolved: onResolved
+            onResolved: {
+                onResolved()
+                isPresented = false
+            }
         )
     }
 }

@@ -119,9 +119,11 @@ actor MicrosoftOAuth {
     }
 
     /// Step 2: Open browser for user to enter code
-    func openVerificationPage(uri: String) {
+    nonisolated func openVerificationPage(uri: String) {
         if let url = URL(string: uri) {
-            NSWorkspace.shared.open(url)
+            DispatchQueue.main.async {
+                NSWorkspace.shared.open(url)
+            }
         }
     }
 

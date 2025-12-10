@@ -1,0 +1,67 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="512" cy="512" r="500" fill="#E0F7FA" />
+  
+  <!-- Bubbles -->
+  <circle cx="150" cy="850" r="30" fill="#4DD0E1" opacity="0.6" />
+  <circle cx="850" cy="200" r="40" fill="#4DD0E1" opacity="0.6" />
+  <circle cx="900" cy="800" r="20" fill="#4DD0E1" opacity="0.6" />
+
+  <!-- The Sperm Whale (Cachalote) - 3/4 Side View -->
+  <g transform="translate(50, 100)">
+      
+      <!-- Body Shape -->
+      <!-- Distinctive boxy head of a sperm whale -->
+      <path d="M 150 200 
+               Q 150 150, 200 150   <!-- Top-left corner rounded -->
+               L 600 150            <!-- Flat top head -->
+               C 850 150, 900 400, 900 500  <!-- Rounded back -->
+               Q 900 650, 800 700   <!-- Tail connection -->
+               L 500 750            <!-- Belly line -->
+               C 250 750, 150 650, 150 550  <!-- Front face bottom -->
+               L 150 200            <!-- Front face vertical -->
+               Z" 
+               fill="#5C6BC0" />
+      
+      <!-- Belly Patch -->
+      <path d="M 300 750 
+               Q 500 750, 700 680
+               Q 500 550, 300 750" 
+               fill="#C5CAE9" opacity="0.9" />
+
+      <!-- Eye (Huge Anime Style) - Placed low on the side -->
+      <g transform="translate(350, 450)">
+        <ellipse cx="0" cy="0" rx="55" ry="65" fill="#333" />
+        <!-- Highlights -->
+        <circle cx="-20" cy="-25" r="20" fill="white" />
+        <circle cx="20" cy="30" r="10" fill="white" opacity="0.7" />
+      </g>
+
+      <!-- Blush -->
+      <ellipse cx="220" cy="550" rx="35" ry="25" fill="#FF8A80" opacity="0.6" />
+
+      <!-- Tiny Smile -->
+      <path d="M 430 550 Q 460 580 490 550" stroke="#333" stroke-width="8" fill="none" stroke-linecap="round" />
+
+      <!-- Pectoral Fin (Small and cute) -->
+      <path d="M 550 600 
+               Q 500 650, 580 700
+               Q 650 650, 600 600 Z" 
+               fill="#3F51B5" />
+
+      <!-- Tail Flukes (Small at the back) -->
+      <path d="M 800 680 
+               Q 880 600, 920 650
+               L 850 700
+               L 920 750
+               Q 880 800, 800 720 Z" 
+               fill="#5C6BC0" />
+               
+      <!-- Water Spout (Blowhole is angled forward on sperm whales) -->
+      <g transform="translate(200, 150) rotate(-45)">
+          <path d="M 0 0 Q -20 -50, -40 -40" stroke="#4DD0E1" stroke-width="8" fill="none" stroke-linecap="round" />
+          <path d="M 10 0 Q 10 -60, 10 -50" stroke="#4DD0E1" stroke-width="8" fill="none" stroke-linecap="round" />
+          <path d="M 20 0 Q 40 -50, 60 -40" stroke="#4DD0E1" stroke-width="8" fill="none" stroke-linecap="round" />
+      </g>
+  </g>
+</svg>
