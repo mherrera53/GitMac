@@ -78,7 +78,7 @@ struct PlannerTasksPanel: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                if let selectedPlan = viewModel.selectedPlanId {
+                if viewModel.selectedPlanId != nil {
                     PlannerBoardView(buckets: viewModel.buckets, tasks: viewModel.tasks)
                 } else {
                     PlannerEmptyView(type: "Select a plan to view tasks")

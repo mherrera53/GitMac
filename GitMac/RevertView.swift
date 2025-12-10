@@ -193,11 +193,11 @@ class RevertViewModel: ObservableObject {
         errorMessage = nil
         
         do {
-            let revertedCommit = try await appState.gitService.revert(
+            _ = try await appState.gitService.revert(
                 commitSHA: commit.sha,
                 noCommit: noCommit
             )
-            
+
             // Show success notification
             let message = noCommit ? "Changes reverted to staging area" : "Commit reverted successfully"
             let detail = noCommit ? "Review and commit when ready" : "New revert commit created"

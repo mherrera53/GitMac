@@ -204,7 +204,8 @@ class RecursiveDirectoryWatcher {
                 let watcher = Unmanaged<RecursiveDirectoryWatcher>.fromOpaque(info).takeUnretainedValue()
 
                 // Filter out excluded paths
-                if let cfPaths = eventPaths as? NSArray {
+                let pathsPtr = unsafeBitCast(eventPaths, to: NSArray.self)
+                if let cfPaths = pathsPtr as NSArray? {
                     for i in 0..<numEvents {
                         if let path = cfPaths[Int(i)] as? String {
                             let shouldExclude = watcher.excludePaths.contains { excludePath in
