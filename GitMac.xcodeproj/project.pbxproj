@@ -62,6 +62,8 @@
 		AC9431BE2EE9822D00A59026 /* QUICK_START.md in Resources */ = {isa = PBXBuildFile; fileRef = AC9431BD2EE9822D00A59026 /* QUICK_START.md */; };
 		AC9431C02EE99A4800A59026 /* RemoteOperationTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC9431BF2EE99A4800A59026 /* RemoteOperationTracker.swift */; };
 		AC9431C22EE99AA000A59026 /* REMOTE_STATUS_INTEGRATION.md in Resources */ = {isa = PBXBuildFile; fileRef = AC9431C12EE99AA000A59026 /* REMOTE_STATUS_INTEGRATION.md */; };
+		WKFLW001B526F46E3958E34A /* WorkflowsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WKFLW001F526F46E3958E34A /* WorkflowsView.swift */; };
+		AWSCB001B526F46E3958E34A /* AWSCodeBuildService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AWSCB001F526F46E3958E34A /* AWSCodeBuildService.swift */; };
 		AC9431C42EE9A33100A59026 /* WARNING_FIXES.md in Resources */ = {isa = PBXBuildFile; fileRef = AC9431C32EE9A33100A59026 /* WARNING_FIXES.md */; };
 		AD16C2E522DD4E7A9F2DA2E6 /* Features/Tags/TagListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07A0562AED2641F98A85EABD /* Features/Tags/TagListView.swift */; };
 		APP001 /* App/GitMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC001 /* App/GitMacApp.swift */; };
@@ -162,6 +164,8 @@
 		AC9431BF2EE99A4800A59026 /* RemoteOperationTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOperationTracker.swift; sourceTree = "<group>"; };
 		AC9431C12EE99AA000A59026 /* REMOTE_STATUS_INTEGRATION.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = REMOTE_STATUS_INTEGRATION.md; sourceTree = "<group>"; };
 		AC9431C32EE9A33100A59026 /* WARNING_FIXES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = WARNING_FIXES.md; sourceTree = "<group>"; };
+		WKFLW001F526F46E3958E34A /* WorkflowsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowsView.swift; sourceTree = "<group>"; };
+		AWSCB001F526F46E3958E34A /* AWSCodeBuildService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AWSCodeBuildService.swift; sourceTree = "<group>"; };
 		AVTRSVC1F526F46E3958E34A /* Core/Services/AvatarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Services/AvatarService.swift; sourceTree = "<group>"; };
 		B2DB7601C3F04EEBB40EBBEA /* Features/GitFlow/GitFlowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/GitFlow/GitFlowManager.swift; sourceTree = "<group>"; };
 		C291CEC87A0B4E0686E32180 /* Features/Worktrees/WorktreeListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Worktrees/WorktreeListView.swift; sourceTree = "<group>"; };
@@ -317,6 +321,8 @@
 				AC9431BF2EE99A4800A59026 /* RemoteOperationTracker.swift */,
 				AC9431C12EE99AA000A59026 /* REMOTE_STATUS_INTEGRATION.md */,
 				AC9431C32EE9A33100A59026 /* WARNING_FIXES.md */,
+				WKFLW001F526F46E3958E34A /* WorkflowsView.swift */,
+				AWSCB001F526F46E3958E34A /* AWSCodeBuildService.swift */,
 			);
 			path = GitMac;
 			sourceTree = "<group>";
@@ -496,6 +502,8 @@
 				AC9431842EE9786B00A59026 /* ResetView.swift in Sources */,
 				NOTNPNL1B526F46E3958E34A /* Features/Notion/NotionPanel.swift in Sources */,
 				AC9431C02EE99A4800A59026 /* RemoteOperationTracker.swift in Sources */,
+				WKFLW001B526F46E3958E34A /* WorkflowsView.swift in Sources */,
+				AWSCB001B526F46E3958E34A /* AWSCodeBuildService.swift in Sources */,
 				AVTRSVC1B526F46E3958E34A /* Core/Services/AvatarService.swift in Sources */,
 				AC9431942EE97A6D00A59026 /* RemoteManagementView.swift in Sources */,
 				CTXMNU01B526F46E3958E34A /* UI/Components/ContextMenus.swift in Sources */,
