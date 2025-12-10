@@ -215,18 +215,16 @@ class BranchListViewModel: ObservableObject {
         // Check for uncommitted changes first
         let changes = await checkUncommittedChanges()
         if !changes.isEmpty {
-            uncommittedFiles = changes
-            pendingCheckoutBranch = branch
-            showUncommittedWarning = true
-            return
+            // Auto stash → checkout → pop (to avoid accumulating stashes)
+            await performCheckoutWithAutoStash(branch.name)
+        } else {
+            await performCheckout(branch.name)
         }
-
-        await performCheckout(branch.name)
     }
 
     func forceCheckout() async {
         guard let branch = pendingCheckoutBranch else { return }
-        await performCheckout(branch.name)
+        await performCheckoutWithAutoStash(branch.name)
         showUncommittedWarning = false
         pendingCheckoutBranch = nil
     }
@@ -238,6 +236,54 @@ class BranchListViewModel: ObservableObject {
         } catch {
             self.error = error.localizedDescription
         }
+        isLoading = false
+    }
+
+    /// Checkout with automatic stash and pop to avoid accumulating stashes
+    private func performCheckoutWithAutoStash(_ branchName: String) async {
+        guard let path = gitService.currentRepository?.path else { return }
+        isLoading = true
+
+        let shell = ShellExecutor()
+
+        // 1. Stash changes (including untracked files with -u)
+        let stashResult = await shell.execute(
+            "git",
+            arguments: ["stash", "push", "-u", "-m", "Auto-stash for checkout to \(branchName)"],
+            workingDirectory: path
+        )
+
+        let didStash = stashResult.isSuccess && !stashResult.stdout.contains("No local changes")
+
+        // 2. Perform checkout
+        do {
+            try await gitService.checkout(branchName)
+
+            // 3. Pop stash if we stashed something
+            if didStash {
+                let popResult = await shell.execute(
+                    "git",
+                    arguments: ["stash", "pop"],
+                    workingDirectory: path
+                )
+
+                if !popResult.isSuccess {
+                    // Pop failed (likely conflicts) - keep stash and notify user
+                    self.error = "Checkout successful but stash pop failed. Your changes are in stash. Run 'git stash pop' manually after resolving conflicts."
+                }
+            }
+        } catch {
+            // Checkout failed - restore stash if we made one
+            if didStash {
+                _ = await shell.execute(
+                    "git",
+                    arguments: ["stash", "pop"],
+                    workingDirectory: path
+                )
+            }
+            self.error = error.localizedDescription
+        }
+
         isLoading = false
     }
 

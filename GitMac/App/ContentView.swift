@@ -1078,7 +1078,8 @@ struct SidebarBranchRow: View {
         if let status = appState.currentRepository?.status {
             let hasChanges = !status.staged.isEmpty || !status.unstaged.isEmpty || !status.untracked.isEmpty
             if hasChanges {
-                showUncommittedAlert = true
+                // Auto stash → checkout → pop (to avoid accumulating stashes)
+                await performCheckoutWithAutoStash()
                 return
             }
         }
@@ -1087,6 +1088,49 @@ struct SidebarBranchRow: View {
         do {
             try await appState.gitService.checkout(branch.name)
         } catch {
+            print("Checkout failed: \(error)")
+        }
+    }
+
+    private func performCheckoutWithAutoStash() async {
+        guard let path = appState.currentRepository?.path else { return }
+
+        let shell = ShellExecutor()
+
+        // 1. Stash changes (including untracked files with -u)
+        let stashResult = await shell.execute(
+            "git",
+            arguments: ["stash", "push", "-u", "-m", "Auto-stash for checkout to \(branch.name)"],
+            workingDirectory: path
+        )
+
+        let didStash = stashResult.isSuccess && !stashResult.stdout.contains("No local changes")
+
+        // 2. Perform checkout
+        do {
+            try await appState.gitService.checkout(branch.name)
+
+            // 3. Pop stash if we stashed something
+            if didStash {
+                let popResult = await shell.execute(
+                    "git",
+                    arguments: ["stash", "pop"],
+                    workingDirectory: path
+                )
+
+                if !popResult.isSuccess {
+                    print("Stash pop failed - changes remain in stash")
+                }
+            }
+        } catch {
+            // Checkout failed - restore stash if we made one
+            if didStash {
+                _ = await shell.execute(
+                    "git",
+                    arguments: ["stash", "pop"],
+                    workingDirectory: path
+                )
+            }
             print("Checkout failed: \(error)")
         }
     }
