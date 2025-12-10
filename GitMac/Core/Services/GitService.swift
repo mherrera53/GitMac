@@ -12,6 +12,13 @@ class GitService: ObservableObject {
     private var repositoryWatcher: GitRepositoryWatcher?
     private var cancellables = Set<AnyCancellable>()
 
+    // Cache with TTL - prevents unbounded memory growth (WWDC 2018 - iOS Memory Deep Dive)
+    private var branchesCache = CacheWithTTL<[Branch]>(ttl: 30)      // 30s for branches
+    private var remoteBranchesCache = CacheWithTTL<[Branch]>(ttl: 60) // 60s for remote branches
+    private var tagsCache = CacheWithTTL<[Tag]>(ttl: 120)            // 2min for tags (change rarely)
+    private var remotesCache = CacheWithTTL<[Remote]>(ttl: 300)      // 5min for remotes (very stable)
+    private var stashesCache = CacheWithTTL<[Stash]>(ttl: 30)        // 30s for stashes
+
     // MARK: - Repository Operations
 
     /// Open a repository
@@ -62,9 +69,29 @@ class GitService: ObservableObject {
         defer { isLoading = false }
 
         currentRepository = try await engine.openRepository(at: path)
+        invalidateCache()
+
+        // Notify views to refresh
+        NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
     }
 
     // MARK: - Branch Operations
+
+    func getBranches() async throws -> [Branch] {
+        if let cached = branchesCache.get() { return cached }
+        guard let path = currentRepository?.path else { return [] }
+        let branches = try await engine.getBranches(at: path)
+        branchesCache.set(branches)
+        return branches
+    }
+
+    func getRemoteBranches() async throws -> [Branch] {
+        if let cached = remoteBranchesCache.get() { return cached }
+        guard let path = currentRepository?.path else { return [] }
+        let branches = try await engine.getRemoteBranches(at: path)
+        remoteBranchesCache.set(branches)
+        return branches
+    }
 
     func createBranch(named name: String, from startPoint: String = "HEAD", checkout: Bool = false) async throws -> Branch {
         guard let path = currentRepository?.path else {
@@ -98,6 +125,18 @@ class GitService: ObservableObject {
         defer { isLoading = false }
 
         try await engine.checkout(ref, at: path)
+        try await refresh()
+    }
+
+    func checkoutForce(_ ref: String) async throws {
+        guard let path = currentRepository?.path else {
+            throw GitServiceError.noRepository
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        try await engine.checkoutForce(ref, at: path)
         try await refresh()
     }
 
@@ -269,9 +308,17 @@ class GitService: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
+        // Auto-detect if branch needs --set-upstream
+        let currentBranchName = currentRepository?.currentBranch?.name
+        let trackingBranch = currentRepository?.currentBranch?.trackingBranch
+        let needsUpstream = setUpstream || trackingBranch == nil || trackingBranch?.isEmpty == true
+
         var options = PushOptions()
         options.force = force
-        options.setUpstream = setUpstream
+        options.setUpstream = needsUpstream
+        if needsUpstream {
+            options.branch = currentBranchName
+        }
 
         try await engine.push(options: options, at: path)
         try await refresh()
@@ -375,6 +422,74 @@ class GitService: ObservableObject {
         try await refresh()
     }
 
+    // MARK: - Reset Operations
+
+    func reset(to commitSHA: String, mode: ResetMode) async throws {
+        guard let path = currentRepository?.path else {
+            throw GitServiceError.noRepository
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        let modeFlag = switch mode {
+        case .soft: "--soft"
+        case .mixed: "--mixed"
+        case .hard: "--hard"
+        }
+
+        let shell = ShellExecutor()
+        let result = await shell.execute(
+            "git",
+            arguments: ["reset", modeFlag, commitSHA],
+            workingDirectory: path
+        )
+
+        if result.exitCode != 0 {
+            throw GitError.commandFailed("git reset", result.stderr)
+        }
+
+        try await refresh()
+    }
+
+    // MARK: - Revert Operations
+
+    func revert(commitSHA: String, noCommit: Bool = false) async throws -> Commit? {
+        guard let path = currentRepository?.path else {
+            throw GitServiceError.noRepository
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        var args = ["revert"]
+        if noCommit {
+            args.append("--no-commit")
+        }
+        args.append(commitSHA)
+
+        let shell = ShellExecutor()
+        let result = await shell.execute(
+            "git",
+            arguments: args,
+            workingDirectory: path
+        )
+
+        if result.exitCode != 0 {
+            throw GitError.commandFailed("git revert", result.stderr)
+        }
+
+        try await refresh()
+
+        // Return the new commit if created
+        if !noCommit {
+            let commits = try await getCommits(branch: nil, limit: 1)
+            return commits.first
+        }
+
+        return nil
+    }
+
     // MARK: - Rebase Operations
 
     func rebase(onto branch: String) async throws {
@@ -435,11 +550,27 @@ class GitService: ObservableObject {
 
     // MARK: - Private Helpers
 
-    private func refreshStatus() async throws {
-        guard let path = currentRepository?.path else { return }
+    private func invalidateCache() {
+        branchesCache.invalidate()
+        remoteBranchesCache.invalidate()
+        tagsCache.invalidate()
+        remotesCache.invalidate()
+        stashesCache.invalidate()
+    }
 
-        let status = try await engine.getStatus(at: path)
-        currentRepository?.status = status
+    private func refreshStatus() async throws {
+        guard var repo = currentRepository else { return }
+
+        let status = try await engine.getStatus(at: repo.path)
+        repo.status = status
+        currentRepository = repo // Must reassign to trigger @Published notification
+
+        // Invalidate cache on status change (as branches might have changed)
+        // Ideally we only invalidate specific parts, but for safety:
+        invalidateCache()
+
+        // Notify views (CommitGraphView, etc.) to refresh
+        NotificationCenter.default.post(name: .repositoryDidRefresh, object: repo.path)
     }
 
     private func setupWatcher(for path: String) {
@@ -448,7 +579,7 @@ class GitService: ObservableObject {
 
         repositoryWatcher?.$hasChanges
             .filter { $0 }
-            .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
+            .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
             .sink { [weak self] _ in
                 Task {
                     try? await self?.refreshStatus()
@@ -458,6 +589,108 @@ class GitService: ObservableObject {
             .store(in: &cancellables)
 
         repositoryWatcher?.startAll()
+    }
+
+    // MARK: - Line-Level Operations (GitKraken-style)
+
+    private let patchManipulator = PatchManipulator()
+
+    /// Stage a single line from an unstaged diff
+    func stageLine(filePath: String, hunk: DiffHunk, lineIndex: Int) async throws {
+        guard let repo = currentRepository else {
+            throw GitServiceError.noRepository
+        }
+
+        try await patchManipulator.stageLine(
+            filePath: filePath,
+            hunk: hunk,
+            lineIndex: lineIndex,
+            repoPath: repo.path
+        )
+
+        // Refresh status after staging
+        try await refreshStatus()
+    }
+
+    /// Discard a single line from an unstaged diff
+    func discardLine(filePath: String, hunk: DiffHunk, lineIndex: Int) async throws {
+        guard let repo = currentRepository else {
+            throw GitServiceError.noRepository
+        }
+
+        try await patchManipulator.discardLine(
+            filePath: filePath,
+            hunk: hunk,
+            lineIndex: lineIndex,
+            repoPath: repo.path
+        )
+
+        // Refresh status after discarding
+        try await refreshStatus()
+    }
+
+    /// Unstage a single line from a staged diff
+    func unstageLine(filePath: String, hunk: DiffHunk, lineIndex: Int) async throws {
+        guard let repo = currentRepository else {
+            throw GitServiceError.noRepository
+        }
+
+        try await patchManipulator.unstageLine(
+            filePath: filePath,
+            hunk: hunk,
+            lineIndex: lineIndex,
+            repoPath: repo.path
+        )
+
+        // Refresh status after unstaging
+        try await refreshStatus()
+    }
+
+    // MARK: - Hunk-Level Operations
+
+    /// Stage an entire hunk from an unstaged diff
+    func stageHunk(filePath: String, hunk: DiffHunk) async throws {
+        guard let repo = currentRepository else {
+            throw GitServiceError.noRepository
+        }
+
+        try await patchManipulator.stageHunk(
+            filePath: filePath,
+            hunk: hunk,
+            repoPath: repo.path
+        )
+
+        try await refreshStatus()
+    }
+
+    /// Discard an entire hunk from an unstaged diff
+    func discardHunk(filePath: String, hunk: DiffHunk) async throws {
+        guard let repo = currentRepository else {
+            throw GitServiceError.noRepository
+        }
+
+        try await patchManipulator.discardHunk(
+            filePath: filePath,
+            hunk: hunk,
+            repoPath: repo.path
+        )
+
+        try await refreshStatus()
+    }
+
+    /// Unstage an entire hunk from a staged diff
+    func unstageHunk(filePath: String, hunk: DiffHunk) async throws {
+        guard let repo = currentRepository else {
+            throw GitServiceError.noRepository
+        }
+
+        try await patchManipulator.unstageHunk(
+            filePath: filePath,
+            hunk: hunk,
+            repoPath: repo.path
+        )
+
+        try await refreshStatus()
     }
 }
 

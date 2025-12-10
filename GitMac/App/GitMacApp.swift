@@ -28,6 +28,7 @@ struct RepositoryTab: Identifiable, Equatable {
     var repository: Repository
     var selectedCommit: Commit?
     var selectedBranch: Branch?
+    var selectedStash: Stash?
 
     static func == (lhs: RepositoryTab, rhs: RepositoryTab) -> Bool {
         lhs.id == rhs.id
@@ -37,6 +38,8 @@ struct RepositoryTab: Identifiable, Equatable {
 // MARK: - App State
 @MainActor
 class AppState: ObservableObject {
+    static let shared = AppState()
+
     // Multiple repos support (tabs)
     @Published var openTabs: [RepositoryTab] = []
     @Published var activeTabId: UUID?
@@ -78,6 +81,15 @@ class AppState: ObservableObject {
         set {
             if let index = activeTabIndex {
                 openTabs[index].selectedBranch = newValue
+            }
+        }
+    }
+
+    var selectedStash: Stash? {
+        get { activeTab?.selectedStash }
+        set {
+            if let index = activeTabIndex {
+                openTabs[index].selectedStash = newValue
             }
         }
     }
@@ -355,4 +367,5 @@ extension Notification.Name {
     static let newBranch = Notification.Name("newBranch")
     static let merge = Notification.Name("merge")
     static let rebase = Notification.Name("rebase")
+    static let repositoryDidRefresh = Notification.Name("repositoryDidRefresh")
 }

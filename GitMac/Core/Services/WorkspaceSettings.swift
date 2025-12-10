@@ -83,6 +83,7 @@ enum IntegrationType: String, CaseIterable, Identifiable {
     case github = "GitHub Issues"
     case jira = "Jira"
     case linear = "Linear"
+    case notion = "Notion"
     case asana = "Asana"
 
     var id: String { rawValue }
@@ -92,8 +93,9 @@ enum IntegrationType: String, CaseIterable, Identifiable {
         case .taiga: return "ticket.fill"
         case .planner: return "calendar.badge.checkmark"
         case .github: return "circle.dashed"
-        case .jira: return "bolt.fill"
-        case .linear: return "line.3.horizontal"
+        case .jira: return "square.stack.3d.up.fill"
+        case .linear: return "lineweight"
+        case .notion: return "doc.text.fill"
         case .asana: return "checklist"
         }
     }
@@ -105,13 +107,14 @@ enum IntegrationType: String, CaseIterable, Identifiable {
         case .github: return "238636"
         case .jira: return "0052CC"
         case .linear: return "5E6AD2"
+        case .notion: return "000000"
         case .asana: return "F06A6A"
         }
     }
 
     var isAvailable: Bool {
         switch self {
-        case .taiga, .planner, .github:
+        case .taiga, .planner, .github, .jira, .linear, .notion:
             return true
         default:
             return false

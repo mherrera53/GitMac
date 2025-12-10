@@ -177,7 +177,7 @@ struct RebaseOptions {
 }
 
 /// Interactive rebase item (commit + action)
-struct RebaseItem: Identifiable {
+struct GitRebaseItem: Identifiable {
     let id: UUID
     let commit: Commit
     var action: RebaseActionType

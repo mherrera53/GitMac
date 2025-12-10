@@ -114,8 +114,21 @@ struct ContentView: View {
             do {
                 try await appState.gitService.fetch()
                 await appState.refresh()
+
+                // Track successful fetch
+                RemoteOperationTracker.shared.recordFetch(
+                    success: true,
+                    remote: "origin"
+                )
             } catch {
                 appState.errorMessage = "Fetch failed: \(error.localizedDescription)"
+
+                // Track failed fetch
+                RemoteOperationTracker.shared.recordFetch(
+                    success: false,
+                    remote: "origin",
+                    error: error.localizedDescription
+                )
             }
             await MainActor.run {
                 isOperationInProgress = false
@@ -124,15 +137,31 @@ struct ContentView: View {
     }
 
     private func handlePull() {
-        guard appState.currentRepository != nil else { return }
+        guard let repo = appState.currentRepository else { return }
+        let branchName = repo.currentBranch?.name ?? "unknown"
         isOperationInProgress = true
         operationMessage = "Pulling changes..."
         Task {
             do {
                 try await appState.gitService.pull()
                 await appState.refresh()
+
+                // Track successful pull
+                RemoteOperationTracker.shared.recordPull(
+                    success: true,
+                    branch: branchName,
+                    remote: "origin"
+                )
             } catch {
                 appState.errorMessage = "Pull failed: \(error.localizedDescription)"
+
+                // Track failed pull
+                RemoteOperationTracker.shared.recordPull(
+                    success: false,
+                    branch: branchName,
+                    remote: "origin",
+                    error: error.localizedDescription
+                )
             }
             await MainActor.run {
                 isOperationInProgress = false
@@ -141,15 +170,31 @@ struct ContentView: View {
     }
 
     private func handlePush() {
-        guard appState.currentRepository != nil else { return }
+        guard let repo = appState.currentRepository else { return }
+        let branchName = repo.currentBranch?.name ?? "unknown"
         isOperationInProgress = true
         operationMessage = "Pushing to remote..."
         Task {
             do {
                 try await appState.gitService.push()
                 await appState.refresh()
+
+                // Track successful push
+                RemoteOperationTracker.shared.recordPush(
+                    success: true,
+                    branch: branchName,
+                    remote: "origin"
+                )
             } catch {
                 appState.errorMessage = "Push failed: \(error.localizedDescription)"
+
+                // Track failed push
+                RemoteOperationTracker.shared.recordPush(
+                    success: false,
+                    branch: branchName,
+                    remote: "origin",
+                    error: error.localizedDescription
+                )
             }
             await MainActor.run {
                 isOperationInProgress = false
@@ -191,8 +236,17 @@ struct GitKrakenLayout: View {
     @State private var isLoadingDiff = false
     @State private var showTerminal = false
     @State private var showTaiga = false
+    @State private var showPlanner = false
+    @State private var showLinear = false
+    @State private var showJira = false
+    @State private var showNotion = false
     @State private var terminalHeight: CGFloat = 200
     @State private var taigaHeight: CGFloat = 250
+    @State private var plannerHeight: CGFloat = 250
+    @State private var linearHeight: CGFloat = 250
+    @State private var jiraHeight: CGFloat = 250
+    @State private var notionHeight: CGFloat = 250
+    @State private var searchText = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -227,6 +281,128 @@ struct GitKrakenLayout: View {
             // Taiga Panel (togglable)
             if showTaiga {
                 TaigaTicketsPanel(height: $taigaHeight, onClose: { showTaiga = false })
+            }
+
+            // Planner Panel (togglable)
+            if showPlanner {
+                PlannerTasksPanel(height: $plannerHeight, onClose: { showPlanner = false })
+            }
+
+            // Linear Panel (togglable)
+            if showLinear {
+                LinearPanel(height: $linearHeight, onClose: { showLinear = false })
+            }
+
+            // Jira Panel (togglable)
+            if showJira {
+                JiraPanel(height: $jiraHeight, onClose: { showJira = false })
+            }
+
+            // Notion Panel (togglable)
+            if showNotion {
+                NotionPanel(height: $notionHeight, onClose: { showNotion = false })
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                HStack(spacing: 1) {
+                    Button(action: {}) {
+                        Image(systemName: "arrow.uturn.backward")
+                    }
+                    .help("Undo")
+                    
+                    Button(action: {}) {
+                        Image(systemName: "arrow.uturn.forward")
+                    }
+                    .help("Redo")
+                }
+            }
+            
+            ToolbarItemGroup(placement: .principal) {
+                Button(action: { NotificationCenter.default.post(name: .fetch, object: nil) }) {
+                    VStack(spacing: 2) {
+                        Image(systemName: "arrow.down")
+                        Text("Fetch").font(.system(size: 10))
+                    }
+                }
+                .help("Fetch")
+                
+                Button(action: { NotificationCenter.default.post(name: .pull, object: nil) }) {
+                    VStack(spacing: 2) {
+                        Image(systemName: "arrow.down.circle.fill")
+                        Text("Pull").font(.system(size: 10))
+                    }
+                }
+                .help("Pull")
+                
+                Button(action: { NotificationCenter.default.post(name: .push, object: nil) }) {
+                    VStack(spacing: 2) {
+                        Image(systemName: "arrow.up.circle.fill")
+                        Text("Push").font(.system(size: 10))
+                    }
+                }
+                .help("Push")
+                
+                Button(action: { NotificationCenter.default.post(name: .newBranch, object: nil) }) {
+                    VStack(spacing: 2) {
+                        Image(systemName: "arrow.triangle.branch")
+                        Text("Branch").font(.system(size: 10))
+                    }
+                }
+                .help("Branch")
+                
+                Button(action: { NotificationCenter.default.post(name: .stash, object: nil) }) {
+                    VStack(spacing: 2) {
+                        Image(systemName: "archivebox")
+                        Text("Stash").font(.system(size: 10))
+                    }
+                }
+                .help("Stash")
+                
+                Button(action: { NotificationCenter.default.post(name: .popStash, object: nil) }) {
+                    VStack(spacing: 2) {
+                        Image(systemName: "archivebox.fill")
+                        Text("Pop").font(.system(size: 10))
+                    }
+                }
+                .help("Pop")
+            }
+            
+            ToolbarItemGroup(placement: .automatic) {
+                Button(action: { showTerminal.toggle() }) {
+                    Image(systemName: showTerminal ? "terminal.fill" : "terminal")
+                }
+                .help(showTerminal ? "Hide Terminal" : "Show Terminal")
+
+                Button(action: { showTaiga.toggle() }) {
+                    Image(systemName: showTaiga ? "ticket.fill" : "ticket")
+                }
+                .help(showTaiga ? "Hide Taiga" : "Show Taiga")
+
+                Button(action: { showPlanner.toggle() }) {
+                    Image(systemName: showPlanner ? "checklist.checked" : "checklist")
+                }
+                .help(showPlanner ? "Hide Planner" : "Show Planner")
+
+                Button(action: { showLinear.toggle() }) {
+                    Image(systemName: showLinear ? "lineweight" : "lineweight")
+                        .foregroundColor(showLinear ? Color(hex: "5E6AD2") : nil)
+                }
+                .help(showLinear ? "Hide Linear" : "Show Linear")
+
+                Button(action: { showJira.toggle() }) {
+                    Image(systemName: showJira ? "square.stack.3d.up.fill" : "square.stack.3d.up")
+                        .foregroundColor(showJira ? Color(hex: "0052CC") : nil)
+                }
+                .help(showJira ? "Hide Jira" : "Show Jira")
+
+                Button(action: { showNotion.toggle() }) {
+                    Image(systemName: showNotion ? "doc.text.fill" : "doc.text")
+                }
+                .help(showNotion ? "Hide Notion" : "Show Notion")
+
+                TextField("Search commits...", text: $searchText)
+                    .frame(minWidth: 150, maxWidth: 250)
             }
         }
     }
@@ -309,7 +485,6 @@ struct CenterPanel: View {
                 }
             } else {
                 // Graph View
-                GraphToolbar(showTerminal: $showTerminal, showTaiga: $showTaiga)
                 if appState.currentRepository != nil {
                     CommitGraphView()
                 } else {
@@ -328,130 +503,22 @@ struct DiffViewWithClose: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack(spacing: 12) {
+            // Close button overlay
+            HStack {
+                Spacer()
                 Button(action: onClose) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 10, weight: .bold))
-                    }
-                    .foregroundColor(GitKrakenTheme.textSecondary)
-                    .frame(width: 24, height: 24)
-                    .background(GitKrakenTheme.backgroundTertiary)
-                    .cornerRadius(4)
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(GitKrakenTheme.textMuted)
                 }
                 .buttonStyle(.plain)
-
-                Image(systemName: FileTypeIcon.systemIcon(for: fileDiff.displayPath))
-                    .foregroundColor(FileTypeIcon.color(for: fileDiff.displayPath))
-
-                Text(fileDiff.displayPath)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
-
-                Spacer()
-
-                HStack(spacing: 12) {
-                    Text("+\(fileDiff.additions)")
-                        .foregroundColor(GitKrakenTheme.accentGreen)
-                    Text("-\(fileDiff.deletions)")
-                        .foregroundColor(GitKrakenTheme.accentRed)
-                }
-                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .padding(8)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(GitKrakenTheme.toolbar)
+            .background(GitKrakenTheme.toolbar.opacity(0.8))
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
-
-            // Diff content
-            GitKrakenDiffContent(fileDiff: fileDiff, repoPath: repoPath)
+            // Use the new DiffView component with split/inline/hunk modes
+            DiffView(fileDiff: fileDiff, repoPath: repoPath)
         }
-    }
-}
-
-// MARK: - GitKraken Diff Content
-struct GitKrakenDiffContent: View {
-    let fileDiff: FileDiff
-    var repoPath: String? = nil
-
-    var body: some View {
-        if fileDiff.isBinary {
-            BinaryFileView(filename: fileDiff.displayPath, repoPath: repoPath)
-        } else {
-            ScrollView([.vertical, .horizontal]) {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(fileDiff.hunks) { hunk in
-                        // Hunk header
-                        Text(hunk.header)
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(GitKrakenTheme.accent)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(GitKrakenTheme.accent.opacity(0.1))
-
-                        // Lines
-                        ForEach(hunk.lines) { line in
-                            DiffLineView(line: line)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-struct DiffLineView: View {
-    let line: DiffLine
-
-    var bgColor: Color {
-        switch line.type {
-        case .addition: return GitKrakenTheme.accentGreen.opacity(0.12)
-        case .deletion: return GitKrakenTheme.accentRed.opacity(0.12)
-        default: return Color.clear
-        }
-    }
-
-    var textColor: Color {
-        switch line.type {
-        case .addition: return GitKrakenTheme.accentGreen
-        case .deletion: return GitKrakenTheme.accentRed
-        default: return GitKrakenTheme.textPrimary
-        }
-    }
-
-    var prefix: String {
-        switch line.type {
-        case .addition: return "+"
-        case .deletion: return "-"
-        default: return " "
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 0) {
-            // Line numbers
-            Text(line.oldLineNumber.map { String($0) } ?? "")
-                .frame(width: 40, alignment: .trailing)
-            Text(line.newLineNumber.map { String($0) } ?? "")
-                .frame(width: 40, alignment: .trailing)
-                .padding(.trailing, 8)
-
-            Text(prefix)
-                .frame(width: 14)
-
-            Text(line.content)
-
-            Spacer(minLength: 0)
-        }
-        .font(.system(size: 12, design: .monospaced))
-        .foregroundColor(textColor)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 1)
-        .background(bgColor)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -852,6 +919,13 @@ struct SidebarBranchRow: View {
     let branch: Branch
     @EnvironmentObject var appState: AppState
     @State private var isHovered = false
+    @State private var showPRSheet = false
+    @State private var branchPRs: [GitHubPullRequest] = []
+    @State private var isLoadingPRs = false
+    @State private var showUncommittedAlert = false
+    @State private var showForceCheckoutAlert = false
+
+    private let githubService = GitHubService()
 
     var body: some View {
         HStack(spacing: 8) {
@@ -882,6 +956,210 @@ struct SidebarBranchRow: View {
         .onHover { isHovered = $0 }
         .onTapGesture {
             appState.selectedBranch = branch
+        }
+        .contextMenu {
+            Button {
+                Task {
+                    await performCheckout()
+                }
+            } label: {
+                Label("Checkout", systemImage: "arrow.right.circle")
+            }
+            .disabled(branch.isCurrent)
+
+            Divider()
+
+            // Existing PRs for this branch
+            if !branchPRs.isEmpty {
+                ForEach(branchPRs) { pr in
+                    Menu {
+                        if pr.state == "open" {
+                            Button {
+                                Task { await mergePR(pr, method: .merge) }
+                            } label: {
+                                Label("Merge", systemImage: "arrow.triangle.merge")
+                            }
+
+                            Button {
+                                Task { await mergePR(pr, method: .squash) }
+                            } label: {
+                                Label("Squash and Merge", systemImage: "square.stack.3d.up")
+                            }
+
+                            Button {
+                                Task { await mergePR(pr, method: .rebase) }
+                            } label: {
+                                Label("Rebase and Merge", systemImage: "arrow.triangle.branch")
+                            }
+
+                            Divider()
+                        }
+
+                        Button {
+                            if let url = URL(string: pr.htmlUrl) {
+                                NSWorkspace.shared.open(url)
+                            }
+                        } label: {
+                            Label("Open in GitHub", systemImage: "safari")
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: pr.state == "open" ? "arrow.triangle.pull" : "checkmark.circle.fill")
+                                .foregroundColor(pr.state == "open" ? .green : .purple)
+                            Text("PR #\(pr.number): \(pr.title)")
+                        }
+                    }
+                }
+
+                Divider()
+            }
+
+            Button {
+                showPRSheet = true
+            } label: {
+                Label("Start a Pull Request", systemImage: "plus.circle")
+            }
+
+            Divider()
+
+            Button {
+                // TODO: Implement merge
+            } label: {
+                Label("Merge into current branch", systemImage: "arrow.triangle.merge")
+            }
+            .disabled(branch.isCurrent)
+
+            Divider()
+
+            Button(role: .destructive) {
+                Task {
+                    try? await appState.gitService.deleteBranch(named: branch.name)
+                }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+            .disabled(branch.isCurrent)
+        }
+        .onAppear {
+            loadBranchPRs()
+        }
+        .sheet(isPresented: $showPRSheet) {
+            CreatePullRequestSheet(branch: branch)
+                .environmentObject(appState)
+        }
+        .alert("Uncommitted Changes", isPresented: $showUncommittedAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Stash & Checkout") {
+                Task {
+                    do {
+                        _ = try await appState.gitService.stash(message: "Auto-stash before checkout to \(branch.name)")
+                        try await appState.gitService.checkout(branch.name)
+                    } catch {
+                        print("Stash & checkout failed: \(error)")
+                    }
+                }
+            }
+            Button("Force Checkout", role: .destructive) {
+                Task {
+                    do {
+                        try await appState.gitService.checkoutForce(branch.name)
+                    } catch {
+                        print("Force checkout failed: \(error)")
+                    }
+                }
+            }
+        } message: {
+            Text("You have uncommitted changes. Commit them first, stash them, or force checkout (will discard changes).")
+        }
+    }
+
+    private func performCheckout() async {
+        // Check for uncommitted changes
+        if let status = appState.currentRepository?.status {
+            let hasChanges = !status.staged.isEmpty || !status.unstaged.isEmpty || !status.untracked.isEmpty
+            if hasChanges {
+                showUncommittedAlert = true
+                return
+            }
+        }
+
+        // No changes, proceed with checkout
+        do {
+            try await appState.gitService.checkout(branch.name)
+        } catch {
+            print("Checkout failed: \(error)")
+        }
+    }
+
+    private func loadBranchPRs() {
+        guard !isLoadingPRs else { return }
+        isLoadingPRs = true
+
+        Task {
+            guard let repo = appState.currentRepository,
+                  let remoteURL = repo.remotes.first?.fetchURL else {
+                isLoadingPRs = false
+                return
+            }
+
+            let (owner, repoName) = parseGitHubURL(remoteURL)
+            guard !owner.isEmpty, !repoName.isEmpty else {
+                isLoadingPRs = false
+                return
+            }
+
+            do {
+                let allPRs = try await githubService.listPullRequests(
+                    owner: owner,
+                    repo: repoName,
+                    state: .all
+                )
+                // Filter PRs that have this branch as head
+                branchPRs = allPRs.filter { $0.head.ref == branch.name }
+            } catch {
+                // Silently fail
+            }
+
+            isLoadingPRs = false
+        }
+    }
+
+    private func parseGitHubURL(_ url: String) -> (owner: String, repo: String) {
+        let cleanURL = url
+            .replacingOccurrences(of: "git@github.com:", with: "")
+            .replacingOccurrences(of: "https://github.com/", with: "")
+            .replacingOccurrences(of: ".git", with: "")
+
+        let parts = cleanURL.components(separatedBy: "/")
+        guard parts.count >= 2 else { return ("", "") }
+
+        return (parts[0], parts[1])
+    }
+
+    private func mergePR(_ pr: GitHubPullRequest, method: MergeMethod) async {
+        guard let repo = appState.currentRepository,
+              let remoteURL = repo.remotes.first?.fetchURL else {
+            return
+        }
+
+        let (owner, repoName) = parseGitHubURL(remoteURL)
+        guard !owner.isEmpty, !repoName.isEmpty else {
+            return
+        }
+
+        do {
+            try await githubService.mergePullRequest(
+                owner: owner,
+                repo: repoName,
+                number: pr.number,
+                mergeMethod: method
+            )
+            // Reload PRs after merge
+            loadBranchPRs()
+            // Refresh git status
+            try? await appState.gitService.refresh()
+        } catch {
+            print("Failed to merge PR: \(error)")
         }
     }
 }
@@ -976,158 +1254,6 @@ struct TagSidebarRow: View {
     }
 }
 
-// MARK: - Graph Toolbar
-struct GraphToolbar: View {
-    @EnvironmentObject var appState: AppState
-    @Binding var showTerminal: Bool
-    @Binding var showTaiga: Bool
-    @State private var searchText = ""
-
-    var body: some View {
-        HStack(spacing: 12) {
-            // Undo/Redo buttons
-            HStack(spacing: 2) {
-                ToolbarIconButton(icon: "arrow.uturn.backward", tooltip: "Undo") {
-                    // Undo action - will implement git reflog based undo
-                }
-                ToolbarIconButton(icon: "arrow.uturn.forward", tooltip: "Redo") {
-                    // Redo action
-                }
-            }
-
-            ToolbarDivider()
-
-            // Fetch/Pull/Push buttons
-            HStack(spacing: 4) {
-                ToolbarButton(icon: "arrow.down", label: "Fetch") {
-                    NotificationCenter.default.post(name: .fetch, object: nil)
-                }
-                ToolbarButton(icon: "arrow.down.circle.fill", label: "Pull") {
-                    NotificationCenter.default.post(name: .pull, object: nil)
-                }
-                ToolbarButton(icon: "arrow.up.circle.fill", label: "Push") {
-                    NotificationCenter.default.post(name: .push, object: nil)
-                }
-            }
-
-            ToolbarDivider()
-
-            // Branch button
-            ToolbarButton(icon: "arrow.triangle.branch", label: "Branch") {
-                NotificationCenter.default.post(name: .newBranch, object: nil)
-            }
-
-            ToolbarDivider()
-
-            // Stash/Pop buttons
-            HStack(spacing: 4) {
-                ToolbarButton(icon: "archivebox", label: "Stash") {
-                    NotificationCenter.default.post(name: .stash, object: nil)
-                }
-                ToolbarButton(icon: "archivebox.fill", label: "Pop") {
-                    NotificationCenter.default.post(name: .popStash, object: nil)
-                }
-            }
-
-            ToolbarDivider()
-
-            // Terminal button
-            ToolbarIconButton(
-                icon: showTerminal ? "terminal.fill" : "terminal",
-                tooltip: showTerminal ? "Hide Terminal" : "Show Terminal",
-                isActive: showTerminal
-            ) {
-                showTerminal.toggle()
-            }
-
-            // Taiga button
-            ToolbarIconButton(
-                icon: showTaiga ? "ticket.fill" : "ticket",
-                tooltip: showTaiga ? "Hide Taiga" : "Show Taiga",
-                isActive: showTaiga
-            ) {
-                showTaiga.toggle()
-            }
-
-            Spacer()
-
-            // Search
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(GitKrakenTheme.textMuted)
-                TextField("Search commits...", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .foregroundColor(GitKrakenTheme.textPrimary)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(GitKrakenTheme.backgroundTertiary)
-            .cornerRadius(6)
-            .frame(width: 200)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(GitKrakenTheme.toolbar)
-    }
-}
-
-// MARK: - Toolbar Divider
-struct ToolbarDivider: View {
-    var body: some View {
-        Rectangle()
-            .fill(GitKrakenTheme.border)
-            .frame(width: 1, height: 28)
-            .padding(.horizontal, 4)
-    }
-}
-
-// MARK: - Toolbar Icon Button (compact)
-struct ToolbarIconButton: View {
-    let icon: String
-    let tooltip: String
-    var isActive: Bool = false
-    let action: () -> Void
-    @State private var isHovered = false
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 14))
-                .foregroundColor(isActive ? GitKrakenTheme.accent : (isHovered ? GitKrakenTheme.textPrimary : GitKrakenTheme.textSecondary))
-                .frame(width: 28, height: 28)
-                .background(isActive ? GitKrakenTheme.accent.opacity(0.15) : (isHovered ? GitKrakenTheme.hover : Color.clear))
-                .cornerRadius(4)
-        }
-        .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
-        .help(tooltip)
-    }
-}
-
-// MARK: - Toolbar Button
-struct ToolbarButton: View {
-    let icon: String
-    let label: String
-    let action: () -> Void
-    @State private var isHovered = false
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 2) {
-                Image(systemName: icon)
-                    .font(.system(size: 16))
-                Text(label)
-                    .font(.system(size: 10))
-            }
-            .foregroundColor(isHovered ? GitKrakenTheme.textPrimary : GitKrakenTheme.textSecondary)
-            .frame(width: 50, height: 40)
-            .background(isHovered ? GitKrakenTheme.hover : Color.clear)
-            .cornerRadius(6)
-        }
-        .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
-    }
-}
 
 // MARK: - Right Staging Panel
 struct RightStagingPanel: View {
@@ -1137,6 +1263,7 @@ struct RightStagingPanel: View {
     @State private var commitMessage = ""
     @StateObject private var stagingVM = StagingViewModel()
     @StateObject private var commitDetailVM = CommitDetailViewModel()
+    @StateObject private var stashDetailVM = StashDetailViewModel()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1148,8 +1275,16 @@ struct RightStagingPanel: View {
                     selectedFileDiff: $selectedFileDiff,
                     onClose: { appState.selectedCommit = nil }
                 )
+            } else if let selectedStash = appState.selectedStash {
+                // Show stash details when a stash is selected
+                StashDetailPanel(
+                    stash: selectedStash,
+                    viewModel: stashDetailVM,
+                    selectedFileDiff: $selectedFileDiff,
+                    onClose: { appState.selectedStash = nil }
+                )
             } else {
-                // Show staging area when no commit is selected (WIP mode)
+                // Show staging area when no commit/stash is selected (WIP mode)
                 StagingAreaPanel(
                     stagingVM: stagingVM,
                     selectedFileDiff: $selectedFileDiff,
@@ -1171,6 +1306,17 @@ struct RightStagingPanel: View {
         .onChange(of: appState.selectedCommit) { _, newCommit in
             if let commit = newCommit, let path = appState.currentRepository?.path {
                 Task { await commitDetailVM.loadCommitFiles(sha: commit.sha, at: path) }
+            }
+        }
+        .onChange(of: appState.selectedStash) { _, newStash in
+            if let stash = newStash, let path = appState.currentRepository?.path {
+                Task { await stashDetailVM.loadStashFiles(stashRef: stash.reference, at: path) }
+            }
+        }
+        .task(id: appState.selectedStash?.sha) {
+            // Load stash files when stash is selected (initial load)
+            if let stash = appState.selectedStash, let path = appState.currentRepository?.path {
+                await stashDetailVM.loadStashFiles(stashRef: stash.reference, at: path)
             }
         }
     }
@@ -1233,6 +1379,7 @@ struct StagingAreaPanel: View {
             CommitSection(
                 commitMessage: $commitMessage,
                 canCommit: !stagingVM.stagedFiles.isEmpty,
+                repositoryPath: appState.currentRepository?.path,
                 onCommit: { stagingVM.commit(message: commitMessage) { commitMessage = "" } }
             )
         }
@@ -1516,7 +1663,7 @@ struct StagingTreeView: View {
 
 // MARK: - Staging Tree Node
 class StagingTreeNode: Identifiable, ObservableObject {
-    let id = UUID()
+    let id: String
     let name: String
     let path: String
     let isFolder: Bool
@@ -1524,6 +1671,7 @@ class StagingTreeNode: Identifiable, ObservableObject {
     var children: [StagingTreeNode] = []
 
     init(name: String, path: String, isFolder: Bool, file: StagingFile? = nil) {
+        self.id = path
         self.name = name
         self.path = path
         self.isFolder = isFolder
@@ -1663,46 +1811,48 @@ struct StagingTreeNodeView: View {
     }
 
     private var fileView: some View {
-        HStack(spacing: 6) {
-            // Status icon
-            if let file = node.file {
-                FileStatusBadge(status: file.status)
-            }
-
-            // File icon
-            Image(systemName: FileTypeIcon.systemIcon(for: node.name))
-                .font(.system(size: 11))
-                .foregroundColor(FileTypeIcon.color(for: node.name))
-
-            // Filename
-            Text(node.name)
-                .font(.system(size: 11))
-                .foregroundColor(GitKrakenTheme.textPrimary)
-                .lineLimit(1)
-
-            Spacer()
-
-            if isHovered, let file = node.file {
-                Button {
-                    onStage(file)
-                } label: {
-                    Image(systemName: isStaged ? "minus.circle" : "plus.circle")
-                        .font(.system(size: 12))
-                        .foregroundColor(isStaged ? GitKrakenTheme.accentRed : GitKrakenTheme.accentGreen)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 3)
-        .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(isSelected ? Color.accentColor.opacity(0.3) : (isHovered ? GitKrakenTheme.hover : Color.clear))
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
+        Button(action: {
             if let file = node.file { onSelect(file) }
+        }) {
+            HStack(spacing: 6) {
+                // Status icon
+                if let file = node.file {
+                    FileStatusBadge(status: file.status)
+                }
+
+                // File icon
+                Image(systemName: "doc.fill")
+                    .font(.system(size: 11))
+                    .foregroundColor(.blue)
+
+                // Filename
+                Text(node.name)
+                    .font(.system(size: 11))
+                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .lineLimit(1)
+
+                Spacer()
+
+                if isHovered, let file = node.file {
+                    Button {
+                        onStage(file)
+                    } label: {
+                        Image(systemName: isStaged ? "minus.circle" : "plus.circle")
+                            .font(.system(size: 12))
+                            .foregroundColor(isStaged ? GitKrakenTheme.accentRed : GitKrakenTheme.accentGreen)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isSelected ? Color.accentColor.opacity(0.3) : (isHovered ? GitKrakenTheme.hover : Color.clear))
+            )
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .onHover { isHovered = $0 }
         .contextMenu {
             if let file = node.file {
@@ -1914,6 +2064,298 @@ class CommitDetailViewModel: ObservableObject {
     }
 }
 
+// MARK: - Stash Detail Panel
+struct StashDetailPanel: View {
+    let stash: Stash
+    @ObservedObject var viewModel: StashDetailViewModel
+    @Binding var selectedFileDiff: FileDiff?
+    let onClose: () -> Void
+    @EnvironmentObject var appState: AppState
+
+    private let stashColor = Color(red: 0.3, green: 0.7, blue: 0.7)
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Stash header
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    HStack(spacing: 4) {
+                        Image(systemName: "shippingbox.fill")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(stashColor)
+                        Text("Stash Details")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(GitKrakenTheme.textMuted)
+                    }
+                    Spacer()
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(GitKrakenTheme.textMuted)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // Stash message
+                Text(stash.displayMessage)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .lineLimit(3)
+
+                // Branch and date
+                HStack(spacing: 8) {
+                    if let branch = stash.branchName {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.triangle.branch")
+                                .font(.system(size: 10))
+                            Text(branch)
+                        }
+                        .font(.system(size: 12))
+                        .foregroundColor(GitKrakenTheme.textSecondary)
+                    }
+                    Spacer()
+                    Text(stash.relativeDate)
+                        .font(.system(size: 11))
+                        .foregroundColor(GitKrakenTheme.textMuted)
+                }
+
+                // Reference
+                HStack {
+                    Text(stash.reference)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(stashColor)
+                    Spacer()
+                }
+            }
+            .padding(12)
+            .background(GitKrakenTheme.backgroundSecondary)
+
+            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+
+            // Stash files
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    Text("Stashed Files")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(GitKrakenTheme.textMuted)
+                    Spacer()
+                    Text("\(viewModel.stashFiles.count)")
+                        .font(.system(size: 11))
+                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(GitKrakenTheme.backgroundTertiary)
+                        .cornerRadius(4)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(GitKrakenTheme.backgroundSecondary)
+
+                if viewModel.isLoading {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Spacer()
+                    }
+                    .padding(.vertical, 20)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(viewModel.stashFiles) { file in
+                                StashDetailFileRow(
+                                    file: file,
+                                    onSelect: { loadStashFileDiff(file) }
+                                )
+                            }
+                            if viewModel.stashFiles.isEmpty {
+                                Text("No files in stash")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(GitKrakenTheme.textMuted)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer()
+
+            // Actions
+            HStack(spacing: 8) {
+                Button {
+                    NotificationCenter.default.post(name: .applyStash, object: stash.index)
+                    onClose()
+                } label: {
+                    Label("Apply", systemImage: "arrow.down.doc")
+                        .font(.system(size: 11))
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    NotificationCenter.default.post(name: .popStashAtIndex, object: stash.index)
+                    onClose()
+                } label: {
+                    Label("Pop", systemImage: "arrow.up.doc")
+                        .font(.system(size: 11))
+                }
+                .buttonStyle(.bordered)
+
+                Spacer()
+
+                Button(role: .destructive) {
+                    NotificationCenter.default.post(name: .dropStash, object: stash.index)
+                    onClose()
+                } label: {
+                    Label("Drop", systemImage: "trash")
+                        .font(.system(size: 11))
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(12)
+            .background(GitKrakenTheme.backgroundSecondary)
+        }
+        .task {
+            // Load files when panel appears
+            if let path = appState.currentRepository?.path {
+                await viewModel.loadStashFiles(stashRef: stash.reference, at: path)
+            }
+        }
+    }
+
+    private func loadStashFileDiff(_ file: StashFile) {
+        guard let path = appState.currentRepository?.path else { return }
+        Task {
+            if let diff = await viewModel.getDiff(for: file, stash: stash, at: path) {
+                selectedFileDiff = diff
+            }
+        }
+    }
+}
+
+// MARK: - Stash Detail ViewModel
+@MainActor
+class StashDetailViewModel: ObservableObject {
+    @Published var stashFiles: [StashFile] = []
+    @Published var isLoading = false
+
+    private let engine = GitEngine()
+
+    func loadStashFiles(stashRef: String, at path: String) async {
+        var log = "DEBUG: Loading stash files for \(stashRef) at \(path)\n"
+
+        isLoading = true
+        do {
+            let files = try await engine.getStashFiles(stashRef: stashRef, at: path)
+            log += "DEBUG: Loaded \(files.count) stash files\n"
+            stashFiles = files
+        } catch {
+            log += "ERROR loading stash files: \(error)\n"
+            stashFiles = []
+        }
+        isLoading = false
+
+        // Write to temp file for debugging
+        try? log.write(toFile: "/tmp/gitmac_debug.log", atomically: true, encoding: .utf8)
+    }
+
+    func getDiff(for file: StashFile, stash: Stash, at path: String) async -> FileDiff? {
+        let shell = ShellExecutor()
+        let result = await shell.execute(
+            "git",
+            arguments: ["stash", "show", "-p", stash.reference, "--", file.path],
+            workingDirectory: path
+        )
+
+        if result.exitCode == 0 && !result.stdout.isEmpty {
+            let diffs = DiffParser.parse(result.stdout)
+            return diffs.first
+        }
+        return nil
+    }
+}
+
+// MARK: - Stash Detail File Row
+struct StashDetailFileRow: View {
+    let file: StashFile
+    let onSelect: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 8) {
+                // Status icon
+                Image(systemName: statusIcon)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(file.statusColor)
+                    .frame(width: 14)
+
+                // File icon
+                Image(systemName: fileIcon(for: file.filename))
+                    .font(.system(size: 10))
+                    .foregroundColor(GitKrakenTheme.textMuted)
+
+                // File path
+                Text(file.filename)
+                    .font(.system(size: 11))
+                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+
+                Spacer()
+
+                // Directory path
+                if file.path != file.filename {
+                    Text(String(file.path.dropLast(file.filename.count + 1)))
+                        .font(.system(size: 10))
+                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .lineLimit(1)
+                        .truncationMode(.head)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(isHovered ? GitKrakenTheme.hover : Color.clear)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .contextMenu {
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(file.path, forType: .string)
+            } label: {
+                Label("Copy Path", systemImage: "doc.on.doc")
+            }
+        }
+    }
+
+    private var statusIcon: String {
+        switch file.status {
+        case .added: return "plus"
+        case .modified: return "pencil"
+        case .deleted: return "minus"
+        case .renamed: return "arrow.right"
+        default: return "circle"
+        }
+    }
+
+    private func fileIcon(for filename: String) -> String {
+        let ext = (filename as NSString).pathExtension.lowercased()
+        switch ext {
+        case "swift": return "swift"
+        case "js", "ts", "jsx", "tsx": return "curlybraces"
+        case "json": return "curlybraces.square"
+        case "md": return "doc.text"
+        case "png", "jpg", "jpeg", "gif", "svg": return "photo"
+        case "css", "scss": return "paintbrush"
+        case "html": return "chevron.left.forwardslash.chevron.right"
+        default: return "doc"
+        }
+    }
+}
+
 // MARK: - Commit File Model
 struct CommitFile: Identifiable {
     let id = UUID()
@@ -1960,9 +2402,9 @@ struct CommitFileRow: View {
                 .frame(width: 16)
 
             // File icon
-            Image(systemName: FileTypeIcon.systemIcon(for: file.path))
+            Image(systemName: "doc.fill")
                 .font(.system(size: 12))
-                .foregroundColor(FileTypeIcon.color(for: file.path))
+                .foregroundColor(.blue)
 
             // Filename
             Text((file.path as NSString).lastPathComponent)
@@ -2316,45 +2758,57 @@ struct ClickableFileRow: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 8) {
-            // Status icon
-            Image(systemName: file.status.icon)
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(file.status.color)
-                .frame(width: 16)
+        Button(action: onSelect) {
+            HStack(spacing: 8) {
+                // Status icon
+                Image(systemName: file.status.icon)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(file.status.color)
+                    .frame(width: 14)
 
-            // File icon
-            Image(systemName: FileTypeIcon.systemIcon(for: file.path))
-                .font(.system(size: 12))
-                .foregroundColor(FileTypeIcon.color(for: file.path))
+                // File path
+                Text(file.path)
+                    .font(.system(size: 11))
+                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
 
-            // Filename
-            Text((file.path as NSString).lastPathComponent)
-                .font(.system(size: 12))
-                .foregroundColor(GitKrakenTheme.textPrimary)
-                .lineLimit(1)
+                Spacer()
 
-            Spacer()
-
-            // Stage/Unstage button (on hover)
-            if isHovered {
-                Button(action: onStage) {
-                    Image(systemName: isStaged ? "minus.circle.fill" : "plus.circle.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(isStaged ? GitKrakenTheme.accentRed : GitKrakenTheme.accentGreen)
+                if isHovered {
+                    Button(action: onStage) {
+                        Image(systemName: isStaged ? "minus.circle" : "plus.circle")
+                            .font(.system(size: 12))
+                            .foregroundColor(isStaged ? GitKrakenTheme.accentRed : GitKrakenTheme.accentGreen)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isSelected ? Color.accentColor.opacity(0.3) : (isHovered ? GitKrakenTheme.hover : Color.clear))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .contextMenu {
+            Button {
+                onStage()
+            } label: {
+                Label(isStaged ? "Unstage File" : "Stage File",
+                      systemImage: isStaged ? "minus.circle" : "plus.circle")
+            }
+            Divider()
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(file.path, forType: .string)
+            } label: {
+                Label("Copy Path", systemImage: "doc.on.doc")
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(isSelected ? Color.accentColor.opacity(0.3) : (isHovered ? GitKrakenTheme.hover : Color.clear))
-        )
-        .contentShape(Rectangle())
-        .onHover { isHovered = $0 }
-        .onTapGesture { onSelect() }
     }
 }
 
@@ -2362,11 +2816,14 @@ struct ClickableFileRow: View {
 struct CommitSection: View {
     @Binding var commitMessage: String
     let canCommit: Bool
+    let repositoryPath: String?
     let onCommit: () -> Void
 
     @State private var linkedTaigaRef: String?
     @State private var linkedTaigaSubject: String?
     @State private var showStatusPicker = false
+    @State private var isGeneratingAI = false
+    @State private var aiError: String?
 
     var body: some View {
         VStack(spacing: 8) {
@@ -2439,6 +2896,37 @@ struct CommitSection: View {
                     .scrollContentBackground(.hidden)
                     .background(Color.clear)
                     .frame(minHeight: 60, maxHeight: 100)
+                
+                // AI Generation Button
+                HStack {
+                    if let error = aiError {
+                        Text(error)
+                            .font(.system(size: 9))
+                            .foregroundColor(.red)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    Button {
+                        generateAICommitMessage()
+                    } label: {
+                        if isGeneratingAI {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                                .frame(width: 22, height: 22)
+                        } else {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 10))
+                                .foregroundColor(GitKrakenTheme.accentPurple)
+                                .padding(6)
+                                .background(GitKrakenTheme.background.opacity(0.8))
+                                .clipShape(Circle())
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .padding(4)
+                    .disabled(isGeneratingAI)
+                    .help("Generate commit message with AI")
+                }
             }
             .padding(4)
             .background(GitKrakenTheme.backgroundTertiary)
@@ -2477,6 +2965,18 @@ struct CommitSection: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .insertPlannerRef)) { notification in
+            if let userInfo = notification.userInfo,
+               let title = userInfo["title"] as? String {
+                
+                // Insert title at the end of commit message
+                if commitMessage.isEmpty {
+                    commitMessage = title
+                } else {
+                    commitMessage += "\n\n" + title
+                }
+            }
+        }
     }
 
     private func updateCommitWithTaiga(ref: String, status: String?) {
@@ -2509,6 +3009,68 @@ struct CommitSection: View {
         }
         linkedTaigaRef = nil
         linkedTaigaSubject = nil
+    }
+
+    private func generateAICommitMessage() {
+        Task {
+            await MainActor.run {
+                isGeneratingAI = true
+                aiError = nil
+            }
+
+            // Check if there are staged changes
+            let engine = GitEngine()
+            guard let path = repositoryPath else {
+                await MainActor.run {
+                    isGeneratingAI = false
+                    aiError = "No repository selected"
+                }
+                return
+            }
+
+            do {
+                // Get staged diff
+                let diff = try await engine.getDiff(staged: true, at: path)
+                if diff.isEmpty {
+                    await MainActor.run {
+                        isGeneratingAI = false
+                        aiError = "No staged changes"
+                    }
+                    return
+                }
+
+                // Generate message using shared instance
+                let message = try await AIService.shared.generateCommitMessage(diff: diff)
+
+                await MainActor.run {
+                    isGeneratingAI = false
+                    if commitMessage.isEmpty {
+                        commitMessage = message
+                    } else {
+                        commitMessage = message + "\n\n" + commitMessage
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isGeneratingAI = false
+                    if let err = error as? AIError {
+                        switch err {
+                        case .noAPIKey:
+                            self.aiError = "No API key configured"
+                        case .invalidProvider:
+                            self.aiError = "Invalid AI provider"
+                        case .requestFailed(let msg):
+                            self.aiError = msg
+                        case .invalidResponse:
+                            self.aiError = "Invalid AI response"
+                        }
+                    } else {
+                        self.aiError = error.localizedDescription
+                    }
+                }
+                print("Error generating AI commit message: \(error)")
+            }
+        }
     }
 }
 
@@ -2711,9 +3273,9 @@ struct StagingFileRow: View {
                 .foregroundColor(statusColor)
                 .frame(width: 16)
 
-            Image(systemName: FileTypeIcon.systemIcon(for: file.path))
+            Image(systemName: "doc.fill")
                 .font(.system(size: 12))
-                .foregroundColor(FileTypeIcon.color(for: file.path))
+                .foregroundColor(.blue)
 
             Text((file.path as NSString).lastPathComponent)
                 .font(.system(size: 12))
@@ -3437,6 +3999,7 @@ struct MergeBranchSheet: View {
 
     private func mergeBranch() {
         guard !selectedBranch.isEmpty else { return }
+        let currentBranch = appState.currentRepository?.currentBranch?.name ?? "HEAD"
         isMerging = true
         errorMessage = nil
 
@@ -3444,10 +4007,26 @@ struct MergeBranchSheet: View {
             do {
                 try await appState.gitService.merge(branch: selectedBranch, noFastForward: noFastForward)
                 await appState.refresh()
+
+                // Track successful merge
+                RemoteOperationTracker.shared.recordMerge(
+                    success: true,
+                    sourceBranch: selectedBranch,
+                    targetBranch: currentBranch
+                )
+
                 await MainActor.run {
                     isPresented = false
                 }
             } catch {
+                // Track failed merge
+                RemoteOperationTracker.shared.recordMerge(
+                    success: false,
+                    sourceBranch: selectedBranch,
+                    targetBranch: currentBranch,
+                    error: error.localizedDescription
+                )
+
                 await MainActor.run {
                     errorMessage = error.localizedDescription
                     isMerging = false

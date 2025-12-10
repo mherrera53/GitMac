@@ -5,6 +5,10 @@ import KeychainAccess
 actor KeychainManager {
     private let keychain: Keychain
 
+    // In-memory cache to reduce Keychain access prompts
+    private var cache: [String: String] = [:]
+    private var cacheLoaded = false
+
     static let shared = KeychainManager()
 
     private init() {
@@ -16,22 +20,32 @@ actor KeychainManager {
 
     /// Save a string value
     func save(key: String, value: String) throws {
+        cache[key] = value
         try keychain.set(value, key: key)
     }
 
-    /// Get a string value
+    /// Get a string value (cached)
     func get(key: String) throws -> String? {
-        try keychain.get(key)
+        if let cached = cache[key] {
+            return cached
+        }
+        let value = try keychain.get(key)
+        if let value = value {
+            cache[key] = value
+        }
+        return value
     }
 
     /// Delete a value
     func delete(key: String) throws {
+        cache.removeValue(forKey: key)
         try keychain.remove(key)
     }
 
     /// Check if a key exists
     func exists(key: String) -> Bool {
-        (try? keychain.get(key)) != nil
+        if cache[key] != nil { return true }
+        return (try? keychain.get(key)) != nil
     }
 
     // MARK: - GitHub Credentials
@@ -173,6 +187,82 @@ actor KeychainManager {
     func deleteGitCredentials(remote: String) throws {
         let key = "git_\(remote.sha256Hash)"
         try keychain.remove(key)
+    }
+
+    // MARK: - Linear
+
+    private let linearTokenKey = "linear_token"
+
+    func saveLinearToken(_ token: String) throws {
+        try keychain.set(token, key: linearTokenKey)
+    }
+
+    func getLinearToken() throws -> String? {
+        try keychain.get(linearTokenKey)
+    }
+
+    func deleteLinearToken() throws {
+        try keychain.remove(linearTokenKey)
+    }
+
+    // MARK: - Jira
+
+    private let jiraTokenKey = "jira_token"
+    private let jiraCloudIdKey = "jira_cloud_id"
+    private let jiraSiteUrlKey = "jira_site_url"
+
+    func saveJiraToken(_ token: String) throws {
+        try keychain.set(token, key: jiraTokenKey)
+    }
+
+    func getJiraToken() throws -> String? {
+        try keychain.get(jiraTokenKey)
+    }
+
+    func saveJiraCloudId(_ cloudId: String) throws {
+        try keychain.set(cloudId, key: jiraCloudIdKey)
+    }
+
+    func getJiraCloudId() throws -> String? {
+        try keychain.get(jiraCloudIdKey)
+    }
+
+    func saveJiraSiteUrl(_ url: String) throws {
+        try keychain.set(url, key: jiraSiteUrlKey)
+    }
+
+    func getJiraSiteUrl() throws -> String? {
+        try keychain.get(jiraSiteUrlKey)
+    }
+
+    func deleteJiraToken() throws {
+        try keychain.remove(jiraTokenKey)
+    }
+
+    func deleteJiraCloudId() throws {
+        try keychain.remove(jiraCloudIdKey)
+    }
+
+    func deleteJiraCredentials() throws {
+        try keychain.remove(jiraTokenKey)
+        try keychain.remove(jiraCloudIdKey)
+        try keychain.remove(jiraSiteUrlKey)
+    }
+
+    // MARK: - Notion
+
+    private let notionTokenKey = "notion_token"
+
+    func saveNotionToken(_ token: String) throws {
+        try keychain.set(token, key: notionTokenKey)
+    }
+
+    func getNotionToken() throws -> String? {
+        try keychain.get(notionTokenKey)
+    }
+
+    func deleteNotionToken() throws {
+        try keychain.remove(notionTokenKey)
     }
 }
 

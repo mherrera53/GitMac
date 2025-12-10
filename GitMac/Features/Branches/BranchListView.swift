@@ -10,6 +10,7 @@ struct BranchListView: View {
     @State private var showMergeSheet = false
     @State private var showRebaseSheet = false
     @State private var showDeleteAlert = false
+    @State private var showPRSheet = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -53,9 +54,19 @@ struct BranchListView: View {
                                     selectedBranch = branch
                                     showRebaseSheet = true
                                 },
+                                onRename: {
+                                    // TODO: Implement Rename Sheet
+                                    NotificationCenter.default.post(name: .renameBranch, object: branch)
+                                },
+                                onPush: { Task { await viewModel.push(branch) } },
+                                onPull: { Task { await viewModel.pull(branch) } },
                                 onDelete: {
                                     selectedBranch = branch
                                     showDeleteAlert = true
+                                },
+                                onStartPR: {
+                                    selectedBranch = branch
+                                    showPRSheet = true
                                 }
                             )
                         }
@@ -105,6 +116,12 @@ struct BranchListView: View {
         .sheet(isPresented: $showRebaseSheet) {
             if let branch = selectedBranch {
                 RebaseSheet(ontoBranch: branch, viewModel: viewModel)
+            }
+        }
+        .sheet(isPresented: $showPRSheet) {
+            if let branch = selectedBranch {
+                CreatePullRequestSheet(branch: branch)
+                    .environmentObject(appState)
             }
         }
         .alert("Delete Branch", isPresented: $showDeleteAlert) {
@@ -271,11 +288,27 @@ class BranchListViewModel: ObservableObject {
     }
 
     func merge(_ branch: Branch, noFastForward: Bool = false) async {
+        let currentBranch = gitService.currentRepository?.currentBranch?.name ?? "HEAD"
         isLoading = true
         do {
             try await gitService.merge(branch: branch.name, noFastForward: noFastForward)
+
+            // Track successful merge
+            RemoteOperationTracker.shared.recordMerge(
+                success: true,
+                sourceBranch: branch.name,
+                targetBranch: currentBranch
+            )
         } catch {
             self.error = error.localizedDescription
+
+            // Track failed merge
+            RemoteOperationTracker.shared.recordMerge(
+                success: false,
+                sourceBranch: branch.name,
+                targetBranch: currentBranch,
+                error: error.localizedDescription
+            )
         }
         isLoading = false
     }
@@ -286,6 +319,61 @@ class BranchListViewModel: ObservableObject {
             try await gitService.rebase(onto: branch.name)
         } catch {
             self.error = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    func push(_ branch: Branch) async {
+        isLoading = true
+        do {
+            // Only support pushing HEAD for now or we need to pass branch name to gitService.push
+            if branch.isHead {
+                try await gitService.push()
+
+                // Track successful push
+                RemoteOperationTracker.shared.recordPush(
+                    success: true,
+                    branch: branch.name,
+                    remote: "origin"
+                )
+            }
+        } catch {
+            self.error = error.localizedDescription
+
+            // Track failed push
+            RemoteOperationTracker.shared.recordPush(
+                success: false,
+                branch: branch.name,
+                remote: "origin",
+                error: error.localizedDescription
+            )
+        }
+        isLoading = false
+    }
+
+    func pull(_ branch: Branch) async {
+        isLoading = true
+        do {
+            if branch.isHead {
+                try await gitService.pull()
+
+                // Track successful pull
+                RemoteOperationTracker.shared.recordPull(
+                    success: true,
+                    branch: branch.name,
+                    remote: "origin"
+                )
+            }
+        } catch {
+            self.error = error.localizedDescription
+
+            // Track failed pull
+            RemoteOperationTracker.shared.recordPull(
+                success: false,
+                branch: branch.name,
+                remote: "origin",
+                error: error.localizedDescription
+            )
         }
         isLoading = false
     }
@@ -321,7 +409,11 @@ struct BranchRow: View {
     var onCheckout: () -> Void = {}
     var onMerge: () -> Void = {}
     var onRebase: () -> Void = {}
+    var onRename: () -> Void = {}
+    var onPush: () -> Void = {}
+    var onPull: () -> Void = {}
     var onDelete: () -> Void = {}
+    var onStartPR: () -> Void = {}
 
     @State private var isHovered = false
 
@@ -367,9 +459,34 @@ struct BranchRow: View {
         }
         .onTapGesture { onSelect() }
         .onHover { isHovered = $0 }
+        .scaleEffect(isHovered ? 1.02 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHovered)
         .contextMenu {
             Button("Checkout") { onCheckout() }
                 .disabled(branch.isHead)
+
+            if branch.isHead {
+                Divider()
+                Button { onPull() } label: { Label("Pull", systemImage: "arrow.down") }
+                Button { onPush() } label: { Label("Push", systemImage: "arrow.up") }
+            }
+            
+            Divider()
+
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(branch.name, forType: .string)
+            } label: {
+                Label("Copy Branch Name", systemImage: "doc.on.doc")
+            }
+
+            Divider()
+
+            Button {
+                onStartPR()
+            } label: {
+                Label("Start a Pull Request", systemImage: "arrow.triangle.pull")
+            }
 
             Divider()
 
@@ -381,7 +498,7 @@ struct BranchRow: View {
 
             Divider()
 
-            Button("Rename...") { }
+            Button("Rename...") { onRename() }
 
             Divider()
 
@@ -582,8 +699,166 @@ struct RebaseSheet: View {
     }
 }
 
-// #Preview {
-//     BranchListView()
-//         .environmentObject(AppState())
-//         .frame(width: 300, height: 500)
-// }
+// MARK: - Create Pull Request Sheet
+
+struct CreatePullRequestSheet: View {
+    let branch: Branch
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var title = ""
+    @State private var prBody = ""
+    @State private var baseBranch = "main"
+    @State private var isDraft = false
+    @State private var isCreating = false
+    @State private var error: String?
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("Create Pull Request")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Form {
+                // Branches
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text("From")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(branch.name)
+                            .fontWeight(.medium)
+                    }
+                    .frame(minWidth: 100)
+
+                    Image(systemName: "arrow.right")
+                        .foregroundColor(.secondary)
+
+                    VStack(alignment: .leading) {
+                        Text("To")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Picker("", selection: $baseBranch) {
+                            Text("main").tag("main")
+                            Text("master").tag("master")
+                            Text("develop").tag("develop")
+                        }
+                        .labelsHidden()
+                    }
+                }
+
+                TextField("Title", text: $title)
+                    .textFieldStyle(.roundedBorder)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Description")
+                    TextEditor(text: $prBody)
+                        .font(.system(.body, design: .monospaced))
+                        .frame(minHeight: 120)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                        )
+                }
+
+                Toggle("Create as draft", isOn: $isDraft)
+
+                if let error = error {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .font(.caption)
+                }
+            }
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button {
+                    Task { await createPR() }
+                } label: {
+                    if isCreating {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                    } else {
+                        Text("Create Pull Request")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(title.isEmpty || isCreating)
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding()
+        .frame(width: 500, height: 450)
+        .onAppear {
+            // Default title from branch name
+            let branchName = branch.name
+                .replacingOccurrences(of: "feature/", with: "")
+                .replacingOccurrences(of: "fix/", with: "")
+                .replacingOccurrences(of: "-", with: " ")
+                .replacingOccurrences(of: "_", with: " ")
+            title = branchName.capitalized
+        }
+    }
+
+    private func createPR() async {
+        isCreating = true
+        error = nil
+
+        do {
+            guard let repo = appState.currentRepository,
+                  let remoteURL = repo.remotes.first?.fetchURL else {
+                error = "No remote repository configured"
+                isCreating = false
+                return
+            }
+
+            // Extract owner/repo from URL
+            let (owner, repoName) = parseGitHubURL(remoteURL)
+            guard !owner.isEmpty, !repoName.isEmpty else {
+                error = "Could not parse repository URL"
+                isCreating = false
+                return
+            }
+
+            let githubService = GitHubService()
+            _ = try await githubService.createPullRequest(
+                owner: owner,
+                repo: repoName,
+                title: title,
+                body: prBody.isEmpty ? nil : prBody,
+                head: branch.name,
+                base: baseBranch,
+                draft: isDraft
+            )
+
+            dismiss()
+        } catch {
+            self.error = error.localizedDescription
+        }
+
+        isCreating = false
+    }
+
+    private func parseGitHubURL(_ url: String) -> (owner: String, repo: String) {
+        // Handle both HTTPS and SSH URLs
+        // https://github.com/owner/repo.git
+        // git@github.com:owner/repo.git
+        let cleanURL = url
+            .replacingOccurrences(of: "git@github.com:", with: "")
+            .replacingOccurrences(of: "https://github.com/", with: "")
+            .replacingOccurrences(of: ".git", with: "")
+
+        let parts = cleanURL.components(separatedBy: "/")
+        guard parts.count >= 2 else { return ("", "") }
+
+        return (parts[0], parts[1])
+    }
+}
+
+extension Notification.Name {
+    static let renameBranch = Notification.Name("renameBranch")
+}

@@ -1,6 +1,45 @@
 import SwiftUI
 import Splash
 
+// MARK: - Diff Line Context Menu Extension
+
+extension View {
+    /// Adds a context menu with copy actions to a diff line view
+    func diffLineContextMenu(line: DiffLine) -> some View {
+        self.contextMenu {
+            Button {
+                ContextMenuHelper.copyToClipboard(line.content)
+                ToastManager.shared.show("Line content copied")
+            } label: {
+                Label("Copy Line Content", systemImage: "doc.on.doc")
+            }
+
+            Button {
+                let lineNum = line.newLineNumber ?? line.oldLineNumber ?? 0
+                let prefix: String
+                switch line.type {
+                case .addition: prefix = "+"
+                case .deletion: prefix = "-"
+                default: prefix = " "
+                }
+                let text = "\(lineNum): \(prefix)\(line.content)"
+                ContextMenuHelper.copyToClipboard(text)
+                ToastManager.shared.show("Line copied with number")
+            } label: {
+                Label("Copy with Line Number", systemImage: "list.number")
+            }
+
+            if line.type != .context && line.type != .hunkHeader {
+                Divider()
+
+                // Stage/discard hints (hunk-level actions available in toolbar)
+                Text("Use hunk actions for stage/discard")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+}
 
 /// Complete diff viewer with multiple view modes
 struct DiffView: View {
@@ -9,6 +48,31 @@ struct DiffView: View {
     @State private var viewMode: DiffViewMode = .split
     @State private var showLineNumbers = true
     @State private var wordWrap = false
+
+    /// Check if file is markdown
+    private var isMarkdown: Bool {
+        let ext = (fileDiff.displayPath as NSString).pathExtension.lowercased()
+        return ext == "md" || ext == "markdown" || ext == "mdown"
+    }
+
+    /// Get full content for preview mode (new file state)
+    private var previewContent: String {
+        // Reconstruct the new file content from diff hunks
+        var lines: [String] = []
+        for hunk in fileDiff.hunks {
+            for line in hunk.lines {
+                switch line.type {
+                case .addition, .context:
+                    lines.append(line.content)
+                case .deletion:
+                    break // Skip deleted lines in preview
+                case .hunkHeader:
+                    break
+                }
+            }
+        }
+        return lines.joined(separator: "\n")
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,10 +83,13 @@ struct DiffView: View {
                 deletions: fileDiff.deletions,
                 viewMode: $viewMode,
                 showLineNumbers: $showLineNumbers,
-                wordWrap: $wordWrap
+                wordWrap: $wordWrap,
+                isMarkdown: isMarkdown
             )
 
-            Divider()
+            Rectangle()
+                .fill(GitKrakenTheme.border)
+                .frame(height: 1)
 
             // Content
             if fileDiff.isBinary {
@@ -46,9 +113,13 @@ struct DiffView: View {
                         hunks: fileDiff.hunks,
                         showLineNumbers: showLineNumbers
                     )
+                case .preview:
+                    // Show rendered markdown with Mermaid support
+                    MarkdownView(content: previewContent, fileName: fileDiff.displayPath)
                 }
             }
         }
+        .background(GitKrakenTheme.background)
     }
 }
 
@@ -56,17 +127,29 @@ enum DiffViewMode: String, CaseIterable {
     case split = "Split"
     case inline = "Inline"
     case hunk = "Hunk"
+    case preview = "Preview"
 
     var icon: String {
         switch self {
         case .split: return "rectangle.split.2x1"
         case .inline: return "rectangle.stack"
         case .hunk: return "text.alignleft"
+        case .preview: return "eye"
         }
+    }
+
+    /// Modes available for regular files
+    static var standardModes: [DiffViewMode] {
+        [.split, .inline, .hunk]
+    }
+
+    /// Modes available for markdown files (includes preview)
+    static var markdownModes: [DiffViewMode] {
+        [.split, .inline, .hunk, .preview]
     }
 }
 
-// MARK: - Diff Toolbar
+// MARK: - Diff Toolbar (GitKraken Style)
 
 struct DiffToolbar: View {
     let filename: String
@@ -75,124 +158,416 @@ struct DiffToolbar: View {
     @Binding var viewMode: DiffViewMode
     @Binding var showLineNumbers: Bool
     @Binding var wordWrap: Bool
+    var isMarkdown: Bool = false
+
+    /// Available modes based on file type
+    private var availableModes: [DiffViewMode] {
+        isMarkdown ? DiffViewMode.markdownModes : DiffViewMode.standardModes
+    }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 16) {
             // File info
-            HStack(spacing: 6) {
-                Image(systemName: FileTypeIcon.systemIcon(for: filename))
-                    .foregroundColor(FileTypeIcon.color(for: filename))
+            HStack(spacing: 8) {
+                Image(systemName: "doc.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.blue)
 
                 Text(filename)
-                    .fontWeight(.medium)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(GitKrakenTheme.textPrimary)
                     .lineLimit(1)
             }
 
-            // Stats
+            // Stats badges
             HStack(spacing: 8) {
-                HStack(spacing: 2) {
-                    Text("+\(additions)")
-                        .foregroundColor(.green)
-                    Text("-\(deletions)")
-                        .foregroundColor(.red)
+                // Additions badge
+                HStack(spacing: 4) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 9, weight: .bold))
+                    Text("\(additions)")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 }
-                .font(.caption.monospacedDigit())
+                .foregroundColor(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(GitKrakenTheme.accentGreen)
+                .cornerRadius(4)
+
+                // Deletions badge
+                HStack(spacing: 4) {
+                    Image(systemName: "minus")
+                        .font(.system(size: 9, weight: .bold))
+                    Text("\(deletions)")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(GitKrakenTheme.accentRed)
+                .cornerRadius(4)
             }
 
             Spacer()
 
             // View options
-            Toggle(isOn: $showLineNumbers) {
-                Image(systemName: "number")
-            }
-            .toggleStyle(.button)
-            .help("Show line numbers")
+            HStack(spacing: 4) {
+                ToolbarButton(
+                    icon: "number",
+                    isActive: showLineNumbers,
+                    tooltip: "Line numbers"
+                ) {
+                    showLineNumbers.toggle()
+                }
 
-            Toggle(isOn: $wordWrap) {
-                Image(systemName: "text.word.spacing")
-            }
-            .toggleStyle(.button)
-            .help("Word wrap")
-
-            Divider()
-                .frame(height: 16)
-
-            // View mode picker
-            Picker("View", selection: $viewMode) {
-                ForEach(DiffViewMode.allCases, id: \.self) { mode in
-                    Label(mode.rawValue, systemImage: mode.icon)
-                        .tag(mode)
+                ToolbarButton(
+                    icon: "text.word.spacing",
+                    isActive: wordWrap,
+                    tooltip: "Word wrap"
+                ) {
+                    wordWrap.toggle()
                 }
             }
-            .pickerStyle(.segmented)
-            .frame(width: 180)
+
+            // Divider
+            Rectangle()
+                .fill(GitKrakenTheme.border)
+                .frame(width: 1, height: 20)
+
+            // View mode selector
+            HStack(spacing: 2) {
+                ForEach(availableModes, id: \.self) { mode in
+                    DiffModeButton(
+                        mode: mode,
+                        isSelected: viewMode == mode
+                    ) {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            viewMode = mode
+                        }
+                    }
+                }
+            }
+            .padding(3)
+            .background(GitKrakenTheme.backgroundTertiary)
+            .cornerRadius(6)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color(nsColor: .controlBackgroundColor))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(GitKrakenTheme.toolbar)
     }
 }
 
-// MARK: - Split Diff View (Side by Side)
+// MARK: - Toolbar Button
+
+struct ToolbarButton: View {
+    let icon: String
+    let isActive: Bool
+    let tooltip: String
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(isActive ? GitKrakenTheme.accent : GitKrakenTheme.textSecondary)
+                .frame(width: 28, height: 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(isActive ? GitKrakenTheme.accent.opacity(0.15) : (isHovered ? GitKrakenTheme.hover : SwiftUI.Color.clear))
+                )
+        }
+        .buttonStyle(.plain)
+        .help(tooltip)
+        .onHover { isHovered = $0 }
+    }
+}
+
+// MARK: - Diff Mode Button
+
+struct DiffModeButton: View {
+    let mode: DiffViewMode
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: mode.icon)
+                    .font(.system(size: 10, weight: .medium))
+                Text(mode.rawValue)
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .foregroundColor(isSelected ? .white : GitKrakenTheme.textSecondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isSelected ? GitKrakenTheme.accent : (isHovered ? GitKrakenTheme.hover : SwiftUI.Color.clear))
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+    }
+}
+
+// MARK: - Split Diff View (Side by Side) with Synchronized Scrolling
 
 struct SplitDiffView: View {
     let hunks: [DiffHunk]
     let showLineNumbers: Bool
     let filename: String
 
+    // Build paired lines for proper alignment
+    private var pairedLines: [(left: DiffLine?, right: DiffLine?, hunkHeader: String?)] {
+        var pairs: [(left: DiffLine?, right: DiffLine?, hunkHeader: String?)] = []
+
+        for hunk in hunks {
+            // Add hunk header as a special row
+            pairs.append((left: nil, right: nil, hunkHeader: hunk.header))
+
+            // Group consecutive deletions and additions for better pairing
+            var i = 0
+            let lines = hunk.lines
+
+            while i < lines.count {
+                let line = lines[i]
+
+                if line.type == .context {
+                    pairs.append((left: line, right: line, hunkHeader: nil))
+                    i += 1
+                } else if line.type == .deletion {
+                    // Collect consecutive deletions
+                    var deletions: [DiffLine] = []
+                    while i < lines.count && lines[i].type == .deletion {
+                        deletions.append(lines[i])
+                        i += 1
+                    }
+
+                    // Collect consecutive additions
+                    var additions: [DiffLine] = []
+                    while i < lines.count && lines[i].type == .addition {
+                        additions.append(lines[i])
+                        i += 1
+                    }
+
+                    // Pair them up
+                    let maxCount = max(deletions.count, additions.count)
+                    for j in 0..<maxCount {
+                        let del = j < deletions.count ? deletions[j] : nil
+                        let add = j < additions.count ? additions[j] : nil
+                        pairs.append((left: del, right: add, hunkHeader: nil))
+                    }
+                } else if line.type == .addition {
+                    // Standalone addition (no preceding deletion)
+                    pairs.append((left: nil, right: line, hunkHeader: nil))
+                    i += 1
+                } else {
+                    i += 1
+                }
+            }
+        }
+
+        return pairs
+    }
+
     var body: some View {
         GeometryReader { geometry in
-            HStack(spacing: 0) {
-                // Left side (old)
-                ScrollView([.vertical, .horizontal]) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(hunks) { hunk in
-                            HunkHeaderRow(header: hunk.header)
+            let halfWidth = geometry.size.width / 2 - 1
 
-                            ForEach(hunk.lines) { line in
-                                if line.type != .addition {
-                                    DiffLineRow(
-                                        line: line,
-                                        side: .left,
-                                        showLineNumber: showLineNumbers,
-                                        filename: filename
-                                    )
-                                } else {
-                                    // Empty placeholder for additions
-                                    EmptyLineRow(showLineNumber: showLineNumbers)
-                                }
+            ScrollView([.vertical, .horizontal]) {
+                HStack(spacing: 0) {
+                    // Left side (old)
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(pairedLines.enumerated()), id: \.offset) { index, pair in
+                            if let header = pair.hunkHeader {
+                                SplitHunkHeaderRow(header: header)
+                                    .frame(width: halfWidth)
+                            } else if let line = pair.left {
+                                SplitDiffLineRow(
+                                    line: line,
+                                    side: .left,
+                                    showLineNumber: showLineNumbers,
+                                    pairedLine: pair.right
+                                )
+                                .frame(width: halfWidth)
+                            } else {
+                                EmptyLineRow(showLineNumber: showLineNumbers)
+                                    .frame(width: halfWidth)
                             }
                         }
                     }
-                }
-                .frame(width: geometry.size.width / 2)
+                    .frame(width: halfWidth)
 
-                Divider()
+                    // Divider
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.3))
+                        .frame(width: 2)
 
-                // Right side (new)
-                ScrollView([.vertical, .horizontal]) {
+                    // Right side (new)
                     VStack(alignment: .leading, spacing: 0) {
-                        ForEach(hunks) { hunk in
-                            HunkHeaderRow(header: hunk.header)
-
-                            ForEach(hunk.lines) { line in
-                                if line.type != .deletion {
-                                    DiffLineRow(
-                                        line: line,
-                                        side: .right,
-                                        showLineNumber: showLineNumbers,
-                                        filename: filename
-                                    )
-                                } else {
-                                    // Empty placeholder for deletions
-                                    EmptyLineRow(showLineNumber: showLineNumbers)
-                                }
+                        ForEach(Array(pairedLines.enumerated()), id: \.offset) { index, pair in
+                            if let header = pair.hunkHeader {
+                                SplitHunkHeaderRow(header: header)
+                                    .frame(width: halfWidth)
+                            } else if let line = pair.right {
+                                SplitDiffLineRow(
+                                    line: line,
+                                    side: .right,
+                                    showLineNumber: showLineNumbers,
+                                    pairedLine: pair.left
+                                )
+                                .frame(width: halfWidth)
+                            } else {
+                                EmptyLineRow(showLineNumber: showLineNumbers)
+                                    .frame(width: halfWidth)
                             }
                         }
                     }
+                    .frame(width: halfWidth)
                 }
-                .frame(width: geometry.size.width / 2)
             }
+        }
+    }
+}
+
+// MARK: - Split View Components
+
+struct SplitHunkHeaderRow: View {
+    let header: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "text.alignleft")
+                .font(.system(size: 10))
+            Text(header)
+                .font(.system(size: 11, design: .monospaced))
+        }
+        .foregroundColor(GitKrakenTheme.accent)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(GitKrakenTheme.accent.opacity(0.08))
+    }
+}
+
+struct SplitDiffLineRow: View {
+    let line: DiffLine
+    let side: DiffSide
+    let showLineNumber: Bool
+    let pairedLine: DiffLine?
+
+    var lineNumber: Int? {
+        switch side {
+        case .left: return line.oldLineNumber
+        case .right: return line.newLineNumber
+        }
+    }
+
+    // Compute word-level diff if there's a paired line
+    private var highlightedContent: AttributedString {
+        guard let paired = pairedLine,
+              line.type != .context,
+              paired.type != .context else {
+            return AttributedString(line.content)
+        }
+
+        // Simple word-level diff
+        let myWords = line.content.components(separatedBy: CharacterSet.whitespaces)
+        let otherWords = paired.content.components(separatedBy: CharacterSet.whitespaces)
+
+        var result = AttributedString()
+
+        for (index, word) in myWords.enumerated() {
+            var wordAttr = AttributedString(word)
+
+            // Check if word differs
+            if index >= otherWords.count || word != otherWords[index] {
+                // Highlight changed word
+                wordAttr.backgroundColor = line.type == .addition ?
+                    GitKrakenTheme.accentGreen.opacity(0.35) : GitKrakenTheme.accentRed.opacity(0.35)
+            }
+
+            result.append(wordAttr)
+            if index < myWords.count - 1 {
+                result.append(AttributedString(" "))
+            }
+        }
+
+        return result
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            if showLineNumber {
+                Text(lineNumber.map { String($0) } ?? "")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .frame(width: 45, alignment: .trailing)
+                    .padding(.trailing, 8)
+                    .background(lineNumberBackground)
+            }
+
+            // Change indicator
+            Text(changeIndicator)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundColor(indicatorColor)
+                .frame(width: 16)
+
+            // Content with word-level highlighting
+            Text(highlightedContent)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundColor(textColor)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 2)
+        .padding(.trailing, 8)
+        .background(backgroundColor)
+        .diffLineContextMenu(line: line)
+    }
+
+    var changeIndicator: String {
+        switch line.type {
+        case .addition: return "+"
+        case .deletion: return "-"
+        case .context: return " "
+        case .hunkHeader: return "@@"
+        }
+    }
+
+    var indicatorColor: SwiftUI.Color {
+        switch line.type {
+        case .addition: return GitKrakenTheme.accentGreen
+        case .deletion: return GitKrakenTheme.accentRed
+        default: return GitKrakenTheme.textMuted
+        }
+    }
+
+    var backgroundColor: SwiftUI.Color {
+        switch line.type {
+        case .addition: return GitKrakenTheme.accentGreen.opacity(0.12)
+        case .deletion: return GitKrakenTheme.accentRed.opacity(0.12)
+        case .context, .hunkHeader: return SwiftUI.Color.clear
+        }
+    }
+
+    var lineNumberBackground: SwiftUI.Color {
+        switch line.type {
+        case .addition: return GitKrakenTheme.accentGreen.opacity(0.06)
+        case .deletion: return GitKrakenTheme.accentRed.opacity(0.06)
+        case .context, .hunkHeader: return GitKrakenTheme.backgroundSecondary
+        }
+    }
+
+    var textColor: SwiftUI.Color {
+        switch line.type {
+        case .addition: return GitKrakenTheme.accentGreen
+        case .deletion: return GitKrakenTheme.accentRed
+        case .context, .hunkHeader: return GitKrakenTheme.textPrimary
         }
     }
 }
@@ -235,16 +610,36 @@ struct HunkDiffView: View {
     var onUnstageHunk: ((Int) -> Void)? = nil
     var onDiscardHunk: ((Int) -> Void)? = nil
 
+    @State private var collapsedHunks: Set<Int> = []
+
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 16) {
+            LazyVStack(spacing: 12) {
+                // Summary header
+                HunkSummaryHeader(
+                    hunkCount: hunks.count,
+                    totalAdditions: hunks.reduce(0) { $0 + $1.lines.filter { $0.type == .addition }.count },
+                    totalDeletions: hunks.reduce(0) { $0 + $1.lines.filter { $0.type == .deletion }.count }
+                )
+
                 ForEach(Array(hunks.enumerated()), id: \.element.id) { index, hunk in
-                    HunkCard(
+                    CollapsibleHunkCard(
                         hunk: hunk,
                         hunkIndex: index,
+                        totalHunks: hunks.count,
                         showLineNumbers: showLineNumbers,
                         showActions: onStageHunk != nil || onUnstageHunk != nil,
                         isStaged: isStaged,
+                        isCollapsed: collapsedHunks.contains(index),
+                        onToggleCollapse: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                if collapsedHunks.contains(index) {
+                                    collapsedHunks.remove(index)
+                                } else {
+                                    collapsedHunks.insert(index)
+                                }
+                            }
+                        },
                         onStage: { onStageHunk?(index) },
                         onUnstage: { onUnstageHunk?(index) },
                         onDiscard: { onDiscardHunk?(index) }
@@ -253,6 +648,198 @@ struct HunkDiffView: View {
             }
             .padding()
         }
+    }
+}
+
+// MARK: - Hunk Summary Header
+
+struct HunkSummaryHeader: View {
+    let hunkCount: Int
+    let totalAdditions: Int
+    let totalDeletions: Int
+
+    var body: some View {
+        HStack(spacing: 16) {
+            HStack(spacing: 6) {
+                Image(systemName: "text.alignleft")
+                    .font(.system(size: 12))
+                Text("\(hunkCount) hunk\(hunkCount == 1 ? "" : "s")")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .foregroundColor(GitKrakenTheme.textSecondary)
+
+            Spacer()
+
+            HStack(spacing: 12) {
+                HStack(spacing: 4) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .bold))
+                    Text("\(totalAdditions)")
+                }
+                .foregroundColor(GitKrakenTheme.accentGreen)
+
+                HStack(spacing: 4) {
+                    Image(systemName: "minus")
+                        .font(.system(size: 10, weight: .bold))
+                    Text("\(totalDeletions)")
+                }
+                .foregroundColor(GitKrakenTheme.accentRed)
+            }
+            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(GitKrakenTheme.backgroundSecondary)
+        .cornerRadius(8)
+    }
+}
+
+// MARK: - Collapsible Hunk Card
+
+struct CollapsibleHunkCard: View {
+    let hunk: DiffHunk
+    let hunkIndex: Int
+    let totalHunks: Int
+    let showLineNumbers: Bool
+    let showActions: Bool
+    let isStaged: Bool
+    let isCollapsed: Bool
+    var onToggleCollapse: (() -> Void)?
+    var onStage: (() -> Void)?
+    var onUnstage: (() -> Void)?
+    var onDiscard: (() -> Void)?
+
+    @State private var isHovered = false
+
+    private var additions: Int {
+        hunk.lines.filter { $0.type == .addition }.count
+    }
+
+    private var deletions: Int {
+        hunk.lines.filter { $0.type == .deletion }.count
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Hunk header (always visible)
+            HStack(spacing: 8) {
+                // Collapse toggle
+                Button(action: { onToggleCollapse?() }) {
+                    Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .frame(width: 16, height: 16)
+                }
+                .buttonStyle(.plain)
+
+                // Hunk number badge
+                Text("Hunk \(hunkIndex + 1)/\(totalHunks)")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(GitKrakenTheme.accent)
+                    .cornerRadius(4)
+
+                // Line range
+                Text("Lines \(hunk.oldStart)-\(hunk.oldStart + hunk.oldLines) → \(hunk.newStart)-\(hunk.newStart + hunk.newLines)")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(GitKrakenTheme.textMuted)
+
+                // Change stats
+                HStack(spacing: 6) {
+                    if additions > 0 {
+                        Text("+\(additions)")
+                            .foregroundColor(GitKrakenTheme.accentGreen)
+                    }
+                    if deletions > 0 {
+                        Text("-\(deletions)")
+                            .foregroundColor(GitKrakenTheme.accentRed)
+                    }
+                }
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+
+                Spacer()
+
+                // Actions (visible on hover)
+                if showActions && isHovered && !isCollapsed {
+                    HStack(spacing: 6) {
+                        if !isStaged {
+                            Button {
+                                onStage?()
+                            } label: {
+                                Label("Stage", systemImage: "plus.circle.fill")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(GitKrakenTheme.accentGreen)
+                                    .cornerRadius(4)
+                            }
+                            .buttonStyle(.plain)
+
+                            Button {
+                                onDiscard?()
+                            } label: {
+                                Label("Discard", systemImage: "trash")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(GitKrakenTheme.accentRed)
+                                    .cornerRadius(4)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            Button {
+                                onUnstage?()
+                            } label: {
+                                Label("Unstage", systemImage: "minus.circle.fill")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(GitKrakenTheme.accentOrange)
+                                    .cornerRadius(4)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(GitKrakenTheme.accent.opacity(0.08))
+
+            // Lines (collapsible)
+            if !isCollapsed {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(hunk.lines) { line in
+                        HunkLineRow(line: line, showLineNumber: showLineNumbers)
+                    }
+                }
+            } else {
+                // Collapsed preview
+                HStack(spacing: 8) {
+                    Text("...")
+                        .foregroundColor(GitKrakenTheme.textMuted)
+                    Text("\(hunk.lines.count) lines")
+                        .font(.system(size: 11))
+                        .foregroundColor(GitKrakenTheme.textMuted)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(GitKrakenTheme.backgroundTertiary)
+            }
+        }
+        .background(GitKrakenTheme.backgroundSecondary)
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isHovered ? GitKrakenTheme.accent.opacity(0.6) : GitKrakenTheme.border, lineWidth: isHovered ? 2 : 1)
+        )
+        .onHover { isHovered = $0 }
     }
 }
 
@@ -391,25 +978,27 @@ struct DiffLineRow: View {
             Text(line.content)
                 .font(.system(.body, design: .monospaced))
                 .foregroundColor(textColor)
+                .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 1)
         .padding(.horizontal, 4)
         .background(backgroundColor)
+        .diffLineContextMenu(line: line)
     }
 
     var backgroundColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return SwiftUI.Color.diffAddedBackground
-        case .deletion: return SwiftUI.Color.diffDeletedBackground
+        case .addition: return SwiftUI.Color.green.opacity(0.15)
+        case .deletion: return SwiftUI.Color.red.opacity(0.15)
         case .context, .hunkHeader: return SwiftUI.Color.clear
         }
     }
 
     var textColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return SwiftUI.Color.diffAddedText
-        case .deletion: return SwiftUI.Color.diffDeletedText
+        case .addition: return SwiftUI.Color.green
+        case .deletion: return SwiftUI.Color.red
         case .context, .hunkHeader: return SwiftUI.Color.primary
         }
     }
@@ -446,11 +1035,13 @@ struct InlineDiffLineRow: View {
             Text(line.content)
                 .font(.system(.body, design: .monospaced))
                 .foregroundColor(textColor)
+                .textSelection(.enabled)
         }
         .padding(.vertical, 1)
         .padding(.horizontal, 4)
         .background(backgroundColor)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .diffLineContextMenu(line: line)
     }
 
     var lineIndicator: String {
@@ -473,16 +1064,16 @@ struct InlineDiffLineRow: View {
 
     var backgroundColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return SwiftUI.Color.diffAddedBackground
-        case .deletion: return SwiftUI.Color.diffDeletedBackground
+        case .addition: return SwiftUI.Color.green.opacity(0.15)
+        case .deletion: return SwiftUI.Color.red.opacity(0.15)
         case .context, .hunkHeader: return SwiftUI.Color.clear
         }
     }
 
     var textColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return SwiftUI.Color.diffAddedText
-        case .deletion: return SwiftUI.Color.diffDeletedText
+        case .addition: return SwiftUI.Color.green
+        case .deletion: return SwiftUI.Color.red
         case .context, .hunkHeader: return SwiftUI.Color.primary
         }
     }
@@ -501,22 +1092,26 @@ struct HunkLineRow: View {
                     Text(line.newLineNumber.map { String($0) } ?? "")
                         .frame(width: 35, alignment: .trailing)
                 }
-                .font(.system(.caption, design: .monospaced))
-                .foregroundColor(.secondary)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(GitKrakenTheme.textMuted)
                 .padding(.trailing, 8)
+                .background(lineNumberBackground)
             }
 
             Text(linePrefix)
                 .foregroundColor(prefixColor)
+                .frame(width: 16)
 
             Text(line.content)
                 .foregroundColor(textColor)
+                .textSelection(.enabled)
         }
-        .font(.system(.body, design: .monospaced))
-        .padding(.vertical, 1)
+        .font(.system(size: 12, design: .monospaced))
+        .padding(.vertical, 2)
         .padding(.horizontal, 8)
         .background(backgroundColor)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .diffLineContextMenu(line: line)
     }
 
     var linePrefix: String {
@@ -530,25 +1125,33 @@ struct HunkLineRow: View {
 
     var prefixColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return .green
-        case .deletion: return .red
-        default: return .secondary
+        case .addition: return GitKrakenTheme.accentGreen
+        case .deletion: return GitKrakenTheme.accentRed
+        default: return GitKrakenTheme.textMuted
         }
     }
 
     var backgroundColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return SwiftUI.Color.green.opacity(0.1)
-        case .deletion: return SwiftUI.Color.red.opacity(0.1)
+        case .addition: return GitKrakenTheme.accentGreen.opacity(0.1)
+        case .deletion: return GitKrakenTheme.accentRed.opacity(0.1)
         default: return SwiftUI.Color.clear
+        }
+    }
+
+    var lineNumberBackground: SwiftUI.Color {
+        switch line.type {
+        case .addition: return GitKrakenTheme.accentGreen.opacity(0.06)
+        case .deletion: return GitKrakenTheme.accentRed.opacity(0.06)
+        default: return GitKrakenTheme.backgroundSecondary
         }
     }
 
     var textColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return SwiftUI.Color(hex: "22863A")
-        case .deletion: return SwiftUI.Color(hex: "CB2431")
-        default: return .primary
+        case .addition: return GitKrakenTheme.accentGreen
+        case .deletion: return GitKrakenTheme.accentRed
+        default: return GitKrakenTheme.textPrimary
         }
     }
 }
@@ -557,13 +1160,17 @@ struct HunkHeaderRow: View {
     let header: String
 
     var body: some View {
-        Text(header)
-            .font(.system(.caption, design: .monospaced))
-            .foregroundColor(.blue)
-            .padding(.vertical, 4)
-            .padding(.horizontal, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.blue.opacity(0.1))
+        HStack(spacing: 8) {
+            Image(systemName: "text.alignleft")
+                .font(.system(size: 10))
+            Text(header)
+                .font(.system(size: 11, design: .monospaced))
+        }
+        .foregroundColor(GitKrakenTheme.accent)
+        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(GitKrakenTheme.accent.opacity(0.08))
     }
 }
 
@@ -574,15 +1181,19 @@ struct EmptyLineRow: View {
         HStack(spacing: 0) {
             if showLineNumber {
                 Text("")
-                    .frame(width: 40)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .frame(width: 45, alignment: .trailing)
                     .padding(.trailing, 8)
+                    .background(GitKrakenTheme.backgroundSecondary)
             }
             Text(" ")
+                .frame(width: 16)
+            Spacer()
         }
-        .font(.system(.body, design: .monospaced))
-        .padding(.vertical, 1)
-        .padding(.horizontal, 4)
-        .background(Color.secondary.opacity(0.05))
+        .font(.system(size: 12, design: .monospaced))
+        .padding(.vertical, 2)
+        .background(GitKrakenTheme.backgroundTertiary.opacity(0.3))
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -849,9 +1460,8 @@ struct SyntaxHighlightedText: View {
             return AttributedString(code)
         }
 
-        let highlighter = SyntaxHighlighter(
-            format: AttributedStringOutputFormat(theme: .sundellsColors(withFont: .init(size: 12))),
-            grammar: grammar
+        let highlighter = Splash.SyntaxHighlighter(
+            format: AttributedStringOutputFormat(theme: .sundellsColors(withFont: .init(size: 12)))
         )
 
         let highlighted = highlighter.highlight(code)
