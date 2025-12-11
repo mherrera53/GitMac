@@ -111,6 +111,10 @@ struct TerminalTabBar: View {
     let onCloseTab: (UUID) -> Void
     let onClear: () -> Void
     let isRunning: Bool
+    var repoPath: String?
+    var onOpenWave: (() -> Void)?
+    var onOpenLazygit: (() -> Void)?
+    @State private var showAIChat = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -144,6 +148,70 @@ struct TerminalTabBar: View {
 
             // Controls
             HStack(spacing: 6) {
+                // Open in Wave button
+                Button {
+                    onOpenWave?()
+                } label: {
+                    HStack(spacing: 2) {
+                        Image(systemName: "wave.3.right")
+                            .font(.system(size: 9))
+                        Text("Wave")
+                            .font(.system(size: 9, weight: .medium))
+                    }
+                    .foregroundColor(TerminalColors.accent)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(TerminalColors.accent.opacity(0.1))
+                    .cornerRadius(4)
+                }
+                .buttonStyle(.plain)
+                .help("Open in Wave Terminal")
+
+                // Open lazygit button
+                Button {
+                    onOpenLazygit?()
+                } label: {
+                    HStack(spacing: 2) {
+                        Image(systemName: "arrow.triangle.branch")
+                            .font(.system(size: 9))
+                        Text("lazygit")
+                            .font(.system(size: 9, weight: .medium))
+                    }
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.orange.opacity(0.1))
+                    .cornerRadius(4)
+                }
+                .buttonStyle(.plain)
+                .help("Open lazygit TUI")
+
+                Divider()
+                    .frame(height: 16)
+
+                // AI Chat button
+                Button {
+                    showAIChat.toggle()
+                } label: {
+                    HStack(spacing: 2) {
+                        Image(systemName: "bubble.left.and.bubble.right")
+                            .font(.system(size: 9))
+                        Text("Chat")
+                            .font(.system(size: 9, weight: .medium))
+                    }
+                    .foregroundColor(.purple)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.purple.opacity(0.1))
+                    .cornerRadius(4)
+                }
+                .buttonStyle(.plain)
+                .help("AI Chat Assistant")
+                .popover(isPresented: $showAIChat) {
+                    TerminalAIChatView(repoPath: repoPath)
+                        .frame(width: 400, height: 500)
+                }
+
                 // AI toggle
                 Button {
                     aiEnabled.toggle()
@@ -161,7 +229,7 @@ struct TerminalTabBar: View {
                     .cornerRadius(4)
                 }
                 .buttonStyle(.plain)
-                .help(aiEnabled ? "AI enabled" : "AI disabled")
+                .help(aiEnabled ? "AI suggestions enabled" : "AI suggestions disabled")
 
                 // Clear button
                 Button(action: onClear) {

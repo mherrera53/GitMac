@@ -12,12 +12,15 @@ let package = Package(
     dependencies: [
         // Syntax highlighting for code
         .package(url: "https://github.com/JohnSundell/Splash.git", from: "0.16.0"),
+        // Real terminal emulator (VT100/Xterm)
+        .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.2.0"),
     ],
     targets: [
         .executableTarget(
             name: "GitMac",
             dependencies: [
-                "Splash"
+                "Splash",
+                "SwiftTerm"
             ],
             path: "GitMac"
         ),
