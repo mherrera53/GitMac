@@ -187,24 +187,61 @@ actor AvatarService {
     private var authenticatedUserAvatarURL: URL?
     private var authenticatedUserLoaded = false
 
+    // Repository commit authors cache (email -> avatar URL)
+    private var repoAuthorsCache: [String: URL] = [:]
+    private var repoAuthorsCacheLoaded: Set<String> = []  // repos already loaded
+
     private func fetchGitHubAvatar(email: String, token: String) async -> URL? {
+        let emailLower = email.lowercased()
+
         // Load authenticated user info once
         if !authenticatedUserLoaded {
             await loadAuthenticatedUser(token: token)
         }
 
         // If email matches authenticated user, return their avatar
-        if authenticatedUserEmails.contains(email.lowercased()),
+        if authenticatedUserEmails.contains(emailLower),
            let avatarURL = authenticatedUserAvatarURL {
             return avatarURL
         }
 
+        // Check repo authors cache
+        if let cachedURL = repoAuthorsCache[emailLower] {
+            return cachedURL
+        }
+
         // Check username cache
-        if let username = githubUsernameCache[email] {
+        if let username = githubUsernameCache[emailLower] {
             return URL(string: "https://avatars.githubusercontent.com/\(username)?size=80")
         }
 
         return nil
+    }
+
+    /// Load commit authors from a GitHub repository
+    func loadRepoAuthors(owner: String, repo: String, token: String) async {
+        let repoKey = "\(owner)/\(repo)"
+        guard !repoAuthorsCacheLoaded.contains(repoKey) else { return }
+        repoAuthorsCacheLoaded.insert(repoKey)
+
+        // Fetch recent commits to get author avatars
+        guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/commits?per_page=100") else { return }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        guard let (data, _) = try? await URLSession.shared.data(for: request),
+              let commits = try? JSONDecoder().decode([GitHubCommitResponse].self, from: data) else {
+            return
+        }
+
+        for commit in commits {
+            if let authorEmail = commit.commit.author?.email?.lowercased(),
+               let avatarUrl = commit.author?.avatarUrl,
+               let url = URL(string: avatarUrl) {
+                repoAuthorsCache[authorEmail] = url
+            }
+        }
     }
 
     /// Load authenticated user's info from GitHub API
@@ -230,6 +267,12 @@ actor AvatarService {
         if let (emailData, _) = try? await URLSession.shared.data(for: emailRequest),
            let emails = try? JSONDecoder().decode([GitHubEmail].self, from: emailData) {
             authenticatedUserEmails = Set(emails.map { $0.email.lowercased() })
+        }
+
+        // Add user-configured email aliases from settings
+        let aliases = EmailAliasSettings.shared.aliases
+        for alias in aliases {
+            authenticatedUserEmails.insert(alias.lowercased())
         }
     }
 
@@ -297,6 +340,27 @@ private struct GitHubEmail: Codable {
     let email: String
     let primary: Bool
     let verified: Bool
+}
+
+private struct GitHubCommitResponse: Codable {
+    let commit: GitHubCommitData
+    let author: GitHubCommitAuthor?
+}
+
+private struct GitHubCommitData: Codable {
+    let author: GitHubCommitPerson?
+}
+
+private struct GitHubCommitPerson: Codable {
+    let email: String?
+}
+
+private struct GitHubCommitAuthor: Codable {
+    let avatarUrl: String?
+
+    enum CodingKeys: String, CodingKey {
+        case avatarUrl = "avatar_url"
+    }
 }
 
 // MARK: - String MD5 Extension
@@ -388,5 +452,46 @@ struct AvatarImageView: View {
             // Still try to load without token (Gravatar only)
             avatarURL = await AvatarService.shared.getAvatarURL(for: email, githubToken: nil)
         }
+    }
+}
+
+// MARK: - Email Alias Settings
+
+/// Manages email aliases for avatar matching (configured in Settings)
+class EmailAliasSettings: ObservableObject {
+    static let shared = EmailAliasSettings()
+
+    private let userDefaultsKey = "email_aliases"
+
+    @Published var aliases: [String] {
+        didSet {
+            save()
+        }
+    }
+
+    private init() {
+        if let data = UserDefaults.standard.data(forKey: userDefaultsKey),
+           let decoded = try? JSONDecoder().decode([String].self, from: data) {
+            aliases = decoded
+        } else {
+            aliases = []
+        }
+    }
+
+    private func save() {
+        if let data = try? JSONEncoder().encode(aliases) {
+            UserDefaults.standard.set(data, forKey: userDefaultsKey)
+        }
+    }
+
+    func addAlias(_ email: String) {
+        let normalized = email.lowercased().trimmingCharacters(in: .whitespaces)
+        if !normalized.isEmpty && !aliases.contains(normalized) {
+            aliases.append(normalized)
+        }
+    }
+
+    func removeAlias(_ email: String) {
+        aliases.removeAll { $0 == email.lowercased() }
     }
 }

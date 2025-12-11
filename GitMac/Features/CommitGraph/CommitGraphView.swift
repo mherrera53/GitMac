@@ -32,6 +32,8 @@ struct CommitGraphView: View {
         .task {
             if let p = appState.currentRepository?.path {
                 await vm.load(at: p)
+                // Load GitHub avatars for repo contributors
+                await loadRepoAvatars()
             }
         }
         .onChange(of: appState.currentRepository?.path) { _, p in
@@ -102,6 +104,27 @@ struct CommitGraphView: View {
                 .foregroundColor(operation.color.opacity(0.4)),
             alignment: .bottom
         )
+    }
+
+    /// Load avatars from GitHub repo commits API
+    private func loadRepoAvatars() async {
+        guard let repo = appState.currentRepository,
+              let remote = repo.remotes.first(where: { $0.name == "origin" }),
+              let token = try? await KeychainManager.shared.getGitHubToken(),
+              !token.isEmpty else { return }
+
+        // Parse owner/repo from GitHub URL
+        let url = remote.fetchURL
+        let pattern = #"github\.com[:/]([^/]+)/([^/.]+)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: url, range: NSRange(url.startIndex..., in: url)),
+              let ownerRange = Range(match.range(at: 1), in: url),
+              let repoRange = Range(match.range(at: 2), in: url) else { return }
+
+        let owner = String(url[ownerRange])
+        let repoName = String(url[repoRange])
+
+        await AvatarService.shared.loadRepoAuthors(owner: owner, repo: repoName, token: token)
     }
 
     private var graphHeader: some View {

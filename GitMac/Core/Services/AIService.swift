@@ -69,6 +69,18 @@ actor AIService {
     private var currentProvider: AIProvider = .anthropic
     private var currentModel: String = "claude-3-haiku-20240307"
 
+    /// Get current provider (loads from keychain if needed)
+    func getCurrentProvider() async -> AIProvider {
+        await loadPreferencesIfNeeded()
+        return currentProvider
+    }
+
+    /// Get current model (loads from keychain if needed)
+    func getCurrentModel() async -> String {
+        await loadPreferencesIfNeeded()
+        return currentModel
+    }
+
     /// Load saved preferences from keychain
     private func loadPreferencesIfNeeded() async {
         guard !preferencesLoaded else { return }

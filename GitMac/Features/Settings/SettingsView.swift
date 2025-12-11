@@ -577,7 +577,14 @@ struct AISettingsView: View {
         let providers = await aiService.getConfiguredProviders()
         configuredProviders = Set(providers)
 
-        if let first = providers.first {
+        // Load saved default provider and model
+        let savedProvider = await aiService.getCurrentProvider()
+        let savedModel = await aiService.getCurrentModel()
+
+        if configuredProviders.contains(savedProvider) {
+            selectedProvider = savedProvider
+            selectedModel = savedModel
+        } else if let first = providers.first {
             selectedProvider = first
             selectedModel = first.models.first?.id ?? ""
         }
@@ -628,26 +635,43 @@ struct GitConfigView: View {
     @State private var userName = ""
     @State private var userEmail = ""
     @State private var defaultBranch = "main"
-    @State private var autoFetch = true
-    @State private var autoFetchInterval = 5
-    @State private var prunOnFetch = true
+    @AppStorage("autoFetch") private var autoFetch = true
+    @AppStorage("autoFetchInterval") private var autoFetchInterval = 5
+    @AppStorage("pruneOnFetch") private var pruneOnFetch = true
+    @State private var isLoading = true
+    @State private var saveStatus: String?
 
     var body: some View {
         Form {
             Section("User") {
                 TextField("Name", text: $userName)
                     .textFieldStyle(.roundedBorder)
+                    .onChange(of: userName) { _, newValue in
+                        saveGitConfig(key: "user.name", value: newValue)
+                    }
                 TextField("Email", text: $userEmail)
                     .textFieldStyle(.roundedBorder)
+                    .onChange(of: userEmail) { _, newValue in
+                        saveGitConfig(key: "user.email", value: newValue)
+                    }
 
                 Text("These values are used for commits in repositories without local config")
                     .font(.caption)
                     .foregroundColor(.secondary)
+
+                if let status = saveStatus {
+                    Text(status)
+                        .font(.caption)
+                        .foregroundColor(.green)
+                }
             }
 
             Section("Defaults") {
                 TextField("Default branch name", text: $defaultBranch)
                     .textFieldStyle(.roundedBorder)
+                    .onChange(of: defaultBranch) { _, newValue in
+                        saveGitConfig(key: "init.defaultBranch", value: newValue)
+                    }
             }
 
             Section("Fetching") {
@@ -663,7 +687,11 @@ struct GitConfigView: View {
                     }
                 }
 
-                Toggle("Prune remote-tracking branches on fetch", isOn: $prunOnFetch)
+                Toggle("Prune remote-tracking branches on fetch", isOn: $pruneOnFetch)
+            }
+
+            Section("Email Aliases") {
+                EmailAliasesView()
             }
         }
         .formStyle(.grouped)
@@ -677,12 +705,77 @@ struct GitConfigView: View {
         let shell = ShellExecutor()
         let nameResult = await shell.execute("git", arguments: ["config", "--global", "user.name"])
         let emailResult = await shell.execute("git", arguments: ["config", "--global", "user.email"])
+        let branchResult = await shell.execute("git", arguments: ["config", "--global", "init.defaultBranch"])
 
         if nameResult.isSuccess {
             userName = nameResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         if emailResult.isSuccess {
             userEmail = emailResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if branchResult.isSuccess {
+            defaultBranch = branchResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        isLoading = false
+    }
+
+    private func saveGitConfig(key: String, value: String) {
+        guard !isLoading, !value.isEmpty else { return }
+        Task {
+            let shell = ShellExecutor()
+            let result = await shell.execute("git", arguments: ["config", "--global", key, value])
+            if result.isSuccess {
+                saveStatus = "Saved"
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    saveStatus = nil
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Email Aliases View
+
+struct EmailAliasesView: View {
+    @StateObject private var settings = EmailAliasSettings.shared
+    @State private var newAlias = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Add email aliases to show your avatar on commits with different emails")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            HStack {
+                TextField("Email alias (e.g. work@company.com)", text: $newAlias)
+                    .textFieldStyle(.roundedBorder)
+
+                Button("Add") {
+                    settings.addAlias(newAlias)
+                    newAlias = ""
+                }
+                .disabled(newAlias.isEmpty)
+            }
+
+            if !settings.aliases.isEmpty {
+                ForEach(settings.aliases, id: \.self) { alias in
+                    HStack {
+                        Image(systemName: "envelope")
+                            .foregroundColor(.secondary)
+                        Text(alias)
+                            .font(.system(.body, design: .monospaced))
+                        Spacer()
+                        Button {
+                            settings.removeAlias(alias)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
         }
     }
 }
