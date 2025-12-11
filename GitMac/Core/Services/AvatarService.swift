@@ -106,14 +106,7 @@ actor AvatarService {
 
         // 3. Create new fetch task
         let task = Task<URL?, Never> {
-            // Try Gravatar first
-            if let gravatarURL = await fetchGravatarAvatar(email: normalizedEmail) {
-                setAvatarURL(gravatarURL, for: cacheKey)
-                saveCachedMappings()
-                return gravatarURL
-            }
-
-            // Try GitHub if token available
+            // Try GitHub FIRST (real profile photos)
             if let token = githubToken,
                let githubURL = await fetchGitHubAvatar(email: normalizedEmail, token: token) {
                 setAvatarURL(githubURL, for: cacheKey)
@@ -121,7 +114,14 @@ actor AvatarService {
                 return githubURL
             }
 
-            // Fallback to Gravatar identicon
+            // Fallback to Gravatar
+            if let gravatarURL = await fetchGravatarAvatar(email: normalizedEmail) {
+                setAvatarURL(gravatarURL, for: cacheKey)
+                saveCachedMappings()
+                return gravatarURL
+            }
+
+            // Last resort: Gravatar identicon
             let identiconURL = gravatarIdenticonURL(email: normalizedEmail)
             setAvatarURL(identiconURL, for: cacheKey)
             return identiconURL
@@ -182,43 +182,55 @@ actor AvatarService {
 
     // MARK: - GitHub
 
+    // Cache for authenticated user
+    private var authenticatedUserEmails: Set<String> = []
+    private var authenticatedUserAvatarURL: URL?
+    private var authenticatedUserLoaded = false
+
     private func fetchGitHubAvatar(email: String, token: String) async -> URL? {
-        // First check if we already know the username for this email
+        // Load authenticated user info once
+        if !authenticatedUserLoaded {
+            await loadAuthenticatedUser(token: token)
+        }
+
+        // If email matches authenticated user, return their avatar
+        if authenticatedUserEmails.contains(email.lowercased()),
+           let avatarURL = authenticatedUserAvatarURL {
+            return avatarURL
+        }
+
+        // Check username cache
         if let username = githubUsernameCache[email] {
-            return URL(string: "https://github.com/\(username).png?size=80")
-        }
-
-        // Search GitHub for user by email
-        guard let searchURL = URL(string: "https://api.github.com/search/users?q=\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")+in:email") else {
-            return nil
-        }
-
-        var request = URLRequest(url: searchURL)
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
-
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else {
-                return nil
-            }
-
-            let searchResult = try JSONDecoder().decode(GitHubUserSearchResponse.self, from: data)
-
-            if let user = searchResult.items.first {
-                // Cache the username with LRU eviction
-                setGithubUsername(user.login, for: email)
-                saveCachedMappings()
-
-                return URL(string: user.avatarUrl)
-            }
-        } catch {
-            print("GitHub avatar fetch error: \(error)")
+            return URL(string: "https://avatars.githubusercontent.com/\(username)?size=80")
         }
 
         return nil
+    }
+
+    /// Load authenticated user's info from GitHub API
+    private func loadAuthenticatedUser(token: String) async {
+        authenticatedUserLoaded = true
+
+        // Get user info (includes avatar and ID)
+        var userRequest = URLRequest(url: URL(string: "https://api.github.com/user")!)
+        userRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        guard let (userData, _) = try? await URLSession.shared.data(for: userRequest),
+              let userJson = try? JSONSerialization.jsonObject(with: userData) as? [String: Any],
+              let avatarUrl = userJson["avatar_url"] as? String else {
+            return
+        }
+
+        authenticatedUserAvatarURL = URL(string: avatarUrl)
+
+        // Get all emails associated with this GitHub account
+        var emailRequest = URLRequest(url: URL(string: "https://api.github.com/user/emails")!)
+        emailRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        if let (emailData, _) = try? await URLSession.shared.data(for: emailRequest),
+           let emails = try? JSONDecoder().decode([GitHubEmail].self, from: emailData) {
+            authenticatedUserEmails = Set(emails.map { $0.email.lowercased() })
+        }
     }
 
     // MARK: - Persistence
@@ -281,6 +293,12 @@ private struct GitHubUserSearchItem: Codable {
     }
 }
 
+private struct GitHubEmail: Codable {
+    let email: String
+    let primary: Bool
+    let verified: Bool
+}
+
 // MARK: - String MD5 Extension
 
 extension String {
@@ -317,19 +335,15 @@ struct AvatarImageView: View {
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                    case .failure:
+                    case .failure, .empty:
+                        // Show fallback while loading or on failure
                         fallbackView
-                    case .empty:
-                        ProgressView()
-                            .scaleEffect(0.5)
                     @unknown default:
                         fallbackView
                     }
                 }
-            } else if isLoading {
-                ProgressView()
-                    .scaleEffect(0.5)
             } else {
+                // No URL yet (loading or failed) - show fallback
                 fallbackView
             }
         }
@@ -344,32 +358,33 @@ struct AvatarImageView: View {
     private var fallbackView: some View {
         ZStack {
             Circle()
-                .fill(Color.gray.opacity(0.3))
+                .fill(fallbackColor)
             Text(fallbackInitial)
                 .font(.system(size: size * 0.4, weight: .bold))
                 .foregroundColor(.white)
         }
     }
 
+    /// Color determinístico basado en hash del email
+    private var fallbackColor: Color {
+        guard !email.isEmpty else { return Color.gray }
+        let hash = email.md5Hash
+        guard let firstChar = hash.first,
+              let value = firstChar.unicodeScalars.first?.value else {
+            return Color.gray
+        }
+        let hue = Double(value % 360) / 360.0
+        return Color(hue: hue, saturation: 0.6, brightness: 0.7)
+    }
+
     @MainActor
     private func loadAvatar() async {
-        defer { isLoading = false }  // Guarantee state update
+        defer { isLoading = false }
 
         do {
             let token = try await KeychainManager.shared.getGitHubToken()
-            #if DEBUG
-            print("[Avatar] Loading for \(email), has token: \(token != nil)")
-            #endif
-
             avatarURL = await AvatarService.shared.getAvatarURL(for: email, githubToken: token)
-
-            #if DEBUG
-            print("[Avatar] \(email) -> \(avatarURL?.absoluteString ?? "fallback")")
-            #endif
         } catch {
-            #if DEBUG
-            print("[Avatar] Token error for \(email): \(error)")
-            #endif
             // Still try to load without token (Gravatar only)
             avatarURL = await AvatarService.shared.getAvatarURL(for: email, githubToken: nil)
         }

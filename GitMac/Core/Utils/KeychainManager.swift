@@ -1,75 +1,134 @@
 import Foundation
-import KeychainAccess
+import Security
+import CommonCrypto
+import CryptoKit
 
-/// Manages secure storage of credentials and API keys
+/// Manages secure storage of credentials
+/// Uses encrypted file storage to avoid keychain password prompts on unsigned apps
 actor KeychainManager {
-    private let keychain: Keychain
+    static let shared = KeychainManager()
 
-    // In-memory cache to reduce Keychain access prompts
+    private let service = "com.gitmac.credentials"
+
+    // In-memory cache
     private var cache: [String: String] = [:]
     private var cacheLoaded = false
 
-    static let shared = KeychainManager()
+    // File-based encrypted storage
+    private let storageURL: URL
+    private let encryptionKey: SymmetricKey
 
     private init() {
-        // Use afterFirstUnlock to avoid repeated password prompts
-        // Also disable iCloud sync which can cause additional auth
-        keychain = Keychain(service: "com.gitmac.credentials")
-            .accessibility(.afterFirstUnlock)
-            .synchronizable(false)
+        // Setup storage directory
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let appDir = appSupport.appendingPathComponent("GitMac", isDirectory: true)
+        try? FileManager.default.createDirectory(at: appDir, withIntermediateDirectories: true)
+        storageURL = appDir.appendingPathComponent(".credentials.enc")
+
+        // Generate or load encryption key based on machine ID
+        encryptionKey = Self.deriveKey()
+
+        // Load existing data
+        loadFromFile()
     }
 
-    /// Preload all known keys into cache (call once at app startup)
-    func preloadCache() {
-        let keys = [
-            githubTokenKey, githubUsernameKey,
-            linearTokenKey, jiraTokenKey, jiraCloudIdKey, jiraSiteUrlKey,
-            notionTokenKey, preferredAIProviderKey, preferredAIModelKey
-        ]
-        for key in keys {
-            if let value = try? keychain.get(key) {
-                cache[key] = value
-            }
+    /// Derive a key from machine-specific identifier
+    private static func deriveKey() -> SymmetricKey {
+        // Use hardware UUID as base for key derivation
+        let platformExpert = IOServiceGetMatchingService(
+            kIOMainPortDefault,
+            IOServiceMatching("IOPlatformExpertDevice")
+        )
+        defer { IOObjectRelease(platformExpert) }
+
+        var serialNumber = "GitMac-Default-Key-2024"
+        if let serialNumberAsCFString = IORegistryEntryCreateCFProperty(
+            platformExpert,
+            kIOPlatformUUIDKey as CFString,
+            kCFAllocatorDefault, 0
+        )?.takeUnretainedValue() as? String {
+            serialNumber = serialNumberAsCFString
         }
-        // AI keys
-        for provider in AIProvider.allCases {
-            if let value = try? keychain.get(provider.keyName) {
-                cache[provider.keyName] = value
-            }
+
+        // Derive key using SHA256
+        let keyData = SHA256.hash(data: Data(serialNumber.utf8))
+        return SymmetricKey(data: keyData)
+    }
+
+    // MARK: - Encrypted File Storage
+
+    private func loadFromFile() {
+        guard FileManager.default.fileExists(atPath: storageURL.path),
+              let encryptedData = try? Data(contentsOf: storageURL) else {
+            return
         }
+
+        guard let decrypted = decrypt(encryptedData),
+              let dict = try? JSONDecoder().decode([String: String].self, from: decrypted) else {
+            return
+        }
+
+        cache = dict
         cacheLoaded = true
     }
 
-    // MARK: - Generic Operations
+    private func saveToFile() {
+        guard let jsonData = try? JSONEncoder().encode(cache),
+              let encrypted = encrypt(jsonData) else {
+            return
+        }
+
+        try? encrypted.write(to: storageURL, options: [.atomic, .completeFileProtection])
+    }
+
+    private func encrypt(_ data: Data) -> Data? {
+        do {
+            let sealedBox = try AES.GCM.seal(data, using: encryptionKey)
+            return sealedBox.combined
+        } catch {
+            return nil
+        }
+    }
+
+    private func decrypt(_ data: Data) -> Data? {
+        do {
+            let sealedBox = try AES.GCM.SealedBox(combined: data)
+            return try AES.GCM.open(sealedBox, using: encryptionKey)
+        } catch {
+            return nil
+        }
+    }
+
+    // MARK: - Public API
+
+    /// Preload cache (already loaded in init, but kept for compatibility)
+    func preloadCache() {
+        if !cacheLoaded {
+            loadFromFile()
+            cacheLoaded = true
+        }
+    }
 
     /// Save a string value
     func save(key: String, value: String) throws {
         cache[key] = value
-        try keychain.set(value, key: key)
+        saveToFile()
     }
 
-    /// Get a string value (cached)
+    /// Get a string value
     func get(key: String) throws -> String? {
-        if let cached = cache[key] {
-            return cached
-        }
-        let value = try keychain.get(key)
-        if let value = value {
-            cache[key] = value
-        }
-        return value
+        return cache[key]
     }
 
     /// Delete a value
     func delete(key: String) throws {
         cache.removeValue(forKey: key)
-        try keychain.remove(key)
+        saveToFile()
     }
 
     /// Check if a key exists
     func exists(key: String) -> Bool {
-        if cache[key] != nil { return true }
-        return (try? keychain.get(key)) != nil
+        return cache[key] != nil
     }
 
     // MARK: - GitHub Credentials
@@ -77,41 +136,26 @@ actor KeychainManager {
     private let githubTokenKey = "github_token"
     private let githubUsernameKey = "github_username"
 
-    /// Save GitHub personal access token
     func saveGitHubToken(_ token: String, username: String? = nil) throws {
-        cache[githubTokenKey] = token
-        try keychain.set(token, key: githubTokenKey)
+        try save(key: githubTokenKey, value: token)
         if let username = username {
-            cache[githubUsernameKey] = username
-            try keychain.set(username, key: githubUsernameKey)
+            try save(key: githubUsernameKey, value: username)
         }
     }
 
-    /// Get GitHub token (cached to avoid repeated password prompts)
     func getGitHubToken() throws -> String? {
-        if let cached = cache[githubTokenKey] { return cached }
-        let value = try keychain.get(githubTokenKey)
-        if let value = value { cache[githubTokenKey] = value }
-        return value
+        try get(key: githubTokenKey)
     }
 
-    /// Get GitHub username (cached)
     func getGitHubUsername() throws -> String? {
-        if let cached = cache[githubUsernameKey] { return cached }
-        let value = try keychain.get(githubUsernameKey)
-        if let value = value { cache[githubUsernameKey] = value }
-        return value
+        try get(key: githubUsernameKey)
     }
 
-    /// Delete GitHub credentials
     func deleteGitHubCredentials() throws {
-        cache.removeValue(forKey: githubTokenKey)
-        cache.removeValue(forKey: githubUsernameKey)
-        try keychain.remove(githubTokenKey)
-        try keychain.remove(githubUsernameKey)
+        try delete(key: githubTokenKey)
+        try delete(key: githubUsernameKey)
     }
 
-    /// Check if GitHub is configured
     var hasGitHubCredentials: Bool {
         exists(key: githubTokenKey)
     }
@@ -123,9 +167,7 @@ actor KeychainManager {
         case anthropic = "anthropic"
         case gemini = "gemini"
 
-        var keyName: String {
-            "\(rawValue)_api_key"
-        }
+        var keyName: String { "\(rawValue)_api_key" }
 
         var displayName: String {
             switch self {
@@ -137,42 +179,29 @@ actor KeychainManager {
 
         var models: [String] {
             switch self {
-            case .openai:
-                return ["gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
-            case .anthropic:
-                return ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"]
-            case .gemini:
-                return ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"]
+            case .openai: return ["gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
+            case .anthropic: return ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"]
+            case .gemini: return ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"]
             }
         }
     }
 
-    /// Save AI API key
     func saveAIKey(provider: AIProvider, key: String) throws {
-        cache[provider.keyName] = key
-        try keychain.set(key, key: provider.keyName)
+        try save(key: provider.keyName, value: key)
     }
 
-    /// Get AI API key (cached)
     func getAIKey(provider: AIProvider) throws -> String? {
-        if let cached = cache[provider.keyName] { return cached }
-        let value = try keychain.get(provider.keyName)
-        if let value = value { cache[provider.keyName] = value }
-        return value
+        try get(key: provider.keyName)
     }
 
-    /// Delete AI API key
     func deleteAIKey(provider: AIProvider) throws {
-        cache.removeValue(forKey: provider.keyName)
-        try keychain.remove(provider.keyName)
+        try delete(key: provider.keyName)
     }
 
-    /// Check if AI provider is configured
     func hasAIKey(provider: AIProvider) -> Bool {
         exists(key: provider.keyName)
     }
 
-    /// Get all configured AI providers
     func configuredAIProviders() -> [AIProvider] {
         AIProvider.allCases.filter { hasAIKey(provider: $0) }
     }
@@ -182,67 +211,37 @@ actor KeychainManager {
     private let preferredAIProviderKey = "preferred_ai_provider"
     private let preferredAIModelKey = "preferred_ai_model"
 
-    /// Save preferred AI provider
     func savePreferredAIProvider(_ provider: AIProvider, model: String) throws {
-        cache[preferredAIProviderKey] = provider.rawValue
-        cache[preferredAIModelKey] = model
-        try keychain.set(provider.rawValue, key: preferredAIProviderKey)
-        try keychain.set(model, key: preferredAIModelKey)
+        try save(key: preferredAIProviderKey, value: provider.rawValue)
+        try save(key: preferredAIModelKey, value: model)
     }
 
-    /// Get preferred AI provider (cached)
     func getPreferredAIProvider() -> (provider: AIProvider, model: String)? {
-        let providerStr: String?
-        let model: String?
-
-        if let cached = cache[preferredAIProviderKey] {
-            providerStr = cached
-        } else {
-            providerStr = try? keychain.get(preferredAIProviderKey)
-            if let p = providerStr { cache[preferredAIProviderKey] = p }
-        }
-
-        if let cached = cache[preferredAIModelKey] {
-            model = cached
-        } else {
-            model = try? keychain.get(preferredAIModelKey)
-            if let m = model { cache[preferredAIModelKey] = m }
-        }
-
-        guard let pStr = providerStr, let provider = AIProvider(rawValue: pStr), let m = model else {
+        guard let providerStr = try? get(key: preferredAIProviderKey),
+              let provider = AIProvider(rawValue: providerStr),
+              let model = try? get(key: preferredAIModelKey) else {
             return nil
         }
-        return (provider, m)
+        return (provider, model)
     }
 
     // MARK: - Git Credentials
 
-    /// Save Git credentials for a remote
-    func saveGitCredentials(
-        remote: String,
-        username: String,
-        password: String
-    ) throws {
+    func saveGitCredentials(remote: String, username: String, password: String) throws {
         let key = "git_\(remote.sha256Hash)"
-        let value = "\(username):\(password)"
-        try keychain.set(value, key: key)
+        try save(key: key, value: "\(username):\(password)")
     }
 
-    /// Get Git credentials for a remote
     func getGitCredentials(remote: String) throws -> (username: String, password: String)? {
         let key = "git_\(remote.sha256Hash)"
-        guard let value = try keychain.get(key) else { return nil }
-
+        guard let value = try get(key: key) else { return nil }
         let parts = value.split(separator: ":", maxSplits: 1)
         guard parts.count == 2 else { return nil }
-
         return (String(parts[0]), String(parts[1]))
     }
 
-    /// Delete Git credentials for a remote
     func deleteGitCredentials(remote: String) throws {
-        let key = "git_\(remote.sha256Hash)"
-        try keychain.remove(key)
+        try delete(key: "git_\(remote.sha256Hash)")
     }
 
     // MARK: - Linear
@@ -250,20 +249,15 @@ actor KeychainManager {
     private let linearTokenKey = "linear_token"
 
     func saveLinearToken(_ token: String) throws {
-        cache[linearTokenKey] = token
-        try keychain.set(token, key: linearTokenKey)
+        try save(key: linearTokenKey, value: token)
     }
 
     func getLinearToken() throws -> String? {
-        if let cached = cache[linearTokenKey] { return cached }
-        let value = try keychain.get(linearTokenKey)
-        if let value = value { cache[linearTokenKey] = value }
-        return value
+        try get(key: linearTokenKey)
     }
 
     func deleteLinearToken() throws {
-        cache.removeValue(forKey: linearTokenKey)
-        try keychain.remove(linearTokenKey)
+        try delete(key: linearTokenKey)
     }
 
     // MARK: - Jira
@@ -273,58 +267,41 @@ actor KeychainManager {
     private let jiraSiteUrlKey = "jira_site_url"
 
     func saveJiraToken(_ token: String) throws {
-        cache[jiraTokenKey] = token
-        try keychain.set(token, key: jiraTokenKey)
+        try save(key: jiraTokenKey, value: token)
     }
 
     func getJiraToken() throws -> String? {
-        if let cached = cache[jiraTokenKey] { return cached }
-        let value = try keychain.get(jiraTokenKey)
-        if let value = value { cache[jiraTokenKey] = value }
-        return value
+        try get(key: jiraTokenKey)
     }
 
     func saveJiraCloudId(_ cloudId: String) throws {
-        cache[jiraCloudIdKey] = cloudId
-        try keychain.set(cloudId, key: jiraCloudIdKey)
+        try save(key: jiraCloudIdKey, value: cloudId)
     }
 
     func getJiraCloudId() throws -> String? {
-        if let cached = cache[jiraCloudIdKey] { return cached }
-        let value = try keychain.get(jiraCloudIdKey)
-        if let value = value { cache[jiraCloudIdKey] = value }
-        return value
+        try get(key: jiraCloudIdKey)
     }
 
     func saveJiraSiteUrl(_ url: String) throws {
-        cache[jiraSiteUrlKey] = url
-        try keychain.set(url, key: jiraSiteUrlKey)
+        try save(key: jiraSiteUrlKey, value: url)
     }
 
     func getJiraSiteUrl() throws -> String? {
-        if let cached = cache[jiraSiteUrlKey] { return cached }
-        let value = try keychain.get(jiraSiteUrlKey)
-        if let value = value { cache[jiraSiteUrlKey] = value }
-        return value
+        try get(key: jiraSiteUrlKey)
     }
 
     func deleteJiraToken() throws {
-        cache.removeValue(forKey: jiraTokenKey)
-        try keychain.remove(jiraTokenKey)
+        try delete(key: jiraTokenKey)
     }
 
     func deleteJiraCloudId() throws {
-        cache.removeValue(forKey: jiraCloudIdKey)
-        try keychain.remove(jiraCloudIdKey)
+        try delete(key: jiraCloudIdKey)
     }
 
     func deleteJiraCredentials() throws {
-        cache.removeValue(forKey: jiraTokenKey)
-        cache.removeValue(forKey: jiraCloudIdKey)
-        cache.removeValue(forKey: jiraSiteUrlKey)
-        try keychain.remove(jiraTokenKey)
-        try keychain.remove(jiraCloudIdKey)
-        try keychain.remove(jiraSiteUrlKey)
+        try delete(key: jiraTokenKey)
+        try delete(key: jiraCloudIdKey)
+        try delete(key: jiraSiteUrlKey)
     }
 
     // MARK: - Notion
@@ -332,20 +309,15 @@ actor KeychainManager {
     private let notionTokenKey = "notion_token"
 
     func saveNotionToken(_ token: String) throws {
-        cache[notionTokenKey] = token
-        try keychain.set(token, key: notionTokenKey)
+        try save(key: notionTokenKey, value: token)
     }
 
     func getNotionToken() throws -> String? {
-        if let cached = cache[notionTokenKey] { return cached }
-        let value = try keychain.get(notionTokenKey)
-        if let value = value { cache[notionTokenKey] = value }
-        return value
+        try get(key: notionTokenKey)
     }
 
     func deleteNotionToken() throws {
-        cache.removeValue(forKey: notionTokenKey)
-        try keychain.remove(notionTokenKey)
+        try delete(key: notionTokenKey)
     }
 }
 
@@ -353,15 +325,8 @@ actor KeychainManager {
 
 extension String {
     var sha256Hash: String {
-        guard let data = self.data(using: .utf8) else { return self }
-
-        var hash = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
-        data.withUnsafeBytes {
-            _ = CC_SHA256($0.baseAddress, CC_LONG(data.count), &hash)
-        }
-
-        return hash.map { String(format: "%02hhx", $0) }.joined()
+        let data = Data(self.utf8)
+        let hash = SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02x", $0) }.joined()
     }
 }
-
-import CommonCrypto
