@@ -1,6 +1,113 @@
 import SwiftUI
 import Splash
 
+// MARK: - Word-Level Diff Algorithm (Kaleidoscope-style)
+
+/// Represents a segment of text with its diff status
+struct DiffSegment: Identifiable {
+    let id = UUID()
+    let text: String
+    let type: SegmentType
+
+    enum SegmentType {
+        case unchanged  // Same in both versions
+        case added      // Only in new version
+        case removed    // Only in old version
+        case changed    // Modified
+    }
+}
+
+/// Word-level diff result for a pair of lines
+struct WordLevelDiffResult {
+    let oldSegments: [DiffSegment]
+    let newSegments: [DiffSegment]
+    let hasInlineChanges: Bool
+}
+
+/// Computes character-level diffs between two strings
+enum WordLevelDiff {
+
+    /// Compare two lines and return highlighted segments
+    static func compare(oldLine: String, newLine: String) -> WordLevelDiffResult {
+        if oldLine == newLine {
+            return WordLevelDiffResult(
+                oldSegments: [DiffSegment(text: oldLine, type: .unchanged)],
+                newSegments: [DiffSegment(text: newLine, type: .unchanged)],
+                hasInlineChanges: false
+            )
+        }
+
+        if oldLine.isEmpty {
+            return WordLevelDiffResult(
+                oldSegments: [],
+                newSegments: [DiffSegment(text: newLine, type: .added)],
+                hasInlineChanges: true
+            )
+        }
+
+        if newLine.isEmpty {
+            return WordLevelDiffResult(
+                oldSegments: [DiffSegment(text: oldLine, type: .removed)],
+                newSegments: [],
+                hasInlineChanges: true
+            )
+        }
+
+        // Find common prefix and suffix for character-level precision
+        let (prefix, oldMiddle, newMiddle, suffix) = findCommonPrefixSuffix(oldLine, newLine)
+
+        var oldSegments: [DiffSegment] = []
+        var newSegments: [DiffSegment] = []
+
+        if !prefix.isEmpty {
+            oldSegments.append(DiffSegment(text: prefix, type: .unchanged))
+            newSegments.append(DiffSegment(text: prefix, type: .unchanged))
+        }
+
+        if !oldMiddle.isEmpty {
+            oldSegments.append(DiffSegment(text: oldMiddle, type: .removed))
+        }
+        if !newMiddle.isEmpty {
+            newSegments.append(DiffSegment(text: newMiddle, type: .added))
+        }
+
+        if !suffix.isEmpty {
+            oldSegments.append(DiffSegment(text: suffix, type: .unchanged))
+            newSegments.append(DiffSegment(text: suffix, type: .unchanged))
+        }
+
+        return WordLevelDiffResult(
+            oldSegments: oldSegments,
+            newSegments: newSegments,
+            hasInlineChanges: !oldMiddle.isEmpty || !newMiddle.isEmpty
+        )
+    }
+
+    private static func findCommonPrefixSuffix(_ old: String, _ new: String) -> (prefix: String, oldMiddle: String, newMiddle: String, suffix: String) {
+        let oldChars = Array(old)
+        let newChars = Array(new)
+
+        var prefixLen = 0
+        while prefixLen < oldChars.count && prefixLen < newChars.count && oldChars[prefixLen] == newChars[prefixLen] {
+            prefixLen += 1
+        }
+
+        var suffixLen = 0
+        while suffixLen < (oldChars.count - prefixLen) &&
+              suffixLen < (newChars.count - prefixLen) &&
+              oldChars[oldChars.count - 1 - suffixLen] == newChars[newChars.count - 1 - suffixLen] {
+            suffixLen += 1
+        }
+
+        let prefix = String(oldChars[0..<prefixLen])
+        let suffix = suffixLen > 0 ? String(oldChars[(oldChars.count - suffixLen)...]) : ""
+        let oldMiddle = String(oldChars[prefixLen..<(oldChars.count - suffixLen)])
+        let newMiddle = String(newChars[prefixLen..<(newChars.count - suffixLen)])
+
+        return (prefix, oldMiddle, newMiddle, suffix)
+    }
+}
+
 // MARK: - Diff Line Context Menu Extension
 
 extension View {
@@ -41,33 +148,53 @@ extension View {
     }
 }
 
-/// Complete diff viewer with multiple view modes
+/// Complete diff viewer with multiple view modes - OPTIMIZED
 struct DiffView: View {
     let fileDiff: FileDiff
     var repoPath: String? = nil
     @State private var viewMode: DiffViewMode = .split
     @State private var showLineNumbers = true
     @State private var wordWrap = false
+    @State private var showMinimap = true
+    @State private var scrollOffset: CGFloat = 0
+    @State private var viewportHeight: CGFloat = 400
 
-    /// Check if file is markdown
+    // Calculate line count for accurate minimap
+    private var totalLineCount: Int {
+        var count = 0
+        for hunk in fileDiff.hunks {
+            count += 1 // hunk header
+            count += hunk.lines.count
+        }
+        return max(count, 1)
+    }
+
+    // Estimated content height (22px per line)
+    private var estimatedContentHeight: CGFloat {
+        CGFloat(totalLineCount) * 22.0
+    }
+
+    private var scrollPosition: CGFloat {
+        guard estimatedContentHeight > viewportHeight else { return 0 }
+        return min(1, max(0, scrollOffset / (estimatedContentHeight - viewportHeight)))
+    }
+
+    private var viewportRatio: CGFloat {
+        guard estimatedContentHeight > 0 else { return 1 }
+        return min(1, max(0.05, viewportHeight / estimatedContentHeight))
+    }
+
     private var isMarkdown: Bool {
         let ext = (fileDiff.displayPath as NSString).pathExtension.lowercased()
         return ext == "md" || ext == "markdown" || ext == "mdown"
     }
 
-    /// Get full content for preview mode (new file state)
     private var previewContent: String {
-        // Reconstruct the new file content from diff hunks
         var lines: [String] = []
         for hunk in fileDiff.hunks {
             for line in hunk.lines {
-                switch line.type {
-                case .addition, .context:
+                if line.type == .addition || line.type == .context {
                     lines.append(line.content)
-                case .deletion:
-                    break // Skip deleted lines in preview
-                case .hunkHeader:
-                    break
                 }
             }
         }
@@ -76,7 +203,6 @@ struct DiffView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Toolbar
             DiffToolbar(
                 filename: fileDiff.displayPath,
                 additions: fileDiff.additions,
@@ -84,42 +210,544 @@ struct DiffView: View {
                 viewMode: $viewMode,
                 showLineNumbers: $showLineNumbers,
                 wordWrap: $wordWrap,
-                isMarkdown: isMarkdown
+                isMarkdown: isMarkdown,
+                showMinimap: $showMinimap
             )
 
             Rectangle()
                 .fill(GitKrakenTheme.border)
                 .frame(height: 1)
 
-            // Content
-            if fileDiff.isBinary {
-                BinaryFileView(filename: fileDiff.displayPath, repoPath: repoPath)
-            } else {
-                switch viewMode {
-                case .split:
-                    SplitDiffView(
+            HStack(spacing: 0) {
+                if fileDiff.isBinary {
+                    BinaryFileView(filename: fileDiff.displayPath, repoPath: repoPath)
+                } else {
+                    switch viewMode {
+                    case .split:
+                        OptimizedSplitDiffView(
+                            hunks: fileDiff.hunks,
+                            showLineNumbers: showLineNumbers,
+                            scrollOffset: $scrollOffset,
+                            viewportHeight: $viewportHeight
+                        )
+                    case .inline:
+                        OptimizedInlineDiffView(
+                            hunks: fileDiff.hunks,
+                            showLineNumbers: showLineNumbers,
+                            scrollOffset: $scrollOffset,
+                            viewportHeight: $viewportHeight
+                        )
+                    case .hunk:
+                        HunkDiffView(hunks: fileDiff.hunks, showLineNumbers: showLineNumbers)
+                    case .preview:
+                        MarkdownView(content: previewContent, fileName: fileDiff.displayPath)
+                    }
+                }
+
+                if showMinimap && !fileDiff.isBinary && viewMode != .preview {
+                    Rectangle()
+                        .fill(GitKrakenTheme.border)
+                        .frame(width: 1)
+
+                    OptimizedMinimapView(
                         hunks: fileDiff.hunks,
-                        showLineNumbers: showLineNumbers,
-                        filename: fileDiff.displayPath
+                        scrollPosition: scrollPosition,
+                        viewportRatio: viewportRatio
                     )
-                case .inline:
-                    InlineDiffView(
-                        hunks: fileDiff.hunks,
-                        showLineNumbers: showLineNumbers,
-                        filename: fileDiff.displayPath
-                    )
-                case .hunk:
-                    HunkDiffView(
-                        hunks: fileDiff.hunks,
-                        showLineNumbers: showLineNumbers
-                    )
-                case .preview:
-                    // Show rendered markdown with Mermaid support
-                    MarkdownView(content: previewContent, fileName: fileDiff.displayPath)
+                    .frame(width: 60)
                 }
             }
         }
         .background(GitKrakenTheme.background)
+    }
+}
+
+// MARK: - Optimized Minimap (No bindings, pure render)
+
+struct OptimizedMinimapView: View {
+    let hunks: [DiffHunk]
+    let scrollPosition: CGFloat
+    let viewportRatio: CGFloat
+
+    var body: some View {
+        GeometryReader { geo in
+            let totalLines = hunks.reduce(0) { $0 + $1.lines.count }
+            let lineHeight = max(0.5, geo.size.height / CGFloat(max(totalLines, 1)))
+            let vpHeight = max(20, geo.size.height * viewportRatio)
+            let vpTop = scrollPosition * (geo.size.height - vpHeight)
+
+            ZStack(alignment: .topLeading) {
+                // Fast canvas-style rendering
+                Canvas { context, size in
+                    var y: CGFloat = 0
+                    for hunk in hunks {
+                        for line in hunk.lines {
+                            let nsColor: NSColor = switch line.type {
+                            case .addition: NSColor.systemGreen
+                            case .deletion: NSColor.systemRed
+                            case .hunkHeader: NSColor.systemBlue.withAlphaComponent(0.5)
+                            case .context: NSColor.clear
+                            }
+                            if nsColor != .clear {
+                                context.fill(
+                                    Path(CGRect(x: 0, y: y, width: size.width, height: max(lineHeight, 1))),
+                                    with: .color(SwiftUI.Color(nsColor).opacity(0.7))
+                                )
+                            }
+                            y += lineHeight
+                        }
+                    }
+                }
+
+                // Viewport indicator
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(SwiftUI.Color.white.opacity(0.2))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 2)
+                            .stroke(SwiftUI.Color.white.opacity(0.5), lineWidth: 1)
+                    )
+                    .frame(width: geo.size.width - 4, height: vpHeight)
+                    .offset(x: 2, y: vpTop)
+            }
+        }
+        .background(SwiftUI.Color(NSColor.controlBackgroundColor).opacity(0.3))
+    }
+}
+
+// MARK: - Diff Scroll Preference Keys
+
+struct DiffScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+
+// MARK: - Optimized Split Diff View
+
+struct OptimizedSplitDiffView: View {
+    let hunks: [DiffHunk]
+    let showLineNumbers: Bool
+    @Binding var scrollOffset: CGFloat
+    @Binding var viewportHeight: CGFloat
+
+    private var pairedLines: [DiffPair] {
+        var pairs: [DiffPair] = []
+        var pairId = 0
+
+        for hunk in hunks {
+            pairId += 1
+            pairs.append(DiffPair(id: pairId, left: nil, right: nil, hunkHeader: hunk.header))
+
+            var i = 0
+            let lines = hunk.lines
+
+            while i < lines.count {
+                let line = lines[i]
+
+                if line.type == .context {
+                    pairId += 1
+                    pairs.append(DiffPair(id: pairId, left: line, right: line, hunkHeader: nil))
+                    i += 1
+                } else if line.type == .deletion {
+                    var deletions: [DiffLine] = []
+                    while i < lines.count && lines[i].type == .deletion {
+                        deletions.append(lines[i])
+                        i += 1
+                    }
+                    var additions: [DiffLine] = []
+                    while i < lines.count && lines[i].type == .addition {
+                        additions.append(lines[i])
+                        i += 1
+                    }
+                    let maxCount = max(deletions.count, additions.count)
+                    for j in 0..<maxCount {
+                        pairId += 1
+                        pairs.append(DiffPair(
+                            id: pairId,
+                            left: j < deletions.count ? deletions[j] : nil,
+                            right: j < additions.count ? additions[j] : nil,
+                            hunkHeader: nil
+                        ))
+                    }
+                } else if line.type == .addition {
+                    pairId += 1
+                    pairs.append(DiffPair(id: pairId, left: nil, right: line, hunkHeader: nil))
+                    i += 1
+                } else {
+                    i += 1
+                }
+            }
+        }
+        return pairs
+    }
+
+    var body: some View {
+        GeometryReader { outerGeo in
+            ScrollView(.vertical, showsIndicators: true) {
+                let halfWidth = max(300, (outerGeo.size.width - 2) / 2)
+
+                LazyVStack(spacing: 0, pinnedViews: []) {
+                    // Scroll position tracker at the top
+                    GeometryReader { geo in
+                        SwiftUI.Color.clear
+                            .preference(key: DiffScrollOffsetKey.self, value: -geo.frame(in: .global).minY + outerGeo.frame(in: .global).minY)
+                    }
+                    .frame(height: 0)
+
+                    ForEach(pairedLines) { pair in
+                        HStack(spacing: 0) {
+                            // Left side
+                            if let header = pair.hunkHeader {
+                                FastHunkHeader(header: header)
+                                    .frame(width: halfWidth)
+                            } else if let line = pair.left {
+                                FastDiffLine(line: line, side: .left, showLineNumber: showLineNumbers, paired: pair.right)
+                                    .frame(width: halfWidth)
+                            } else {
+                                // Empty on left - show green stripes if right has addition
+                                FastEmptyLine(
+                                    showLineNumber: showLineNumbers,
+                                    isAdded: pair.right?.type == .addition
+                                )
+                                .frame(width: halfWidth)
+                            }
+
+                            Rectangle().fill(SwiftUI.Color.gray.opacity(0.3)).frame(width: 2)
+
+                            // Right side
+                            if let header = pair.hunkHeader {
+                                FastHunkHeader(header: header)
+                                    .frame(width: halfWidth)
+                            } else if let line = pair.right {
+                                FastDiffLine(line: line, side: .right, showLineNumber: showLineNumbers, paired: pair.left)
+                                    .frame(width: halfWidth)
+                            } else {
+                                // Empty on right - show red stripes if left has deletion
+                                FastEmptyLine(
+                                    showLineNumber: showLineNumbers,
+                                    isDeleted: pair.left?.type == .deletion
+                                )
+                                .frame(width: halfWidth)
+                            }
+                        }
+                    }
+                }
+            }
+            .onPreferenceChange(DiffScrollOffsetKey.self) { scrollOffset = max(0, $0) }
+            .onChange(of: outerGeo.size.height) { _, new in viewportHeight = new }
+            .onAppear { viewportHeight = outerGeo.size.height }
+        }
+    }
+}
+
+// MARK: - Optimized Inline Diff View
+
+struct OptimizedInlineDiffView: View {
+    let hunks: [DiffHunk]
+    let showLineNumbers: Bool
+    @Binding var scrollOffset: CGFloat
+    @Binding var viewportHeight: CGFloat
+
+    private var allLines: [IdentifiedDiffLine] {
+        var result: [IdentifiedDiffLine] = []
+        var lineId = 0
+        for hunk in hunks {
+            lineId += 1
+            result.append(IdentifiedDiffLine(id: lineId, line: nil, hunkHeader: hunk.header))
+            for line in hunk.lines {
+                lineId += 1
+                result.append(IdentifiedDiffLine(id: lineId, line: line, hunkHeader: nil))
+            }
+        }
+        return result
+    }
+
+    var body: some View {
+        GeometryReader { outerGeo in
+            ScrollView(.vertical, showsIndicators: true) {
+                LazyVStack(spacing: 0) {
+                    // Scroll position tracker
+                    GeometryReader { geo in
+                        SwiftUI.Color.clear
+                            .preference(key: DiffScrollOffsetKey.self, value: -geo.frame(in: .global).minY + outerGeo.frame(in: .global).minY)
+                    }
+                    .frame(height: 0)
+
+                    ForEach(allLines) { item in
+                        if let header = item.hunkHeader {
+                            FastHunkHeader(header: header)
+                        } else if let line = item.line {
+                            FastInlineLine(line: line, showLineNumber: showLineNumbers)
+                        }
+                    }
+                }
+            }
+            .onPreferenceChange(DiffScrollOffsetKey.self) { scrollOffset = max(0, $0) }
+            .onChange(of: outerGeo.size.height) { _, new in viewportHeight = new }
+            .onAppear { viewportHeight = outerGeo.size.height }
+        }
+    }
+}
+
+// MARK: - Fast Rendering Components
+
+struct DiffPair: Identifiable {
+    let id: Int
+    let left: DiffLine?
+    let right: DiffLine?
+    let hunkHeader: String?
+}
+
+struct IdentifiedDiffLine: Identifiable {
+    let id: Int
+    let line: DiffLine?
+    let hunkHeader: String?
+}
+
+struct FastHunkHeader: View {
+    let header: String
+
+    var body: some View {
+        Text(header)
+            .font(.system(size: 11, design: .monospaced))
+            .foregroundColor(.cyan)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.cyan.opacity(0.1))
+    }
+}
+
+struct FastEmptyLine: View {
+    let showLineNumber: Bool
+    var isDeleted: Bool = false  // True when line was deleted on this side
+    var isAdded: Bool = false    // True when line was added on other side
+
+    var body: some View {
+        HStack(spacing: 0) {
+            if showLineNumber {
+                Text("")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.secondary.opacity(0.3))
+                    .frame(width: 45, alignment: .trailing)
+                    .padding(.trailing, 8)
+            }
+
+            // Show visual indicator for missing lines
+            if isDeleted || isAdded {
+                // Diagonal stripes pattern to indicate "no content here"
+                ZStack {
+                    // Background color
+                    Rectangle()
+                        .fill(isDeleted ? SwiftUI.Color.red.opacity(0.05) : SwiftUI.Color.green.opacity(0.05))
+
+                    // Diagonal pattern
+                    GeometryReader { geo in
+                        Path { path in
+                            let spacing: CGFloat = 8
+                            for x in stride(from: -geo.size.height, through: geo.size.width, by: spacing) {
+                                path.move(to: CGPoint(x: x, y: geo.size.height))
+                                path.addLine(to: CGPoint(x: x + geo.size.height, y: 0))
+                            }
+                        }
+                        .stroke(
+                            isDeleted ? SwiftUI.Color.red.opacity(0.15) : SwiftUI.Color.green.opacity(0.15),
+                            lineWidth: 1
+                        )
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                Text(" ")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(height: 22)
+        .background(SwiftUI.Color.gray.opacity(0.03))
+    }
+}
+
+struct FastDiffLine: View {
+    let line: DiffLine
+    let side: DiffSide
+    let showLineNumber: Bool
+    let paired: DiffLine?
+
+    var body: some View {
+        HStack(spacing: 0) {
+            if showLineNumber {
+                Text(lineNumber)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.secondary.opacity(0.6))
+                    .frame(width: 45, alignment: .trailing)
+                    .padding(.trailing, 8)
+            }
+
+            Text(indicator)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundColor(indicatorColor)
+                .frame(width: 16)
+
+            // Use simple text for speed, word-level diff only when needed
+            if shouldHighlightWords, let p = paired {
+                highlightedText(old: side == .left ? line.content : p.content,
+                               new: side == .right ? line.content : p.content)
+            } else {
+                Text(line.content)
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundColor(textColor)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 2)
+        .background(backgroundColor)
+    }
+
+    private var shouldHighlightWords: Bool {
+        paired != nil && line.type != .context && paired?.type != .context
+    }
+
+    private var lineNumber: String {
+        switch side {
+        case .left: return line.oldLineNumber.map { "\($0)" } ?? ""
+        case .right: return line.newLineNumber.map { "\($0)" } ?? ""
+        }
+    }
+
+    private var indicator: String {
+        switch line.type {
+        case .addition: return "+"
+        case .deletion: return "-"
+        case .context: return " "
+        case .hunkHeader: return "@"
+        }
+    }
+
+    private var indicatorColor: SwiftUI.Color {
+        switch line.type {
+        case .addition: return .green
+        case .deletion: return .red
+        default: return .secondary
+        }
+    }
+
+    private var textColor: SwiftUI.Color {
+        switch line.type {
+        case .addition: return .green
+        case .deletion: return .red
+        default: return SwiftUI.Color(NSColor.textColor)
+        }
+    }
+
+    private var backgroundColor: SwiftUI.Color {
+        switch line.type {
+        case .addition: return .green.opacity(0.1)
+        case .deletion: return .red.opacity(0.1)
+        default: return .clear
+        }
+    }
+
+    @ViewBuilder
+    private func highlightedText(old: String, new: String) -> some View {
+        let result = WordLevelDiff.compare(oldLine: old, newLine: new)
+        let segments = side == .left ? result.oldSegments : result.newSegments
+
+        HStack(spacing: 0) {
+            ForEach(segments) { seg in
+                Text(seg.text)
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundColor(segmentColor(seg.type))
+                    .background(segmentBg(seg.type))
+            }
+        }
+    }
+
+    private func segmentColor(_ type: DiffSegment.SegmentType) -> SwiftUI.Color {
+        switch type {
+        case .added: return .green
+        case .removed: return .red
+        default: return textColor
+        }
+    }
+
+    private func segmentBg(_ type: DiffSegment.SegmentType) -> SwiftUI.Color {
+        switch type {
+        case .added: return .green.opacity(0.3)
+        case .removed: return .red.opacity(0.3)
+        default: return .clear
+        }
+    }
+}
+
+struct FastInlineLine: View {
+    let line: DiffLine
+    let showLineNumber: Bool
+
+    var body: some View {
+        HStack(spacing: 0) {
+            if showLineNumber {
+                HStack(spacing: 2) {
+                    Text(line.oldLineNumber.map { "\($0)" } ?? "")
+                        .frame(width: 35, alignment: .trailing)
+                    Text(line.newLineNumber.map { "\($0)" } ?? "")
+                        .frame(width: 35, alignment: .trailing)
+                }
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(.secondary.opacity(0.6))
+                .padding(.trailing, 8)
+            }
+
+            Text(indicator)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundColor(indicatorColor)
+                .frame(width: 16)
+
+            Text(line.content)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundColor(textColor)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 2)
+        .background(backgroundColor)
+    }
+
+    private var indicator: String {
+        switch line.type {
+        case .addition: return "+"
+        case .deletion: return "-"
+        case .context: return " "
+        case .hunkHeader: return "@"
+        }
+    }
+
+    private var indicatorColor: SwiftUI.Color {
+        switch line.type {
+        case .addition: return .green
+        case .deletion: return .red
+        default: return .secondary
+        }
+    }
+
+    private var textColor: SwiftUI.Color {
+        switch line.type {
+        case .addition: return .green
+        case .deletion: return .red
+        default: return SwiftUI.Color(NSColor.textColor)
+        }
+    }
+
+    private var backgroundColor: SwiftUI.Color {
+        switch line.type {
+        case .addition: return .green.opacity(0.1)
+        case .deletion: return .red.opacity(0.1)
+        default: return .clear
+        }
     }
 }
 
@@ -159,6 +787,7 @@ struct DiffToolbar: View {
     @Binding var showLineNumbers: Bool
     @Binding var wordWrap: Bool
     var isMarkdown: Bool = false
+    @Binding var showMinimap: Bool
 
     /// Available modes based on file type
     private var availableModes: [DiffViewMode] {
@@ -226,6 +855,14 @@ struct DiffToolbar: View {
                     tooltip: "Word wrap"
                 ) {
                     wordWrap.toggle()
+                }
+
+                ToolbarButton(
+                    icon: "chart.bar.doc.horizontal",
+                    isActive: showMinimap,
+                    tooltip: "Minimap"
+                ) {
+                    showMinimap.toggle()
                 }
             }
 
@@ -467,7 +1104,7 @@ struct SplitDiffLineRow: View {
         }
     }
 
-    // Compute word-level diff if there's a paired line
+    // Compute character-level diff (Kaleidoscope-style)
     private var highlightedContent: AttributedString {
         guard let paired = pairedLine,
               line.type != .context,
@@ -475,26 +1112,37 @@ struct SplitDiffLineRow: View {
             return AttributedString(line.content)
         }
 
-        // Simple word-level diff
-        let myWords = line.content.components(separatedBy: CharacterSet.whitespaces)
-        let otherWords = paired.content.components(separatedBy: CharacterSet.whitespaces)
+        // Determine old and new content based on line types
+        let oldContent = line.type == .deletion ? line.content : paired.content
+        let newContent = line.type == .addition ? line.content : paired.content
+
+        // Get character-level diff
+        let diffResult = WordLevelDiff.compare(oldLine: oldContent, newLine: newContent)
+
+        // Use appropriate segments based on which side we're rendering
+        let segments = line.type == .deletion ? diffResult.oldSegments : diffResult.newSegments
 
         var result = AttributedString()
 
-        for (index, word) in myWords.enumerated() {
-            var wordAttr = AttributedString(word)
+        for segment in segments {
+            var segmentAttr = AttributedString(segment.text)
 
-            // Check if word differs
-            if index >= otherWords.count || word != otherWords[index] {
-                // Highlight changed word
-                wordAttr.backgroundColor = line.type == .addition ?
-                    GitKrakenTheme.accentGreen.opacity(0.35) : GitKrakenTheme.accentRed.opacity(0.35)
+            switch segment.type {
+            case .unchanged:
+                // No special highlighting
+                break
+            case .added:
+                segmentAttr.backgroundColor = GitKrakenTheme.accentGreen.opacity(0.4)
+                segmentAttr.foregroundColor = SwiftUI.Color.green
+            case .removed:
+                segmentAttr.backgroundColor = GitKrakenTheme.accentRed.opacity(0.4)
+                segmentAttr.foregroundColor = SwiftUI.Color.red
+            case .changed:
+                let color = line.type == .addition ? GitKrakenTheme.accentGreen : GitKrakenTheme.accentRed
+                segmentAttr.backgroundColor = color.opacity(0.4)
             }
 
-            result.append(wordAttr)
-            if index < myWords.count - 1 {
-                result.append(AttributedString(" "))
-            }
+            result.append(segmentAttr)
         }
 
         return result

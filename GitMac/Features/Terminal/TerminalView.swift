@@ -686,46 +686,43 @@ struct CommandInputArea: View {
                 )
             }
 
-            // Input field
-            HStack(spacing: 8) {
+            // Multi-line expandable input (Warp-style)
+            HStack(alignment: .top, spacing: 8) {
                 // Prompt
                 Text(prompt)
                     .font(.system(size: 13, weight: .semibold, design: .monospaced))
                     .foregroundColor(TerminalColors.prompt)
+                    .padding(.top, 2)
 
-                // Input
-                TextField("Enter command or describe what you want...", text: $commandInput)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13, design: .monospaced))
-                    .foregroundColor(TerminalColors.command)
-                    .focused($isInputFocused)
-                    .onSubmit(onSubmit)
-                    .onKeyPress(.upArrow) {
+                // Expandable text input
+                ExpandableTextEditor(
+                    text: $commandInput,
+                    placeholder: "Enter command or describe what you want...",
+                    isInputFocused: _isInputFocused,
+                    onSubmit: onSubmit,
+                    onArrowUp: {
                         if showSuggestions && selectedSuggestion > 0 {
                             selectedSuggestion -= 1
                         } else {
                             onArrowUp()
                         }
-                        return .handled
-                    }
-                    .onKeyPress(.downArrow) {
+                    },
+                    onArrowDown: {
                         if showSuggestions && selectedSuggestion < suggestions.count - 1 {
                             selectedSuggestion += 1
                         } else {
                             onArrowDown()
                         }
-                        return .handled
-                    }
-                    .onKeyPress(.tab) {
-                        onTab()
-                        return .handled
-                    }
+                    },
+                    onTab: onTab
+                )
 
                 // Loading/Running indicator
                 if isRunning {
                     ProgressView()
                         .scaleEffect(0.6)
                         .frame(width: 16, height: 16)
+                        .padding(.top, 2)
                 } else if isLoadingAI {
                     HStack(spacing: 4) {
                         Image(systemName: "sparkles")
@@ -735,12 +732,101 @@ struct CommandInputArea: View {
                             .scaleEffect(0.5)
                     }
                     .frame(width: 32, height: 16)
+                    .padding(.top, 2)
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.vertical, 10)
             .background(TerminalColors.inputBackground)
         }
+    }
+}
+
+// MARK: - Expandable Text Editor (Warp-style multi-line input)
+
+struct ExpandableTextEditor: View {
+    @Binding var text: String
+    let placeholder: String
+    @FocusState var isInputFocused: Bool
+    let onSubmit: () -> Void
+    let onArrowUp: () -> Void
+    let onArrowDown: () -> Void
+    let onTab: () -> Void
+
+    @State private var textHeight: CGFloat = 22
+
+    private var lineCount: Int {
+        max(1, text.components(separatedBy: "\n").count)
+    }
+
+    private var dynamicHeight: CGFloat {
+        // Min 22 (single line), max 200 (about 10 lines)
+        let baseHeight: CGFloat = 22
+        let lineHeight: CGFloat = 18
+        let calculated = baseHeight + CGFloat(max(0, lineCount - 1)) * lineHeight
+        return min(200, calculated)
+    }
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            // Placeholder
+            if text.isEmpty {
+                Text(placeholder)
+                    .font(.system(size: 13, design: .monospaced))
+                    .foregroundColor(TerminalColors.textMuted)
+                    .padding(.top, 2)
+                    .padding(.leading, 4)
+            }
+
+            // Text Editor
+            TextEditor(text: $text)
+                .font(.system(size: 13, design: .monospaced))
+                .foregroundColor(TerminalColors.command)
+                .scrollContentBackground(.hidden)
+                .focused($isInputFocused)
+                .frame(minHeight: 22, maxHeight: dynamicHeight)
+                .fixedSize(horizontal: false, vertical: true)
+                .onKeyPress(.return, phases: .down) { _ in
+                    // Shift+Return = new line, Return alone = submit
+                    if NSEvent.modifierFlags.contains(.shift) {
+                        return .ignored // Let TextEditor handle it (new line)
+                    } else {
+                        onSubmit()
+                        return .handled
+                    }
+                }
+                .onKeyPress(.upArrow) {
+                    // Only handle if at first line
+                    if !text.contains("\n") || text.hasPrefix(text.components(separatedBy: "\n").first ?? "") {
+                        onArrowUp()
+                        return .handled
+                    }
+                    return .ignored
+                }
+                .onKeyPress(.downArrow) {
+                    // Only handle if at last line
+                    let lines = text.components(separatedBy: "\n")
+                    if lines.count <= 1 {
+                        onArrowDown()
+                        return .handled
+                    }
+                    return .ignored
+                }
+                .onKeyPress(.tab) {
+                    onTab()
+                    return .handled
+                }
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(TerminalColors.background.opacity(0.5))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(isInputFocused ? TerminalColors.accent.opacity(0.5) : Color.clear, lineWidth: 1)
+        )
     }
 }
 
@@ -1289,5 +1375,177 @@ struct GitCommandSuggestions {
         }
 
         return []
+    }
+}
+
+// MARK: - AI Chat View for Terminal
+
+struct TerminalAIChatView: View {
+    var repoPath: String?
+    @State private var messages: [TerminalAIChatMessage] = []
+    @State private var inputText = ""
+    @State private var isLoading = false
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Image(systemName: "sparkles")
+                    .foregroundColor(.purple)
+                Text("AI Terminal Assistant")
+                    .font(.headline)
+                Spacer()
+                Button("Done") { dismiss() }
+                    .buttonStyle(.plain)
+            }
+            .padding()
+            .background(Color(NSColor.controlBackgroundColor))
+
+            Divider()
+
+            // Messages
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 12) {
+                        ForEach(messages) { message in
+                            TerminalAIChatBubble(message: message)
+                                .id(message.id)
+                        }
+
+                        if isLoading {
+                            HStack {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                                Text("Thinking...")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                    .padding()
+                }
+                .onChange(of: messages.count) { _, _ in
+                    if let last = messages.last {
+                        withAnimation {
+                            proxy.scrollTo(last.id, anchor: .bottom)
+                        }
+                    }
+                }
+            }
+
+            Divider()
+
+            // Input
+            HStack(spacing: 8) {
+                TextField("Ask about git commands, errors, or code...", text: $inputText)
+                    .textFieldStyle(.plain)
+                    .padding(10)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .cornerRadius(8)
+                    .onSubmit { sendMessage() }
+
+                Button(action: sendMessage) {
+                    Image(systemName: "paperplane.fill")
+                        .foregroundColor(.white)
+                        .padding(10)
+                        .background(inputText.isEmpty ? Color.gray : Color.purple)
+                        .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
+                .disabled(inputText.isEmpty || isLoading)
+            }
+            .padding()
+            .background(Color(NSColor.controlBackgroundColor))
+        }
+    }
+
+    private func sendMessage() {
+        let userText = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !userText.isEmpty else { return }
+
+        messages.append(TerminalAIChatMessage(role: .user, content: userText))
+        inputText = ""
+        isLoading = true
+
+        Task {
+            do {
+                let aiService = AIService()
+                let systemPrompt = buildContext()
+                // Use generateCommitMessage as a general-purpose AI call
+                // The diff parameter will contain our prompt
+                let prompt = """
+                \(systemPrompt)
+
+                User question: \(userText)
+
+                Provide a helpful, concise response:
+                """
+                let response = try await aiService.generateCommitMessage(diff: prompt)
+
+                await MainActor.run {
+                    messages.append(TerminalAIChatMessage(role: .assistant, content: response))
+                    isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    messages.append(TerminalAIChatMessage(
+                        role: .assistant,
+                        content: "Error: \(error.localizedDescription)\n\nMake sure you have configured an AI provider in Settings > AI."
+                    ))
+                    isLoading = false
+                }
+            }
+        }
+    }
+
+    private func buildContext() -> String {
+        var context = """
+        You are a helpful Git and terminal assistant. Help with:
+        - Git commands and workflows
+        - Terminal commands
+        - Debugging errors
+        Be concise and provide practical solutions.
+        """
+        if let path = repoPath {
+            context += "\n\nRepository: \(path)"
+        }
+        return context
+    }
+}
+
+struct TerminalAIChatMessage: Identifiable {
+    let id = UUID()
+    let role: Role
+    let content: String
+    enum Role { case user, assistant }
+}
+
+struct TerminalAIChatBubble: View {
+    let message: TerminalAIChatMessage
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            if message.role == .assistant {
+                Image(systemName: "sparkles")
+                    .foregroundColor(.purple)
+                    .frame(width: 24, height: 24)
+            }
+
+            Text(message.content)
+                .textSelection(.enabled)
+                .font(.system(size: 13))
+                .padding(10)
+                .background(message.role == .user ? Color.blue.opacity(0.15) : Color(NSColor.controlBackgroundColor))
+                .cornerRadius(12)
+
+            if message.role == .user {
+                Image(systemName: "person.circle.fill")
+                    .foregroundColor(.blue)
+                    .frame(width: 24, height: 24)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: message.role == .user ? .trailing : .leading)
     }
 }

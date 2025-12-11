@@ -698,8 +698,20 @@ struct LeftSidebarPanel: View {
 struct CICDSidebarSection: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = CICDSidebarViewModel()
-    @State private var showWorkflowsPanel = false
-    @State private var showAWSPanel = false
+    @State private var showCICDPanel = false
+    @State private var selectedTab: CICDTab = .github
+
+    enum CICDTab: String, CaseIterable {
+        case github = "GitHub Actions"
+        case aws = "AWS CodeBuild"
+
+        var icon: String {
+            switch self {
+            case .github: return "bolt.circle.fill"
+            case .aws: return "cloud.fill"
+            }
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -712,7 +724,8 @@ struct CICDSidebarSection: View {
                     statusColor: viewModel.githubStatusColor,
                     count: viewModel.githubRunningCount
                 ) {
-                    showWorkflowsPanel = true
+                    selectedTab = .github
+                    showCICDPanel = true
                 }
             }
 
@@ -725,7 +738,8 @@ struct CICDSidebarSection: View {
                     statusColor: viewModel.awsStatusColor,
                     count: viewModel.awsRunningCount
                 ) {
-                    showAWSPanel = true
+                    selectedTab = .aws
+                    showCICDPanel = true
                 }
             }
 
@@ -743,14 +757,69 @@ struct CICDSidebarSection: View {
         .task {
             await viewModel.refresh(appState: appState)
         }
-        .sheet(isPresented: $showWorkflowsPanel) {
-            WorkflowsPanel()
+        .sheet(isPresented: $showCICDPanel) {
+            UnifiedCICDPanel(selectedTab: $selectedTab, hasGitHub: viewModel.hasGitHub, hasAWS: viewModel.hasAWS)
                 .environmentObject(appState)
         }
-        .sheet(isPresented: $showAWSPanel) {
-            AWSCodeBuildPanel()
-                .environmentObject(appState)
+    }
+}
+
+// MARK: - Unified CI/CD Panel with Tabs
+
+struct UnifiedCICDPanel: View {
+    @Binding var selectedTab: CICDSidebarSection.CICDTab
+    let hasGitHub: Bool
+    let hasAWS: Bool
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header with tabs
+            HStack {
+                Text("CI/CD")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+
+                Spacer()
+
+                // Tab picker
+                Picker("", selection: $selectedTab) {
+                    if hasGitHub {
+                        Label("GitHub", systemImage: "bolt.circle.fill")
+                            .tag(CICDSidebarSection.CICDTab.github)
+                    }
+                    if hasAWS {
+                        Label("AWS", systemImage: "cloud.fill")
+                            .tag(CICDSidebarSection.CICDTab.aws)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 250)
+
+                Spacer()
+
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding()
+            .background(Color(NSColor.windowBackgroundColor))
+
+            Divider()
+
+            // Content based on selected tab
+            switch selectedTab {
+            case .github:
+                WorkflowsPanel()
+            case .aws:
+                AWSCodeBuildPanel()
+            }
         }
+        .frame(width: 900, height: 600)
     }
 }
 
