@@ -12,8 +12,32 @@ actor KeychainManager {
     static let shared = KeychainManager()
 
     private init() {
+        // Use afterFirstUnlock to avoid repeated password prompts
+        // Also disable iCloud sync which can cause additional auth
         keychain = Keychain(service: "com.gitmac.credentials")
-            .accessibility(.whenUnlocked)
+            .accessibility(.afterFirstUnlock)
+            .synchronizable(false)
+    }
+
+    /// Preload all known keys into cache (call once at app startup)
+    func preloadCache() {
+        let keys = [
+            githubTokenKey, githubUsernameKey,
+            linearTokenKey, jiraTokenKey, jiraCloudIdKey, jiraSiteUrlKey,
+            notionTokenKey, preferredAIProviderKey, preferredAIModelKey
+        ]
+        for key in keys {
+            if let value = try? keychain.get(key) {
+                cache[key] = value
+            }
+        }
+        // AI keys
+        for provider in AIProvider.allCases {
+            if let value = try? keychain.get(provider.keyName) {
+                cache[provider.keyName] = value
+            }
+        }
+        cacheLoaded = true
     }
 
     // MARK: - Generic Operations

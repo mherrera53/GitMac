@@ -5,6 +5,13 @@ struct GitMacApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var recentReposManager = RecentRepositoriesManager.shared
 
+    init() {
+        // Preload keychain cache to avoid repeated password prompts
+        Task {
+            await KeychainManager.shared.preloadCache()
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
