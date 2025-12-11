@@ -46,7 +46,7 @@ struct SettingsView: View {
 // MARK: - General Settings
 
 struct GeneralSettingsView: View {
-    @AppStorage("appearance") private var appearance = "system"
+    @StateObject private var themeManager = ThemeManager.shared
     @AppStorage("showInMenuBar") private var showInMenuBar = false
     @AppStorage("openAtLogin") private var openAtLogin = false
     @AppStorage("defaultClonePath") private var defaultClonePath = "~/Developer"
@@ -56,12 +56,35 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section("Appearance") {
-                Picker("Theme", selection: $appearance) {
-                    Text("System").tag("system")
-                    Text("Light").tag("light")
-                    Text("Dark").tag("dark")
+                // Theme selector with icons
+                HStack(spacing: 12) {
+                    ForEach(Theme.allCases.filter { $0 != .custom }) { theme in
+                        ThemeButton(
+                            theme: theme,
+                            isSelected: themeManager.currentTheme == theme
+                        ) {
+                            themeManager.setTheme(theme)
+                        }
+                    }
                 }
-                .pickerStyle(.segmented)
+                .padding(.vertical, 8)
+
+                // Custom theme button
+                Button {
+                    themeManager.setTheme(.custom)
+                } label: {
+                    HStack {
+                        Image(systemName: "paintbrush.fill")
+                            .foregroundColor(.purple)
+                        Text("Customize Colors...")
+                        Spacer()
+                        if themeManager.currentTheme == .custom {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.green)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
             }
 
             Section("Startup") {
@@ -1975,6 +1998,43 @@ struct SubscriptionSettingsView: View {
         .padding()
         .sheet(isPresented: $showSubscriptionSheet) {
             SubscriptionView()
+        }
+    }
+}
+
+// MARK: - Theme Button
+
+struct ThemeButton: View {
+    let theme: Theme
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: theme.icon)
+                    .font(.system(size: 24))
+                    .foregroundColor(isSelected ? .white : iconColor)
+                    .frame(width: 50, height: 50)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(isSelected ? Color.accentColor : Color.secondary.opacity(0.15))
+                    )
+
+                Text(theme.displayName)
+                    .font(.caption)
+                    .foregroundColor(isSelected ? .primary : .secondary)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var iconColor: Color {
+        switch theme {
+        case .system: return .gray
+        case .light: return .orange
+        case .dark: return .indigo
+        case .custom: return .purple
         }
     }
 }

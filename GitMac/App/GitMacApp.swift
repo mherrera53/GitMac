@@ -4,6 +4,7 @@ import SwiftUI
 struct GitMacApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var recentReposManager = RecentRepositoriesManager.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         // Preload keychain cache to avoid repeated password prompts
@@ -17,9 +18,19 @@ struct GitMacApp: App {
             ContentView()
                 .environmentObject(appState)
                 .environmentObject(recentReposManager)
+                .task {
+                    // Restore previous session on launch
+                    await appState.restoreSession()
+                }
         }
         .commands {
             GitMacCommands()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .background || newPhase == .inactive {
+                // Save session when app goes to background or becomes inactive
+                appState.saveSession()
+            }
         }
 
         Settings {
@@ -105,6 +116,53 @@ class AppState: ObservableObject {
     let gitHubService = GitHubService()
     let aiService = AIService()
 
+    private let openReposKey = "openRepositoryPaths"
+    private let activeRepoKey = "activeRepositoryPath"
+
+    // MARK: - Session Persistence
+
+    /// Save current session (open tabs and active tab)
+    func saveSession() {
+        let paths = openTabs.map { $0.repository.path }
+        UserDefaults.standard.set(paths, forKey: openReposKey)
+
+        if let activePath = activeTab?.repository.path {
+            UserDefaults.standard.set(activePath, forKey: activeRepoKey)
+        }
+    }
+
+    /// Restore previous session
+    func restoreSession() async {
+        guard let paths = UserDefaults.standard.stringArray(forKey: openReposKey), !paths.isEmpty else {
+            return
+        }
+
+        let activePath = UserDefaults.standard.string(forKey: activeRepoKey)
+
+        for path in paths {
+            // Verify path exists
+            guard FileManager.default.fileExists(atPath: path) else { continue }
+
+            do {
+                let repo = try await gitService.openRepository(at: path)
+                let newTab = RepositoryTab(repository: repo)
+                openTabs.append(newTab)
+
+                // Set active tab if this was the active one
+                if path == activePath {
+                    activeTabId = newTab.id
+                }
+            } catch {
+                print("Failed to restore repository at \(path): \(error)")
+            }
+        }
+
+        // If no active tab was set, use the first one
+        if activeTabId == nil {
+            activeTabId = openTabs.first?.id
+        }
+    }
+
     func openRepository(at path: String) async {
         isLoading = true
         errorMessage = nil
@@ -124,6 +182,9 @@ class AppState: ObservableObject {
 
             // Save to recent repositories
             RecentRepositoriesManager.shared.addRecent(path: repo.path, name: repo.name)
+
+            // Auto-save session
+            saveSession()
         } catch {
             errorMessage = "Error opening repository: \(error.localizedDescription)"
         }
@@ -169,10 +230,15 @@ class AppState: ObservableObject {
         if activeTabId == tabId {
             activeTabId = openTabs.last?.id
         }
+
+        // Auto-save after closing tab
+        saveSession()
     }
 
     func selectTab(_ tabId: UUID) {
         activeTabId = tabId
+        // Auto-save active tab
+        saveSession()
     }
 }
 
