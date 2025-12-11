@@ -10,8 +10,6 @@ let package = Package(
         .executable(name: "GitMac", targets: ["GitMac"])
     ],
     dependencies: [
-        // Keychain access for secure credential storage
-        .package(url: "https://github.com/kishikawakatsumi/KeychainAccess.git", from: "4.2.2"),
         // Syntax highlighting for code
         .package(url: "https://github.com/JohnSundell/Splash.git", from: "0.16.0"),
     ],
@@ -19,7 +17,6 @@ let package = Package(
         .executableTarget(
             name: "GitMac",
             dependencies: [
-                "KeychainAccess",
                 "Splash"
             ],
             path: "GitMac"

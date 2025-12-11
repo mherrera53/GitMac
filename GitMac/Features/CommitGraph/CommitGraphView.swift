@@ -513,7 +513,7 @@ struct GraphRow: View {
             .padding(.leading, 8)
 
             // Graph - Canvas for lines, overlay for avatar
-            ZStack {
+            ZStack(alignment: .leading) {
                 Canvas { ctx, size in
                     let cy = size.height / 2
                     let myX = x(node.lane)
@@ -548,22 +548,20 @@ struct GraphRow: View {
                 }
                 .frame(width: 110, height: H)
 
-                // Avatar overlay INSIDE the node
+                // Avatar overlay INSIDE the node - positioned at lane center
                 avatarView
-                    .frame(width: R * 2 - 2, height: R * 2 - 2) // Slightly smaller than node
+                    .frame(width: R * 2, height: R * 2)
                     .clipShape(Circle())
                     .overlay(
                         Circle()
-                            .stroke(color(node.lane), lineWidth: 2)
+                            .stroke(Color.white, lineWidth: 2)
                     )
-                    .background(
-                        Circle()
-                            .fill(GitKrakenTheme.background)
-                    )
-                    .offset(x: x(node.lane) - 55) // Center on node position (55 is half of 110 width)
+                    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                    .position(x: x(node.lane), y: H / 2)
                     .scaleEffect(isHovered ? 1.15 : 1.0)
                     .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHovered)
             }
+            .frame(width: 110, height: H)
 
             // Commit info
             HStack(spacing: 8) {
