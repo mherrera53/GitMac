@@ -1,9 +1,46 @@
 import Foundation
+import os.signpost
 
-/// GitHub API service
+private let githubLog = OSLog(subsystem: "com.gitmac", category: "github")
+
+/// GitHub API service with caching, ETag support, and rate limit handling
 actor GitHubService {
     private let baseURL = "https://api.github.com"
     private let keychainManager = KeychainManager.shared
+
+    // Configured URLSession with caching (20MB RAM, 200MB disk)
+    private lazy var session: URLSession = {
+        let config = URLSessionConfiguration.default
+
+        // Configure cache
+        let cache = URLCache(
+            memoryCapacity: 20 * 1024 * 1024,  // 20 MB RAM
+            diskCapacity: 200 * 1024 * 1024,    // 200 MB disk
+            diskPath: "com.gitmac.github-cache"
+        )
+        config.urlCache = cache
+        config.requestCachePolicy = .useProtocolCachePolicy
+
+        // Reasonable timeouts
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 300
+
+        return URLSession(configuration: config)
+    }()
+
+    // Reusable JSON decoder
+    private let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }()
+
+    // ETag cache for conditional requests
+    private var etagCache: [String: String] = [:]
+
+    // Rate limit tracking
+    private var rateLimitRemaining: Int = 5000
+    private var rateLimitReset: Date?
 
     private var token: String? {
         get async {
@@ -245,6 +282,11 @@ actor GitHubService {
         method: String = "GET",
         body: [String: Any]? = nil
     ) async throws -> Data {
+        let signpostID = OSSignpostID(log: githubLog)
+        os_signpost(.begin, log: githubLog, name: "github.request", signpostID: signpostID,
+                    "%{public}s %{public}s", method, endpoint)
+        defer { os_signpost(.end, log: githubLog, name: "github.request", signpostID: signpostID) }
+
         guard let url = URL(string: baseURL + endpoint) else {
             throw GitHubError.invalidURL
         }
@@ -252,35 +294,81 @@ actor GitHubService {
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         if let token = await token {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
+        // Add ETag for conditional GET requests
+        if method == "GET", let etag = etagCache[endpoint] {
+            request.setValue(etag, forHTTPHeaderField: "If-None-Match")
+        }
+
         if let body = body {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw GitHubError.invalidResponse
         }
 
+        // Update rate limit tracking
+        updateRateLimitInfo(from: httpResponse)
+
+        // Store ETag for future conditional requests
+        if let etag = httpResponse.value(forHTTPHeaderField: "ETag") {
+            etagCache[endpoint] = etag
+        }
+
         switch httpResponse.statusCode {
         case 200...299:
             return data
+
+        case 304:
+            // Not Modified - return cached data if available
+            if let cachedResponse = session.configuration.urlCache?.cachedResponse(for: request) {
+                return cachedResponse.data
+            }
+            // If no cached data, this is unexpected - throw error
+            throw GitHubError.invalidResponse
+
         case 401:
             throw GitHubError.unauthorized
+
         case 403:
+            // Check if this is a rate limit error
+            if rateLimitRemaining == 0 {
+                throw GitHubError.rateLimited(resetTime: rateLimitReset)
+            }
             throw GitHubError.forbidden
+
         case 404:
             throw GitHubError.notFound
+
         case 422:
             throw GitHubError.validationFailed(parseError(data))
+
+        case 429:
+            // Too Many Requests
+            throw GitHubError.rateLimited(resetTime: rateLimitReset)
+
         default:
             throw GitHubError.requestFailed(httpResponse.statusCode, parseError(data))
+        }
+    }
+
+    private func updateRateLimitInfo(from response: HTTPURLResponse) {
+        if let remaining = response.value(forHTTPHeaderField: "X-RateLimit-Remaining"),
+           let remainingInt = Int(remaining) {
+            rateLimitRemaining = remainingInt
+        }
+
+        if let reset = response.value(forHTTPHeaderField: "X-RateLimit-Reset"),
+           let resetTimestamp = TimeInterval(reset) {
+            rateLimitReset = Date(timeIntervalSince1970: resetTimestamp)
         }
     }
 
@@ -290,6 +378,23 @@ actor GitHubService {
             return message
         }
         return String(data: data, encoding: .utf8) ?? "Unknown error"
+    }
+
+    // MARK: - Rate Limit Info
+
+    /// Get current rate limit status
+    var rateLimitStatus: (remaining: Int, resetTime: Date?) {
+        (rateLimitRemaining, rateLimitReset)
+    }
+
+    /// Check if we should wait before making requests
+    var shouldThrottle: Bool {
+        rateLimitRemaining < 10 && rateLimitReset != nil && rateLimitReset! > Date()
+    }
+
+    /// Clear ETag cache (useful when data might have changed externally)
+    func clearETagCache() {
+        etagCache.removeAll()
     }
 }
 
@@ -515,6 +620,7 @@ enum GitHubError: LocalizedError {
     case notFound
     case validationFailed(String)
     case requestFailed(Int, String)
+    case rateLimited(resetTime: Date?)
 
     var errorDescription: String? {
         switch self {
@@ -532,6 +638,13 @@ enum GitHubError: LocalizedError {
             return "Validation failed: \(message)"
         case .requestFailed(let code, let message):
             return "Request failed (\(code)): \(message)"
+        case .rateLimited(let resetTime):
+            if let reset = resetTime {
+                let formatter = DateFormatter()
+                formatter.timeStyle = .short
+                return "Rate limit exceeded. Resets at \(formatter.string(from: reset))"
+            }
+            return "Rate limit exceeded. Please wait before retrying."
         }
     }
 }

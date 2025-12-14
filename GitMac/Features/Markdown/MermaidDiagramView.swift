@@ -5,6 +5,7 @@ import WebKit
 
 /// Renders Mermaid diagrams using WKWebView with mermaid.js
 /// Supports: flowchart, sequence, class, state, ER, pie, gantt, journey, mindmap
+/// Optimized: Reuses WKWebView and updates diagram via JavaScript when only code changes
 struct MermaidDiagramView: NSViewRepresentable {
     let code: String
     let isDarkMode: Bool
@@ -20,16 +21,71 @@ struct MermaidDiagramView: NSViewRepresentable {
         let config = WKWebViewConfiguration()
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
 
+        // Enable content caching
+        config.websiteDataStore = .default()
+
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.setValue(false, forKey: "drawsBackground")
+
+        // Initial load
+        context.coordinator.lastIsDarkMode = isDarkMode
+        context.coordinator.lastCode = code
+        context.coordinator.isLoaded = false
+        let html = generateHTML(code: code, isDarkMode: isDarkMode)
+        webView.loadHTMLString(html, baseURL: nil)
 
         return webView
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
-        let html = generateHTML(code: code, isDarkMode: isDarkMode)
-        webView.loadHTMLString(html, baseURL: nil)
+        let coordinator = context.coordinator
+
+        // If theme changed, we need to reload entire HTML
+        if coordinator.lastIsDarkMode != isDarkMode {
+            coordinator.lastIsDarkMode = isDarkMode
+            coordinator.lastCode = code
+            coordinator.isLoaded = false
+            let html = generateHTML(code: code, isDarkMode: isDarkMode)
+            webView.loadHTMLString(html, baseURL: nil)
+            return
+        }
+
+        // If only code changed and page is loaded, update via JavaScript
+        if coordinator.lastCode != code {
+            coordinator.lastCode = code
+
+            if coordinator.isLoaded {
+                // Update diagram via JavaScript without reloading HTML
+                let escapedCode = escapeCodeForJS(code)
+                let js = """
+                (async function() {
+                    const container = document.getElementById('diagram');
+                    try {
+                        // Remove old SVG element if exists
+                        const oldSvg = document.getElementById('mermaid-svg');
+                        if (oldSvg) oldSvg.remove();
+
+                        const { svg } = await mermaid.render('mermaid-svg', `\(escapedCode)`);
+                        container.innerHTML = svg;
+                        return document.body.scrollHeight;
+                    } catch (error) {
+                        container.innerHTML = '<div class="error">Mermaid Error: ' + error.message + '</div>';
+                        return document.body.scrollHeight;
+                    }
+                })();
+                """
+                webView.evaluateJavaScript(js) { height, _ in
+                    if let h = height as? CGFloat {
+                        webView.frame.size.height = min(h, 600)
+                    }
+                }
+            } else {
+                // Page not yet loaded, reload HTML
+                let html = generateHTML(code: code, isDarkMode: isDarkMode)
+                webView.loadHTMLString(html, baseURL: nil)
+            }
+        }
     }
 
     func makeCoordinator() -> Coordinator {
@@ -37,14 +93,33 @@ struct MermaidDiagramView: NSViewRepresentable {
     }
 
     class Coordinator: NSObject, WKNavigationDelegate {
+        var lastCode: String = ""
+        var lastIsDarkMode: Bool = false
+        var isLoaded: Bool = false
+
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            isLoaded = true
             // Adjust height based on content
-            webView.evaluateJavaScript("document.body.scrollHeight") { height, _ in
+            webView.evaluateJavaScript("document.body.scrollHeight") { [weak self] height, _ in
+                guard self != nil else { return }
                 if let h = height as? CGFloat {
                     webView.frame.size.height = min(h, 600)
                 }
             }
         }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            isLoaded = false
+        }
+    }
+
+    /// Escape code for safe JavaScript string interpolation
+    private func escapeCodeForJS(_ code: String) -> String {
+        code
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "`", with: "\\`")
+            .replacingOccurrences(of: "$", with: "\\$")
+            .replacingOccurrences(of: "\n", with: "\\n")
     }
 
     private func generateHTML(code: String, isDarkMode: Bool) -> String {

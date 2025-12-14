@@ -319,6 +319,52 @@ actor KeychainManager {
     func deleteNotionToken() throws {
         try delete(key: notionTokenKey)
     }
+
+    // MARK: - AWS Credentials
+
+    private let awsAccessKeyIdKey = "aws.accessKeyId"
+    private let awsSecretAccessKeyKey = "aws.secretAccessKey"
+    private let awsSessionTokenKey = "aws.sessionToken"
+    private let awsRegionKey = "aws.region"
+
+    struct AWSCredentials {
+        let accessKeyId: String
+        let secretAccessKey: String
+        let sessionToken: String?
+        let region: String
+    }
+
+    func saveAWSCredentials(accessKeyId: String, secretAccessKey: String, sessionToken: String?, region: String) throws {
+        try save(key: awsAccessKeyIdKey, value: accessKeyId)
+        try save(key: awsSecretAccessKeyKey, value: secretAccessKey)
+        if let token = sessionToken {
+            try save(key: awsSessionTokenKey, value: token)
+        }
+        try save(key: awsRegionKey, value: region)
+    }
+
+    func getAWSCredentials() throws -> AWSCredentials? {
+        guard let accessKeyId = try get(key: awsAccessKeyIdKey),
+              let secretAccessKey = try get(key: awsSecretAccessKeyKey) else {
+            return nil
+        }
+        let sessionToken = try get(key: awsSessionTokenKey)
+        let region = try get(key: awsRegionKey) ?? "us-east-1"
+
+        return AWSCredentials(
+            accessKeyId: accessKeyId,
+            secretAccessKey: secretAccessKey,
+            sessionToken: sessionToken,
+            region: region
+        )
+    }
+
+    func deleteAWSCredentials() throws {
+        try delete(key: awsAccessKeyIdKey)
+        try delete(key: awsSecretAccessKeyKey)
+        try delete(key: awsSessionTokenKey)
+        try delete(key: awsRegionKey)
+    }
 }
 
 // MARK: - String Hash Extension

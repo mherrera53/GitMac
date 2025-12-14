@@ -1,7 +1,11 @@
 import Foundation
 import Combine
+import os.signpost
+
+private let serviceLog = OSLog(subsystem: "com.gitmac", category: "service")
 
 /// High-level Git service for the application
+/// Acts as an orchestrator for repository contexts and provides a unified API
 @MainActor
 class GitService: ObservableObject {
     @Published var currentRepository: Repository?
@@ -12,12 +16,18 @@ class GitService: ObservableObject {
     private var repositoryWatcher: GitRepositoryWatcher?
     private var cancellables = Set<AnyCancellable>()
 
+    // Reference to context manager for multi-repo support
+    private let contextManager = RepositoryContextManager.shared
+
     // Cache with TTL - prevents unbounded memory growth (WWDC 2018 - iOS Memory Deep Dive)
     private var branchesCache = CacheWithTTL<[Branch]>(ttl: 30)      // 30s for branches
     private var remoteBranchesCache = CacheWithTTL<[Branch]>(ttl: 60) // 60s for remote branches
     private var tagsCache = CacheWithTTL<[Tag]>(ttl: 120)            // 2min for tags (change rarely)
     private var remotesCache = CacheWithTTL<[Remote]>(ttl: 300)      // 5min for remotes (very stable)
     private var stashesCache = CacheWithTTL<[Stash]>(ttl: 30)        // 30s for stashes
+
+    // Use V2 optimized methods flag
+    private var useOptimizedMethods = true
 
     // MARK: - Repository Operations
 
@@ -575,20 +585,83 @@ class GitService: ObservableObject {
 
     private func setupWatcher(for path: String) {
         repositoryWatcher?.stopAll()
+        cancellables.removeAll()
+
         repositoryWatcher = GitRepositoryWatcher(repositoryPath: path)
 
-        repositoryWatcher?.$hasChanges
-            .filter { $0 }
+        // Subscribe to differentiated change signals for incremental updates
+        repositoryWatcher?.$lastSignal
+            .compactMap { $0 }
             .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
-            .sink { [weak self] _ in
-                Task {
-                    try? await self?.refreshStatus()
+            .sink { [weak self] signal in
+                Task { @MainActor in
+                    await self?.handleChangeSignal(signal)
                     self?.repositoryWatcher?.acknowledgeChanges()
                 }
             }
             .store(in: &cancellables)
 
         repositoryWatcher?.startAll()
+    }
+
+    /// Handle differentiated change signals for incremental updates
+    private func handleChangeSignal(_ signal: RepositoryChangeSignal) async {
+        let signpostID = OSSignpostID(log: serviceLog)
+        os_signpost(.begin, log: serviceLog, name: "handle.signal", signpostID: signpostID,
+                    "signal=%{public}s", signal.rawValue)
+        defer { os_signpost(.end, log: serviceLog, name: "handle.signal", signpostID: signpostID) }
+
+        switch signal {
+        case .status:
+            // Only refresh status - fast path
+            try? await refreshStatusOnly()
+
+        case .head:
+            // HEAD changed - refresh status and potentially commits
+            try? await refreshStatus()
+
+        case .refs:
+            // Branches/tags changed - invalidate ref caches and refresh
+            branchesCache.invalidate()
+            remoteBranchesCache.invalidate()
+            tagsCache.invalidate()
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: currentRepository?.path)
+
+        case .stash:
+            // Only stashes changed
+            stashesCache.invalidate()
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: currentRepository?.path)
+
+        case .config:
+            // Config changed - may need to refresh remotes
+            remotesCache.invalidate()
+
+        case .full:
+            // Unknown change - do full refresh
+            try? await refresh()
+        }
+    }
+
+    /// Refresh only status without invalidating all caches
+    private func refreshStatusOnly() async throws {
+        guard var repo = currentRepository else { return }
+
+        let signpostID = OSSignpostID(log: serviceLog)
+        os_signpost(.begin, log: serviceLog, name: "refresh.status", signpostID: signpostID)
+        defer { os_signpost(.end, log: serviceLog, name: "refresh.status", signpostID: signpostID) }
+
+        // Use V2 optimized status if enabled
+        let status: RepositoryStatus
+        if useOptimizedMethods {
+            status = try await engine.getStatusV2(at: repo.path)
+        } else {
+            status = try await engine.getStatus(at: repo.path)
+        }
+
+        repo.status = status
+        currentRepository = repo
+
+        NotificationCenter.default.post(name: .repositoryDidRefresh, object: repo.path)
     }
 
     // MARK: - Line-Level Operations (GitKraken-style)
@@ -691,6 +764,50 @@ class GitService: ObservableObject {
         )
 
         try await refreshStatus()
+    }
+
+    // MARK: - V2 Optimized Methods
+
+    /// Get commits using V2 optimized method (NUL-separated parsing)
+    func getCommitsV2(branch: String? = nil, limit: Int = 100, skip: Int = 0) async throws -> [Commit] {
+        guard let path = currentRepository?.path else {
+            throw GitServiceError.noRepository
+        }
+
+        return try await engine.getCommitsV2(at: path, branch: branch, limit: limit, skip: skip)
+    }
+
+    /// Get branches using V2 optimized method (for-each-ref with NUL separators)
+    func getBranchesV2() async throws -> [Branch] {
+        guard let path = currentRepository?.path else {
+            throw GitServiceError.noRepository
+        }
+
+        return try await engine.getBranchesV2(at: path)
+    }
+
+    /// Get commit files using V2 optimized method (unified parsing)
+    func getCommitFilesV2(sha: String) async throws -> [CommitFile] {
+        guard let path = currentRepository?.path else {
+            throw GitServiceError.noRepository
+        }
+
+        return try await engine.getCommitFilesV2(sha: sha, at: path)
+    }
+
+    /// Stream diff for large files with backpressure support
+    func getDiffStream(for file: String? = nil, staged: Bool = false) -> AsyncThrowingStream<String, Error>? {
+        guard let path = currentRepository?.path else {
+            return nil
+        }
+
+        return engine.getDiffStreaming(for: file, staged: staged, at: path)
+    }
+
+    /// Get current active context (for multi-repo support)
+    func getActiveContext() async -> RepositoryContext? {
+        guard let path = currentRepository?.path else { return nil }
+        return await contextManager.context(for: path)
     }
 }
 

@@ -53,6 +53,12 @@ class WorkspaceSettingsManager: ObservableObject {
         config.plannerPlanName = planName
         setConfig(for: repoPath, config: config)
     }
+
+    func setCodeBuildProject(for repoPath: String, projectName: String?) {
+        var config = getConfig(for: repoPath)
+        config.codeBuildProjectName = projectName
+        setConfig(for: repoPath, config: config)
+    }
 }
 
 // MARK: - Workspace Configuration
@@ -71,6 +77,9 @@ struct WorkspaceConfig: Codable {
     var jiraProjectKey: String?
     var linearTeamId: String?
     var asanaProjectId: String?
+
+    // AWS CodeBuild
+    var codeBuildProjectName: String?
 
     init() {}
 }
