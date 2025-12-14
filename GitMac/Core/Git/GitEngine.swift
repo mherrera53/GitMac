@@ -1,4 +1,9 @@
 import Foundation
+import os.signpost
+
+// MARK: - Performance Logging
+
+private let gitLog = OSLog(subsystem: "com.gitmac", category: "git")
 
 /// Main wrapper for Git operations
 /// Uses git CLI commands as the primary backend for reliability
@@ -987,11 +992,15 @@ actor GitEngine {
 
         let result = await shellExecutor.execute("git", arguments: args, workingDirectory: path)
 
-        guard result.exitCode == 0 else {
-            throw GitError.commandFailed("git diff", result.stderr)
+        // git diff returns exit code 0 for success, but sometimes has warnings in stderr
+        // If we have stdout content, use it even if there are warnings
+        if result.exitCode == 0 || !result.stdout.isEmpty {
+            return result.stdout
         }
 
-        return result.stdout
+        // Only throw if we have no output and an error
+        let errorMessage = result.stderr.isEmpty ? "No diff output" : result.stderr
+        throw GitError.commandFailed("git diff", errorMessage)
     }
 
     /// Get diff between two refs
@@ -1369,6 +1378,392 @@ actor GitEngine {
         }
 
         return UpstreamInfo(name: "", ahead: ahead, behind: behind)
+    }
+
+    // MARK: - V2 Optimized Methods (Porcelain v2, NUL separators, streaming)
+
+    /// Get repository status using porcelain v2 format with NUL separators
+    /// More robust with special characters in filenames and includes branch tracking info
+    func getStatusV2(at path: String) async throws -> RepositoryStatus {
+        let signpostID = OSSignpostID(log: gitLog)
+        os_signpost(.begin, log: gitLog, name: "git.status.v2", signpostID: signpostID)
+        defer { os_signpost(.end, log: gitLog, name: "git.status.v2", signpostID: signpostID) }
+
+        let result = await shellExecutor.execute(
+            "git",
+            arguments: [
+                "status",
+                "--porcelain=v2",
+                "-b",           // Include branch info
+                "-z",           // NUL-separated
+                "-uall"         // Show all untracked files
+            ],
+            workingDirectory: path
+        )
+
+        guard result.exitCode == 0 else {
+            throw GitError.commandFailed("git status", result.stderr)
+        }
+
+        return parseStatusV2(result.stdout)
+    }
+
+    private func parseStatusV2(_ output: String) -> RepositoryStatus {
+        var status = RepositoryStatus()
+
+        // Split by NUL character
+        let entries = output.split(separator: "\0", omittingEmptySubsequences: false)
+
+        var i = 0
+        while i < entries.count {
+            let entry = String(entries[i])
+            guard !entry.isEmpty else {
+                i += 1
+                continue
+            }
+
+            // Branch headers: # branch.oid <sha>, # branch.head <name>, etc.
+            if entry.hasPrefix("# ") {
+                i += 1
+                continue
+            }
+
+            // Changed entries (ordinary): 1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>
+            if entry.hasPrefix("1 ") {
+                let parts = entry.split(separator: " ", maxSplits: 8, omittingEmptySubsequences: false)
+                if parts.count >= 9 {
+                    let xy = String(parts[1])
+                    let indexStatus = xy.first ?? "."
+                    let worktreeStatus = xy.count > 1 ? xy[xy.index(xy.startIndex, offsetBy: 1)] : Character(".")
+                    let filePath = String(parts[8])
+
+                    // Index (staged) changes
+                    if indexStatus != "." {
+                        if let statusType = statusTypeFromCharV2(indexStatus) {
+                            status.staged.append(FileStatus(path: filePath, status: statusType))
+                        }
+                    }
+
+                    // Worktree (unstaged) changes
+                    if worktreeStatus != "." {
+                        if let statusType = statusTypeFromCharV2(worktreeStatus) {
+                            status.unstaged.append(FileStatus(path: filePath, status: statusType))
+                        }
+                    }
+                }
+                i += 1
+                continue
+            }
+
+            // Renamed/copied entries: 2 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <X><score> <path><sep><origPath>
+            if entry.hasPrefix("2 ") {
+                let parts = entry.split(separator: " ", maxSplits: 9, omittingEmptySubsequences: false)
+                if parts.count >= 10 {
+                    let xy = String(parts[1])
+                    let indexStatus = xy.first ?? "."
+                    let filePath = String(parts[9])
+
+                    if indexStatus == "R" {
+                        status.staged.append(FileStatus(path: filePath, status: .renamed))
+                    } else if indexStatus == "C" {
+                        status.staged.append(FileStatus(path: filePath, status: .copied))
+                    }
+                }
+                // Skip the original path entry that follows
+                i += 2
+                continue
+            }
+
+            // Untracked: ? <path>
+            if entry.hasPrefix("? ") {
+                let filePath = String(entry.dropFirst(2))
+                status.untracked.append(filePath)
+                i += 1
+                continue
+            }
+
+            // Ignored: ! <path>
+            if entry.hasPrefix("! ") {
+                i += 1
+                continue
+            }
+
+            // Unmerged (conflict): u <XY> <sub> <m1> <m2> <m3> <mW> <h1> <h2> <h3> <path>
+            if entry.hasPrefix("u ") {
+                let parts = entry.split(separator: " ", maxSplits: 10, omittingEmptySubsequences: false)
+                if parts.count >= 11 {
+                    let filePath = String(parts[10])
+                    status.conflicted.append(FileStatus(path: filePath, status: .unmerged))
+                }
+                i += 1
+                continue
+            }
+
+            i += 1
+        }
+
+        return status
+    }
+
+    private func statusTypeFromCharV2(_ char: Character) -> FileStatusType? {
+        switch char {
+        case "M": return .modified
+        case "T": return .modified  // Type changed
+        case "A": return .added
+        case "D": return .deleted
+        case "R": return .renamed
+        case "C": return .copied
+        case "U": return .unmerged
+        default: return nil
+        }
+    }
+
+    /// Get commits with NUL-separated format to safely handle messages with special characters
+    func getCommitsV2(
+        at path: String,
+        branch: String? = nil,
+        limit: Int = 100,
+        skip: Int = 0
+    ) async throws -> [Commit] {
+        let signpostID = OSSignpostID(log: gitLog)
+        os_signpost(.begin, log: gitLog, name: "git.commits.v2", signpostID: signpostID)
+        defer { os_signpost(.end, log: gitLog, name: "git.commits.v2", signpostID: signpostID) }
+
+        // Use %x00 as field separator (NUL byte)
+        // Format: sha, parents, author name, author email, author date, committer name, committer email, committer date, subject
+        var args = [
+            "log",
+            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x00",
+            "--topo-order",     // Topological ordering for graph
+            "-n", String(limit),
+            "--skip", String(skip)
+        ]
+
+        if let branch = branch {
+            args.append(branch)
+        }
+
+        let result = await shellExecutor.execute("git", arguments: args, workingDirectory: path)
+
+        guard result.exitCode == 0 else {
+            throw GitError.commandFailed("git log", result.stderr)
+        }
+
+        return parseCommitsNUL(result.stdout)
+    }
+
+    private func parseCommitsNUL(_ output: String) -> [Commit] {
+        var commits: [Commit] = []
+
+        // Each commit has 9 fields separated by NUL, ending with a NUL
+        let fields = output.split(separator: "\0", omittingEmptySubsequences: false)
+
+        var i = 0
+        while i + 8 < fields.count {
+            let sha = String(fields[i])
+            guard !sha.isEmpty && !sha.hasPrefix("\n") else {
+                i += 1
+                continue
+            }
+
+            // Clean sha of any leading newlines from previous record
+            let cleanSha = sha.trimmingCharacters(in: .newlines)
+            guard cleanSha.count == 40 else {
+                i += 1
+                continue
+            }
+
+            let parentSHAs = String(fields[i + 1]).split(separator: " ").map(String.init)
+            let authorName = String(fields[i + 2])
+            let authorEmail = String(fields[i + 3])
+            let authorDateStr = String(fields[i + 4])
+            let committerName = String(fields[i + 5])
+            let committerEmail = String(fields[i + 6])
+            let committerDateStr = String(fields[i + 7])
+            let subject = String(fields[i + 8])
+
+            let authorDate = parseGitDate(authorDateStr) ?? Date()
+            let committerDate = parseGitDate(committerDateStr) ?? Date()
+
+            commits.append(Commit(
+                sha: cleanSha,
+                message: subject.trimmingCharacters(in: .whitespacesAndNewlines),
+                author: authorName,
+                authorEmail: authorEmail,
+                authorDate: authorDate,
+                committer: committerName,
+                committerEmail: committerEmail,
+                committerDate: committerDate,
+                parentSHAs: parentSHAs
+            ))
+
+            i += 9
+        }
+
+        return commits
+    }
+
+    /// Stream diff output for large files with backpressure support
+    /// Returns an AsyncThrowingStream that yields lines as they become available
+    nonisolated func getDiffStreaming(
+        for file: String? = nil,
+        staged: Bool = false,
+        at path: String
+    ) -> AsyncThrowingStream<String, Error> {
+        var args = ["diff", "--no-color", "--no-ext-diff"]
+
+        if staged {
+            args.append("--cached")
+        }
+
+        if let file = file {
+            args.append("--")
+            args.append(file)
+        }
+
+        return shellExecutor.executeStreaming(
+            "git",
+            arguments: args,
+            workingDirectory: path,
+            bufferSize: 100  // Buffer 100 lines before applying backpressure
+        )
+    }
+
+    /// Get files changed in a commit with unified parsing (single command where possible)
+    func getCommitFilesV2(sha: String, at path: String) async throws -> [CommitFile] {
+        let signpostID = OSSignpostID(log: gitLog)
+        os_signpost(.begin, log: gitLog, name: "git.commit-files.v2", signpostID: signpostID)
+        defer { os_signpost(.end, log: gitLog, name: "git.commit-files.v2", signpostID: signpostID) }
+
+        // Run both commands in parallel
+        async let statusTask = shellExecutor.execute(
+            "git",
+            arguments: ["diff-tree", "--no-commit-id", "-r", "-z", "--name-status", sha],
+            workingDirectory: path
+        )
+        async let numstatTask = shellExecutor.execute(
+            "git",
+            arguments: ["diff-tree", "--no-commit-id", "-r", "-z", "--numstat", sha],
+            workingDirectory: path
+        )
+
+        let statusResult = await statusTask
+        let numstatResult = await numstatTask
+
+        guard statusResult.exitCode == 0 else {
+            throw GitError.commandFailed("git diff-tree", statusResult.stderr)
+        }
+
+        // Parse numstat into dictionary: path -> (additions, deletions)
+        var fileStats: [String: (Int, Int)] = [:]
+        let numstatParts = numstatResult.stdout.split(separator: "\0", omittingEmptySubsequences: false)
+        var j = 0
+        while j + 2 < numstatParts.count {
+            let addStr = String(numstatParts[j])
+            let delStr = String(numstatParts[j + 1])
+            let filePath = String(numstatParts[j + 2])
+
+            // Binary files show "-" for additions/deletions
+            let additions = Int(addStr) ?? 0
+            let deletions = Int(delStr) ?? 0
+            fileStats[filePath] = (additions, deletions)
+            j += 3
+        }
+
+        // Parse name-status: pairs of (status, path)
+        var files: [CommitFile] = []
+        let statusParts = statusResult.stdout.split(separator: "\0", omittingEmptySubsequences: false)
+        var i = 0
+        while i + 1 < statusParts.count {
+            let statusChar = String(statusParts[i])
+            let filePath = String(statusParts[i + 1])
+
+            guard !statusChar.isEmpty && !filePath.isEmpty else {
+                i += 2
+                continue
+            }
+
+            let status: CommitFile.CommitFileStatus
+            switch statusChar.first {
+            case "A": status = .added
+            case "M": status = .modified
+            case "D": status = .deleted
+            case "R": status = .renamed
+            case "C": status = .copied
+            case "T": status = .modified  // Type changed
+            default: status = .modified
+            }
+
+            let stats = fileStats[filePath] ?? (0, 0)
+            files.append(CommitFile(
+                path: filePath,
+                status: status,
+                additions: stats.0,
+                deletions: stats.1
+            ))
+
+            i += 2
+        }
+
+        return files
+    }
+
+    /// Get branches using for-each-ref with NUL separators for robustness
+    func getBranchesV2(at path: String) async throws -> [Branch] {
+        let signpostID = OSSignpostID(log: gitLog)
+        os_signpost(.begin, log: gitLog, name: "git.branches.v2", signpostID: signpostID)
+        defer { os_signpost(.end, log: gitLog, name: "git.branches.v2", signpostID: signpostID) }
+
+        let result = await shellExecutor.execute(
+            "git",
+            arguments: [
+                "for-each-ref",
+                "--format=%(refname:short)%00%(objectname)%00%(HEAD)%00%(upstream:short)%00%(upstream:track)%00",
+                "refs/heads"
+            ],
+            workingDirectory: path
+        )
+
+        guard result.exitCode == 0 else {
+            throw GitError.commandFailed("git for-each-ref", result.stderr)
+        }
+
+        let currentHead = try? await getHeadSHA(at: path)
+        var branches: [Branch] = []
+
+        // Each branch record: name, sha, head marker, upstream, track info, then empty (separator)
+        let parts = result.stdout.split(separator: "\0", omittingEmptySubsequences: false)
+        var i = 0
+        while i + 4 < parts.count {
+            let name = String(parts[i])
+            let sha = String(parts[i + 1])
+            let isHeadMarker = String(parts[i + 2])
+            let upstream = String(parts[i + 3])
+            let trackInfo = String(parts[i + 4])
+
+            guard !name.isEmpty else {
+                i += 6
+                continue
+            }
+
+            let isHead = isHeadMarker == "*" || sha == currentHead
+            let upstreamBranch = upstream.isEmpty ? nil : upstream
+            let upstreamInfo = trackInfo.isEmpty ? nil : parseTrackInfo(trackInfo)
+
+            branches.append(Branch(
+                name: name,
+                fullName: "refs/heads/\(name)",
+                isRemote: false,
+                isHead: isHead,
+                trackingBranch: upstreamBranch,
+                targetSHA: sha,
+                upstream: upstreamInfo
+            ))
+
+            i += 6  // 5 fields + empty separator
+        }
+
+        return branches
     }
 }
 

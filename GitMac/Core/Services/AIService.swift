@@ -144,31 +144,200 @@ actor AIService {
 
     // MARK: - Commit Message Generation
 
-    /// Generate a commit message from a diff
+    /// Configuration for diff optimization
+    private struct DiffOptimizationConfig {
+        static let maxLinesPerFile = 15          // Reduced from 50
+        static let maxFiles = 8                   // Limit files with full diff
+        static let maxTotalChars = 3000           // Reduced from 8000
+        static let maxContextLines = 1            // Minimal context
+    }
+
+    /// File change summary for stats-based approach
+    private struct FileChangeSummary {
+        let filename: String
+        let additions: Int
+        let deletions: Int
+        let isNew: Bool
+        let isDeleted: Bool
+        let isRenamed: Bool
+    }
+
+    /// Parse diff into file summaries (fast, no content)
+    private func parseDiffStats(_ diff: String) -> [FileChangeSummary] {
+        var summaries: [FileChangeSummary] = []
+        var currentFile = ""
+        var additions = 0
+        var deletions = 0
+        var isNew = false
+        var isDeleted = false
+        var isRenamed = false
+
+        for line in diff.components(separatedBy: "\n") {
+            if line.hasPrefix("diff --git ") {
+                // Save previous file
+                if !currentFile.isEmpty {
+                    summaries.append(FileChangeSummary(
+                        filename: currentFile,
+                        additions: additions,
+                        deletions: deletions,
+                        isNew: isNew,
+                        isDeleted: isDeleted,
+                        isRenamed: isRenamed
+                    ))
+                }
+                // Reset for new file
+                if let match = line.range(of: "b/", options: .backwards) {
+                    currentFile = String(line[match.upperBound...])
+                }
+                additions = 0
+                deletions = 0
+                isNew = false
+                isDeleted = false
+                isRenamed = false
+            } else if line.hasPrefix("new file") {
+                isNew = true
+            } else if line.hasPrefix("deleted file") {
+                isDeleted = true
+            } else if line.hasPrefix("rename ") || line.hasPrefix("similarity index") {
+                isRenamed = true
+            } else if line.hasPrefix("+") && !line.hasPrefix("+++") {
+                additions += 1
+            } else if line.hasPrefix("-") && !line.hasPrefix("---") {
+                deletions += 1
+            }
+        }
+
+        // Don't forget last file
+        if !currentFile.isEmpty {
+            summaries.append(FileChangeSummary(
+                filename: currentFile,
+                additions: additions,
+                deletions: deletions,
+                isNew: isNew,
+                isDeleted: isDeleted,
+                isRenamed: isRenamed
+            ))
+        }
+
+        return summaries
+    }
+
+    /// Create optimized diff for AI (minimal tokens, maximum context)
+    private func createOptimizedDiff(_ diff: String) -> String {
+        let stats = parseDiffStats(diff)
+        let totalFiles = stats.count
+        let totalAdditions = stats.reduce(0) { $0 + $1.additions }
+        let totalDeletions = stats.reduce(0) { $0 + $1.deletions }
+
+        var result = "Summary: \(totalFiles) files, +\(totalAdditions)/-\(totalDeletions) lines\n\n"
+
+        // Add file list with stats
+        result += "Files changed:\n"
+        for (index, file) in stats.enumerated() {
+            let status = file.isNew ? " (new)" : file.isDeleted ? " (deleted)" : file.isRenamed ? " (renamed)" : ""
+            result += "  \(index + 1). \(file.filename)\(status) +\(file.additions)/-\(file.deletions)\n"
+        }
+        result += "\n"
+
+        // Only include actual diff for top files (sorted by change size)
+        let sortedStats = stats.sorted { ($0.additions + $0.deletions) > ($1.additions + $1.deletions) }
+        let topFiles = Set(sortedStats.prefix(DiffOptimizationConfig.maxFiles).map { $0.filename })
+
+        // Parse and include minimal diff for top files
+        var currentFile = ""
+        var currentContent: [String] = []
+        var lineCount = 0
+        var includedFiles = 0
+        var totalChars = result.count
+
+        for line in diff.components(separatedBy: "\n") {
+            if line.hasPrefix("diff --git ") {
+                // Save previous file content
+                if !currentContent.isEmpty && includedFiles < DiffOptimizationConfig.maxFiles {
+                    let fileContent = currentContent.joined(separator: "\n")
+                    if totalChars + fileContent.count < DiffOptimizationConfig.maxTotalChars {
+                        result += fileContent + "\n\n"
+                        totalChars += fileContent.count
+                        includedFiles += 1
+                    }
+                }
+
+                // Start new file
+                currentContent = []
+                lineCount = 0
+
+                if let match = line.range(of: "b/", options: .backwards) {
+                    currentFile = String(line[match.upperBound...])
+                }
+
+                // Only process top files
+                if topFiles.contains(currentFile) {
+                    currentContent.append("--- \(currentFile) ---")
+                }
+            } else if topFiles.contains(currentFile) {
+                // Skip metadata lines
+                if line.hasPrefix("index ") || line.hasPrefix("--- ") || line.hasPrefix("+++ ") ||
+                   line.hasPrefix("new file") || line.hasPrefix("deleted file") {
+                    continue
+                }
+
+                // Include hunk headers
+                if line.hasPrefix("@@") {
+                    if lineCount > 0 {
+                        currentContent.append("...")
+                    }
+                    continue
+                }
+
+                // Include change lines with limit
+                if line.hasPrefix("+") || line.hasPrefix("-") {
+                    lineCount += 1
+                    if lineCount <= DiffOptimizationConfig.maxLinesPerFile {
+                        // Truncate long lines
+                        let truncatedLine = line.count > 100 ? String(line.prefix(100)) + "..." : line
+                        currentContent.append(truncatedLine)
+                    } else if lineCount == DiffOptimizationConfig.maxLinesPerFile + 1 {
+                        currentContent.append("... (\(lineCount)+ more lines)")
+                    }
+                }
+            }
+        }
+
+        // Don't forget last file
+        if !currentContent.isEmpty && includedFiles < DiffOptimizationConfig.maxFiles {
+            let fileContent = currentContent.joined(separator: "\n")
+            if totalChars + fileContent.count < DiffOptimizationConfig.maxTotalChars {
+                result += fileContent + "\n"
+            }
+        }
+
+        return result
+    }
+
+    /// Generate a commit message from a diff (optimized for speed and tokens)
     func generateCommitMessage(
         diff: String,
         style: CommitStyle = .conventional,
         maxLength: Int = 72
     ) async throws -> String {
+        // Create highly optimized diff summary
+        let optimizedDiff = createOptimizedDiff(diff)
+
         let prompt = """
-        Generate a concise Git commit message for the following code changes.
+        Generate a Git commit message for these changes.
 
         Style: \(style.description)
-        Maximum subject line length: \(maxLength) characters
+        Max subject: \(maxLength) chars
 
         Rules:
-        - Use imperative mood ("Add feature" not "Added feature")
-        - Be specific but concise
-        - First line is the subject (max \(maxLength) chars)
-        - If needed, add a blank line and then a body with more details
-        - For conventional commits, use these types: feat, fix, docs, style, refactor, test, chore
+        - Imperative mood ("Add" not "Added")
+        - Subject line only, no body unless critical
+        - Types: feat, fix, docs, style, refactor, test, chore
 
-        Diff:
-        ```
-        \(diff.prefix(8000))
-        ```
+        Changes:
+        \(optimizedDiff)
 
-        Generate only the commit message, nothing else:
+        Commit message:
         """
 
         return try await sendMessage(prompt)
@@ -413,6 +582,137 @@ actor AIService {
             let confidence = item["confidence"] as? Double ?? 0.5
             return TerminalSuggestion(command: command, description: description, confidence: confidence)
         }
+    }
+
+    // MARK: - PR Title Generation
+
+    /// Generate a PR title from commits and diff
+    func generatePRTitle(
+        commits: [Commit],
+        diff: String
+    ) async throws -> String {
+        let commitsText = commits.prefix(10).map { "- \($0.summary)" }.joined(separator: "\n")
+        let stats = parseDiffStats(diff)
+        let summary = "Files: \(stats.count), +\(stats.reduce(0) { $0 + $1.additions })/-\(stats.reduce(0) { $0 + $1.deletions })"
+
+        let prompt = """
+        Generate a concise PR title (max 72 chars) for these changes.
+
+        Commits:
+        \(commitsText)
+
+        \(summary)
+
+        Rules:
+        - Use conventional format: type: description (e.g., "feat: Add user authentication")
+        - Types: feat, fix, docs, style, refactor, test, chore
+        - Be specific but concise
+        - Imperative mood
+
+        Respond with ONLY the title, no quotes or explanation:
+        """
+
+        let result = try await sendMessage(prompt)
+        // Clean up response - remove quotes if present
+        return result
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+    }
+
+    // MARK: - Branch Explanation
+
+    /// Explain what changed in a branch compared to base
+    func explainBranch(
+        branchName: String,
+        commits: [Commit],
+        diff: String,
+        baseBranch: String = "main"
+    ) async throws -> BranchExplanation {
+        let commitsText = commits.prefix(20).map {
+            "- [\($0.sha.prefix(7))] \($0.summary) by \($0.author)"
+        }.joined(separator: "\n")
+
+        let stats = parseDiffStats(diff)
+        let filesSummary = stats.prefix(15).map { file in
+            let status = file.isNew ? "new" : file.isDeleted ? "deleted" : "modified"
+            return "  - \(file.filename) (\(status), +\(file.additions)/-\(file.deletions))"
+        }.joined(separator: "\n")
+
+        let prompt = """
+        Analyze this Git branch and explain what it does.
+
+        Branch: \(branchName) (compared to \(baseBranch))
+        Total commits: \(commits.count)
+        Files changed: \(stats.count)
+
+        Commits:
+        \(commitsText)
+
+        Files:
+        \(filesSummary)
+
+        Provide a JSON response:
+        {
+            "summary": "1-2 sentence summary of what this branch does",
+            "purpose": "The main goal or feature being implemented",
+            "keyChanges": ["change 1", "change 2", "change 3"],
+            "riskLevel": "low/medium/high",
+            "riskReason": "why this risk level (if medium/high)",
+            "suggestedReviewers": ["areas of expertise needed"]
+        }
+        """
+
+        let response = try await sendMessage(prompt)
+
+        // Parse JSON response
+        guard let data = response.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            // Fallback if JSON parsing fails
+            return BranchExplanation(
+                summary: response,
+                purpose: "Unable to determine",
+                keyChanges: [],
+                riskLevel: .medium,
+                riskReason: nil,
+                suggestedReviewers: []
+            )
+        }
+
+        let riskStr = (json["riskLevel"] as? String)?.lowercased() ?? "medium"
+        let riskLevel: BranchExplanation.RiskLevel
+        switch riskStr {
+        case "low": riskLevel = .low
+        case "high": riskLevel = .high
+        default: riskLevel = .medium
+        }
+
+        return BranchExplanation(
+            summary: json["summary"] as? String ?? response,
+            purpose: json["purpose"] as? String ?? "Unknown",
+            keyChanges: json["keyChanges"] as? [String] ?? [],
+            riskLevel: riskLevel,
+            riskReason: json["riskReason"] as? String,
+            suggestedReviewers: json["suggestedReviewers"] as? [String] ?? []
+        )
+    }
+
+    // MARK: - Custom Instructions
+
+    /// Generate with custom team instructions
+    func generateWithCustomInstructions(
+        prompt: String,
+        customInstructions: String
+    ) async throws -> String {
+        let fullPrompt = """
+        Follow these team-specific instructions:
+        \(customInstructions)
+
+        ---
+
+        \(prompt)
+        """
+
+        return try await sendMessage(fullPrompt)
     }
 
     /// Suggest a conflict resolution
@@ -693,5 +993,38 @@ struct TerminalSuggestion: Identifiable, Equatable {
 
     static func == (lhs: TerminalSuggestion, rhs: TerminalSuggestion) -> Bool {
         lhs.command == rhs.command
+    }
+}
+
+// MARK: - Branch Explanation Model
+
+struct BranchExplanation {
+    let summary: String
+    let purpose: String
+    let keyChanges: [String]
+    let riskLevel: RiskLevel
+    let riskReason: String?
+    let suggestedReviewers: [String]
+
+    enum RiskLevel: String {
+        case low
+        case medium
+        case high
+
+        var color: String {
+            switch self {
+            case .low: return "green"
+            case .medium: return "orange"
+            case .high: return "red"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .low: return "checkmark.shield"
+            case .medium: return "exclamationmark.shield"
+            case .high: return "xmark.shield"
+            }
+        }
     }
 }

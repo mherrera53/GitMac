@@ -25,6 +25,11 @@ actor AvatarService {
     // Disk cache directory
     private let cacheDirectory: URL
 
+    // Throttled persistence (debounce writes to disk)
+    private var persistenceTask: Task<Void, Never>?
+    private var needsPersistence = false
+    private let persistenceDebounceInterval: TimeInterval = 2.0  // 2 seconds
+
     private init() {
         let paths = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
         cacheDirectory = paths[0].appendingPathComponent("com.gitmac.avatars")
@@ -297,7 +302,32 @@ actor AvatarService {
         githubUsernameCache = mappings.githubUsernames
     }
 
+    /// Schedule a throttled save to disk (debounced to avoid excessive I/O)
     private func saveCachedMappings() {
+        needsPersistence = true
+
+        // Cancel any pending persistence task
+        persistenceTask?.cancel()
+
+        // Schedule new persistence with debounce
+        persistenceTask = Task {
+            do {
+                try await Task.sleep(nanoseconds: UInt64(persistenceDebounceInterval * 1_000_000_000))
+
+                // Check if we still need to persist and weren't cancelled
+                guard !Task.isCancelled, needsPersistence else { return }
+
+                await saveCachedMappingsNow()
+            } catch {
+                // Task was cancelled, that's fine
+            }
+        }
+    }
+
+    /// Immediately save cached mappings to disk (called after debounce or on explicit flush)
+    private func saveCachedMappingsNow() async {
+        needsPersistence = false
+
         // Convert URLs to strings for JSON encoding
         var urlStrings: [String: String] = [:]
         for (key, url) in avatarCache {
@@ -310,7 +340,15 @@ actor AvatarService {
         )
 
         if let data = try? JSONEncoder().encode(mappings) {
-            try? data.write(to: mappingsFileURL)
+            try? data.write(to: mappingsFileURL, options: .atomic)
+        }
+    }
+
+    /// Force immediate persistence (useful before app termination)
+    func flushCache() async {
+        persistenceTask?.cancel()
+        if needsPersistence {
+            await saveCachedMappingsNow()
         }
     }
 }

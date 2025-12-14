@@ -1,7 +1,79 @@
 import Foundation
+import os.signpost
+
+// MARK: - Performance Logging
+
+private let shellLog = OSLog(subsystem: "com.gitmac", category: "shell")
+
+// MARK: - Shell Errors
+
+enum ShellError: LocalizedError {
+    case nonZeroExit(Int32)
+    case timeout(command: String)
+    case terminated
+    case processFailedToStart(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .nonZeroExit(let code):
+            return "Command exited with code \(code)"
+        case .timeout(let command):
+            return "Command '\(command)' timed out"
+        case .terminated:
+            return "Process was terminated"
+        case .processFailedToStart(let message):
+            return "Failed to start process: \(message)"
+        }
+    }
+}
+
+// MARK: - Command Timeout Configuration
+
+/// Command-specific timeout configuration for Git operations
+enum GitCommandTimeout {
+    case status         // Fast read operation
+    case log            // Can be slow for large repos
+    case diff           // Variable based on file size
+    case fetch          // Network dependent
+    case pull           // Network + merge
+    case push           // Network dependent
+    case clone          // Large network operation
+    case `default`      // General operations
+
+    var seconds: TimeInterval {
+        switch self {
+        case .status: return 10
+        case .log: return 30
+        case .diff: return 60
+        case .fetch: return 300      // 5 minutes
+        case .pull: return 600       // 10 minutes
+        case .push: return 600       // 10 minutes
+        case .clone: return 1800     // 30 minutes
+        case .default: return 60
+        }
+    }
+
+    /// Infer timeout from git command arguments
+    static func infer(from arguments: [String]) -> GitCommandTimeout {
+        guard let firstArg = arguments.first else { return .default }
+
+        switch firstArg {
+        case "status": return .status
+        case "log", "rev-list": return .log
+        case "diff", "diff-tree": return .diff
+        case "fetch": return .fetch
+        case "pull": return .pull
+        case "push": return .push
+        case "clone": return .clone
+        default: return .default
+        }
+    }
+}
+
+// MARK: - Shell Result
 
 /// Result of a shell command execution
-struct ShellResult {
+struct ShellResult: Sendable {
     let stdout: String
     let stderr: String
     let exitCode: Int32
@@ -48,18 +120,46 @@ actor ShellExecutor {
         env["LANG"] = "en_US.UTF-8"
         env["LC_ALL"] = "en_US.UTF-8"
 
+        // Performance and safety flags
+        env["GIT_OPTIONAL_LOCKS"] = "0"      // Avoid locks on read operations
+        env["GIT_TERMINAL_PROMPT"] = "0"     // Never prompt for credentials (avoid hangs)
+
         self.defaultEnvironment = env
     }
 
     /// Execute a command and return the result
+    /// - Parameters:
+    ///   - command: The command to execute
+    ///   - arguments: Command arguments
+    ///   - workingDirectory: Working directory for the command
+    ///   - environment: Additional environment variables
+    ///   - timeout: Timeout in seconds (defaults to auto-inferred for git commands)
     func execute(
         _ command: String,
         arguments: [String] = [],
         workingDirectory: String? = nil,
         environment: [String: String]? = nil,
-        timeout: TimeInterval = 60
+        timeout: TimeInterval? = nil
     ) async -> ShellResult {
-        await withCheckedContinuation { continuation in
+        // Auto-infer timeout for git commands
+        let effectiveTimeout: TimeInterval
+        if let timeout = timeout {
+            effectiveTimeout = timeout
+        } else if command == "git" {
+            effectiveTimeout = GitCommandTimeout.infer(from: arguments).seconds
+        } else {
+            effectiveTimeout = 60
+        }
+
+        let signpostID = OSSignpostID(log: shellLog)
+        os_signpost(.begin, log: shellLog, name: "shell.execute", signpostID: signpostID,
+                    "%{public}s %{public}s", command, arguments.joined(separator: " "))
+
+        defer {
+            os_signpost(.end, log: shellLog, name: "shell.execute", signpostID: signpostID)
+        }
+
+        return await withCheckedContinuation { continuation in
             let process = Process()
             let stdoutPipe = Pipe()
             let stderrPipe = Pipe()
@@ -82,15 +182,23 @@ actor ShellExecutor {
                 process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory)
             }
 
-            // Timeout handling
+            // Escalated timeout handling: SIGTERM first, then SIGKILL
             let timeoutWorkItem = DispatchWorkItem {
-                if process.isRunning {
-                    process.terminate()
+                guard process.isRunning else { return }
+
+                // First try graceful termination
+                process.terminate()
+
+                // Schedule forced kill if still running after 2 seconds
+                DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
+                    if process.isRunning {
+                        kill(process.processIdentifier, SIGKILL)
+                    }
                 }
             }
 
             DispatchQueue.global().asyncAfter(
-                deadline: .now() + timeout,
+                deadline: .now() + effectiveTimeout,
                 execute: timeoutWorkItem
             )
 
@@ -180,6 +288,105 @@ actor ShellExecutor {
             } catch {
                 onError(error.localizedDescription)
                 continuation.resume(returning: -1)
+            }
+        }
+    }
+
+    /// Execute a command with backpressure-aware streaming output via AsyncThrowingStream
+    /// - Parameters:
+    ///   - command: The command to execute
+    ///   - arguments: Command arguments
+    ///   - workingDirectory: Working directory for the command
+    ///   - bufferSize: Maximum number of lines to buffer before applying backpressure
+    /// - Returns: An AsyncThrowingStream that yields lines as they become available
+    nonisolated func executeStreaming(
+        _ command: String,
+        arguments: [String] = [],
+        workingDirectory: String? = nil,
+        bufferSize: Int = 50
+    ) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream(bufferingPolicy: .bufferingNewest(bufferSize)) { continuation in
+            let process = Process()
+            let stdoutPipe = Pipe()
+            let stderrPipe = Pipe()
+
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            process.arguments = [command] + arguments
+            process.standardOutput = stdoutPipe
+            process.standardError = stderrPipe
+
+            // Use default environment (can't access actor state from nonisolated)
+            var env = ProcessInfo.processInfo.environment
+            env["GIT_PAGER"] = ""
+            env["PAGER"] = ""
+            env["LANG"] = "en_US.UTF-8"
+            env["LC_ALL"] = "en_US.UTF-8"
+            env["GIT_OPTIONAL_LOCKS"] = "0"
+            env["GIT_TERMINAL_PROMPT"] = "0"
+            process.environment = env
+
+            if let workingDirectory = workingDirectory {
+                process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory)
+            }
+
+            var lineBuffer = ""
+
+            stdoutPipe.fileHandleForReading.readabilityHandler = { handle in
+                let data = handle.availableData
+                guard !data.isEmpty else { return }
+
+                if let chunk = String(data: data, encoding: .utf8) {
+                    lineBuffer += chunk
+
+                    // Split by newlines and yield complete lines
+                    while let newlineIndex = lineBuffer.firstIndex(of: "\n") {
+                        let line = String(lineBuffer[..<newlineIndex])
+                        lineBuffer = String(lineBuffer[lineBuffer.index(after: newlineIndex)...])
+                        continuation.yield(line)
+                    }
+                }
+            }
+
+            // Collect stderr but don't stream it (could be used for error reporting)
+            var stderrBuffer = ""
+            stderrPipe.fileHandleForReading.readabilityHandler = { handle in
+                let data = handle.availableData
+                if !data.isEmpty, let string = String(data: data, encoding: .utf8) {
+                    stderrBuffer += string
+                }
+            }
+
+            process.terminationHandler = { process in
+                stdoutPipe.fileHandleForReading.readabilityHandler = nil
+                stderrPipe.fileHandleForReading.readabilityHandler = nil
+
+                // Yield any remaining content in buffer
+                if !lineBuffer.isEmpty {
+                    continuation.yield(lineBuffer)
+                }
+
+                if process.terminationStatus == 0 {
+                    continuation.finish()
+                } else {
+                    let errorMessage = stderrBuffer.isEmpty
+                        ? "Process exited with code \(process.terminationStatus)"
+                        : stderrBuffer
+                    continuation.finish(throwing: ShellError.nonZeroExit(process.terminationStatus))
+                    _ = errorMessage // Suppress unused variable warning
+                }
+            }
+
+            do {
+                try process.run()
+
+                // Handle cancellation
+                continuation.onTermination = { @Sendable _ in
+                    if process.isRunning {
+                        process.terminate()
+                    }
+                }
+            } catch {
+                continuation.finish(throwing: ShellError.processFailedToStart(error.localizedDescription))
             }
         }
     }

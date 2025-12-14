@@ -62,13 +62,12 @@
 		AC9431BE2EE9822D00A59026 /* QUICK_START.md in Resources */ = {isa = PBXBuildFile; fileRef = AC9431BD2EE9822D00A59026 /* QUICK_START.md */; };
 		AC9431C02EE99A4800A59026 /* RemoteOperationTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC9431BF2EE99A4800A59026 /* RemoteOperationTracker.swift */; };
 		AC9431C22EE99AA000A59026 /* REMOTE_STATUS_INTEGRATION.md in Resources */ = {isa = PBXBuildFile; fileRef = AC9431C12EE99AA000A59026 /* REMOTE_STATUS_INTEGRATION.md */; };
-		WKFLW001B526F46E3958E34A /* WorkflowsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WKFLW001F526F46E3958E34A /* WorkflowsView.swift */; };
-		AWSCB001B526F46E3958E34A /* AWSCodeBuildService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AWSCB001F526F46E3958E34A /* AWSCodeBuildService.swift */; };
 		AC9431C42EE9A33100A59026 /* WARNING_FIXES.md in Resources */ = {isa = PBXBuildFile; fileRef = AC9431C32EE9A33100A59026 /* WARNING_FIXES.md */; };
 		AD16C2E522DD4E7A9F2DA2E6 /* Features/Tags/TagListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07A0562AED2641F98A85EABD /* Features/Tags/TagListView.swift */; };
 		APP001 /* App/GitMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC001 /* App/GitMacApp.swift */; };
 		APP002 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = RES001 /* Assets.xcassets */; };
 		AVTRSVC1B526F46E3958E34A /* Core/Services/AvatarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AVTRSVC1F526F46E3958E34A /* Core/Services/AvatarService.swift */; };
+		AWSCB001B526F46E3958E34A /* AWSCodeBuildService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AWSCB001F526F46E3958E34A /* AWSCodeBuildService.swift */; };
 		B22085A223F142A680B2B116 /* App/ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7F03F2B6A4D4CA1B7A62F19 /* App/ContentView.swift */; };
 		B288434E27474BCE8B605D16 /* Core/Git/Repository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45056B3410F84FBE87F85752 /* Core/Git/Repository.swift */; };
 		B3A46B7AB4C14FE7ABB248DE /* Features/CommitGraph/CommitGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A052AB429346498D89696798 /* Features/CommitGraph/CommitGraphView.swift */; };
@@ -100,6 +99,8 @@
 		PKG001 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = DEP001 /* KeychainAccess */; };
 		PKG002 /* Splash in Frameworks */ = {isa = PBXBuildFile; productRef = DEP002 /* Splash */; };
 		PLNR001B526F46E3958E34A3 /* Features/Planner/PlannerTasksPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = PLNR001F526F46E3958E34A3 /* Features/Planner/PlannerTasksPanel.swift */; };
+		REPOCTX01B526F46E3958E34 /* Core/Git/RepositoryContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = REPOCTX01F526F46E3958E34 /* Core/Git/RepositoryContext.swift */; };
+		WKFLW001B526F46E3958E34A /* WorkflowsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WKFLW001F526F46E3958E34A /* WorkflowsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -164,9 +165,16 @@
 		AC9431BF2EE99A4800A59026 /* RemoteOperationTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOperationTracker.swift; sourceTree = "<group>"; };
 		AC9431C12EE99AA000A59026 /* REMOTE_STATUS_INTEGRATION.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = REMOTE_STATUS_INTEGRATION.md; sourceTree = "<group>"; };
 		AC9431C32EE9A33100A59026 /* WARNING_FIXES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = WARNING_FIXES.md; sourceTree = "<group>"; };
-		WKFLW001F526F46E3958E34A /* WorkflowsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowsView.swift; sourceTree = "<group>"; };
-		AWSCB001F526F46E3958E34A /* AWSCodeBuildService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AWSCodeBuildService.swift; sourceTree = "<group>"; };
+		AC9431C52EED65B400A59026 /* DIFFVIEW_PERFORMANCE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DIFFVIEW_PERFORMANCE.md; sourceTree = "<group>"; };
+		ACB688DC2EEE3AA200CCD845 /* DiffOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffOptions.swift; sourceTree = "<group>"; };
+		ACB688DD2EEE3AC400CCD845 /* DiffCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffCache.swift; sourceTree = "<group>"; };
+		ACB688DE2EEE3B0100CCD845 /* DiffEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffEngine.swift; sourceTree = "<group>"; };
+		ACB688DF2EEE3B2A00CCD845 /* DiffEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffEngineTests.swift; sourceTree = "<group>"; };
+		ACB688E02EEE3B6000CCD845 /* TiledDiffView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TiledDiffView.swift; sourceTree = "<group>"; };
+		ACB688E12EEE3B8100CCD845 /* DiffSearchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffSearchEngine.swift; sourceTree = "<group>"; };
+		ACB688E22EEE3BA100CCD845 /* DiffStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffStatusBar.swift; sourceTree = "<group>"; };
 		AVTRSVC1F526F46E3958E34A /* Core/Services/AvatarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Services/AvatarService.swift; sourceTree = "<group>"; };
+		AWSCB001F526F46E3958E34A /* AWSCodeBuildService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AWSCodeBuildService.swift; sourceTree = "<group>"; };
 		B2DB7601C3F04EEBB40EBBEA /* Features/GitFlow/GitFlowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/GitFlow/GitFlowManager.swift; sourceTree = "<group>"; };
 		C291CEC87A0B4E0686E32180 /* Features/Worktrees/WorktreeListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Worktrees/WorktreeListView.swift; sourceTree = "<group>"; };
 		C4DB863C48084E76B7AE0888 /* Features/PullRequests/PRListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/PullRequests/PRListView.swift; sourceTree = "<group>"; };
@@ -199,8 +207,10 @@
 		PATCHMAN01F526F46E3958E34 /* Core/Git/PatchManipulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Git/PatchManipulator.swift; sourceTree = "<group>"; };
 		PLNR001F526F46E3958E34A3 /* Features/Planner/PlannerTasksPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Planner/PlannerTasksPanel.swift; sourceTree = "<group>"; };
 		PROD01 /* GitMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GitMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		REPOCTX01F526F46E3958E34 /* Core/Git/RepositoryContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Git/RepositoryContext.swift; sourceTree = "<group>"; };
 		RES001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		SRC001 /* App/GitMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/GitMacApp.swift; sourceTree = "<group>"; };
+		WKFLW001F526F46E3958E34A /* WorkflowsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -252,6 +262,7 @@
 				45056B3410F84FBE87F85752 /* Core/Git/Repository.swift */,
 				ECC927E0DBEE478EBF4A503F /* Core/Git/Worktree.swift */,
 				16FAFECA970C46BC86DEEB01 /* Core/Git/GitEngine.swift */,
+				REPOCTX01F526F46E3958E34 /* Core/Git/RepositoryContext.swift */,
 				PATCHMAN01F526F46E3958E34 /* Core/Git/PatchManipulator.swift */,
 				3163AE41EEA248F3AB7DED92 /* Core/Git/Tag.swift */,
 				F7F03F2B6A4D4CA1B7A62F19 /* App/ContentView.swift */,
@@ -341,6 +352,14 @@
 				GRP001 /* GitMac */,
 				GRP002 /* Products */,
 				AC94317C2EE9223600A59026 /* Recovered References */,
+				AC9431C52EED65B400A59026 /* DIFFVIEW_PERFORMANCE.md */,
+				ACB688DC2EEE3AA200CCD845 /* DiffOptions.swift */,
+				ACB688DD2EEE3AC400CCD845 /* DiffCache.swift */,
+				ACB688DE2EEE3B0100CCD845 /* DiffEngine.swift */,
+				ACB688DF2EEE3B2A00CCD845 /* DiffEngineTests.swift */,
+				ACB688E02EEE3B6000CCD845 /* TiledDiffView.swift */,
+				ACB688E12EEE3B8100CCD845 /* DiffSearchEngine.swift */,
+				ACB688E22EEE3BA100CCD845 /* DiffStatusBar.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -460,6 +479,7 @@
 				B288434E27474BCE8B605D16 /* Core/Git/Repository.swift in Sources */,
 				47A04D733A15416C9417CECA /* Core/Git/Worktree.swift in Sources */,
 				93B29E6BD2524365845BFE55 /* Core/Git/GitEngine.swift in Sources */,
+				REPOCTX01B526F46E3958E34 /* Core/Git/RepositoryContext.swift in Sources */,
 				PATCHMAN01B526F46E3958E34 /* Core/Git/PatchManipulator.swift in Sources */,
 				A44D05C9CC5F4468B8898071 /* Core/Git/Tag.swift in Sources */,
 				B22085A223F142A680B2B116 /* App/ContentView.swift in Sources */,
@@ -569,7 +589,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -645,6 +665,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -654,7 +675,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				"INSTALL_PATH[sdk=macosx*]" = "";
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;

@@ -32,8 +32,6 @@ struct CommitGraphView: View {
         .task {
             if let p = appState.currentRepository?.path {
                 await vm.load(at: p)
-                // Load GitHub avatars for repo contributors
-                await loadRepoAvatars()
             }
         }
         .onChange(of: appState.currentRepository?.path) { _, p in
@@ -104,27 +102,6 @@ struct CommitGraphView: View {
                 .foregroundColor(operation.color.opacity(0.4)),
             alignment: .bottom
         )
-    }
-
-    /// Load avatars from GitHub repo commits API
-    private func loadRepoAvatars() async {
-        guard let repo = appState.currentRepository,
-              let remote = repo.remotes.first(where: { $0.name == "origin" }),
-              let token = try? await KeychainManager.shared.getGitHubToken(),
-              !token.isEmpty else { return }
-
-        // Parse owner/repo from GitHub URL
-        let url = remote.fetchURL
-        let pattern = #"github\.com[:/]([^/]+)/([^/.]+)"#
-        guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: url, range: NSRange(url.startIndex..., in: url)),
-              let ownerRange = Range(match.range(at: 1), in: url),
-              let repoRange = Range(match.range(at: 2), in: url) else { return }
-
-        let owner = String(url[ownerRange])
-        let repoName = String(url[repoRange])
-
-        await AvatarService.shared.loadRepoAuthors(owner: owner, repo: repoName, token: token)
     }
 
     private var graphHeader: some View {
@@ -536,7 +513,7 @@ struct GraphRow: View {
             .padding(.leading, 8)
 
             // Graph - Canvas for lines, overlay for avatar
-            ZStack(alignment: .leading) {
+            ZStack {
                 Canvas { ctx, size in
                     let cy = size.height / 2
                     let myX = x(node.lane)
@@ -571,20 +548,22 @@ struct GraphRow: View {
                 }
                 .frame(width: 110, height: H)
 
-                // Avatar overlay INSIDE the node - positioned at lane center
+                // Avatar overlay INSIDE the node
                 avatarView
-                    .frame(width: R * 2, height: R * 2)
+                    .frame(width: R * 2 - 2, height: R * 2 - 2) // Slightly smaller than node
                     .clipShape(Circle())
                     .overlay(
                         Circle()
-                            .stroke(Color.white, lineWidth: 2)
+                            .stroke(color(node.lane), lineWidth: 2)
                     )
-                    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
-                    .position(x: x(node.lane), y: H / 2)
+                    .background(
+                        Circle()
+                            .fill(GitKrakenTheme.background)
+                    )
+                    .offset(x: x(node.lane) - 55) // Center on node position (55 is half of 110 width)
                     .scaleEffect(isHovered ? 1.15 : 1.0)
                     .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHovered)
             }
-            .frame(width: 110, height: H)
 
             // Commit info
             HStack(spacing: 8) {

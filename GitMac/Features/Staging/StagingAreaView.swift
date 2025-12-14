@@ -13,7 +13,11 @@ struct StagingAreaView: View {
     @State private var viewMode: FileViewMode = .tree
     @State private var extensionFilter: String? = nil
     @Namespace private var animation
-    
+
+    private var repoPath: String {
+        appState.currentRepository?.path ?? ""
+    }
+
     var body: some View {
         HSplitView {
             // Left: File lists
@@ -114,10 +118,12 @@ struct StagingAreaView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { notification in
-            // Refresh when stash apply/pop or other operations complete
+            // Refresh when stash apply/pop, commit, or other operations complete
             if let path = notification.object as? String,
                path == appState.currentRepository?.path {
-                Task {
+                Task { @MainActor in
+                    // Small delay to ensure git operations are complete
+                    try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
                     try? await appState.gitService.refresh()
                     if let repo = appState.currentRepository {
                         await viewModel.loadStatus(for: repo)
@@ -281,6 +287,7 @@ struct StagingAreaView: View {
                         FileRow(
                             file: file,
                             isSelected: selectedFile == file.path,
+                            repositoryPath: repoPath,
                             namespace: animation,
                             onSelect: { selectedFile = file.path },
                             onStage: { Task { await viewModel.stage(file: file.path) } },
@@ -311,6 +318,7 @@ struct StagingAreaView: View {
                         FileRow(
                             file: file,
                             isSelected: selectedFile == file.path,
+                            repositoryPath: repoPath,
                             namespace: animation,
                             onSelect: { selectedFile = file.path },
                             onStage: { Task { await viewModel.stage(file: file.path) } },
@@ -324,6 +332,7 @@ struct StagingAreaView: View {
                     FileRow(
                         file: file,
                         isSelected: selectedFile == file.path,
+                        repositoryPath: repoPath,
                         namespace: animation,
                         onSelect: { selectedFile = file.path },
                         onStage: { Task { await viewModel.stage(file: file.path) } },
@@ -388,6 +397,7 @@ struct StagingAreaView: View {
                 FileRow(
                     file: file,
                     isSelected: selectedFile == file.path,
+                    repositoryPath: repoPath,
                     namespace: animation,
                     onSelect: { selectedFile = file.path },
                     onUnstage: { Task { await viewModel.unstage(file: file.path) } }
@@ -625,7 +635,12 @@ class StagingAreaViewModel: ObservableObject {
     }
 
     private func reloadStatus() async {
-        // Reload from appState's current repository
+        // Force refresh from git service first to get latest state
+        if let gitService = gitService {
+            try? await gitService.refresh()
+        }
+
+        // Then reload from appState's current repository
         if let repo = appState?.currentRepository {
             await loadStatus(for: repo)
         }
@@ -658,7 +673,18 @@ class StagingAreaViewModel: ObservableObject {
             _ = try await gitService.commit(message: message, amend: amend)
             commitError = nil
             showError = false
+
+            // Force refresh the gitService first to update the repository
+            try? await gitService.refresh()
+
+            // Then reload our local status
             await reloadStatus()
+
+            // Post notification to update other views (CommitGraph, etc.)
+            if let path = currentPath {
+                NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+            }
+
             return true
         } catch {
             return false
@@ -731,6 +757,7 @@ struct FileListSection<HeaderActions: View, Content: View>: View {
 struct FileRow: View {
     let file: FileStatus
     let isSelected: Bool
+    var repositoryPath: String = ""
     var namespace: Namespace.ID? = nil
     var onSelect: () -> Void = {}
     var onStage: (() async -> Void)? = nil
@@ -741,6 +768,7 @@ struct FileRow: View {
     @State private var isStaging = false
     @State private var isUnstaging = false
     @State private var isDiscarding = false
+    @State private var showPreview = false
 
     var body: some View {
         HStack(spacing: 8) {
@@ -829,10 +857,15 @@ struct FileRow: View {
             FileContextMenu(
                 filePath: file.path,
                 isStaged: onUnstage != nil,
+                repositoryPath: repositoryPath,
                 onStage: onStage != nil ? { Task { await onStage?() } } : nil,
                 onUnstage: onUnstage != nil ? { Task { await onUnstage?() } } : nil,
-                onDiscard: onDiscard != nil ? { Task { await onDiscard?() } } : nil
+                onDiscard: onDiscard != nil ? { Task { await onDiscard?() } } : nil,
+                onPreview: { showPreview = true }
             )
+        }
+        .sheet(isPresented: $showPreview) {
+            FilePreviewView(filePath: file.path, repositoryPath: repositoryPath)
         }
     }
 }
@@ -1021,12 +1054,26 @@ struct ConflictedFileRow: View {
 struct FileContextMenu: View {
     let filePath: String
     let isStaged: Bool
+    var repositoryPath: String = ""
     var onStage: (() -> Void)?
     var onUnstage: (() -> Void)?
     var onDiscard: (() -> Void)?
+    var onPreview: (() -> Void)?
 
     var filename: String {
         URL(fileURLWithPath: filePath).lastPathComponent
+    }
+
+    var fileExtension: String {
+        URL(fileURLWithPath: filePath).pathExtension
+    }
+
+    var directory: String {
+        URL(fileURLWithPath: filePath).deletingLastPathComponent().path
+    }
+
+    var canPreviewFile: Bool {
+        FilePreviewHelper.canPreview(filename: filePath)
     }
 
     var body: some View {
@@ -1049,6 +1096,23 @@ struct FileContextMenu: View {
             }
 
             Divider()
+
+            // Preview and Copy Content (for text files)
+            if canPreviewFile {
+                Button {
+                    onPreview?()
+                } label: {
+                    Label("Preview File", systemImage: "eye")
+                }
+
+                Button {
+                    copyFileContent()
+                } label: {
+                    Label("Copy Content", systemImage: "doc.on.clipboard")
+                }
+
+                Divider()
+            }
 
             // File operations
             Button {
@@ -1091,8 +1155,29 @@ struct FileContextMenu: View {
 
             Divider()
 
-            Button {
-                NotificationCenter.default.post(name: .ignoreFile, object: filePath)
+            // Ignore submenu (GitKraken style)
+            Menu {
+                Button {
+                    NotificationCenter.default.post(name: .ignoreFile, object: ["type": "file", "path": filePath])
+                } label: {
+                    Label("Ignore '\(filename)'", systemImage: "doc")
+                }
+
+                if !fileExtension.isEmpty {
+                    Button {
+                        NotificationCenter.default.post(name: .ignoreFile, object: ["type": "extension", "path": filePath, "extension": fileExtension])
+                    } label: {
+                        Label("Ignore all '.\(fileExtension)' files", systemImage: "doc.badge.ellipsis")
+                    }
+                }
+
+                if !directory.isEmpty && directory != "." {
+                    Button {
+                        NotificationCenter.default.post(name: .ignoreFile, object: ["type": "directory", "path": filePath, "directory": directory])
+                    } label: {
+                        Label("Ignore directory '\(URL(fileURLWithPath: directory).lastPathComponent)/'", systemImage: "folder.badge.minus")
+                    }
+                }
             } label: {
                 Label("Ignore", systemImage: "eye.slash")
             }
@@ -1102,6 +1187,28 @@ struct FileContextMenu: View {
             } label: {
                 Label("Assume Unchanged", systemImage: "lock.doc")
             }
+
+            Button {
+                NotificationCenter.default.post(name: .stopTrackingFile, object: filePath)
+            } label: {
+                Label("Stop Tracking", systemImage: "xmark.bin")
+            }
+        }
+    }
+
+    private func copyFileContent() {
+        let fullPath: String
+        if filePath.hasPrefix("/") {
+            fullPath = filePath
+        } else if !repositoryPath.isEmpty {
+            fullPath = (repositoryPath as NSString).appendingPathComponent(filePath)
+        } else {
+            fullPath = filePath
+        }
+
+        if let content = try? String(contentsOfFile: fullPath, encoding: .utf8) {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(content, forType: .string)
         }
     }
 }
@@ -2039,4 +2146,421 @@ struct TreeNodeView: View {
 extension Notification.Name {
     static let ignoreFile = Notification.Name("ignoreFile")
     static let assumeUnchanged = Notification.Name("assumeUnchanged")
+    static let stopTrackingFile = Notification.Name("stopTrackingFile")
+}
+
+// MARK: - File Preview View
+
+struct FilePreviewView: View {
+    let filePath: String
+    let repositoryPath: String
+    @State private var content: String = ""
+    @State private var isLoading = true
+    @State private var error: String?
+    @State private var isBinary = false
+    @State private var fileSize: Int64 = 0
+    @State private var copyFeedback = false
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            previewHeader
+
+            Divider()
+
+            // Content
+            if isLoading {
+                ProgressView("Loading file...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let error = error {
+                previewErrorView(error)
+            } else if isBinary {
+                binaryFileView
+            } else {
+                textContentView
+            }
+        }
+        .frame(minWidth: 600, minHeight: 400)
+        .task {
+            await loadFile()
+        }
+    }
+
+    // MARK: - Header
+
+    private var previewHeader: some View {
+        HStack(spacing: 12) {
+            // File icon
+            PreviewFileTypeIcon(filename: previewFilename)
+                .frame(width: 24, height: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(previewFilename)
+                    .font(.system(size: 14, weight: .semibold))
+
+                Text(previewDirectory)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            // File info badges
+            HStack(spacing: 8) {
+                if fileSize > 0 {
+                    Text(formatFileSize(fileSize))
+                        .font(.system(size: 10))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.secondary.opacity(0.1))
+                        .cornerRadius(4)
+                }
+
+                Text(previewFileExtension.uppercased())
+                    .font(.system(size: 10, weight: .medium))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(languageColor.opacity(0.2))
+                    .foregroundColor(languageColor)
+                    .cornerRadius(4)
+            }
+
+            // Actions
+            HStack(spacing: 4) {
+                // Copy button
+                Button {
+                    copyPreviewContent()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: copyFeedback ? "checkmark" : "doc.on.doc")
+                        Text(copyFeedback ? "Copied!" : "Copy")
+                    }
+                    .font(.system(size: 12))
+                }
+                .buttonStyle(.bordered)
+                .disabled(isBinary || content.isEmpty)
+
+                // Open in default app
+                Button {
+                    NSWorkspace.shared.open(URL(fileURLWithPath: fullPath))
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.forward.app")
+                        Text("Open")
+                    }
+                    .font(.system(size: 12))
+                }
+                .buttonStyle(.bordered)
+
+                // Reveal in Finder
+                Button {
+                    NSWorkspace.shared.selectFile(fullPath, inFileViewerRootedAtPath: "")
+                } label: {
+                    Image(systemName: "folder")
+                        .font(.system(size: 12))
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+        .padding(12)
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    // MARK: - Content Views
+
+    private var textContentView: some View {
+        ScrollView([.horizontal, .vertical]) {
+            Text(content)
+                .font(.system(size: 12, design: .monospaced))
+                .textSelection(.enabled)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .background(Color(NSColor.textBackgroundColor))
+    }
+
+    private var binaryFileView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "doc.fill")
+                .font(.system(size: 48))
+                .foregroundColor(.secondary)
+
+            Text("Binary File")
+                .font(.system(size: 16, weight: .semibold))
+
+            Text("This file cannot be previewed as text")
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+
+            Button {
+                NSWorkspace.shared.open(URL(fileURLWithPath: fullPath))
+            } label: {
+                Label("Open with Default App", systemImage: "arrow.up.forward.app")
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func previewErrorView(_ message: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 32))
+                .foregroundColor(.orange)
+
+            Text("Unable to load file")
+                .font(.system(size: 14, weight: .medium))
+
+            Text(message)
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Computed Properties
+
+    private var fullPath: String {
+        if filePath.hasPrefix("/") {
+            return filePath
+        }
+        return (repositoryPath as NSString).appendingPathComponent(filePath)
+    }
+
+    private var previewFilename: String {
+        URL(fileURLWithPath: filePath).lastPathComponent
+    }
+
+    private var previewDirectory: String {
+        URL(fileURLWithPath: filePath).deletingLastPathComponent().path
+    }
+
+    private var previewFileExtension: String {
+        URL(fileURLWithPath: filePath).pathExtension.lowercased()
+    }
+
+    private var languageColor: Color {
+        switch previewFileExtension {
+        case "swift": return .orange
+        case "sql": return .blue
+        case "json": return .green
+        case "xml", "html": return .purple
+        case "css", "scss": return .pink
+        case "js", "ts", "tsx", "jsx": return .yellow
+        case "py": return .blue
+        case "rb": return .red
+        case "go": return .cyan
+        case "rs": return .orange
+        case "md", "txt": return .gray
+        case "yml", "yaml": return .red
+        case "sh", "bash", "zsh": return .green
+        default: return .secondary
+        }
+    }
+
+    // MARK: - Actions
+
+    private func loadFile() async {
+        isLoading = true
+
+        let url = URL(fileURLWithPath: fullPath)
+
+        // Check file size
+        if let attrs = try? FileManager.default.attributesOfItem(atPath: fullPath),
+           let size = attrs[.size] as? Int64 {
+            fileSize = size
+
+            // Limit preview to 5MB
+            if size > 5_000_000 {
+                error = "File is too large to preview (\(formatFileSize(size)))"
+                isLoading = false
+                return
+            }
+        }
+
+        // Check if binary
+        if FilePreviewHelper.isBinaryFile(at: fullPath) {
+            isBinary = true
+            isLoading = false
+            return
+        }
+
+        // Load content
+        do {
+            content = try String(contentsOf: url, encoding: .utf8)
+        } catch {
+            // Try other encodings
+            if let data = FileManager.default.contents(atPath: fullPath) {
+                if let str = String(data: data, encoding: .isoLatin1) {
+                    content = str
+                } else if let str = String(data: data, encoding: .ascii) {
+                    content = str
+                } else {
+                    self.error = "Unable to read file: unsupported encoding"
+                }
+            } else {
+                self.error = error.localizedDescription
+            }
+        }
+
+        isLoading = false
+    }
+
+    private func copyPreviewContent() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(content, forType: .string)
+
+        withAnimation {
+            copyFeedback = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation {
+                copyFeedback = false
+            }
+        }
+    }
+
+    private func formatFileSize(_ bytes: Int64) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: bytes)
+    }
+}
+
+// MARK: - Preview File Type Icon
+
+struct PreviewFileTypeIcon: View {
+    let filename: String
+
+    var body: some View {
+        Image(systemName: iconName)
+            .foregroundColor(iconColor)
+    }
+
+    private var previewFileExtension: String {
+        URL(fileURLWithPath: filename).pathExtension.lowercased()
+    }
+
+    private var iconName: String {
+        switch previewFileExtension {
+        case "swift": return "swift"
+        case "sql": return "cylinder.split.1x2"
+        case "json": return "curlybraces"
+        case "xml", "html": return "chevron.left.forwardslash.chevron.right"
+        case "css", "scss": return "paintbrush"
+        case "js", "ts", "tsx", "jsx": return "j.square"
+        case "py": return "p.square"
+        case "rb": return "r.square"
+        case "go": return "g.square"
+        case "md": return "doc.text"
+        case "txt": return "doc.plaintext"
+        case "yml", "yaml": return "list.bullet.indent"
+        case "sh", "bash", "zsh": return "terminal"
+        case "png", "jpg", "jpeg", "gif", "svg", "webp": return "photo"
+        case "pdf": return "doc.richtext"
+        case "zip", "tar", "gz", "rar": return "archivebox"
+        case "mp3", "wav", "m4a": return "waveform"
+        case "mp4", "mov", "avi": return "film"
+        default: return "doc.fill"
+        }
+    }
+
+    private var iconColor: Color {
+        switch previewFileExtension {
+        case "swift": return .orange
+        case "sql": return .blue
+        case "json": return .green
+        case "xml", "html": return .purple
+        case "css", "scss": return .pink
+        case "js", "ts", "tsx", "jsx": return .yellow
+        case "py": return .blue
+        case "rb": return .red
+        case "go": return .cyan
+        case "md", "txt": return .gray
+        case "yml", "yaml": return .red
+        case "sh", "bash", "zsh": return .green
+        case "png", "jpg", "jpeg", "gif", "svg", "webp": return .purple
+        case "pdf": return .red
+        default: return .blue
+        }
+    }
+}
+
+// MARK: - File Preview Helper
+
+enum FilePreviewHelper {
+    // Common text file extensions
+    static let textExtensions: Set<String> = [
+        "txt", "md", "markdown", "rst", "rtf",
+        "sql", "json", "xml", "html", "htm", "css", "scss", "sass", "less",
+        "js", "jsx", "ts", "tsx", "mjs", "cjs",
+        "py", "pyw", "pyi", "rb", "rake", "gemspec",
+        "swift", "m", "mm", "h", "c", "cpp", "cc", "cxx", "hpp",
+        "java", "kt", "kts", "scala", "groovy",
+        "go", "rs", "zig", "nim",
+        "php", "phtml", "twig", "blade",
+        "sh", "bash", "zsh", "fish", "ps1", "bat", "cmd",
+        "yml", "yaml", "toml", "ini", "cfg", "conf", "config",
+        "env", "envrc", "editorconfig", "gitignore", "gitattributes",
+        "dockerfile", "makefile", "cmake", "gradle",
+        "csv", "tsv", "log", "diff", "patch"
+    ]
+
+    // Binary file extensions
+    static let binaryExtensions: Set<String> = [
+        "png", "jpg", "jpeg", "gif", "bmp", "ico", "icns", "webp", "tiff", "tif", "svg",
+        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+        "zip", "tar", "gz", "bz2", "xz", "7z", "rar",
+        "exe", "dll", "so", "dylib", "a", "o", "obj",
+        "mp3", "wav", "m4a", "flac", "aac", "ogg",
+        "mp4", "mov", "avi", "mkv", "webm",
+        "ttf", "otf", "woff", "woff2", "eot",
+        "sqlite", "db", "mdb",
+        "class", "jar", "war",
+        "pyc", "pyo", "beam",
+        "wasm"
+    ]
+
+    static func isBinaryFile(at path: String) -> Bool {
+        let ext = URL(fileURLWithPath: path).pathExtension.lowercased()
+
+        // Check known extensions first
+        if textExtensions.contains(ext) {
+            return false
+        }
+        if binaryExtensions.contains(ext) {
+            return true
+        }
+
+        // Check file content for binary bytes
+        guard let fileHandle = FileHandle(forReadingAtPath: path) else {
+            return false
+        }
+        defer { try? fileHandle.close() }
+
+        // Read first 8KB to check for binary content
+        let data = fileHandle.readData(ofLength: 8192)
+
+        // Check for null bytes (common indicator of binary files)
+        if data.contains(0x00) {
+            return true
+        }
+
+        // Check for high ratio of non-printable characters
+        let nonPrintableCount = data.filter { byte in
+            // Allow common text bytes: tab, newline, carriage return, and printable ASCII
+            byte != 0x09 && byte != 0x0A && byte != 0x0D && (byte < 0x20 || byte > 0x7E)
+        }.count
+
+        let ratio = Double(nonPrintableCount) / Double(max(data.count, 1))
+        return ratio > 0.3
+    }
+
+    static func canPreview(filename: String) -> Bool {
+        let ext = URL(fileURLWithPath: filename).pathExtension.lowercased()
+        return textExtensions.contains(ext)
+    }
 }

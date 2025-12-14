@@ -76,83 +76,152 @@ class FileWatcher: ObservableObject {
     }
 }
 
+// MARK: - Repository Change Signal
+
+/// Differentiated change signals from file watcher for incremental updates
+enum RepositoryChangeSignal: String, CaseIterable {
+    case status          // index or working dir changed - refresh status only
+    case head            // HEAD changed (checkout, commit) - refresh head + commits
+    case refs            // branches/tags changed - refresh refs only
+    case stash           // stash reflog changed - refresh stashes only
+    case config          // .git/config changed - may need full refresh
+    case full            // unknown change, full refresh needed
+}
+
 /// Watches a Git repository's .git directory and working directory for changes
+/// Emits differentiated signals for incremental updates
 class GitRepositoryWatcher: ObservableObject {
+    // Legacy properties for backward compatibility
     @Published var hasChanges = false
     @Published var headChanged = false
 
-    private var gitDirWatcher: FileWatcher?
-    private var workingDirWatcher: RecursiveDirectoryWatcher?
+    // New differentiated signal
+    @Published private(set) var lastSignal: RepositoryChangeSignal?
+
+    // Signal stream for async consumers
+    private var signalContinuation: AsyncStream<RepositoryChangeSignal>.Continuation?
+    private(set) var signalStream: AsyncStream<RepositoryChangeSignal>!
+
     private var headWatcher: FileWatcher?
     private var indexWatcher: FileWatcher?
+    private var stashWatcher: FileWatcher?
+    private var configWatcher: FileWatcher?
+    private var refsWatcher: RecursiveDirectoryWatcher?
+    private var workingDirWatcher: RecursiveDirectoryWatcher?
 
     private var cancellables = Set<AnyCancellable>()
     private let repositoryPath: String
+    private let debounceInterval: TimeInterval
 
-    init(repositoryPath: String) {
+    init(repositoryPath: String, debounceInterval: TimeInterval = 0.2) {
         self.repositoryPath = repositoryPath
+        self.debounceInterval = debounceInterval
+
+        // Setup signal stream
+        signalStream = AsyncStream { [weak self] continuation in
+            self?.signalContinuation = continuation
+        }
+
         setupWatchers()
     }
 
     deinit {
         stopAll()
+        signalContinuation?.finish()
     }
 
     private func setupWatchers() {
         let gitDir = (repositoryPath as NSString).appendingPathComponent(".git")
+        let fm = FileManager.default
 
-        // Watch .git directory
-        gitDirWatcher = FileWatcher(path: gitDir)
-        gitDirWatcher?.$lastChange
-            .debounce(for: .milliseconds(100), scheduler: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.hasChanges = true
-            }
-            .store(in: &cancellables)
-
-        // Watch HEAD file
+        // Watch HEAD file -> .head signal
         let headPath = (gitDir as NSString).appendingPathComponent("HEAD")
         headWatcher = FileWatcher(path: headPath)
         headWatcher?.$lastChange
-            .debounce(for: .milliseconds(100), scheduler: RunLoop.main)
+            .debounce(for: .milliseconds(Int(debounceInterval * 1000)), scheduler: RunLoop.main)
             .sink { [weak self] _ in
+                self?.emitSignal(.head)
                 self?.headChanged = true
             }
             .store(in: &cancellables)
 
-        // Watch index file (staging area)
+        // Watch index file (staging area) -> .status signal
         let indexPath = (gitDir as NSString).appendingPathComponent("index")
         indexWatcher = FileWatcher(path: indexPath)
         indexWatcher?.$lastChange
-            .debounce(for: .milliseconds(100), scheduler: RunLoop.main)
+            .debounce(for: .milliseconds(Int(debounceInterval * 1000)), scheduler: RunLoop.main)
             .sink { [weak self] _ in
-                self?.hasChanges = true
+                self?.emitSignal(.status)
             }
             .store(in: &cancellables)
 
-        // Watch working directory for file changes (detects edits to tracked files)
+        // Watch stash reflog -> .stash signal
+        let stashLogPath = (gitDir as NSString).appendingPathComponent("logs/refs/stash")
+        if fm.fileExists(atPath: stashLogPath) {
+            stashWatcher = FileWatcher(path: stashLogPath)
+            stashWatcher?.$lastChange
+                .debounce(for: .milliseconds(Int(debounceInterval * 1000)), scheduler: RunLoop.main)
+                .sink { [weak self] _ in
+                    self?.emitSignal(.stash)
+                }
+                .store(in: &cancellables)
+        }
+
+        // Watch config file -> .config signal
+        let configPath = (gitDir as NSString).appendingPathComponent("config")
+        configWatcher = FileWatcher(path: configPath)
+        configWatcher?.$lastChange
+            .debounce(for: .milliseconds(Int(debounceInterval * 1000)), scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.emitSignal(.config)
+            }
+            .store(in: &cancellables)
+
+        // Watch refs directory for branch/tag changes -> .refs signal
+        let refsPath = (gitDir as NSString).appendingPathComponent("refs")
+        if fm.fileExists(atPath: refsPath) {
+            refsWatcher = RecursiveDirectoryWatcher(
+                paths: [refsPath],
+                latency: debounceInterval,
+                excludePaths: []
+            ) { [weak self] in
+                self?.emitSignal(.refs)
+            }
+        }
+
+        // Watch working directory for file changes -> .status signal
         workingDirWatcher = RecursiveDirectoryWatcher(
             paths: [repositoryPath],
-            latency: 0.3,
-            excludePaths: [".git", "node_modules", ".build", "DerivedData", "Pods", ".swiftpm"]
+            latency: debounceInterval,
+            excludePaths: [".git", "node_modules", ".build", "DerivedData", "Pods", ".swiftpm", "vendor", "__pycache__", ".pytest_cache"]
         ) { [weak self] in
-            self?.hasChanges = true
+            self?.emitSignal(.status)
         }
+    }
+
+    private func emitSignal(_ signal: RepositoryChangeSignal) {
+        lastSignal = signal
+        hasChanges = true
+        signalContinuation?.yield(signal)
     }
 
     /// Start all watchers
     func startAll() {
-        gitDirWatcher?.start()
         headWatcher?.start()
         indexWatcher?.start()
+        stashWatcher?.start()
+        configWatcher?.start()
+        refsWatcher?.start()
         workingDirWatcher?.start()
     }
 
     /// Stop all watchers
     func stopAll() {
-        gitDirWatcher?.stop()
         headWatcher?.stop()
         indexWatcher?.stop()
+        stashWatcher?.stop()
+        configWatcher?.stop()
+        refsWatcher?.stop()
         workingDirWatcher?.stop()
     }
 
@@ -160,6 +229,14 @@ class GitRepositoryWatcher: ObservableObject {
     func acknowledgeChanges() {
         hasChanges = false
         headChanged = false
+        lastSignal = nil
+    }
+
+    /// Get pending signals and clear them
+    func consumeSignal() -> RepositoryChangeSignal? {
+        let signal = lastSignal
+        lastSignal = nil
+        return signal
     }
 }
 

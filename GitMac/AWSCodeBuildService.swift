@@ -91,8 +91,20 @@ struct CodeBuild: Identifiable, Codable {
 struct AWSCodeBuildView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = AWSCodeBuildViewModel()
+    @StateObject private var workspaceManager = WorkspaceSettingsManager.shared
     @State private var selectedFilter: AWSBuildFilter = .all
     @State private var selectedProject: String = ""
+
+    // Get assigned project for current repo
+    private var assignedProject: String? {
+        guard let repoPath = appState.currentRepository?.path else { return nil }
+        return workspaceManager.getConfig(for: repoPath).codeBuildProjectName
+    }
+
+    // Effective project filter (assigned or manual selection)
+    private var effectiveProjectFilter: String {
+        assignedProject ?? selectedProject
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -106,6 +118,16 @@ struct AWSCodeBuildView: View {
 
                 Spacer()
 
+                if let project = assignedProject {
+                    Text(project)
+                        .font(.system(size: 10))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.green)
+                        .cornerRadius(4)
+                }
+
                 if viewModel.isConfigured {
                     Text(viewModel.region)
                         .font(.system(size: 10))
@@ -117,7 +139,7 @@ struct AWSCodeBuildView: View {
                 }
 
                 Button {
-                    Task { await viewModel.refresh() }
+                    Task { await viewModel.refresh(projectFilter: assignedProject) }
                 } label: {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 11))
@@ -134,8 +156,8 @@ struct AWSCodeBuildView: View {
             } else if viewModel.error != nil {
                 errorView
             } else {
-                // Project filter
-                if !viewModel.projects.isEmpty {
+                // Project filter (only show if no assigned project)
+                if assignedProject == nil && !viewModel.projects.isEmpty {
                     HStack {
                         Picker("Project", selection: $selectedProject) {
                             Text("All Projects").tag("")
@@ -149,6 +171,26 @@ struct AWSCodeBuildView: View {
                         Spacer()
 
                         // Status filters
+                        HStack(spacing: 4) {
+                            ForEach(AWSBuildFilter.allCases, id: \.self) { filter in
+                                FilterChip(
+                                    title: filter.title,
+                                    isSelected: selectedFilter == filter,
+                                    color: filter.color
+                                ) {
+                                    selectedFilter = filter
+                                }
+                            }
+                        }
+                    }
+                    .padding(8)
+                } else if assignedProject != nil {
+                    // Just status filters when project is assigned
+                    HStack {
+                        Text("Showing builds for assigned project")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
                         HStack(spacing: 4) {
                             ForEach(AWSBuildFilter.allCases, id: \.self) { filter in
                                 FilterChip(
@@ -201,15 +243,22 @@ struct AWSCodeBuildView: View {
         }
         .task {
             await viewModel.loadCredentials()
-            await viewModel.refresh()
+            await viewModel.refresh(projectFilter: assignedProject)
+        }
+        .onChange(of: appState.currentRepository?.path) { _, _ in
+            // Refresh when repository changes
+            Task {
+                await viewModel.refresh(projectFilter: assignedProject)
+            }
         }
     }
 
     private var filteredBuilds: [CodeBuild] {
         var builds = viewModel.builds
 
-        if !selectedProject.isEmpty {
-            builds = builds.filter { $0.projectName == selectedProject }
+        // Filter by assigned project or manual selection
+        if !effectiveProjectFilter.isEmpty {
+            builds = builds.filter { $0.projectName == effectiveProjectFilter }
         }
 
         switch selectedFilter {
@@ -489,45 +538,164 @@ class AWSCodeBuildViewModel: ObservableObject {
         isConfigured = !accessKeyId.isEmpty && !secretAccessKey.isEmpty
     }
 
-    func refresh() async {
+    func refresh(projectFilter: String? = nil) async {
         guard isConfigured else { return }
 
-        isLoading = true
-        error = nil
+        await MainActor.run { isLoading = true; error = nil }
 
-        // Note: Full AWS SDK integration would require the AWS SDK for Swift
-        // For now, we use a simplified approach with direct API calls
+        // Load builds first (priority) - filter by project if specified (much faster!)
+        var buildIds: [String] = []
 
-        // In production, you would use:
-        // import AWSSDKForSwift
-        // let client = try CodeBuildClient(region: region)
-        // let response = try await client.listBuilds(input: ListBuildsInput())
+        if let filter = projectFilter, !filter.isEmpty {
+            // Fast path: only get builds for the assigned project (limit to 10)
+            let buildsResult = runAWSCommand(["codebuild", "list-builds-for-project", "--project-name", filter, "--max-items", "10", "--output", "json"])
+            if buildsResult.success {
+                if let data = buildsResult.output.data(using: .utf8),
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let ids = json["ids"] as? [String] {
+                    buildIds = ids
+                }
+            }
+        } else {
+            // Get only recent builds (limit to 5 for speed)
+            let buildsResult = runAWSCommand(["codebuild", "list-builds", "--max-items", "5", "--output", "json"])
+            if buildsResult.success {
+                if let data = buildsResult.output.data(using: .utf8),
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let ids = json["ids"] as? [String] {
+                    buildIds = ids
+                }
+            }
+        }
 
-        // Simulated data for demonstration
-        // Replace with actual AWS SDK calls
-        await simulateAWSFetch()
+        if !buildIds.isEmpty {
+            // Get build details (only fetch what we have)
+            let idsToFetch = Array(buildIds.prefix(10))
+            let detailsResult = runAWSCommand(["codebuild", "batch-get-builds", "--ids"] + idsToFetch + ["--output", "json"])
 
-        isLoading = false
+            if detailsResult.success {
+                if let detailsData = detailsResult.output.data(using: .utf8),
+                   let detailsJson = try? JSONSerialization.jsonObject(with: detailsData) as? [String: Any],
+                   let buildsArray = detailsJson["builds"] as? [[String: Any]] {
+
+                    var loadedBuilds: [CodeBuild] = []
+
+                    for buildDict in buildsArray {
+                        let id = buildDict["id"] as? String ?? ""
+                        let arn = buildDict["arn"] as? String ?? ""
+                        let buildNumber = buildDict["buildNumber"] as? Int
+                        let buildStatus = buildDict["buildStatus"] as? String ?? "UNKNOWN"
+                        let projectName = buildDict["projectName"] as? String ?? ""
+                        let sourceVersion = buildDict["sourceVersion"] as? String
+                        let currentPhase = buildDict["currentPhase"] as? String
+                        let initiator = buildDict["initiator"] as? String
+
+                        var startTime: Date?
+                        var endTime: Date?
+
+                        if let startTimeNum = buildDict["startTime"] as? Double {
+                            startTime = Date(timeIntervalSince1970: startTimeNum)
+                        }
+                        if let endTimeNum = buildDict["endTime"] as? Double {
+                            endTime = Date(timeIntervalSince1970: endTimeNum)
+                        }
+
+                        loadedBuilds.append(CodeBuild(
+                            id: id,
+                            arn: arn,
+                            buildNumber: buildNumber,
+                            buildStatus: buildStatus,
+                            projectName: projectName,
+                            sourceVersion: sourceVersion,
+                            startTime: startTime,
+                            endTime: endTime,
+                            currentPhase: currentPhase,
+                            initiator: initiator
+                        ))
+                    }
+                    await MainActor.run { builds = loadedBuilds }
+                }
+            } else {
+                await MainActor.run { error = detailsResult.output }
+            }
+        } else {
+            // No builds found - clear the list
+            await MainActor.run { builds = [] }
+        }
+
+        // Load projects (for picker, after builds are loaded)
+        let projectsResult = runAWSCommand(["codebuild", "list-projects", "--output", "json"])
+        if projectsResult.success {
+            if let data = projectsResult.output.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let projectNames = json["projects"] as? [String] {
+                let currentRegion = region
+                var loadedProjects: [CodeBuildProject] = []
+                for name in projectNames {
+                    loadedProjects.append(CodeBuildProject(
+                        name: name,
+                        arn: "arn:aws:codebuild:\(currentRegion):project/\(name)",
+                        description: nil,
+                        sourceType: nil,
+                        lastBuildStatus: nil
+                    ))
+                }
+                await MainActor.run { projects = loadedProjects }
+            }
+        }
+
+        await MainActor.run { isLoading = false }
     }
 
-    private func simulateAWSFetch() async {
-        // This is a placeholder - in production use AWS SDK
-        // The real implementation would make authenticated API calls
+    private func runAWSCommand(_ arguments: [String], timeout: TimeInterval = 10) -> (success: Bool, output: String) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/opt/homebrew/bin/aws")
+        process.arguments = arguments
 
-        // For now, show a message that AWS SDK is needed
-        if builds.isEmpty {
-            error = "AWS SDK integration required. Install aws-sdk-swift package for full functionality."
+        let pipe = Pipe()
+        let errorPipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = errorPipe
+
+        do {
+            try process.run()
+
+            // Add timeout
+            let deadline = Date().addingTimeInterval(timeout)
+            while process.isRunning && Date() < deadline {
+                Thread.sleep(forTimeInterval: 0.1)
+            }
+
+            if process.isRunning {
+                process.terminate()
+                return (false, "Command timed out after \(Int(timeout))s")
+            }
+
+            let outputData = pipe.fileHandleForReading.readDataToEndOfFile()
+            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+
+            let output = String(data: outputData, encoding: .utf8) ?? ""
+            let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
+
+            if process.terminationStatus == 0 {
+                return (true, output)
+            } else {
+                return (false, errorOutput.isEmpty ? output : errorOutput)
+            }
+        } catch {
+            return (false, error.localizedDescription)
         }
     }
 
     func startBuild(projectName: String) async {
         guard isConfigured else { return }
 
-        isLoading = true
+        await MainActor.run { isLoading = true }
 
-        // AWS SDK call would go here:
-        // let input = StartBuildInput(projectName: projectName)
-        // let response = try await client.startBuild(input: input)
+        let result = runAWSCommand(["codebuild", "start-build", "--project-name", projectName])
+        if !result.success {
+            await MainActor.run { error = result.output }
+        }
 
         await refresh()
     }
@@ -535,11 +703,12 @@ class AWSCodeBuildViewModel: ObservableObject {
     func stopBuild(buildId: String) async {
         guard isConfigured else { return }
 
-        isLoading = true
+        await MainActor.run { isLoading = true }
 
-        // AWS SDK call would go here:
-        // let input = StopBuildInput(id: buildId)
-        // try await client.stopBuild(input: input)
+        let result = runAWSCommand(["codebuild", "stop-build", "--id", buildId])
+        if !result.success {
+            await MainActor.run { error = result.output }
+        }
 
         await refresh()
     }

@@ -84,6 +84,16 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .merge)) { _ in
             showMergeSheet = true
         }
+        // File ignore/tracking handlers
+        .onReceive(NotificationCenter.default.publisher(for: .ignoreFile)) { notification in
+            handleIgnoreFile(notification)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .assumeUnchanged)) { notification in
+            handleAssumeUnchanged(notification)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .stopTrackingFile)) { notification in
+            handleStopTrackingFile(notification)
+        }
         .sheet(isPresented: $showNewBranchSheet) {
             CreateBranchSheet(isPresented: $showNewBranchSheet)
                 .environmentObject(appState)
@@ -222,6 +232,116 @@ struct ContentView: View {
                 await appState.refresh()
             } catch {
                 appState.errorMessage = "Stash pop failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    // MARK: - File Ignore/Tracking Handlers
+
+    private func handleIgnoreFile(_ notification: Notification) {
+        guard let repoPath = appState.currentRepository?.path else { return }
+
+        Task {
+            do {
+                let gitignorePath = "\(repoPath)/.gitignore"
+                var currentContent = ""
+
+                // Read existing .gitignore content
+                if FileManager.default.fileExists(atPath: gitignorePath) {
+                    currentContent = try String(contentsOfFile: gitignorePath, encoding: .utf8)
+                    if !currentContent.hasSuffix("\n") {
+                        currentContent += "\n"
+                    }
+                }
+
+                var entryToAdd = ""
+
+                // Handle different ignore types (GitKraken style)
+                if let info = notification.object as? [String: String] {
+                    let type = info["type"] ?? "file"
+                    let filePath = info["path"] ?? ""
+
+                    switch type {
+                    case "extension":
+                        let ext = info["extension"] ?? URL(fileURLWithPath: filePath).pathExtension
+                        entryToAdd = "*.\(ext)"
+                    case "directory":
+                        let dir = info["directory"] ?? URL(fileURLWithPath: filePath).deletingLastPathComponent().lastPathComponent
+                        // Make path relative to repo
+                        let relativePath = dir.replacingOccurrences(of: repoPath + "/", with: "")
+                        entryToAdd = "\(relativePath)/"
+                    default:
+                        // Single file - make path relative to repo
+                        let relativePath = filePath.replacingOccurrences(of: repoPath + "/", with: "")
+                        entryToAdd = relativePath
+                    }
+                } else if let filePath = notification.object as? String {
+                    // Legacy: simple file path
+                    let relativePath = filePath.replacingOccurrences(of: repoPath + "/", with: "")
+                    entryToAdd = relativePath
+                }
+
+                // Check if entry already exists
+                let lines = currentContent.components(separatedBy: "\n")
+                if !lines.contains(entryToAdd) {
+                    currentContent += entryToAdd + "\n"
+                    try currentContent.write(toFile: gitignorePath, atomically: true, encoding: .utf8)
+                }
+
+                await appState.refresh()
+                NotificationCenter.default.post(name: .repositoryDidRefresh, object: repoPath)
+            } catch {
+                await MainActor.run {
+                    appState.errorMessage = "Failed to add to .gitignore: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+
+    private func handleAssumeUnchanged(_ notification: Notification) {
+        guard let repoPath = appState.currentRepository?.path,
+              let filePath = notification.object as? String else { return }
+
+        Task {
+            let shell = ShellExecutor()
+            let relativePath = filePath.replacingOccurrences(of: repoPath + "/", with: "")
+            let result = await shell.execute(
+                "git",
+                arguments: ["update-index", "--assume-unchanged", relativePath],
+                workingDirectory: repoPath
+            )
+
+            if result.exitCode != 0 {
+                await MainActor.run {
+                    appState.errorMessage = "Failed to assume unchanged: \(result.stderr)"
+                }
+            } else {
+                await appState.refresh()
+                NotificationCenter.default.post(name: .repositoryDidRefresh, object: repoPath)
+            }
+        }
+    }
+
+    private func handleStopTrackingFile(_ notification: Notification) {
+        guard let repoPath = appState.currentRepository?.path,
+              let filePath = notification.object as? String else { return }
+
+        Task {
+            let shell = ShellExecutor()
+            let relativePath = filePath.replacingOccurrences(of: repoPath + "/", with: "")
+            let result = await shell.execute(
+                "git",
+                arguments: ["rm", "--cached", relativePath],
+                workingDirectory: repoPath
+            )
+
+            if result.exitCode != 0 {
+                await MainActor.run {
+                    appState.errorMessage = "Failed to stop tracking: \(result.stderr)"
+                }
+            } else {
+                await appState.refresh()
+                NotificationCenter.default.post(name: .repositoryDidRefresh, object: repoPath)
             }
         }
     }
@@ -404,6 +524,10 @@ struct GitKrakenLayout: View {
                 TextField("Search commits...", text: $searchText)
                     .frame(minWidth: 150, maxWidth: 250)
             }
+        }
+        .onChange(of: appState.activeTabId) { _, _ in
+            // Clear diff when switching repositories
+            selectedFileDiff = nil
         }
     }
 }
@@ -2356,6 +2480,7 @@ struct CommitDetailPanel: View {
                             ForEach(viewModel.changedFiles) { file in
                                 CommitFileRow(
                                     file: file,
+                                    repositoryPath: appState.currentRepository?.path ?? "",
                                     onSelect: { loadCommitFileDiff(file) }
                                 )
                             }
@@ -2718,7 +2843,7 @@ struct CommitFile: Identifiable {
     let deletions: Int
 
     enum CommitFileStatus {
-        case added, modified, deleted, renamed
+        case added, modified, deleted, renamed, copied
 
         var color: Color {
             switch self {
@@ -2726,6 +2851,7 @@ struct CommitFile: Identifiable {
             case .modified: return GitKrakenTheme.accentOrange
             case .deleted: return GitKrakenTheme.accentRed
             case .renamed: return GitKrakenTheme.accent
+            case .copied: return GitKrakenTheme.accent
             }
         }
 
@@ -2735,6 +2861,7 @@ struct CommitFile: Identifiable {
             case .modified: return "pencil"
             case .deleted: return "minus"
             case .renamed: return "arrow.right"
+            case .copied: return "doc.on.doc"
             }
         }
     }
@@ -2743,8 +2870,18 @@ struct CommitFile: Identifiable {
 // MARK: - Commit File Row
 struct CommitFileRow: View {
     let file: CommitFile
+    var repositoryPath: String = ""
     let onSelect: () -> Void
     @State private var isHovered = false
+    @State private var showPreview = false
+
+    private var filename: String {
+        (file.path as NSString).lastPathComponent
+    }
+
+    private var canPreview: Bool {
+        FilePreviewHelper.canPreview(filename: file.path)
+    }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -2760,7 +2897,7 @@ struct CommitFileRow: View {
                 .foregroundColor(.blue)
 
             // Filename
-            Text((file.path as NSString).lastPathComponent)
+            Text(filename)
                 .font(.system(size: 12))
                 .foregroundColor(GitKrakenTheme.textPrimary)
                 .lineLimit(1)
@@ -2785,6 +2922,67 @@ struct CommitFileRow: View {
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
         .onTapGesture { onSelect() }
+        .contextMenu {
+            // Preview and Copy Content (for text files)
+            if canPreview {
+                Button {
+                    showPreview = true
+                } label: {
+                    Label("Preview File", systemImage: "eye")
+                }
+
+                Button {
+                    copyFileContent()
+                } label: {
+                    Label("Copy Content", systemImage: "doc.on.clipboard")
+                }
+
+                Divider()
+            }
+
+            // Copy path options
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(file.path, forType: .string)
+            } label: {
+                Label("Copy Path", systemImage: "doc.on.doc")
+            }
+
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(filename, forType: .string)
+            } label: {
+                Label("Copy Filename", systemImage: "doc.text")
+            }
+
+            Divider()
+
+            // Open/Reveal options
+            Button {
+                let fullPath = (repositoryPath as NSString).appendingPathComponent(file.path)
+                NSWorkspace.shared.selectFile(fullPath, inFileViewerRootedAtPath: "")
+            } label: {
+                Label("Reveal in Finder", systemImage: "folder")
+            }
+
+            Button {
+                let fullPath = (repositoryPath as NSString).appendingPathComponent(file.path)
+                NSWorkspace.shared.open(URL(fileURLWithPath: fullPath))
+            } label: {
+                Label("Open with Default App", systemImage: "arrow.up.forward.app")
+            }
+        }
+        .sheet(isPresented: $showPreview) {
+            FilePreviewView(filePath: file.path, repositoryPath: repositoryPath)
+        }
+    }
+
+    private func copyFileContent() {
+        let fullPath = (repositoryPath as NSString).appendingPathComponent(file.path)
+        if let content = try? String(contentsOfFile: fullPath, encoding: .utf8) {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(content, forType: .string)
+        }
     }
 }
 
@@ -3371,8 +3569,6 @@ struct CommitSection: View {
                 aiError = nil
             }
 
-            // Check if there are staged changes
-            let engine = GitEngine()
             guard let path = repositoryPath else {
                 await MainActor.run {
                     isGeneratingAI = false
@@ -3382,8 +3578,26 @@ struct CommitSection: View {
             }
 
             do {
-                // Get staged diff
-                let diff = try await engine.getDiff(staged: true, at: path)
+                // First check if there are staged changes using git diff --cached --stat
+                let shell = ShellExecutor()
+                let statResult = await shell.execute("git", arguments: ["diff", "--cached", "--stat"], workingDirectory: path)
+
+                if statResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    await MainActor.run {
+                        isGeneratingAI = false
+                        aiError = "No staged changes"
+                    }
+                    return
+                }
+
+                // Get staged diff with limited output for AI
+                let diffResult = await shell.execute(
+                    "git",
+                    arguments: ["diff", "--cached", "-U2", "--no-color"],  // -U2 = less context
+                    workingDirectory: path
+                )
+
+                let diff = diffResult.stdout
                 if diff.isEmpty {
                     await MainActor.run {
                         isGeneratingAI = false
@@ -4235,10 +4449,8 @@ struct MergeBranchSheet: View {
     @State private var noFastForward = false
     @State private var isMerging = false
     @State private var errorMessage: String?
-
-    var localBranches: [Branch] {
-        appState.currentRepository?.branches.filter { !$0.isHead } ?? []
-    }
+    @State private var isLoadingBranches = false
+    @State private var availableBranches: [Branch] = []
 
     var currentBranchName: String {
         appState.currentRepository?.currentBranch?.name ?? "current branch"
@@ -4252,6 +4464,13 @@ struct MergeBranchSheet: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(GitKrakenTheme.textPrimary)
                 Spacer()
+
+                if isLoadingBranches {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                        .frame(width: 20, height: 20)
+                }
+
                 Button {
                     isPresented = false
                 } label: {
@@ -4276,12 +4495,13 @@ struct MergeBranchSheet: View {
 
                     Picker("", selection: $selectedBranch) {
                         Text("Select a branch...").tag("")
-                        ForEach(localBranches) { branch in
+                        ForEach(availableBranches) { branch in
                             Text(branch.name).tag(branch.name)
                         }
                     }
                     .pickerStyle(.menu)
                     .labelsHidden()
+                    .disabled(isLoadingBranches)
                 }
 
                 // Info
@@ -4348,6 +4568,29 @@ struct MergeBranchSheet: View {
         }
         .frame(width: 400, height: 300)
         .background(GitKrakenTheme.panel)
+        .task {
+            await loadBranches()
+        }
+    }
+
+    private func loadBranches() async {
+        isLoadingBranches = true
+        do {
+            // Force refresh to get latest branches after pull
+            try await appState.gitService.refresh()
+            let branches = try await appState.gitService.getBranches()
+            await MainActor.run {
+                // Filter out current branch (can't merge into itself)
+                availableBranches = branches.filter { !$0.isHead && !$0.isCurrent }
+                isLoadingBranches = false
+            }
+        } catch {
+            await MainActor.run {
+                // Fallback to cached branches
+                availableBranches = appState.currentRepository?.branches.filter { !$0.isHead } ?? []
+                isLoadingBranches = false
+            }
+        }
     }
 
     private func mergeBranch() {

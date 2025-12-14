@@ -167,6 +167,26 @@ struct DiffHunk: Identifiable {
     let newStart: Int
     let newLines: Int
     let lines: [DiffLine]
+    
+    // Large File Mode: byte offsets in the original diff output
+    let byteOffsets: (start: Int, end: Int)?
+    
+    // Estimated line count (for hunks not yet materialized)
+    var estimatedLineCount: Int {
+        byteOffsets != nil ? oldLines + newLines : lines.count
+    }
+    
+    // UI state: whether this hunk is collapsed
+    var isCollapsed: Bool = false
+    
+    // Statistics
+    var additions: Int {
+        lines.filter { $0.type == .addition }.count
+    }
+    
+    var deletions: Int {
+        lines.filter { $0.type == .deletion }.count
+    }
 
     init(
         header: String,
@@ -174,7 +194,8 @@ struct DiffHunk: Identifiable {
         oldLines: Int,
         newStart: Int,
         newLines: Int,
-        lines: [DiffLine]
+        lines: [DiffLine],
+        byteOffsets: (start: Int, end: Int)? = nil
     ) {
         self.id = UUID()
         self.header = header
@@ -183,6 +204,7 @@ struct DiffHunk: Identifiable {
         self.newStart = newStart
         self.newLines = newLines
         self.lines = lines
+        self.byteOffsets = byteOffsets
     }
 }
 
@@ -192,13 +214,32 @@ struct DiffLine: Identifiable {
     let content: String
     let oldLineNumber: Int?
     let newLineNumber: Int?
+    
+    // Large File Mode: byte offsets in the original diff output (if not materialized)
+    let byteOffset: (start: Int, end: Int)?
+    
+    // Optional: intraline change ranges (for word-level diff)
+    let intralineRanges: [NSRange]?
+    
+    var isMaterialized: Bool {
+        byteOffset == nil
+    }
 
-    init(type: DiffLineType, content: String, oldLineNumber: Int?, newLineNumber: Int?) {
+    init(
+        type: DiffLineType,
+        content: String,
+        oldLineNumber: Int?,
+        newLineNumber: Int?,
+        byteOffset: (start: Int, end: Int)? = nil,
+        intralineRanges: [NSRange]? = nil
+    ) {
         self.id = UUID()
         self.type = type
         self.content = content
         self.oldLineNumber = oldLineNumber
         self.newLineNumber = newLineNumber
+        self.byteOffset = byteOffset
+        self.intralineRanges = intralineRanges
     }
 }
 
