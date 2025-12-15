@@ -217,13 +217,47 @@ struct DiffView: View {
     @State private var viewportHeight: CGFloat = 400
 
     // Calculate line count for accurate minimap
+    // Calculate line count for accurate minimap
     private var totalLineCount: Int {
         var count = 0
         for hunk in fileDiff.hunks {
             count += 1 // hunk header
-            count += hunk.lines.count
+
+            if viewMode == .inline || viewMode == .preview {
+                // Inline mode counts all lines
+                count += hunk.lines.count
+            } else {
+                // Split mode collapses deletions and additions into single rows
+                var i = 0
+                let lines = hunk.lines
+                while i < lines.count {
+                    let line = lines[i]
+                    if line.type == .context {
+                        count += 1
+                        i += 1
+                    } else if line.type == .deletion {
+                        var dels = 0
+                        while i < lines.count && lines[i].type == .deletion { dels += 1; i += 1 }
+                        var adds = 0
+                        while i < lines.count && lines[i].type == .addition { adds += 1; i += 1 }
+                        count += max(dels, adds)
+                    } else if line.type == .addition {
+                        count += 1
+                        i += 1
+                    } else {
+                         i += 1
+                    }
+                }
+            }
         }
         return max(count, 1)
+    }
+
+    // Threshold for "large file" - switch to optimized inline view
+    private let largeFileLineThreshold = 5000
+
+    private var isLargeFile: Bool {
+        totalLineCount > largeFileLineThreshold
     }
 
     // Estimated content height (22px per line)
@@ -260,16 +294,37 @@ struct DiffView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            DiffToolbar(
-                filename: fileDiff.displayPath,
-                additions: fileDiff.additions,
-                deletions: fileDiff.deletions,
-                viewMode: $viewMode,
-                showLineNumbers: $showLineNumbers,
-                wordWrap: $wordWrap,
-                isMarkdown: isMarkdown,
-                showMinimap: $showMinimap
-            )
+            HStack(spacing: 0) {
+                DiffToolbar(
+                    filename: fileDiff.displayPath,
+                    additions: fileDiff.additions,
+                    deletions: fileDiff.deletions,
+                    viewMode: $viewMode,
+                    showLineNumbers: $showLineNumbers,
+                    wordWrap: $wordWrap,
+                    isMarkdown: isMarkdown,
+                    showMinimap: $showMinimap
+                )
+
+                // Large File Mode indicator
+                if isLargeFile {
+                    HStack(spacing: 4) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 10))
+                        Text("LFM")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text("(\(totalLineCount) lines)")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(SwiftUI.Color.orange.opacity(0.15))
+                    .cornerRadius(4)
+                    .padding(.trailing, 8)
+                }
+            }
 
             Rectangle()
                 .fill(GitKrakenTheme.border)
@@ -278,6 +333,12 @@ struct DiffView: View {
             HStack(spacing: 0) {
                 if fileDiff.isBinary {
                     BinaryFileView(filename: fileDiff.displayPath, repoPath: repoPath)
+                } else if isLargeFile {
+                    // Use high-performance NSView-based rendering for large files
+                    LargeFileDiffViewWrapper(
+                        hunks: fileDiff.hunks,
+                        showLineNumbers: showLineNumbers
+                    )
                 } else {
                     switch viewMode {
                     case .split:
@@ -301,7 +362,7 @@ struct DiffView: View {
                     }
                 }
 
-                if showMinimap && !fileDiff.isBinary && viewMode != .preview {
+                if showMinimap && !fileDiff.isBinary && viewMode != .preview && !isLargeFile {
                     Rectangle()
                         .fill(GitKrakenTheme.border)
                         .frame(width: 1)
@@ -314,7 +375,8 @@ struct DiffView: View {
                     .frame(width: 60)
                 }
             }
-        }
+            }
+
         .background(GitKrakenTheme.background)
     }
 }
@@ -445,13 +507,15 @@ struct OptimizedSplitDiffView: View {
             ScrollView(.vertical, showsIndicators: true) {
                 let halfWidth = max(300, (outerGeo.size.width - 2) / 2)
 
-                LazyVStack(spacing: 0, pinnedViews: []) {
-                    // Scroll position tracker at the top
+                VStack(spacing: 0) {
+                    // Top Anchor for reliable scroll tracking
                     GeometryReader { geo in
-                        SwiftUI.Color.clear
-                            .preference(key: DiffScrollOffsetKey.self, value: -geo.frame(in: .global).minY + outerGeo.frame(in: .global).minY)
+                        SwiftUI.Color.red.opacity(0.001)
+                            .preference(key: DiffScrollOffsetKey.self, value: -geo.frame(in: .named("DiffScrollView")).minY)
                     }
-                    .frame(height: 0)
+                    .frame(height: 1) // Force render with non-zero height
+
+                    LazyVStack(spacing: 0, pinnedViews: []) {
 
                     ForEach(pairedLines) { pair in
                         HStack(spacing: 0) {
@@ -489,10 +553,15 @@ struct OptimizedSplitDiffView: View {
                                 .frame(width: halfWidth)
                             }
                         }
-                    }
-                }
+                    } // End LazyVStack
+                } // End VStack
             }
-            .onPreferenceChange(DiffScrollOffsetKey.self) { scrollOffset = max(0, $0) }
+            }
+            .coordinateSpace(name: "DiffScrollView")
+            .onPreferenceChange(DiffScrollOffsetKey.self) { val in
+                // print("Split Scroll Offset: \(val)") // DEBUG
+                scrollOffset = max(0, val)
+            }
             .onChange(of: outerGeo.size.height) { _, new in viewportHeight = new }
             .onAppear { viewportHeight = outerGeo.size.height }
         }
@@ -524,13 +593,15 @@ struct OptimizedInlineDiffView: View {
     var body: some View {
         GeometryReader { outerGeo in
             ScrollView(.vertical, showsIndicators: true) {
-                LazyVStack(spacing: 0) {
-                    // Scroll position tracker
+                VStack(spacing: 0) {
+                    // Top Anchor for reliable scroll tracking
                     GeometryReader { geo in
-                        SwiftUI.Color.clear
-                            .preference(key: DiffScrollOffsetKey.self, value: -geo.frame(in: .global).minY + outerGeo.frame(in: .global).minY)
+                        SwiftUI.Color.red.opacity(0.001)
+                            .preference(key: DiffScrollOffsetKey.self, value: -geo.frame(in: .named("DiffScrollView")).minY)
                     }
-                    .frame(height: 0)
+                    .frame(height: 1) // Force render
+
+                    LazyVStack(spacing: 0) {
 
                     ForEach(allLines) { item in
                         if let header = item.hunkHeader {
@@ -539,9 +610,13 @@ struct OptimizedInlineDiffView: View {
                             FastInlineLine(line: line, showLineNumber: showLineNumbers)
                         }
                     }
-                }
+                } // End LazyVStack
+                } // End VStack
             }
-            .onPreferenceChange(DiffScrollOffsetKey.self) { scrollOffset = max(0, $0) }
+            .coordinateSpace(name: "DiffScrollView")
+            .onPreferenceChange(DiffScrollOffsetKey.self) { val in
+                scrollOffset = max(0, val)
+            }
             .onChange(of: outerGeo.size.height) { _, new in viewportHeight = new }
             .onAppear { viewportHeight = outerGeo.size.height }
         }
@@ -574,6 +649,7 @@ struct FastHunkHeader: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(Color.cyan.opacity(0.1))
+            .frame(height: 22)
     }
 }
 
@@ -662,6 +738,7 @@ struct FastDiffLine: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 2)
         .background(backgroundColor)
+        .frame(height: 22)
     }
 
     private var shouldHighlightWords: Bool {
@@ -772,6 +849,7 @@ struct FastInlineLine: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 2)
         .background(backgroundColor)
+        .frame(height: 22)
     }
 
     private var indicator: String {
@@ -2189,17 +2267,50 @@ struct SyntaxHighlightedText: View {
 // MARK: - Diff Parser
 
 struct DiffParser {
+    /// Maximum lines to parse (prevents freezing on huge files)
+    private static let maxLinesToParse = 3000
+
+    /// Parse a unified diff string into FileDiff objects (ASYNC - runs on background thread)
+    static func parseAsync(_ diffString: String) async -> [FileDiff] {
+        // Run parsing on background thread to avoid UI freeze
+        return await Task.detached(priority: .userInitiated) {
+            parse(diffString)
+        }.value
+    }
+
     /// Parse a unified diff string into FileDiff objects
+    /// Limits parsing to maxLinesToParse for performance
     static func parse(_ diffString: String) -> [FileDiff] {
         var files: [FileDiff] = []
         var currentFile: (oldPath: String?, newPath: String, hunks: [DiffHunk], additions: Int, deletions: Int)?
         var currentHunk: (header: String, oldStart: Int, oldLines: Int, newStart: Int, newLines: Int, lines: [DiffLine])?
 
-        let lines = diffString.components(separatedBy: .newlines)
+        // For very large diffs, truncate the string first to avoid memory issues
+        // Use utf8.count which is O(1) for native strings
+        let maxBytes = 500_000 // ~500KB max
+        let truncatedString: String
+        var wasTruncated = false
+
+        if diffString.utf8.count > maxBytes {
+            // Truncate by taking prefix of utf8 bytes
+            truncatedString = String(diffString.utf8.prefix(maxBytes)) ?? String(diffString.prefix(maxBytes / 4))
+            wasTruncated = true
+        } else {
+            truncatedString = diffString
+        }
+
+        let lines = truncatedString.components(separatedBy: .newlines)
         var oldLineNum = 0
         var newLineNum = 0
+        var linesParsed = 0
 
         for line in lines {
+            // Limit lines parsed
+            linesParsed += 1
+            if linesParsed > maxLinesToParse {
+                wasTruncated = true
+                break
+            }
             if line.hasPrefix("diff --git") {
                 // Save previous file
                 if var file = currentFile {
@@ -2252,7 +2363,8 @@ struct DiffParser {
                 }
 
                 // Parse hunk header: @@ -oldStart,oldLines +newStart,newLines @@
-                let pattern = #"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@"#
+                let pattern = #"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@.*"#
+                print("DEBUG: Parsing hunk header: \(line)")
                 if let regex = try? NSRegularExpression(pattern: pattern),
                    let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) {
 
@@ -2265,8 +2377,11 @@ struct DiffParser {
 
                     oldLineNum = oldStart
                     newLineNum = newStart
+                    print("DEBUG: Hunk parsed successfully. Start: \(newStart)")
 
                     currentHunk = (header: line, oldStart: oldStart, oldLines: oldLines, newStart: newStart, newLines: newLines, lines: [])
+                } else {
+                    print("DEBUG: Failed to parse hunk header regex for: \(line)")
                 }
             } else if currentHunk != nil {
                 let type: DiffLineType
@@ -2312,7 +2427,16 @@ struct DiffParser {
 
         // Save last file
         if var file = currentFile {
-            if let hunk = currentHunk {
+            if var hunk = currentHunk {
+                // Add truncation indicator if needed
+                if wasTruncated {
+                    hunk.lines.append(DiffLine(
+                        type: .context,
+                        content: "... [Diff truncated - file too large to display fully] ...",
+                        oldLineNumber: nil,
+                        newLineNumber: nil
+                    ))
+                }
                 file.hunks.append(DiffHunk(
                     header: hunk.header,
                     oldStart: hunk.oldStart,
@@ -2344,6 +2468,374 @@ struct DiffParser {
             return .renamed
         }
         return .modified
+    }
+}
+
+// MARK: - Large File Diff View (Paginated for performance)
+
+/// High-performance diff view for large files with pagination
+struct LargeFileDiffViewWrapper: View {
+    let hunks: [DiffHunk]
+    let showLineNumbers: Bool
+
+    // Pagination settings
+    private static let initialLineLimit = 1000
+    private static let loadMoreIncrement = 2000
+
+    @State private var displayedLineCount: Int = LargeFileDiffViewWrapper.initialLineLimit
+    @State private var isLoadingMore = false
+
+    // Total line count
+    private var totalLineCount: Int {
+        hunks.reduce(0) { $0 + $1.lines.count + 1 } // +1 for hunk header
+    }
+
+    // Only compute lines up to displayedLineCount
+    private var visibleLines: [LargeDiffLine] {
+        var result: [LargeDiffLine] = []
+        var lineId = 0
+        var totalAdded = 0
+
+        for (hunkIndex, hunk) in hunks.enumerated() {
+            guard totalAdded < displayedLineCount else { break }
+
+            // Add hunk header
+            lineId += 1
+            result.append(LargeDiffLine(
+                id: lineId,
+                type: .hunkHeader,
+                content: hunk.header,
+                oldLineNumber: nil,
+                newLineNumber: nil,
+                hunkIndex: hunkIndex
+            ))
+            totalAdded += 1
+
+            // Add lines up to limit
+            for line in hunk.lines {
+                guard totalAdded < displayedLineCount else { break }
+
+                lineId += 1
+                result.append(LargeDiffLine(
+                    id: lineId,
+                    type: line.type,
+                    content: line.content,
+                    oldLineNumber: line.oldLineNumber,
+                    newLineNumber: line.newLineNumber,
+                    hunkIndex: hunkIndex
+                ))
+                totalAdded += 1
+            }
+        }
+
+        return result
+    }
+
+    private var hasMoreLines: Bool {
+        displayedLineCount < totalLineCount
+    }
+
+    private var remainingLines: Int {
+        max(0, totalLineCount - displayedLineCount)
+    }
+
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: true) {
+            LazyVStack(spacing: 0) {
+                ForEach(visibleLines) { line in
+                    LargeDiffLineView(line: line, showLineNumbers: showLineNumbers)
+                }
+
+                // Load more button
+                if hasMoreLines {
+                    Button(action: loadMore) {
+                        HStack {
+                            if isLoadingMore {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                                    .frame(width: 16, height: 16)
+                            }
+                            Text("Load \(min(remainingLines, Self.loadMoreIncrement)) more lines (\(remainingLines) remaining)")
+                                .font(.system(size: 12))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(GitKrakenTheme.backgroundSecondary)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(GitKrakenTheme.accent)
+                }
+            }
+        }
+        .background(GitKrakenTheme.background)
+    }
+
+    private func loadMore() {
+        isLoadingMore = true
+        // Use async to avoid blocking UI
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            displayedLineCount += Self.loadMoreIncrement
+            isLoadingMore = false
+        }
+    }
+}
+
+/// Line model for large diff view
+private struct LargeDiffLine: Identifiable {
+    let id: Int
+    let type: DiffLineType
+    let content: String
+    let oldLineNumber: Int?
+    let newLineNumber: Int?
+    let hunkIndex: Int
+}
+
+/// Simple line view for large diffs (minimal overhead)
+private struct LargeDiffLineView: View {
+    let line: LargeDiffLine
+    let showLineNumbers: Bool
+
+    var body: some View {
+        HStack(spacing: 0) {
+            if line.type == .hunkHeader {
+                // Hunk header
+                Text(line.content)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.cyan)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(SwiftUI.Color.cyan.opacity(0.1))
+            } else {
+                // Regular line
+                if showLineNumbers {
+                    HStack(spacing: 2) {
+                        Text(line.oldLineNumber.map { "\($0)" } ?? "")
+                            .frame(width: 35, alignment: .trailing)
+                        Text(line.newLineNumber.map { "\($0)" } ?? "")
+                            .frame(width: 35, alignment: .trailing)
+                    }
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.secondary.opacity(0.5))
+                    .padding(.trailing, 4)
+                }
+
+                Text(prefix)
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundColor(prefixColor)
+                    .frame(width: 14)
+
+                Text(line.content)
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundColor(textColor)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(height: 18)
+        .background(backgroundColor)
+    }
+
+    private var prefix: String {
+        switch line.type {
+        case .addition: return "+"
+        case .deletion: return "-"
+        case .context: return " "
+        case .hunkHeader: return "@"
+        }
+    }
+
+    private var prefixColor: SwiftUI.Color {
+        switch line.type {
+        case .addition: return .green
+        case .deletion: return .red
+        default: return .secondary
+        }
+    }
+
+    private var textColor: SwiftUI.Color {
+        switch line.type {
+        case .addition: return .green
+        case .deletion: return .red
+        default: return SwiftUI.Color(NSColor.textColor)
+        }
+    }
+
+    private var backgroundColor: SwiftUI.Color {
+        switch line.type {
+        case .addition: return .green.opacity(0.1)
+        case .deletion: return .red.opacity(0.1)
+        default: return .clear
+        }
+    }
+}
+
+/// Custom NSView for high-performance diff rendering
+/// Only draws visible lines for O(1) scroll performance
+class LargeFileDiffNSView: NSView {
+    static let lineHeight: CGFloat = 18
+    static let lineNumberWidth: CGFloat = 80
+    static let prefixWidth: CGFloat = 16
+    static let padding: CGFloat = 8
+
+    var hunks: [DiffHunk] = []
+    var showLineNumbers: Bool = true
+
+    private struct LayoutItem {
+        enum Kind {
+            case hunkHeader(Int)
+            case line(hunkIndex: Int, lineIndex: Int)
+        }
+        let kind: Kind
+        let y: CGFloat
+    }
+
+    private var layoutItems: [LayoutItem] = []
+    var totalHeight: CGFloat = 0
+
+    override var isFlipped: Bool { true }
+
+    override var intrinsicContentSize: NSSize {
+        NSSize(width: NSView.noIntrinsicMetric, height: totalHeight)
+    }
+
+    func recalculateLayout() {
+        layoutItems.removeAll()
+        var y: CGFloat = 0
+
+        for (hunkIndex, hunk) in hunks.enumerated() {
+            // Hunk header
+            layoutItems.append(LayoutItem(kind: .hunkHeader(hunkIndex), y: y))
+            y += Self.lineHeight + 4
+
+            // Lines
+            for (lineIndex, _) in hunk.lines.enumerated() {
+                layoutItems.append(LayoutItem(kind: .line(hunkIndex: hunkIndex, lineIndex: lineIndex), y: y))
+                y += Self.lineHeight
+            }
+
+            y += 4 // Spacing between hunks
+        }
+
+        totalHeight = max(y, 100)
+        // Set both frame height and width to ensure proper scrolling
+        let currentWidth = max(frame.size.width, 800)
+        frame = NSRect(x: 0, y: 0, width: currentWidth, height: totalHeight)
+        invalidateIntrinsicContentSize()
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard let context = NSGraphicsContext.current?.cgContext else { return }
+
+        // Background
+        context.setFillColor(NSColor(GitKrakenTheme.background).cgColor)
+        context.fill(dirtyRect)
+
+        let visibleMinY = dirtyRect.minY
+        let visibleMaxY = dirtyRect.maxY
+
+        // Only draw visible items
+        for item in layoutItems {
+            let itemTop = item.y
+            let itemBottom = item.y + Self.lineHeight
+
+            guard itemBottom >= visibleMinY && itemTop <= visibleMaxY else { continue }
+
+            switch item.kind {
+            case .hunkHeader(let hunkIndex):
+                drawHunkHeader(hunkIndex: hunkIndex, at: item.y, width: bounds.width, context: context)
+            case .line(let hunkIndex, let lineIndex):
+                if hunkIndex < hunks.count && lineIndex < hunks[hunkIndex].lines.count {
+                    drawLine(hunks[hunkIndex].lines[lineIndex], at: item.y, width: bounds.width, context: context)
+                }
+            }
+        }
+    }
+
+    private func drawHunkHeader(hunkIndex: Int, at y: CGFloat, width: CGFloat, context: CGContext) {
+        guard hunkIndex < hunks.count else { return }
+        let hunk = hunks[hunkIndex]
+
+        // Background
+        let rect = CGRect(x: 0, y: y, width: width, height: Self.lineHeight + 4)
+        context.setFillColor(NSColor.cyan.withAlphaComponent(0.1).cgColor)
+        context.fill(rect)
+
+        // Text
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium),
+            .foregroundColor: NSColor.cyan
+        ]
+        let textRect = CGRect(x: Self.padding, y: y + 2, width: width - Self.padding * 2, height: Self.lineHeight)
+        (hunk.header as NSString).draw(in: textRect, withAttributes: attrs)
+    }
+
+    private func drawLine(_ line: DiffLine, at y: CGFloat, width: CGFloat, context: CGContext) {
+        let rect = CGRect(x: 0, y: y, width: width, height: Self.lineHeight)
+
+        // Background
+        let bgColor: NSColor
+        switch line.type {
+        case .addition: bgColor = NSColor.systemGreen.withAlphaComponent(0.1)
+        case .deletion: bgColor = NSColor.systemRed.withAlphaComponent(0.1)
+        default: bgColor = .clear
+        }
+        if bgColor != .clear {
+            context.setFillColor(bgColor.cgColor)
+            context.fill(rect)
+        }
+
+        var x: CGFloat = Self.padding
+
+        // Line numbers
+        if showLineNumbers {
+            let numAttrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
+                .foregroundColor: NSColor.secondaryLabelColor.withAlphaComponent(0.6)
+            ]
+
+            let oldNum = line.oldLineNumber.map { String($0) } ?? ""
+            let oldRect = CGRect(x: x, y: y, width: 35, height: Self.lineHeight)
+            (oldNum as NSString).draw(in: oldRect, withAttributes: numAttrs)
+
+            let newNum = line.newLineNumber.map { String($0) } ?? ""
+            let newRect = CGRect(x: x + 38, y: y, width: 35, height: Self.lineHeight)
+            (newNum as NSString).draw(in: newRect, withAttributes: numAttrs)
+
+            x += Self.lineNumberWidth
+        }
+
+        // Prefix
+        let prefix: String
+        let prefixColor: NSColor
+        switch line.type {
+        case .addition: prefix = "+"; prefixColor = .systemGreen
+        case .deletion: prefix = "-"; prefixColor = .systemRed
+        case .context: prefix = " "; prefixColor = .secondaryLabelColor
+        case .hunkHeader: prefix = "@"; prefixColor = .cyan
+        }
+
+        let prefixAttrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular),
+            .foregroundColor: prefixColor
+        ]
+        let prefixRect = CGRect(x: x, y: y, width: Self.prefixWidth, height: Self.lineHeight)
+        (prefix as NSString).draw(in: prefixRect, withAttributes: prefixAttrs)
+        x += Self.prefixWidth
+
+        // Content
+        let contentColor: NSColor
+        switch line.type {
+        case .addition: contentColor = .systemGreen
+        case .deletion: contentColor = .systemRed
+        default: contentColor = .textColor
+        }
+
+        let contentAttrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular),
+            .foregroundColor: contentColor
+        ]
+        let contentRect = CGRect(x: x, y: y, width: width - x - Self.padding, height: Self.lineHeight)
+        (line.content as NSString).draw(in: contentRect, withAttributes: contentAttrs)
     }
 }
 

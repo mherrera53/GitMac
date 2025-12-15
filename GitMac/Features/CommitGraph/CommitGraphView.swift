@@ -164,7 +164,9 @@ struct CommitGraphView: View {
 
     // Merged timeline of commits and stashes, sorted chronologically
     private var timelineSection: some View {
-        ForEach(vm.timelineItems) { item in
+        ForEach(Array(vm.timelineItems.enumerated()), id: \.element.id) { index, item in
+            let isNearEnd = index >= vm.timelineItems.count - 10
+
             switch item {
             case .commit(let node):
                 GraphRow(
@@ -177,6 +179,12 @@ struct CommitGraphView: View {
                     selectedId = node.commit.sha
                     appState.selectedCommit = node.commit
                     appState.selectedStash = nil  // Clear stash selection
+                }
+                .onAppear {
+                    // Trigger load more when near the end of the list
+                    if isNearEnd && vm.hasMore && !vm.isLoading {
+                        Task { await vm.loadMore() }
+                    }
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Commit \(node.commit.shortSha) by \(node.commit.author): \(node.commit.summary)")
@@ -192,6 +200,12 @@ struct CommitGraphView: View {
                     selectedId = stashNode.id
                     appState.selectedCommit = nil  // Clear commit selection
                     appState.selectedStash = stashNode.stash  // Set stash selection
+                }
+                .onAppear {
+                    // Trigger load more when near the end of the list
+                    if isNearEnd && vm.hasMore && !vm.isLoading {
+                        Task { await vm.loadMore() }
+                    }
                 }
             }
         }
@@ -674,7 +688,7 @@ class GraphViewModel: ObservableObject {
         commits = []
 
         do {
-            // Load branches
+            // Load branches (use original method - V2 has same output)
             let branches = try await engine.getBranches(at: p)
             branchHeads = [:]
             for branch in branches {
@@ -683,8 +697,8 @@ class GraphViewModel: ObservableObject {
                 }
             }
 
-            // Load commits
-            commits = try await engine.getCommits(at: p, limit: 100)
+            // Load commits using V2 (NUL-separated, handles special chars in messages)
+            commits = try await engine.getCommitsV2(at: p, limit: 100)
             hasMore = commits.count == 100
 
             // Load status for uncommitted changes
@@ -715,7 +729,7 @@ class GraphViewModel: ObservableObject {
         page += 1
 
         do {
-            let more = try await engine.getCommits(at: p, limit: 100, skip: page * 100)
+            let more = try await engine.getCommitsV2(at: p, limit: 100, skip: page * 100)
             commits.append(contentsOf: more)
             hasMore = more.count == 100
 

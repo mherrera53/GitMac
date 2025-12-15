@@ -1555,16 +1555,20 @@ struct DiffPreviewView: View {
     private func loadDiff() async {
         isLoading = true
         errorMessage = nil
+        hunks = []
         let service = gitService ?? GitService()
-        diff = (try? await service.getDiff(for: path, staged: staged)) ?? ""
-        // Use the shared DiffParser that returns FileDiffs, then take hunks
-        let files = DiffParser.parse(diff)
-        if let first = files.first {
-            hunks = first.hunks
-        } else {
-            hunks = []
+        
+        do {
+            let diffString = try await service.getDiff(for: path, staged: staged)
+            let diffs = await DiffParser.parseAsync(diffString)
+            if let first = diffs.first {
+                self.hunks = first.hunks
+            }
+            isLoading = false
+        } catch {
+            errorMessage = error.localizedDescription
+            isLoading = false
         }
-        isLoading = false
     }
 
     private func stageHunk(at index: Int) async {

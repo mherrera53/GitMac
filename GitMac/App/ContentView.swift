@@ -2531,12 +2531,30 @@ class CommitDetailViewModel: ObservableObject {
     }
 
     func getDiff(for file: CommitFile, commit: Commit, at path: String) async -> FileDiff? {
+        // Use streaming to load diffs, aborting early for very large files to prevent UI freeze
         do {
-            let diffString = try await engine.getCommitFileDiff(sha: commit.sha, filePath: file.path, at: path)
-            let diffs = DiffParser.parse(diffString)
+            let maxLines = 5000
+            var diffString = ""
+            var lineCount = 0
+            var truncated = false
+
+            // Stream the diff
+            for try await line in engine.getCommitFileDiffStreaming(sha: commit.sha, filePath: file.path, at: path) {
+                diffString += line + "\n"
+                lineCount += 1
+
+                if lineCount >= maxLines {
+                    diffString += "\n... [Output truncated - file too large] ..."
+                    truncated = true
+                    break
+                }
+            }
+            
+            // Use async parser
+            let diffs = await DiffParser.parseAsync(diffString)
             return diffs.first
         } catch {
-            print("Error getting diff: \(error)")
+            print("Error getting streaming diff: \(error)")
             return nil
         }
     }
@@ -2747,7 +2765,8 @@ class StashDetailViewModel: ObservableObject {
         )
 
         if result.exitCode == 0 && !result.stdout.isEmpty {
-            let diffs = DiffParser.parse(result.stdout)
+            // Use async parser to avoid UI freeze on large files
+            let diffs = await DiffParser.parseAsync(result.stdout)
             return diffs.first
         }
         return nil
@@ -3134,7 +3153,8 @@ class StagingViewModel: ObservableObject {
 
         do {
             let diffString = try await engine.getDiff(for: file.path, staged: file.isStaged, at: path)
-            let diffs = DiffParser.parse(diffString)
+            // Use async parser to avoid UI freeze on large files
+            let diffs = await DiffParser.parseAsync(diffString)
             return diffs.first
         } catch {
             print("Error getting diff: \(error)")
