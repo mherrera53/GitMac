@@ -978,6 +978,7 @@ actor GitEngine {
     // MARK: - Diff Operations
 
     /// Get diff for a file
+    /// Truncates output for very large diffs to prevent UI freeze
     func getDiff(for file: String? = nil, staged: Bool = false, at path: String) async throws -> String {
         var args = ["diff"]
 
@@ -995,7 +996,16 @@ actor GitEngine {
         // git diff returns exit code 0 for success, but sometimes has warnings in stderr
         // If we have stdout content, use it even if there are warnings
         if result.exitCode == 0 || !result.stdout.isEmpty {
-            return result.stdout
+            let output = result.stdout
+
+            // Truncate very large diffs early (500KB max)
+            let maxBytes = 500_000
+            if output.utf8.count > maxBytes {
+                let truncated = String(output.utf8.prefix(maxBytes)) ?? String(output.prefix(maxBytes / 4))
+                return truncated + "\n\n... [Output truncated - file too large] ..."
+            }
+
+            return output
         }
 
         // Only throw if we have no output and an error
@@ -1085,6 +1095,7 @@ actor GitEngine {
     }
 
     /// Get diff for a specific file in a commit
+    /// Truncates output for very large diffs to prevent UI freeze
     func getCommitFileDiff(sha: String, filePath: String, at path: String) async throws -> String {
         let result = await shellExecutor.execute(
             "git",
@@ -1093,16 +1104,41 @@ actor GitEngine {
         )
 
         // For initial commits (no parent), try without ^
+        var output: String
         if result.exitCode != 0 {
             let fallbackResult = await shellExecutor.execute(
                 "git",
                 arguments: ["show", sha, "--format=", "--", filePath],
                 workingDirectory: path
             )
-            return fallbackResult.stdout
+            output = fallbackResult.stdout
+        } else {
+            output = result.stdout
         }
 
-        return result.stdout
+        // Truncate very large diffs early (500KB max)
+        let maxBytes = 500_000
+        if output.utf8.count > maxBytes {
+            let truncated = String(output.utf8.prefix(maxBytes)) ?? String(output.prefix(maxBytes / 4))
+            return truncated + "\n\n... [Output truncated - file too large] ..."
+        }
+
+        return output
+    }
+
+    /// Stream diff for a specific file in a commit
+    /// Uses `git show` to stream content, allowing for early termination/truncation on large files
+    nonisolated func getCommitFileDiffStreaming(
+        sha: String,
+        filePath: String,
+        at path: String
+    ) -> AsyncThrowingStream<String, Error> {
+        return shellExecutor.executeStreaming(
+            "git",
+            arguments: ["show", sha, "--format=", "--", filePath],
+            workingDirectory: path,
+            bufferSize: 100
+        )
     }
 
     // MARK: - Merge Operations
@@ -1529,12 +1565,11 @@ actor GitEngine {
         os_signpost(.begin, log: gitLog, name: "git.commits.v2", signpostID: signpostID)
         defer { os_signpost(.end, log: gitLog, name: "git.commits.v2", signpostID: signpostID) }
 
-        // Use %x00 as field separator (NUL byte)
+        // Use %x00 as field separator (NUL byte) and %x01 as record separator
         // Format: sha, parents, author name, author email, author date, committer name, committer email, committer date, subject
         var args = [
             "log",
-            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x00",
-            "--topo-order",     // Topological ordering for graph
+            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x01",
             "-n", String(limit),
             "--skip", String(skip)
         ]
@@ -1555,38 +1590,33 @@ actor GitEngine {
     private func parseCommitsNUL(_ output: String) -> [Commit] {
         var commits: [Commit] = []
 
-        // Each commit has 9 fields separated by NUL, ending with a NUL
-        let fields = output.split(separator: "\0", omittingEmptySubsequences: false)
+        // Split by record separator (0x01) first, then by field separator (0x00)
+        let records = output.components(separatedBy: "\u{01}")
 
-        var i = 0
-        while i + 8 < fields.count {
-            let sha = String(fields[i])
-            guard !sha.isEmpty && !sha.hasPrefix("\n") else {
-                i += 1
-                continue
-            }
+        for record in records {
+            let trimmed = record.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
 
-            // Clean sha of any leading newlines from previous record
-            let cleanSha = sha.trimmingCharacters(in: .newlines)
-            guard cleanSha.count == 40 else {
-                i += 1
-                continue
-            }
+            let fields = trimmed.components(separatedBy: "\u{00}")
+            guard fields.count >= 9 else { continue }
 
-            let parentSHAs = String(fields[i + 1]).split(separator: " ").map(String.init)
-            let authorName = String(fields[i + 2])
-            let authorEmail = String(fields[i + 3])
-            let authorDateStr = String(fields[i + 4])
-            let committerName = String(fields[i + 5])
-            let committerEmail = String(fields[i + 6])
-            let committerDateStr = String(fields[i + 7])
-            let subject = String(fields[i + 8])
+            let sha = fields[0]
+            guard sha.count == 40 else { continue }
+
+            let parentSHAs = fields[1].split(separator: " ").map(String.init)
+            let authorName = fields[2]
+            let authorEmail = fields[3]
+            let authorDateStr = fields[4]
+            let committerName = fields[5]
+            let committerEmail = fields[6]
+            let committerDateStr = fields[7]
+            let subject = fields[8]
 
             let authorDate = parseGitDate(authorDateStr) ?? Date()
             let committerDate = parseGitDate(committerDateStr) ?? Date()
 
             commits.append(Commit(
-                sha: cleanSha,
+                sha: sha,
                 message: subject.trimmingCharacters(in: .whitespacesAndNewlines),
                 author: authorName,
                 authorEmail: authorEmail,
@@ -1596,8 +1626,6 @@ actor GitEngine {
                 committerDate: committerDate,
                 parentSHAs: parentSHAs
             ))
-
-            i += 9
         }
 
         return commits
