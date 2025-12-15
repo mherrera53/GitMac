@@ -2533,25 +2533,34 @@ class CommitDetailViewModel: ObservableObject {
     func getDiff(for file: CommitFile, commit: Commit, at path: String) async -> FileDiff? {
         // Use streaming to load diffs, aborting early for very large files to prevent UI freeze
         do {
-            let maxLines = 5000
-            var diffString = ""
+            let maxLines = 100000
+            var diffLines: [String] = []
             var lineCount = 0
             var truncated = false
 
+            print("DEBUG: Starting diff stream for \(file.path)")
+            
             // Stream the diff
             for try await line in engine.getCommitFileDiffStreaming(sha: commit.sha, filePath: file.path, at: path) {
-                diffString += line + "\n"
+                diffLines.append(line)
                 lineCount += 1
 
                 if lineCount >= maxLines {
-                    diffString += "\n... [Output truncated - file too large] ..."
+                    diffLines.append("\n... [Output truncated - file too large] ...")
                     truncated = true
+                    print("DEBUG: Truncated diff at \(maxLines) lines")
                     break
                 }
             }
             
+            print("DEBUG: Diff stream complete. Caught \(lineCount) lines. Parsing...")
+            
+            // Use joined() for O(N) instead of O(N^2) loop concatenation
+            let diffString = diffLines.joined(separator: "\n")
+            
             // Use async parser
             let diffs = await DiffParser.parseAsync(diffString)
+            print("DEBUG: Parsing complete. Found \(diffs.first?.hunks.count ?? 0) hunks")
             return diffs.first
         } catch {
             print("Error getting streaming diff: \(error)")

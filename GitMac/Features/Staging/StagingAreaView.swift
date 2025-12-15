@@ -1490,6 +1490,8 @@ struct DiffPreviewView: View {
     @State private var hunks: [DiffHunk] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var scrollOffset: CGFloat = 0
+    @State private var viewportHeight: CGFloat = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1530,6 +1532,7 @@ struct DiffPreviewView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 // Interactive hunk view
+                // Interactive hunk view
                 HunkDiffView(
                     hunks: hunks,
                     showLineNumbers: true,
@@ -1543,7 +1546,10 @@ struct DiffPreviewView: View {
                     } : nil,
                     onDiscardHunk: staged ? nil : { hunkIndex in
                         Task { await discardHunk(at: hunkIndex) }
-                    }
+                    },
+                    scrollOffset: $scrollOffset,
+                    viewportHeight: $viewportHeight,
+                    viewId: "StagingDiff"
                 )
             }
         }
