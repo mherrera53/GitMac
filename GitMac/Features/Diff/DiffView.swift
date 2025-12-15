@@ -215,6 +215,7 @@ struct DiffView: View {
     @State private var showMinimap = true
     @State private var scrollOffset: CGFloat = 0
     @State private var viewportHeight: CGFloat = 400
+    @State private var contentHeight: CGFloat = 1000
 
     // Calculate line count for accurate minimap
     // Calculate line count for accurate minimap
@@ -254,7 +255,8 @@ struct DiffView: View {
     }
 
     // Threshold for "large file" - switch to optimized inline view
-    private let largeFileLineThreshold = 5000
+    // Threshold for "large file" - switch to optimized inline view
+    private let largeFileLineThreshold = 20000
 
     private var isLargeFile: Bool {
         totalLineCount > largeFileLineThreshold
@@ -262,17 +264,62 @@ struct DiffView: View {
 
     // Estimated content height (22px per line)
     private var estimatedContentHeight: CGFloat {
-        CGFloat(totalLineCount) * 22.0
+        CGFloat(visualRowCount) * 22.0
     }
 
+    private var visualRowCount: Int {
+        if viewMode == .split {
+            // In split view, we pair simultaneous deletions and additions.
+            // visualRows ≈ hunks + context + max(deletions, additions) in blocks
+            var count = 0
+            for hunk in fileDiff.hunks {
+                count += 1 // Header
+                
+                var i = 0
+                let lines = hunk.lines
+                while i < lines.count {
+                    let line = lines[i]
+                    if line.type == .context {
+                        count += 1
+                        i += 1
+                    } else {
+                        // Block counting logic (matches OptimizedSplitDiffView)
+                        var deletions = 0
+                        var j = i
+                        while j < lines.count && lines[j].type == .deletion {
+                            deletions += 1
+                            j += 1
+                        }
+                        
+                        var additions = 0
+                        var k = j
+                        while k < lines.count && lines[k].type == .addition {
+                            additions += 1
+                            k += 1
+                        }
+                        
+                        count += max(deletions, additions)
+                        i = k
+                        if i == j { i += 1 } // Safety
+                    }
+                }
+            }
+            return count
+        } else {
+            // Unified/Inline: just sum of lines + headers
+            return fileDiff.hunks.reduce(0) { $0 + $1.lines.count + 1 }
+        }
+    }
+
+    // Exact scroll position based on real physics
     private var scrollPosition: CGFloat {
-        guard estimatedContentHeight > viewportHeight else { return 0 }
-        return min(1, max(0, scrollOffset / (estimatedContentHeight - viewportHeight)))
+        guard contentHeight > viewportHeight else { return 0 }
+        return min(1, max(0, scrollOffset / (contentHeight - viewportHeight)))
     }
 
     private var viewportRatio: CGFloat {
-        guard estimatedContentHeight > 0 else { return 1 }
-        return min(1, max(0.05, viewportHeight / estimatedContentHeight))
+        guard contentHeight > 0 else { return 1 }
+        return min(1, max(0.05, viewportHeight / contentHeight))
     }
 
     private var isMarkdown: Bool {
@@ -337,7 +384,9 @@ struct DiffView: View {
                     // Use high-performance NSView-based rendering for large files
                     LargeFileDiffViewWrapper(
                         hunks: fileDiff.hunks,
-                        showLineNumbers: showLineNumbers
+                        showLineNumbers: showLineNumbers,
+                        scrollOffset: $scrollOffset,
+                        viewportHeight: $viewportHeight
                     )
                 } else {
                     switch viewMode {
@@ -346,17 +395,25 @@ struct DiffView: View {
                             hunks: fileDiff.hunks,
                             showLineNumbers: showLineNumbers,
                             scrollOffset: $scrollOffset,
-                            viewportHeight: $viewportHeight
+                            viewportHeight: $viewportHeight,
+                            contentHeight: $contentHeight
                         )
                     case .inline:
                         OptimizedInlineDiffView(
                             hunks: fileDiff.hunks,
                             showLineNumbers: showLineNumbers,
                             scrollOffset: $scrollOffset,
-                            viewportHeight: $viewportHeight
+                            viewportHeight: $viewportHeight,
+                            contentHeight: $contentHeight
                         )
                     case .hunk:
-                        HunkDiffView(hunks: fileDiff.hunks, showLineNumbers: showLineNumbers)
+                        HunkDiffView(
+                            hunks: fileDiff.hunks, 
+                            showLineNumbers: showLineNumbers,
+                            scrollOffset: $scrollOffset,
+                            viewportHeight: $viewportHeight,
+                            contentHeight: $contentHeight
+                        )
                     case .preview:
                         MarkdownView(content: previewContent, fileName: fileDiff.displayPath)
                     }
@@ -442,6 +499,54 @@ struct DiffScrollOffsetKey: PreferenceKey {
     }
 }
 
+// MARK: - Unified Scroll Container (The Source of Truth)
+struct UnifiedDiffScrollView<Content: View>: View {
+    @Binding var scrollOffset: CGFloat
+    @Binding var viewportHeight: CGFloat
+    var viewportWidth: Binding<CGFloat>? = nil
+    var contentHeight: Binding<CGFloat>? = nil
+    var id: String = "DiffScrollView"
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: true) {
+            ZStack(alignment: .top) {
+                // Reliable Scroll Tracker
+                GeometryReader { geo in
+                    SwiftUI.Color.clear
+                        .preference(key: DiffScrollOffsetKey.self, value: -geo.frame(in: .named(id)).minY)
+                }
+                .frame(height: 1)
+
+                // Content
+                content()
+            }
+            .background(
+                GeometryReader { geo in
+                    SwiftUI.Color.clear
+                        .onAppear { contentHeight?.wrappedValue = geo.size.height }
+                        .onChange(of: geo.size.height) { _, new in contentHeight?.wrappedValue = new }
+                }
+            )
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .coordinateSpace(name: id)
+        .background(
+            GeometryReader { geo in
+                SwiftUI.Color.clear
+                    .onAppear { 
+                        viewportHeight = geo.size.height
+                        viewportWidth?.wrappedValue = geo.size.width
+                    }
+                    .onChange(of: geo.size.height) { _, new in viewportHeight = new }
+                    .onChange(of: geo.size.width) { _, new in viewportWidth?.wrappedValue = new }
+            }
+        )
+        .onPreferenceChange(DiffScrollOffsetKey.self) { val in
+            scrollOffset = max(0, val)
+        }
+    }
+}
 
 // MARK: - Optimized Split Diff View
 
@@ -450,52 +555,62 @@ struct OptimizedSplitDiffView: View {
     let showLineNumbers: Bool
     @Binding var scrollOffset: CGFloat
     @Binding var viewportHeight: CGFloat
+    @Binding var contentHeight: CGFloat
+    @State private var viewWidth: CGFloat = 1000
 
-    private var pairedLines: [DiffPair] {
+    private var pairs: [DiffPair] {
+        // ... (implementation hidden, same as before)
         var pairs: [DiffPair] = []
         var pairId = 0
-
+        
         for hunk in hunks {
             pairId += 1
             pairs.append(DiffPair(id: pairId, left: nil, right: nil, hunkHeader: hunk.header))
-
+            
             var i = 0
             let lines = hunk.lines
-
+            
             while i < lines.count {
                 let line = lines[i]
-
+                
                 if line.type == .context {
                     pairId += 1
                     pairs.append(DiffPair(id: pairId, left: line, right: line, hunkHeader: nil))
                     i += 1
-                } else if line.type == .deletion {
-                    var deletions: [DiffLine] = []
-                    while i < lines.count && lines[i].type == .deletion {
-                        deletions.append(lines[i])
-                        i += 1
-                    }
-                    var additions: [DiffLine] = []
-                    while i < lines.count && lines[i].type == .addition {
-                        additions.append(lines[i])
-                        i += 1
-                    }
-                    let maxCount = max(deletions.count, additions.count)
-                    for j in 0..<maxCount {
-                        pairId += 1
-                        pairs.append(DiffPair(
-                            id: pairId,
-                            left: j < deletions.count ? deletions[j] : nil,
-                            right: j < additions.count ? additions[j] : nil,
-                            hunkHeader: nil
-                        ))
-                    }
-                } else if line.type == .addition {
-                    pairId += 1
-                    pairs.append(DiffPair(id: pairId, left: nil, right: line, hunkHeader: nil))
-                    i += 1
                 } else {
-                    i += 1
+                    // Collect block of changes
+                    var deletions: [DiffLine] = []
+                    var additions: [DiffLine] = []
+                    
+                    // Consume consecutive deletions
+                    var j = i
+                    while j < lines.count && lines[j].type == .deletion {
+                        deletions.append(lines[j])
+                        j += 1
+                    }
+                    
+                    // Consume consecutive additions
+                    var k = j
+                    while k < lines.count && lines[k].type == .addition {
+                        additions.append(lines[k])
+                        k += 1
+                    }
+                    
+                    let maxCount = max(deletions.count, additions.count)
+                    
+                    if maxCount > 0 {
+                        for idx in 0..<maxCount {
+                            pairId += 1
+                            let left = idx < deletions.count ? deletions[idx] : nil
+                            let right = idx < additions.count ? additions[idx] : nil
+                            pairs.append(DiffPair(id: pairId, left: left, right: right, hunkHeader: nil))
+                        }
+                        
+                        i = k
+                    } else {
+                        // Should technically not happen if log is correct, but safety advance
+                        i += 1
+                    }
                 }
             }
         }
@@ -503,21 +618,12 @@ struct OptimizedSplitDiffView: View {
     }
 
     var body: some View {
-        GeometryReader { outerGeo in
-            ScrollView(.vertical, showsIndicators: true) {
-                let halfWidth = max(300, (outerGeo.size.width - 2) / 2)
-
-                VStack(spacing: 0) {
-                    // Top Anchor for reliable scroll tracking
-                    GeometryReader { geo in
-                        SwiftUI.Color.red.opacity(0.001)
-                            .preference(key: DiffScrollOffsetKey.self, value: -geo.frame(in: .named("DiffScrollView")).minY)
-                    }
-                    .frame(height: 1) // Force render with non-zero height
-
-                    LazyVStack(spacing: 0, pinnedViews: []) {
-
-                    ForEach(pairedLines) { pair in
+        UnifiedDiffScrollView(scrollOffset: $scrollOffset, viewportHeight: $viewportHeight, viewportWidth: $viewWidth, contentHeight: $contentHeight) {
+            let halfWidth = max(300, (viewWidth - 2) / 2)
+            
+            VStack(spacing: 0) {
+                LazyVStack(spacing: 0, pinnedViews: []) {
+                    ForEach(pairs) { pair in
                         HStack(spacing: 0) {
                             // Left side
                             if let header = pair.hunkHeader {
@@ -527,7 +633,7 @@ struct OptimizedSplitDiffView: View {
                                 FastDiffLine(line: line, side: .left, showLineNumber: showLineNumbers, paired: pair.right)
                                     .frame(width: halfWidth)
                             } else {
-                                // Empty on left - show green stripes if right has addition
+                                // Empty on left
                                 FastEmptyLine(
                                     showLineNumber: showLineNumbers,
                                     isAdded: pair.right?.type == .addition
@@ -545,7 +651,7 @@ struct OptimizedSplitDiffView: View {
                                 FastDiffLine(line: line, side: .right, showLineNumber: showLineNumbers, paired: pair.left)
                                     .frame(width: halfWidth)
                             } else {
-                                // Empty on right - show red stripes if left has deletion
+                                // Empty on right
                                 FastEmptyLine(
                                     showLineNumber: showLineNumbers,
                                     isDeleted: pair.left?.type == .deletion
@@ -553,17 +659,9 @@ struct OptimizedSplitDiffView: View {
                                 .frame(width: halfWidth)
                             }
                         }
-                    } // End LazyVStack
-                } // End VStack
+                    }
+                }
             }
-            }
-            .coordinateSpace(name: "DiffScrollView")
-            .onPreferenceChange(DiffScrollOffsetKey.self) { val in
-                // print("Split Scroll Offset: \(val)") // DEBUG
-                scrollOffset = max(0, val)
-            }
-            .onChange(of: outerGeo.size.height) { _, new in viewportHeight = new }
-            .onAppear { viewportHeight = outerGeo.size.height }
         }
     }
 }
@@ -575,6 +673,7 @@ struct OptimizedInlineDiffView: View {
     let showLineNumbers: Bool
     @Binding var scrollOffset: CGFloat
     @Binding var viewportHeight: CGFloat
+    @Binding var contentHeight: CGFloat
 
     private var allLines: [IdentifiedDiffLine] {
         var result: [IdentifiedDiffLine] = []
@@ -591,18 +690,9 @@ struct OptimizedInlineDiffView: View {
     }
 
     var body: some View {
-        GeometryReader { outerGeo in
-            ScrollView(.vertical, showsIndicators: true) {
-                VStack(spacing: 0) {
-                    // Top Anchor for reliable scroll tracking
-                    GeometryReader { geo in
-                        SwiftUI.Color.red.opacity(0.001)
-                            .preference(key: DiffScrollOffsetKey.self, value: -geo.frame(in: .named("DiffScrollView")).minY)
-                    }
-                    .frame(height: 1) // Force render
-
-                    LazyVStack(spacing: 0) {
-
+        UnifiedDiffScrollView(scrollOffset: $scrollOffset, viewportHeight: $viewportHeight) {
+            VStack(spacing: 0) {
+                LazyVStack(spacing: 0) {
                     ForEach(allLines) { item in
                         if let header = item.hunkHeader {
                             FastHunkHeader(header: header)
@@ -610,15 +700,8 @@ struct OptimizedInlineDiffView: View {
                             FastInlineLine(line: line, showLineNumber: showLineNumbers)
                         }
                     }
-                } // End LazyVStack
-                } // End VStack
+                }
             }
-            .coordinateSpace(name: "DiffScrollView")
-            .onPreferenceChange(DiffScrollOffsetKey.self) { val in
-                scrollOffset = max(0, val)
-            }
-            .onChange(of: outerGeo.size.height) { _, new in viewportHeight = new }
-            .onAppear { viewportHeight = outerGeo.size.height }
         }
     }
 }
@@ -1393,43 +1476,49 @@ struct HunkDiffView: View {
     var onUnstageHunk: ((Int) -> Void)? = nil
     var onDiscardHunk: ((Int) -> Void)? = nil
 
+    @Binding var scrollOffset: CGFloat
+    @Binding var viewportHeight: CGFloat
+    var contentHeight: Binding<CGFloat>? = nil
+    var viewId: String = "DiffScrollView"
     @State private var collapsedHunks: Set<Int> = []
 
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                // Summary header
-                HunkSummaryHeader(
-                    hunkCount: hunks.count,
-                    totalAdditions: hunks.reduce(0) { $0 + $1.lines.filter { $0.type == .addition }.count },
-                    totalDeletions: hunks.reduce(0) { $0 + $1.lines.filter { $0.type == .deletion }.count }
-                )
-
-                ForEach(Array(hunks.enumerated()), id: \.element.id) { index, hunk in
-                    CollapsibleHunkCard(
-                        hunk: hunk,
-                        hunkIndex: index,
-                        totalHunks: hunks.count,
-                        showLineNumbers: showLineNumbers,
-                        showActions: onStageHunk != nil || onUnstageHunk != nil,
-                        isStaged: isStaged,
-                        isCollapsed: collapsedHunks.contains(index),
-                        onToggleCollapse: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                if collapsedHunks.contains(index) {
-                                    collapsedHunks.remove(index)
-                                } else {
-                                    collapsedHunks.insert(index)
-                                }
-                            }
-                        },
-                        onStage: { onStageHunk?(index) },
-                        onUnstage: { onUnstageHunk?(index) },
-                        onDiscard: { onDiscardHunk?(index) }
+        UnifiedDiffScrollView(scrollOffset: $scrollOffset, viewportHeight: $viewportHeight, contentHeight: contentHeight, id: viewId) {
+            VStack(spacing: 0) {
+                LazyVStack(spacing: 12) {
+                    // Summary header
+                    HunkSummaryHeader(
+                        hunkCount: hunks.count,
+                        totalAdditions: hunks.reduce(0) { $0 + $1.lines.filter { $0.type == .addition }.count },
+                        totalDeletions: hunks.reduce(0) { $0 + $1.lines.filter { $0.type == .deletion }.count }
                     )
+
+                    ForEach(Array(hunks.enumerated()), id: \.element.id) { index, hunk in
+                        CollapsibleHunkCard(
+                            hunk: hunk,
+                            hunkIndex: index,
+                            totalHunks: hunks.count,
+                            showLineNumbers: showLineNumbers,
+                            showActions: onStageHunk != nil || onUnstageHunk != nil,
+                            isStaged: isStaged,
+                            isCollapsed: collapsedHunks.contains(index),
+                            onToggleCollapse: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    if collapsedHunks.contains(index) {
+                                        collapsedHunks.remove(index)
+                                    } else {
+                                        collapsedHunks.insert(index)
+                                    }
+                                }
+                            },
+                            onStage: { onStageHunk?(index) },
+                            onUnstage: { onUnstageHunk?(index) },
+                            onDiscard: { onDiscardHunk?(index) }
+                        )
+                    }
                 }
+                .padding()
             }
-            .padding()
         }
     }
 }
@@ -2268,7 +2357,7 @@ struct SyntaxHighlightedText: View {
 
 struct DiffParser {
     /// Maximum lines to parse (prevents freezing on huge files)
-    private static let maxLinesToParse = 3000
+    private static let maxLinesToParse = 100000
 
     /// Parse a unified diff string into FileDiff objects (ASYNC - runs on background thread)
     static func parseAsync(_ diffString: String) async -> [FileDiff] {
@@ -2287,7 +2376,7 @@ struct DiffParser {
 
         // For very large diffs, truncate the string first to avoid memory issues
         // Use utf8.count which is O(1) for native strings
-        let maxBytes = 500_000 // ~500KB max
+        let maxBytes = 50_000_000 // ~50MB max
         let truncatedString: String
         var wasTruncated = false
 
@@ -2477,6 +2566,8 @@ struct DiffParser {
 struct LargeFileDiffViewWrapper: View {
     let hunks: [DiffHunk]
     let showLineNumbers: Bool
+    @Binding var scrollOffset: CGFloat
+    @Binding var viewportHeight: CGFloat
 
     // Pagination settings
     private static let initialLineLimit = 1000
@@ -2540,7 +2631,7 @@ struct LargeFileDiffViewWrapper: View {
     }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: true) {
+        UnifiedDiffScrollView(scrollOffset: $scrollOffset, viewportHeight: $viewportHeight) {
             LazyVStack(spacing: 0) {
                 ForEach(visibleLines) { line in
                     LargeDiffLineView(line: line, showLineNumbers: showLineNumbers)
@@ -2567,6 +2658,7 @@ struct LargeFileDiffViewWrapper: View {
                 }
             }
         }
+
         .background(GitKrakenTheme.background)
     }
 
@@ -2631,7 +2723,7 @@ private struct LargeDiffLineView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .frame(height: 18)
+        .frame(height: 22)
         .background(backgroundColor)
     }
 

@@ -305,7 +305,7 @@ actor ShellExecutor {
         workingDirectory: String? = nil,
         bufferSize: Int = 50
     ) -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream(bufferingPolicy: .bufferingNewest(bufferSize)) { continuation in
+        AsyncThrowingStream(bufferingPolicy: .unbounded) { continuation in
             let process = Process()
             let stdoutPipe = Pipe()
             let stderrPipe = Pipe()
@@ -331,53 +331,17 @@ actor ShellExecutor {
 
             var lineBuffer = ""
 
-            stdoutPipe.fileHandleForReading.readabilityHandler = { handle in
-                let data = handle.availableData
-                guard !data.isEmpty else { return }
-
-                if let chunk = String(data: data, encoding: .utf8) {
-                    lineBuffer += chunk
-
-                    // Split by newlines and yield complete lines
-                    while let newlineIndex = lineBuffer.firstIndex(of: "\n") {
-                        let line = String(lineBuffer[..<newlineIndex])
-                        lineBuffer = String(lineBuffer[lineBuffer.index(after: newlineIndex)...])
-                        continuation.yield(line)
-                    }
+            // Move to background thread for blocking I/O
+            Task.detached {
+                let stdoutHandle = stdoutPipe.fileHandleForReading
+                let stderrHandle = stderrPipe.fileHandleForReading
+                
+                do {
+                    try process.run()
+                } catch {
+                    continuation.finish(throwing: ShellError.processFailedToStart(error.localizedDescription))
+                    return
                 }
-            }
-
-            // Collect stderr but don't stream it (could be used for error reporting)
-            var stderrBuffer = ""
-            stderrPipe.fileHandleForReading.readabilityHandler = { handle in
-                let data = handle.availableData
-                if !data.isEmpty, let string = String(data: data, encoding: .utf8) {
-                    stderrBuffer += string
-                }
-            }
-
-            process.terminationHandler = { process in
-                stdoutPipe.fileHandleForReading.readabilityHandler = nil
-                stderrPipe.fileHandleForReading.readabilityHandler = nil
-
-                // Yield any remaining content in buffer
-                if !lineBuffer.isEmpty {
-                    continuation.yield(lineBuffer)
-                }
-
-                if process.terminationStatus == 0 {
-                    continuation.finish()
-                } else {
-                    let errorMessage = stderrBuffer.isEmpty
-                        ? "Process exited with code \(process.terminationStatus)"
-                        : stderrBuffer
-                    continuation.finish(throwing: ShellError.nonZeroExit(process.terminationStatus))
-                    _ = errorMessage // Suppress unused variable warning
-                }
-            }
-
-            do {
-                try process.run()
 
                 // Handle cancellation
                 continuation.onTermination = { @Sendable _ in
@@ -385,8 +349,27 @@ actor ShellExecutor {
                         process.terminate()
                     }
                 }
-            } catch {
-                continuation.finish(throwing: ShellError.processFailedToStart(error.localizedDescription))
+
+                // Read stdout line by line
+                // Note: This blocks the detached task thread, which is fine
+                for try await line in stdoutHandle.bytes.lines {
+                    continuation.yield(line)
+                }
+                
+                // Read stderr (non-blocking if possible, or simple readToEnd)
+                let stderrData = stderrHandle.readDataToEndOfFile()
+                let stderrString = String(data: stderrData, encoding: .utf8) ?? ""
+
+                process.waitUntilExit()
+                
+                if process.terminationStatus == 0 {
+                    continuation.finish()
+                } else {
+                    let errorMessage = stderrString.isEmpty 
+                        ? "Process exited with code \(process.terminationStatus)" 
+                        : stderrString
+                    continuation.finish(throwing: ShellError.nonZeroExit(process.terminationStatus))
+                }
             }
         }
     }
