@@ -427,7 +427,12 @@ struct DiffView: View {
                     OptimizedMinimapView(
                         hunks: fileDiff.hunks,
                         scrollPosition: scrollPosition,
-                        viewportRatio: viewportRatio
+                        viewportRatio: viewportRatio,
+                        onScrollToPosition: { normalizedPos in
+                            // Calculate new scroll offset from normalized position (0-1)
+                            let maxScroll = max(0, contentHeight - viewportHeight)
+                            scrollOffset = normalizedPos * maxScroll
+                        }
                     )
                     .frame(width: 60)
                 }
@@ -438,12 +443,15 @@ struct DiffView: View {
     }
 }
 
-// MARK: - Optimized Minimap (No bindings, pure render)
+// MARK: - Optimized Minimap (Interactive with click navigation)
 
 struct OptimizedMinimapView: View {
     let hunks: [DiffHunk]
     let scrollPosition: CGFloat
     let viewportRatio: CGFloat
+    var onScrollToPosition: ((CGFloat) -> Void)? = nil
+
+    @State private var isDragging = false
 
     var body: some View {
         GeometryReader { geo in
@@ -475,15 +483,32 @@ struct OptimizedMinimapView: View {
                     }
                 }
 
-                // Viewport indicator
+                // Viewport indicator (draggable)
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(SwiftUI.Color.white.opacity(0.2))
+                    .fill(SwiftUI.Color.white.opacity(isDragging ? 0.35 : 0.2))
                     .overlay(
                         RoundedRectangle(cornerRadius: 2)
-                            .stroke(SwiftUI.Color.white.opacity(0.5), lineWidth: 1)
+                            .stroke(SwiftUI.Color.white.opacity(isDragging ? 0.7 : 0.5), lineWidth: 1)
                     )
                     .frame(width: geo.size.width - 4, height: vpHeight)
                     .offset(x: 2, y: vpTop)
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                isDragging = true
+                                let normalizedY = min(1, max(0, value.location.y / geo.size.height))
+                                onScrollToPosition?(normalizedY)
+                            }
+                            .onEnded { _ in
+                                isDragging = false
+                            }
+                    )
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { location in
+                // Click anywhere on minimap to navigate
+                let normalizedY = min(1, max(0, location.y / geo.size.height))
+                onScrollToPosition?(normalizedY)
             }
         }
         .background(SwiftUI.Color(NSColor.controlBackgroundColor).opacity(0.3))
@@ -1481,17 +1506,42 @@ struct HunkDiffView: View {
     var contentHeight: Binding<CGFloat>? = nil
     var viewId: String = "DiffScrollView"
     @State private var collapsedHunks: Set<Int> = []
+    @State private var selectedHunks: Set<Int> = []
+    @State private var isSelectionMode: Bool = false
+
+    private var hasActions: Bool {
+        onStageHunk != nil || onUnstageHunk != nil || onDiscardHunk != nil
+    }
 
     var body: some View {
         UnifiedDiffScrollView(scrollOffset: $scrollOffset, viewportHeight: $viewportHeight, contentHeight: contentHeight, id: viewId) {
             VStack(spacing: 0) {
                 LazyVStack(spacing: 12) {
-                    // Summary header
-                    HunkSummaryHeader(
-                        hunkCount: hunks.count,
-                        totalAdditions: hunks.reduce(0) { $0 + $1.lines.filter { $0.type == .addition }.count },
-                        totalDeletions: hunks.reduce(0) { $0 + $1.lines.filter { $0.type == .deletion }.count }
-                    )
+                    // Summary header with selection toolbar
+                    HStack(spacing: 12) {
+                        HunkSummaryHeader(
+                            hunkCount: hunks.count,
+                            totalAdditions: hunks.reduce(0) { $0 + $1.lines.filter { $0.type == .addition }.count },
+                            totalDeletions: hunks.reduce(0) { $0 + $1.lines.filter { $0.type == .deletion }.count }
+                        )
+
+                        Spacer()
+
+                        // Selection mode toggle and actions
+                        if hasActions && hunks.count > 1 {
+                            HunkSelectionToolbar(
+                                isSelectionMode: $isSelectionMode,
+                                selectedCount: selectedHunks.count,
+                                totalCount: hunks.count,
+                                isStaged: isStaged,
+                                onSelectAll: { selectedHunks = Set(0..<hunks.count) },
+                                onDeselectAll: { selectedHunks.removeAll() },
+                                onStageSelected: onStageHunk != nil ? stageSelectedHunks : nil,
+                                onUnstageSelected: onUnstageHunk != nil ? unstageSelectedHunks : nil,
+                                onDiscardSelected: onDiscardHunk != nil ? discardSelectedHunks : nil
+                            )
+                        }
+                    }
 
                     ForEach(Array(hunks.enumerated()), id: \.element.id) { index, hunk in
                         CollapsibleHunkCard(
@@ -1502,6 +1552,8 @@ struct HunkDiffView: View {
                             showActions: onStageHunk != nil || onUnstageHunk != nil,
                             isStaged: isStaged,
                             isCollapsed: collapsedHunks.contains(index),
+                            isSelectionMode: isSelectionMode,
+                            isSelected: selectedHunks.contains(index),
                             onToggleCollapse: {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     if collapsedHunks.contains(index) {
@@ -1509,6 +1561,13 @@ struct HunkDiffView: View {
                                     } else {
                                         collapsedHunks.insert(index)
                                     }
+                                }
+                            },
+                            onToggleSelection: {
+                                if selectedHunks.contains(index) {
+                                    selectedHunks.remove(index)
+                                } else {
+                                    selectedHunks.insert(index)
                                 }
                             },
                             onStage: { onStageHunk?(index) },
@@ -1520,6 +1579,31 @@ struct HunkDiffView: View {
                 .padding()
             }
         }
+    }
+
+    private func stageSelectedHunks() {
+        for index in selectedHunks.sorted() {
+            onStageHunk?(index)
+        }
+        selectedHunks.removeAll()
+        isSelectionMode = false
+    }
+
+    private func unstageSelectedHunks() {
+        for index in selectedHunks.sorted() {
+            onUnstageHunk?(index)
+        }
+        selectedHunks.removeAll()
+        isSelectionMode = false
+    }
+
+    private func discardSelectedHunks() {
+        // Discard in reverse order to avoid index shifting issues
+        for index in selectedHunks.sorted().reversed() {
+            onDiscardHunk?(index)
+        }
+        selectedHunks.removeAll()
+        isSelectionMode = false
     }
 }
 
@@ -1566,6 +1650,131 @@ struct HunkSummaryHeader: View {
     }
 }
 
+// MARK: - Hunk Selection Toolbar
+
+struct HunkSelectionToolbar: View {
+    @Binding var isSelectionMode: Bool
+    let selectedCount: Int
+    let totalCount: Int
+    var isStaged: Bool = false
+    var onSelectAll: (() -> Void)?
+    var onDeselectAll: (() -> Void)?
+    var onStageSelected: (() -> Void)?
+    var onUnstageSelected: (() -> Void)?
+    var onDiscardSelected: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: 8) {
+            // Toggle selection mode
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isSelectionMode.toggle()
+                    if !isSelectionMode {
+                        onDeselectAll?()
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: isSelectionMode ? "checkmark.square.fill" : "square.dashed")
+                        .font(.system(size: 11))
+                    Text("Select")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(isSelectionMode ? GitKrakenTheme.accent.opacity(0.2) : Color.clear)
+                .cornerRadius(4)
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(isSelectionMode ? GitKrakenTheme.accent : GitKrakenTheme.textSecondary)
+
+            if isSelectionMode {
+                Divider()
+                    .frame(height: 16)
+
+                // Selection counter
+                Text("\(selectedCount)/\(totalCount)")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(GitKrakenTheme.textSecondary)
+
+                // Select/Deselect all buttons
+                Button("All") { onSelectAll?() }
+                    .font(.system(size: 10, weight: .medium))
+                    .buttonStyle(.plain)
+                    .foregroundColor(GitKrakenTheme.accent)
+
+                Button("None") { onDeselectAll?() }
+                    .font(.system(size: 10, weight: .medium))
+                    .buttonStyle(.plain)
+                    .foregroundColor(GitKrakenTheme.textSecondary)
+
+                if selectedCount > 0 {
+                    Divider()
+                        .frame(height: 16)
+
+                    // Bulk actions
+                    if !isStaged, let stageSelected = onStageSelected {
+                        Button {
+                            stageSelected()
+                        } label: {
+                            HStack(spacing: 3) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 10))
+                                Text("Stage")
+                                    .font(.system(size: 10, weight: .medium))
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(GitKrakenTheme.accentGreen)
+                            .foregroundColor(.white)
+                            .cornerRadius(4)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    if isStaged, let unstageSelected = onUnstageSelected {
+                        Button {
+                            unstageSelected()
+                        } label: {
+                            HStack(spacing: 3) {
+                                Image(systemName: "minus.circle.fill")
+                                    .font(.system(size: 10))
+                                Text("Unstage")
+                                    .font(.system(size: 10, weight: .medium))
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(GitKrakenTheme.accentOrange)
+                            .foregroundColor(.white)
+                            .cornerRadius(4)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    if !isStaged, let discardSelected = onDiscardSelected {
+                        Button {
+                            discardSelected()
+                        } label: {
+                            HStack(spacing: 3) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 10))
+                                Text("Discard")
+                                    .font(.system(size: 10, weight: .medium))
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(GitKrakenTheme.accentRed)
+                            .foregroundColor(.white)
+                            .cornerRadius(4)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Collapsible Hunk Card
 
 struct CollapsibleHunkCard: View {
@@ -1576,7 +1785,10 @@ struct CollapsibleHunkCard: View {
     let showActions: Bool
     let isStaged: Bool
     let isCollapsed: Bool
+    var isSelectionMode: Bool = false
+    var isSelected: Bool = false
     var onToggleCollapse: (() -> Void)?
+    var onToggleSelection: (() -> Void)?
     var onStage: (() -> Void)?
     var onUnstage: (() -> Void)?
     var onDiscard: (() -> Void)?
@@ -1595,6 +1807,18 @@ struct CollapsibleHunkCard: View {
         VStack(alignment: .leading, spacing: 0) {
             // Hunk header (always visible)
             HStack(spacing: 8) {
+                // Selection checkbox (visible in selection mode)
+                if isSelectionMode {
+                    Button {
+                        onToggleSelection?()
+                    } label: {
+                        Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                            .font(.system(size: 14))
+                            .foregroundColor(isSelected ? GitKrakenTheme.accent : GitKrakenTheme.textSecondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+
                 // Collapse toggle
                 Button(action: { onToggleCollapse?() }) {
                     Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
@@ -1705,13 +1929,21 @@ struct CollapsibleHunkCard: View {
                 .background(GitKrakenTheme.backgroundTertiary)
             }
         }
-        .background(GitKrakenTheme.backgroundSecondary)
+        .background(isSelected ? GitKrakenTheme.accent.opacity(0.1) : GitKrakenTheme.backgroundSecondary)
         .cornerRadius(8)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(isHovered ? GitKrakenTheme.accent.opacity(0.6) : GitKrakenTheme.border, lineWidth: isHovered ? 2 : 1)
+                .stroke(
+                    isSelected ? GitKrakenTheme.accent : (isHovered ? GitKrakenTheme.accent.opacity(0.6) : GitKrakenTheme.border),
+                    lineWidth: isSelected || isHovered ? 2 : 1
+                )
         )
         .onHover { isHovered = $0 }
+        .onTapGesture {
+            if isSelectionMode {
+                onToggleSelection?()
+            }
+        }
     }
 }
 
