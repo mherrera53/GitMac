@@ -188,6 +188,30 @@ class GitService: ObservableObject {
         try await refreshStatus()
     }
 
+    /// Discard a staged file completely (unstage + discard changes)
+    func discardStagedFile(path filePath: String) async throws {
+        guard let repoPath = currentRepository?.path else {
+            throw GitServiceError.noRepository
+        }
+
+        // Step 1: Unstage the file
+        try await engine.unstage(files: [filePath], at: repoPath)
+        // Step 2: Discard the changes
+        try await engine.discardChanges(files: [filePath], at: repoPath)
+        try await refreshStatus()
+    }
+
+    /// Discard multiple staged files completely (unstage + discard changes)
+    func discardStagedFiles(paths: [String]) async throws {
+        guard let repoPath = currentRepository?.path else {
+            throw GitServiceError.noRepository
+        }
+
+        try await engine.unstage(files: paths, at: repoPath)
+        try await engine.discardChanges(files: paths, at: repoPath)
+        try await refreshStatus()
+    }
+
     // MARK: - Commit Operations
 
     func commit(message: String, amend: Bool = false) async throws -> Commit {

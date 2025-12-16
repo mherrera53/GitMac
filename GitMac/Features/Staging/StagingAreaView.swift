@@ -217,6 +217,7 @@ struct StagingAreaView: View {
     @State private var isStagingAll = false
     @State private var isDiscardingAll = false
     @State private var isUnstagingAll = false
+    @State private var isDiscardingAllStaged = false
 
     private var unstagedSection: some View {
         FileListSection(
@@ -360,17 +361,30 @@ struct StagingAreaView: View {
             icon: "checkmark.square.fill",
             headerColor: .green
         ) {
-            HeaderActionButton(
-                icon: "minus.circle.fill",
-                color: GitKrakenTheme.accentOrange,
-                isLoading: isUnstagingAll,
-                tooltip: "Unstage All"
-            ) {
-                isUnstagingAll = true
-                await viewModel.unstageAll()
-                isUnstagingAll = false
+            HStack(spacing: 4) {
+                HeaderActionButton(
+                    icon: "minus.circle.fill",
+                    color: GitKrakenTheme.accentOrange,
+                    isLoading: isUnstagingAll,
+                    tooltip: "Unstage All"
+                ) {
+                    isUnstagingAll = true
+                    await viewModel.unstageAll()
+                    isUnstagingAll = false
+                }
+                .keyboardShortcut("u", modifiers: [.command, .shift])
+
+                HeaderActionButton(
+                    icon: "xmark.circle.fill",
+                    color: GitKrakenTheme.accentRed,
+                    isLoading: isDiscardingAllStaged,
+                    tooltip: "Discard All Staged"
+                ) {
+                    isDiscardingAllStaged = true
+                    await viewModel.discardAllStaged()
+                    isDiscardingAllStaged = false
+                }
             }
-            .keyboardShortcut("u", modifiers: [.command, .shift])
         } content: {
             if viewModel.stagedFiles.isEmpty {
                 emptyStateView("No staged changes")
@@ -390,7 +404,8 @@ struct StagingAreaView: View {
                 isStaged: true,
                 namespace: animation,
                 onUnstage: { path in Task { await viewModel.unstage(file: path) } },
-                onUnstageFolder: { folder in Task { await viewModel.unstageFolder(folder) } }
+                onUnstageFolder: { folder in Task { await viewModel.unstageFolder(folder) } },
+                onDiscardStaged: { path in Task { await viewModel.discardStagedFile(path) } }
             )
         } else {
             ForEach(filteredStagedFiles) { file in
@@ -400,7 +415,8 @@ struct StagingAreaView: View {
                     repositoryPath: repoPath,
                     namespace: animation,
                     onSelect: { selectedFile = file.path },
-                    onUnstage: { Task { await viewModel.unstage(file: file.path) } }
+                    onUnstage: { Task { await viewModel.unstage(file: file.path) } },
+                    onDiscardStaged: { Task { await viewModel.discardStagedFile(file.path) } }
                 )
             }
         }
@@ -634,6 +650,21 @@ class StagingAreaViewModel: ObservableObject {
         await reloadStatus()
     }
 
+    /// Discard a staged file completely (unstage + discard changes)
+    func discardStagedFile(_ path: String) async {
+        guard currentPath != nil, let gitService = gitService else { return }
+        try? await gitService.discardStagedFile(path: path)
+        await reloadStatus()
+    }
+
+    /// Discard all staged files completely (unstage + discard changes)
+    func discardAllStaged() async {
+        guard let gitService = gitService else { return }
+        let allStaged = stagedFiles.map { $0.path }
+        try? await gitService.discardStagedFiles(paths: allStaged)
+        await reloadStatus()
+    }
+
     private func reloadStatus() async {
         // Force refresh from git service first to get latest state
         if let gitService = gitService {
@@ -763,11 +794,13 @@ struct FileRow: View {
     var onStage: (() async -> Void)? = nil
     var onUnstage: (() async -> Void)? = nil
     var onDiscard: (() async -> Void)? = nil
+    var onDiscardStaged: (() async -> Void)? = nil
 
     @State private var isHovered = false
     @State private var isStaging = false
     @State private var isUnstaging = false
     @State private var isDiscarding = false
+    @State private var isDiscardingStaged = false
     @State private var showPreview = false
 
     var body: some View {
@@ -839,6 +872,19 @@ struct FileRow: View {
                             isDiscarding = true
                             await discard()
                             isDiscarding = false
+                        }
+                    }
+
+                    if let discardStaged = onDiscardStaged {
+                        FileActionButton(
+                            icon: "xmark.circle",
+                            color: GitKrakenTheme.accentRed,
+                            isLoading: isDiscardingStaged,
+                            tooltip: "Discard staged changes"
+                        ) {
+                            isDiscardingStaged = true
+                            await discardStaged()
+                            isDiscardingStaged = false
                         }
                     }
                 }
@@ -1741,6 +1787,7 @@ struct FileTreeView: View {
     // Callbacks for staged files
     var onUnstage: ((String) -> Void)? = nil
     var onUnstageFolder: ((String) -> Void)? = nil
+    var onDiscardStaged: ((String) -> Void)? = nil
 
     // Section identifier for expansion state (prevents conflicts between staged/unstaged)
     private var section: String {
@@ -1760,7 +1807,8 @@ struct FileTreeView: View {
                 onDiscard: onDiscard,
                 onStageFolder: onStageFolder,
                 onUnstage: onUnstage,
-                onUnstageFolder: onUnstageFolder
+                onUnstageFolder: onUnstageFolder,
+                onDiscardStaged: onDiscardStaged
             )
         }
     }
@@ -1890,6 +1938,7 @@ struct TreeNodeView: View {
     var onStageFolder: ((String) -> Void)?
     var onUnstage: ((String) -> Void)?
     var onUnstageFolder: ((String) -> Void)?
+    var onDiscardStaged: ((String) -> Void)?
 
     @ObservedObject private var expansionState = TreeExpansionState.shared
     @State private var isHovered = false
@@ -2012,7 +2061,8 @@ struct TreeNodeView: View {
                             onDiscard: onDiscard,
                             onStageFolder: onStageFolder,
                             onUnstage: onUnstage,
-                            onUnstageFolder: onUnstageFolder
+                            onUnstageFolder: onUnstageFolder,
+                            onDiscardStaged: onDiscardStaged
                         )
                         .padding(.leading, 16)
                     }
@@ -2060,6 +2110,16 @@ struct TreeNodeView: View {
                         }
                         .buttonStyle(.borderless)
                         .help("Unstage")
+                    }
+                    if let discardStaged = onDiscardStaged {
+                        Button {
+                            discardStaged(node.path)
+                        } label: {
+                            Image(systemName: "xmark.circle")
+                                .foregroundColor(.red)
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Discard staged changes")
                     }
                 } else {
                     if let stage = onStage {
