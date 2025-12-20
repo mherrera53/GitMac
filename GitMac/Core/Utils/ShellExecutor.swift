@@ -182,6 +182,24 @@ actor ShellExecutor {
                 process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory)
             }
 
+            // Data capture
+            var stdoutData = Data()
+            var stderrData = Data()
+            let group = DispatchGroup()
+            let queue = DispatchQueue(label: "com.gitmac.shell-io", attributes: .concurrent)
+
+            group.enter()
+            queue.async {
+                stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+                group.leave()
+            }
+
+            group.enter()
+            queue.async {
+                stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+                group.leave()
+            }
+
             // Escalated timeout handling: SIGTERM first, then SIGKILL
             let timeoutWorkItem = DispatchWorkItem {
                 guard process.isRunning else { return }
@@ -207,9 +225,7 @@ actor ShellExecutor {
                 process.waitUntilExit()
 
                 timeoutWorkItem.cancel()
-
-                let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-                let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+                group.wait() // Wait for IO to finish
 
                 let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
                 let stderr = String(data: stderrData, encoding: .utf8) ?? ""
@@ -315,7 +331,7 @@ actor ShellExecutor {
             process.standardOutput = stdoutPipe
             process.standardError = stderrPipe
 
-            // Use default environment (can't access actor state from nonisolated)
+            // Use default environment
             var env = ProcessInfo.processInfo.environment
             env["GIT_PAGER"] = ""
             env["PAGER"] = ""
@@ -329,13 +345,16 @@ actor ShellExecutor {
                 process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory)
             }
 
-            var lineBuffer = ""
-
             // Move to background thread for blocking I/O
             Task.detached {
                 let stdoutHandle = stdoutPipe.fileHandleForReading
                 let stderrHandle = stderrPipe.fileHandleForReading
                 
+                // Start stderr reader concurrently to prevent deadlocks
+                let stderrTask = Task {
+                    return stderrHandle.readDataToEndOfFile()
+                }
+
                 do {
                     try process.run()
                 } catch {
@@ -351,13 +370,12 @@ actor ShellExecutor {
                 }
 
                 // Read stdout line by line
-                // Note: This blocks the detached task thread, which is fine
                 for try await line in stdoutHandle.bytes.lines {
                     continuation.yield(line)
                 }
                 
-                // Read stderr (non-blocking if possible, or simple readToEnd)
-                let stderrData = stderrHandle.readDataToEndOfFile()
+                // Wait for process and stderr
+                let stderrData = await stderrTask.value
                 let stderrString = String(data: stderrData, encoding: .utf8) ?? ""
 
                 process.waitUntilExit()

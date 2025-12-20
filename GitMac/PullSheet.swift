@@ -129,6 +129,44 @@ struct PullSheet: View {
                 detail: r.message
             )
             
+        } catch let gitError as GitError {
+            self.error = gitError.localizedDescription
+            
+            // Track failed pull
+            RemoteOperationTracker.shared.recordPull(
+                success: false,
+                branch: branchName,
+                remote: "origin",
+                error: gitError.localizedDescription
+            )
+            
+            // Show error notification with suggested fix if available
+            if let fix = gitError.suggestedFix {
+                NotificationManager.shared.errorWithFix(
+                    "Pull failed",
+                    detail: gitError.localizedDescription,
+                    fixTitle: fix.title,
+                    fixHint: fix.hint
+                ) { [weak appState] in
+                    // Execute the suggested fix
+                    Task {
+                        if let command = fix.command {
+                            // Run the suggested command
+                            if command == "git stash" {
+                                try? await appState?.gitService.stash(message: "Auto-stash before pull")
+                                NotificationManager.shared.success("Changes stashed", detail: "Now try pulling again")
+                            } else if command == "git pull --rebase" {
+                                // Already doing this, just close
+                            }
+                        }
+                    }
+                }
+            } else {
+                NotificationManager.shared.error(
+                    "Pull failed",
+                    detail: gitError.localizedDescription
+                )
+            }
         } catch {
             self.error = error.localizedDescription
             
@@ -140,7 +178,6 @@ struct PullSheet: View {
                 error: error.localizedDescription
             )
             
-            // Show error notification
             NotificationManager.shared.error(
                 "Pull failed",
                 detail: error.localizedDescription

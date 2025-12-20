@@ -36,15 +36,17 @@ actor AIService {
             switch self {
             case .openai:
                 return [
+                    AIModel(id: "gpt-4o-mini", name: "GPT-4o Mini (Fast)", provider: self),
+                    AIModel(id: "gpt-4o", name: "GPT-4o", provider: self),
                     AIModel(id: "gpt-4-turbo", name: "GPT-4 Turbo", provider: self),
-                    AIModel(id: "gpt-4", name: "GPT-4", provider: self),
                     AIModel(id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", provider: self)
                 ]
             case .anthropic:
                 return [
-                    AIModel(id: "claude-3-opus-20240229", name: "Claude 3 Opus", provider: self),
-                    AIModel(id: "claude-3-sonnet-20240229", name: "Claude 3 Sonnet", provider: self),
-                    AIModel(id: "claude-3-haiku-20240307", name: "Claude 3 Haiku", provider: self)
+                    AIModel(id: "claude-3-5-haiku-20241022", name: "Claude 3.5 Haiku (Fast)", provider: self),
+                    AIModel(id: "claude-3-5-sonnet-20241022", name: "Claude 3.5 Sonnet", provider: self),
+                    AIModel(id: "claude-3-haiku-20240307", name: "Claude 3 Haiku", provider: self),
+                    AIModel(id: "claude-3-opus-20240229", name: "Claude 3 Opus", provider: self)
                 ]
             case .gemini:
                 return [
@@ -67,7 +69,7 @@ actor AIService {
     // MARK: - Configuration
 
     private var currentProvider: AIProvider = .anthropic
-    private var currentModel: String = "claude-3-haiku-20240307"
+    private var currentModel: String = "claude-3-5-haiku-20241022"
 
     /// Get current provider (loads from keychain if needed)
     func getCurrentProvider() async -> AIProvider {
@@ -320,27 +322,28 @@ actor AIService {
         style: CommitStyle = .conventional,
         maxLength: Int = 72
     ) async throws -> String {
+        // Start loading preferences in parallel with diff processing
+        async let prefsTask: Void = loadPreferencesIfNeeded()
+        
         // Create highly optimized diff summary
         let optimizedDiff = createOptimizedDiff(diff)
-
+        
+        // Wait for preferences
+        await prefsTask
+        
+        // Ultra-compact prompt for speed
         let prompt = """
-        Generate a Git commit message for these changes.
-
-        Style: \(style.description)
-        Max subject: \(maxLength) chars
-
-        Rules:
-        - Imperative mood ("Add" not "Added")
-        - Subject line only, no body unless critical
-        - Types: feat, fix, docs, style, refactor, test, chore
-
-        Changes:
+        Git commit message for:
         \(optimizedDiff)
-
-        Commit message:
+        
+        Format: \(style.description) | Max \(maxLength) chars | Imperative mood
+        Types: feat/fix/docs/style/refactor/test/chore
+        
+        Reply with ONLY the commit message:
         """
-
-        return try await sendMessage(prompt)
+        
+        // Use quick message for faster response
+        return try await sendQuickMessage(prompt, maxTokens: 100)
     }
 
     /// Generate a PR description
@@ -485,7 +488,7 @@ actor AIService {
         request.timeoutInterval = 10
 
         let body: [String: Any] = [
-            "model": "gpt-3.5-turbo", // Use faster model for autocomplete
+            "model": "gpt-4o-mini", // Fastest OpenAI model
             "messages": [["role": "user", "content": message]],
             "max_tokens": maxTokens,
             "temperature": 0.3
@@ -513,7 +516,7 @@ actor AIService {
         request.timeoutInterval = 10
 
         let body: [String: Any] = [
-            "model": "claude-3-haiku-20240307", // Use fastest model
+            "model": "claude-3-5-haiku-20241022", // Fastest Claude model
             "max_tokens": maxTokens,
             "messages": [["role": "user", "content": message]]
         ]

@@ -234,9 +234,34 @@ class BranchListViewModel: ObservableObject {
         do {
             try await gitService.checkout(branchName)
             try await gitService.refresh()
+            NotificationManager.shared.success(
+                "Switched to '\(branchName)'",
+                detail: nil
+            )
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
+        } catch let gitError as GitError {
+            self.error = gitError.localizedDescription
+            if let fix = gitError.suggestedFix {
+                NotificationManager.shared.errorWithFix(
+                    "Checkout failed",
+                    detail: gitError.localizedDescription,
+                    fixTitle: fix.title,
+                    fixHint: fix.hint
+                ) {
+                    // Action depends on fix
+                    if fix.command == "git stash" {
+                        Task {
+                            try? await self.gitService.stash()
+                            NotificationManager.shared.success("Changes stashed", detail: "Try checkout again")
+                        }
+                    }
+                }
+            } else {
+                NotificationManager.shared.error("Checkout failed", detail: gitError.localizedDescription)
+            }
         } catch {
             self.error = error.localizedDescription
+            NotificationManager.shared.error("Checkout failed", detail: error.localizedDescription)
         }
         isLoading = false
     }
@@ -378,27 +403,52 @@ class BranchListViewModel: ObservableObject {
     func push(_ branch: Branch) async {
         isLoading = true
         do {
-            // Only support pushing HEAD for now or we need to pass branch name to gitService.push
             if branch.isHead {
                 try await gitService.push()
-
-                // Track successful push
+                NotificationManager.shared.success(
+                    "Pushed '\(branch.name)'",
+                    detail: "Changes pushed to remote"
+                )
                 RemoteOperationTracker.shared.recordPush(
                     success: true,
                     branch: branch.name,
                     remote: "origin"
                 )
             }
+        } catch let gitError as GitError {
+            self.error = gitError.localizedDescription
+            RemoteOperationTracker.shared.recordPush(
+                success: false,
+                branch: branch.name,
+                remote: "origin",
+                error: gitError.localizedDescription
+            )
+            if let fix = gitError.suggestedFix {
+                NotificationManager.shared.errorWithFix(
+                    "Push failed",
+                    detail: gitError.localizedDescription,
+                    fixTitle: fix.title,
+                    fixHint: fix.hint
+                ) {
+                    Task {
+                        if fix.command == "git pull --rebase" {
+                            try? await self.gitService.pull(rebase: true)
+                            NotificationManager.shared.info("Pulled with rebase", detail: "Try pushing again")
+                        }
+                    }
+                }
+            } else {
+                NotificationManager.shared.error("Push failed", detail: gitError.localizedDescription)
+            }
         } catch {
             self.error = error.localizedDescription
-
-            // Track failed push
             RemoteOperationTracker.shared.recordPush(
                 success: false,
                 branch: branch.name,
                 remote: "origin",
                 error: error.localizedDescription
             )
+            NotificationManager.shared.error("Push failed", detail: error.localizedDescription)
         }
         isLoading = false
     }
@@ -408,24 +458,50 @@ class BranchListViewModel: ObservableObject {
         do {
             if branch.isHead {
                 try await gitService.pull()
-
-                // Track successful pull
+                NotificationManager.shared.success(
+                    "Pulled '\(branch.name)'",
+                    detail: "Updated from remote"
+                )
                 RemoteOperationTracker.shared.recordPull(
                     success: true,
                     branch: branch.name,
                     remote: "origin"
                 )
             }
+        } catch let gitError as GitError {
+            self.error = gitError.localizedDescription
+            RemoteOperationTracker.shared.recordPull(
+                success: false,
+                branch: branch.name,
+                remote: "origin",
+                error: gitError.localizedDescription
+            )
+            if let fix = gitError.suggestedFix {
+                NotificationManager.shared.errorWithFix(
+                    "Pull failed",
+                    detail: gitError.localizedDescription,
+                    fixTitle: fix.title,
+                    fixHint: fix.hint
+                ) {
+                    Task {
+                        if fix.command == "git stash" {
+                            try? await self.gitService.stash()
+                            NotificationManager.shared.success("Changes stashed", detail: "Try pulling again")
+                        }
+                    }
+                }
+            } else {
+                NotificationManager.shared.error("Pull failed", detail: gitError.localizedDescription)
+            }
         } catch {
             self.error = error.localizedDescription
-
-            // Track failed pull
             RemoteOperationTracker.shared.recordPull(
                 success: false,
                 branch: branch.name,
                 remote: "origin",
                 error: error.localizedDescription
             )
+            NotificationManager.shared.error("Pull failed", detail: error.localizedDescription)
         }
         isLoading = false
     }

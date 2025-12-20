@@ -488,7 +488,7 @@ class GitService: ObservableObject {
 
     // MARK: - Revert Operations
 
-    func revert(commitSHA: String, noCommit: Bool = false) async throws -> Commit? {
+    func revert(commitSHAs: [String], noCommit: Bool = false) async throws {
         guard let path = currentRepository?.path else {
             throw GitServiceError.noRepository
         }
@@ -500,7 +500,8 @@ class GitService: ObservableObject {
         if noCommit {
             args.append("--no-commit")
         }
-        args.append(commitSHA)
+        
+        args.append(contentsOf: commitSHAs)
 
         let shell = ShellExecutor()
         let result = await shell.execute(
@@ -514,14 +515,6 @@ class GitService: ObservableObject {
         }
 
         try await refresh()
-
-        // Return the new commit if created
-        if !noCommit {
-            let commits = try await getCommits(branch: nil, limit: 1)
-            return commits.first
-        }
-
-        return nil
     }
 
     // MARK: - Rebase Operations

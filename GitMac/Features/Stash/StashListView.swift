@@ -35,6 +35,29 @@ struct StashListView: View {
                 .padding()
                 .background(Color(nsColor: .controlBackgroundColor))
 
+                if let error = viewModel.error {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.red)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                        Spacer()
+                        Button {
+                            viewModel.error = nil
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(8)
+                    .background(Color.red.opacity(0.1))
+                    .cornerRadius(4)
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+                }
+
                 Divider()
 
                 // List
@@ -91,6 +114,7 @@ struct StashListView: View {
             Text("Are you sure you want to drop '\(stashToDelete?.displayMessage ?? "")'? This cannot be undone.")
         }
         .task {
+            viewModel.configure(gitService: appState.gitService)
             if let repo = appState.currentRepository {
                 viewModel.loadStashes(from: repo)
             }
@@ -109,9 +133,13 @@ class StashListViewModel: ObservableObject {
     @Published var stashFiles: [String: [StashFile]] = [:] // Cache of files per stash ref
     @Published var stashStats: [String: (additions: Int, deletions: Int)] = [:] // Cache of stats per stash ref
 
-    private let gitService = GitService()
+    private var gitService: GitService?
     private let gitEngine = GitEngine()
     private var currentPath: String?
+
+    func configure(gitService: GitService) {
+        self.gitService = gitService
+    }
 
     func loadStashes(from repo: Repository) {
         stashes = repo.stashes
@@ -142,6 +170,10 @@ class StashListViewModel: ObservableObject {
     }
 
     func createStash(message: String?, includeUntracked: Bool) async {
+        guard let gitService = gitService else {
+            self.error = "Git service not configured"
+            return
+        }
         isLoading = true
         do {
             _ = try await gitService.stash(message: message, includeUntracked: includeUntracked)
@@ -152,6 +184,7 @@ class StashListViewModel: ObservableObject {
     }
 
     func applyStash(_ stash: Stash) async {
+        guard let gitService = gitService else { return }
         isLoading = true
         do {
             try await gitService.stashApply(index: stash.index)
@@ -164,6 +197,7 @@ class StashListViewModel: ObservableObject {
     }
 
     func popStash(_ stash: Stash) async {
+        guard let gitService = gitService else { return }
         isLoading = true
         do {
             try await gitService.stashPop(index: stash.index)
@@ -176,6 +210,7 @@ class StashListViewModel: ObservableObject {
     }
 
     func dropStash(_ stash: Stash) async {
+        guard let gitService = gitService else { return }
         isLoading = true
         do {
             try await gitService.stashDrop(index: stash.index)

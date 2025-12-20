@@ -45,6 +45,29 @@ class NotificationManager: ObservableObject {
         show(detail.map { "\(message)\n\($0)" } ?? message, type: .info)
     }
     
+    /// Show error with suggested fix action button
+    func errorWithFix(
+        _ message: String,
+        detail: String? = nil,
+        fixTitle: String,
+        fixHint: String,
+        fixAction: @escaping () -> Void
+    ) {
+        let fullMessage = detail.map { "\(message)\n\($0)" } ?? message
+        let notification = ToastNotification(
+            message: fullMessage,
+            type: .error,
+            duration: 10.0, // Longer for actionable notifications
+            actionTitle: fixTitle,
+            actionHint: fixHint,
+            action: fixAction
+        )
+        
+        DispatchQueue.main.async { [weak self] in
+            self?.addNotification(notification)
+        }
+    }
+    
     func dismiss(_ notification: ToastNotification) {
         withAnimation(.easeOut(duration: 0.2)) {
             notifications.removeAll { $0.id == notification.id }
@@ -106,12 +129,30 @@ struct ToastNotification: Identifiable, Equatable {
     let duration: TimeInterval
     let timestamp: Date
     
-    init(message: String, type: NotificationType, duration: TimeInterval) {
+    // Action button for error recovery
+    let actionTitle: String?
+    let actionHint: String?
+    private let actionHandler: (() -> Void)?
+    
+    var hasAction: Bool { actionTitle != nil && actionHandler != nil }
+    
+    init(message: String, type: NotificationType, duration: TimeInterval, actionTitle: String? = nil, actionHint: String? = nil, action: (() -> Void)? = nil) {
         self.id = UUID()
         self.message = message
         self.type = type
         self.duration = duration
         self.timestamp = Date()
+        self.actionTitle = actionTitle
+        self.actionHint = actionHint
+        self.actionHandler = action
+    }
+    
+    func performAction() {
+        actionHandler?()
+    }
+    
+    static func == (lhs: ToastNotification, rhs: ToastNotification) -> Bool {
+        lhs.id == rhs.id
     }
 }
 
@@ -152,31 +193,60 @@ struct ToastNotificationView: View {
     @State private var dragOffset: CGFloat = 0
     
     var body: some View {
-        HStack(spacing: 12) {
-            // Icon
-            Image(systemName: notification.type.icon)
-                .font(.system(size: 20))
-                .foregroundColor(notification.type.color)
-            
-            // Message
-            VStack(alignment: .leading, spacing: 4) {
-                ForEach(notification.message.components(separatedBy: "\n"), id: \.self) { line in
-                    Text(line)
-                        .font(line == notification.message.components(separatedBy: "\n").first ? .body : .caption)
-                        .foregroundColor(line == notification.message.components(separatedBy: "\n").first ? .primary : .secondary)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                // Icon
+                Image(systemName: notification.type.icon)
+                    .font(.system(size: 20))
+                    .foregroundColor(notification.type.color)
+                
+                // Message
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(notification.message.components(separatedBy: "\n"), id: \.self) { line in
+                        Text(line)
+                            .font(line == notification.message.components(separatedBy: "\n").first ? .body : .caption)
+                            .foregroundColor(line == notification.message.components(separatedBy: "\n").first ? .primary : .secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // Close button (on hover)
+                if isHovered {
+                    Button {
+                        onDismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             
-            // Close button (on hover)
-            if isHovered {
-                Button {
-                    onDismiss()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
+            // Action button for error recovery with explanation
+            if notification.hasAction, let title = notification.actionTitle {
+                Divider()
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    if let hint = notification.actionHint {
+                        Text("💡 \(hint)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    
+                    Button {
+                        notification.performAction()
+                        onDismiss()
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.right.circle.fill")
+                            Text(title)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(notification.type.color)
+                    .controlSize(.small)
                 }
-                .buttonStyle(.plain)
             }
         }
         .padding()
@@ -189,7 +259,7 @@ struct ToastNotificationView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(notification.type.color.opacity(0.5), lineWidth: 2)
         )
-        .frame(width: 350)
+        .frame(width: 380)
         .offset(x: dragOffset)
         .onHover { isHovered = $0 }
         .gesture(
