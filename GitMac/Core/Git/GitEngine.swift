@@ -1917,4 +1917,107 @@ enum GitError: LocalizedError {
             return "Failed to unlock worktree at '\(path)': \(message)"
         }
     }
+    
+    // MARK: - Error Recovery Suggestions
+    
+    /// Suggested fix for the error with title and command/action
+    var suggestedFix: (title: String, command: String?, hint: String)? {
+        switch self {
+        // Push errors
+        case .pushFailed(let msg):
+            if msg.contains("non-fast-forward") || msg.contains("fetch first") || msg.contains("rejected") {
+                return ("Pull First", "git pull --rebase", "Remote has changes you don't have locally. Pull and rebase first.")
+            }
+            if msg.contains("permission denied") || msg.contains("403") {
+                return ("Check Permissions", nil, "You may not have push access to this repository. Check your credentials.")
+            }
+            if msg.contains("no upstream") || msg.contains("no tracking") {
+                return ("Set Upstream", "git push -u origin HEAD", "No upstream branch configured. Push with -u to set tracking.")
+            }
+            return nil
+            
+        // Pull errors
+        case .pullFailed(let msg):
+            if msg.contains("uncommitted changes") || msg.contains("would be overwritten") {
+                return ("Stash Changes", "git stash", "You have uncommitted changes. Stash them first, then pull.")
+            }
+            if msg.contains("diverged") {
+                return ("Rebase or Merge", "git pull --rebase", "Your branch has diverged from remote. Try pull with rebase.")
+            }
+            if msg.contains("Connection") || msg.contains("Could not resolve") {
+                return ("Check Connection", nil, "Network error. Check your internet connection and try again.")
+            }
+            return nil
+            
+        // Fetch errors
+        case .fetchFailed(let msg):
+            if msg.contains("Connection") || msg.contains("Could not resolve") {
+                return ("Check Connection", nil, "Network error. Check your internet connection.")
+            }
+            if msg.contains("authentication") || msg.contains("permission") {
+                return ("Re-authenticate", nil, "Authentication failed. Check your credentials in Settings.")
+            }
+            return nil
+            
+        // Checkout errors
+        case .checkoutFailed(_, let msg):
+            if msg.contains("uncommitted changes") || msg.contains("would be overwritten") {
+                return ("Stash or Commit", "git stash", "You have uncommitted changes. Stash or commit them first.")
+            }
+            if msg.contains("pathspec") || msg.contains("did not match") {
+                return ("Fetch First", "git fetch --all", "Branch not found locally. Try fetching from remote first.")
+            }
+            return nil
+            
+        // Merge errors
+        case .mergeFailed(let msg):
+            if msg.contains("uncommitted changes") {
+                return ("Stash Changes", "git stash", "Stash your changes before merging.")
+            }
+            return ("Abort Merge", "git merge --abort", "Merge failed. You can abort and try again.")
+            
+        case .mergeConflict:
+            return ("Resolve Conflicts", nil, "Merge has conflicts. Resolve them in the conflicted files, then commit.")
+            
+        // Rebase errors
+        case .rebaseFailed(let msg):
+            if msg.contains("uncommitted changes") {
+                return ("Stash Changes", "git stash", "Stash your changes before rebasing.")
+            }
+            return ("Abort Rebase", "git rebase --abort", "Rebase failed. You can abort and try again.")
+            
+        case .rebaseConflict:
+            return ("Resolve or Skip", "git rebase --continue", "Resolve conflicts, stage files, then continue rebase. Or skip with --skip.")
+            
+        // Stash errors
+        case .stashApplyFailed(let msg):
+            if msg.contains("conflict") {
+                return ("Resolve Conflicts", nil, "Stash apply has conflicts. Resolve them manually.")
+            }
+            if msg.contains("uncommitted changes") {
+                return ("Commit First", nil, "Commit or stash current changes before applying another stash.")
+            }
+            return nil
+            
+        // Commit errors
+        case .commitFailed(let msg):
+            if msg.contains("nothing to commit") {
+                return ("Stage Files", "git add .", "No staged changes to commit. Stage some files first.")
+            }
+            if msg.contains("empty message") || msg.contains("Aborting commit") {
+                return ("Add Message", nil, "Commit message is required.")
+            }
+            return nil
+            
+        // Stage errors
+        case .stageFailed(let msg):
+            if msg.contains("pathspec") || msg.contains("did not match") {
+                return ("Check Path", nil, "File not found. It may have been moved or deleted.")
+            }
+            return nil
+            
+        default:
+            return nil
+        }
+    }
 }

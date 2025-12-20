@@ -190,10 +190,30 @@ class GitRepositoryWatcher: ObservableObject {
         }
 
         // Watch working directory for file changes -> .status signal
+        // Increased latency and extensive excludes for large repos (AWS CodeBuild, etc.)
         workingDirWatcher = RecursiveDirectoryWatcher(
             paths: [repositoryPath],
-            latency: debounceInterval,
-            excludePaths: [".git", "node_modules", ".build", "DerivedData", "Pods", ".swiftpm", "vendor", "__pycache__", ".pytest_cache"]
+            latency: 0.5, // Increased from 0.2 for large repos
+            excludePaths: [
+                // Version control
+                ".git",
+                // JavaScript/Node
+                "node_modules", ".npm", ".pnpm-store", ".yarn",
+                // Python
+                "__pycache__", ".pytest_cache", ".venv", "venv", ".tox", ".mypy_cache",
+                // Swift/iOS
+                "DerivedData", "Pods", ".swiftpm", ".build",
+                // Ruby
+                "vendor",
+                // AWS/Serverless
+                ".aws-sam", ".serverless", "cdk.out", ".amplify",
+                // General build
+                "build", "dist", "out", "target", "bin", "obj",
+                // Terraform/IaC
+                ".terraform",
+                // Misc
+                ".cache", "tmp", ".tmp", "temp", "logs"
+            ]
         ) { [weak self] in
             self?.emitSignal(.status)
         }
@@ -268,10 +288,10 @@ class RecursiveDirectoryWatcher {
             copyDescription: nil
         )
 
+        // Removed kFSEventStreamCreateFlagNoDefer for better coalescing on large repos
         let flags: FSEventStreamCreateFlags = UInt32(
             kFSEventStreamCreateFlagUseCFTypes |
-            kFSEventStreamCreateFlagFileEvents |
-            kFSEventStreamCreateFlagNoDefer
+            kFSEventStreamCreateFlagFileEvents
         )
 
         eventStream = FSEventStreamCreate(

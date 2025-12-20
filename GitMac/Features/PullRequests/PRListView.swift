@@ -158,9 +158,17 @@ class PRListViewModel: ObservableObject {
                 number: pr.number,
                 mergeMethod: method
             )
+            NotificationManager.shared.success(
+                "PR #\(pr.number) merged",
+                detail: "\(pr.title) merged with \(method.rawValue)"
+            )
             await loadPullRequests()
         } catch {
             self.error = error.localizedDescription
+            NotificationManager.shared.error(
+                "Merge failed",
+                detail: error.localizedDescription
+            )
         }
     }
 
@@ -171,15 +179,23 @@ class PRListViewModel: ObservableObject {
                 repo: repo,
                 number: pr.number
             )
+            NotificationManager.shared.success(
+                "PR #\(pr.number) closed",
+                detail: pr.title
+            )
             await loadPullRequests()
         } catch {
             self.error = error.localizedDescription
+            NotificationManager.shared.error(
+                "Failed to close PR",
+                detail: error.localizedDescription
+            )
         }
     }
 
     func createPR(title: String, body: String, head: String, base: String, draft: Bool) async {
         do {
-            _ = try await githubService.createPullRequest(
+            let newPR = try await githubService.createPullRequest(
                 owner: owner,
                 repo: repo,
                 title: title,
@@ -188,9 +204,17 @@ class PRListViewModel: ObservableObject {
                 base: base,
                 draft: draft
             )
+            NotificationManager.shared.success(
+                "PR #\(newPR.number) created",
+                detail: title
+            )
             await loadPullRequests()
         } catch {
             self.error = error.localizedDescription
+            NotificationManager.shared.error(
+                "Failed to create PR",
+                detail: error.localizedDescription
+            )
         }
     }
 }

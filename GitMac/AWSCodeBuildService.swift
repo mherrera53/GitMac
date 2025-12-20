@@ -242,14 +242,10 @@ struct AWSCodeBuildView: View {
             }
         }
         .task {
+            // Only check credentials on mount - don't load builds (lazy loading)
             await viewModel.loadCredentials()
-            await viewModel.refresh(projectFilter: assignedProject)
-        }
-        .onChange(of: appState.currentRepository?.path) { _, _ in
-            // Refresh when repository changes
-            Task {
-                await viewModel.refresh(projectFilter: assignedProject)
-            }
+            // Skip auto-refresh to prevent hang on open
+            // User can click refresh to load builds when ready
         }
     }
 
@@ -439,27 +435,90 @@ struct AWSBuildRow: View {
                 .foregroundColor(build.statusColor)
                 .cornerRadius(4)
 
-            // Time
+            // Time and Duration
             VStack(alignment: .trailing, spacing: 2) {
-                Text(build.timeAgo)
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
-
-                if let duration = build.duration {
-                    HStack(spacing: 2) {
-                        Image(systemName: "clock")
-                            .font(.system(size: 9))
-                        Text(duration)
-                            .font(.system(size: 10))
-                    }
-                    .foregroundColor(.secondary)
+                // Execution start time (e.g., "10:30 AM")
+                if let startTime = build.startTime {
+                    Text(formatStartTime(startTime))
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.primary)
                 }
+                
+                // Relative time and duration
+                HStack(spacing: 4) {
+                    Text(build.timeAgo)
+                        .font(.system(size: 9))
+                        .foregroundColor(.secondary)
+                    
+                    if let duration = build.duration {
+                        Text("•")
+                            .foregroundColor(.secondary)
+                        HStack(spacing: 2) {
+                            Image(systemName: "clock")
+                                .font(.system(size: 8))
+                            Text(duration)
+                                .font(.system(size: 9))
+                        }
+                        .foregroundColor(.secondary)
+                    }
+                }
+            }
+            
+            // View Details button (on hover)
+            if isHovered {
+                Button {
+                    openInAWSConsole()
+                } label: {
+                    Image(systemName: "arrow.up.right.square")
+                        .font(.system(size: 12))
+                }
+                .buttonStyle(.borderless)
+                .help("View in AWS Console")
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(isHovered ? Color.gray.opacity(0.1) : Color.clear)
         .onHover { isHovered = $0 }
+        .contextMenu {
+            Button {
+                openInAWSConsole()
+            } label: {
+                Label("View in AWS Console", systemImage: "safari")
+            }
+            
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(build.id, forType: .string)
+            } label: {
+                Label("Copy Build ID", systemImage: "doc.on.doc")
+            }
+            
+            if build.buildStatus == "IN_PROGRESS" {
+                Divider()
+                Button(role: .destructive) {
+                    // Stop build would be here
+                } label: {
+                    Label("Stop Build", systemImage: "stop.circle")
+                }
+            }
+        }
+    }
+    
+    private func formatStartTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return formatter.string(from: date)
+    }
+    
+    private func openInAWSConsole() {
+        // Extract region from ARN or use default
+        let region = build.arn.components(separatedBy: ":").dropFirst(3).first ?? "us-east-1"
+        let encodedId = build.id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? build.id
+        let url = URL(string: "https://\(region).console.aws.amazon.com/codesuite/codebuild/projects/\(build.projectName)/build/\(encodedId)")
+        if let url = url {
+            NSWorkspace.shared.open(url)
+        }
     }
 }
 
@@ -542,36 +601,44 @@ class AWSCodeBuildViewModel: ObservableObject {
         guard isConfigured else { return }
 
         await MainActor.run { isLoading = true; error = nil }
+        
+        let currentRegion = region // Capture region for use in async calls
 
         // Load builds first (priority) - filter by project if specified (much faster!)
         var buildIds: [String] = []
 
         if let filter = projectFilter, !filter.isEmpty {
             // Fast path: only get builds for the assigned project (limit to 10)
-            let buildsResult = runAWSCommand(["codebuild", "list-builds-for-project", "--project-name", filter, "--max-items", "10", "--output", "json"])
+            let buildsResult = await runAWSCommandAsync(["codebuild", "list-builds-for-project", "--project-name", filter, "--max-items", "10", "--region", currentRegion, "--output", "json"])
             if buildsResult.success {
                 if let data = buildsResult.output.data(using: .utf8),
                    let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let ids = json["ids"] as? [String] {
                     buildIds = ids
                 }
+            } else {
+                await MainActor.run { error = buildsResult.output; isLoading = false }
+                return
             }
         } else {
             // Get only recent builds (limit to 5 for speed)
-            let buildsResult = runAWSCommand(["codebuild", "list-builds", "--max-items", "5", "--output", "json"])
+            let buildsResult = await runAWSCommandAsync(["codebuild", "list-builds", "--max-items", "5", "--region", currentRegion, "--output", "json"])
             if buildsResult.success {
                 if let data = buildsResult.output.data(using: .utf8),
                    let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let ids = json["ids"] as? [String] {
                     buildIds = ids
                 }
+            } else {
+                await MainActor.run { error = buildsResult.output; isLoading = false }
+                return
             }
         }
 
         if !buildIds.isEmpty {
             // Get build details (only fetch what we have)
             let idsToFetch = Array(buildIds.prefix(10))
-            let detailsResult = runAWSCommand(["codebuild", "batch-get-builds", "--ids"] + idsToFetch + ["--output", "json"])
+            let detailsResult = await runAWSCommandAsync(["codebuild", "batch-get-builds", "--ids"] + idsToFetch + ["--region", currentRegion, "--output", "json"])
 
             if detailsResult.success {
                 if let detailsData = detailsResult.output.data(using: .utf8),
@@ -624,12 +691,11 @@ class AWSCodeBuildViewModel: ObservableObject {
         }
 
         // Load projects (for picker, after builds are loaded)
-        let projectsResult = runAWSCommand(["codebuild", "list-projects", "--output", "json"])
+        let projectsResult = await runAWSCommandAsync(["codebuild", "list-projects", "--region", currentRegion, "--output", "json"])
         if projectsResult.success {
             if let data = projectsResult.output.data(using: .utf8),
                let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let projectNames = json["projects"] as? [String] {
-                let currentRegion = region
                 var loadedProjects: [CodeBuildProject] = []
                 for name in projectNames {
                     loadedProjects.append(CodeBuildProject(
@@ -647,44 +713,70 @@ class AWSCodeBuildViewModel: ObservableObject {
         await MainActor.run { isLoading = false }
     }
 
-    private func runAWSCommand(_ arguments: [String], timeout: TimeInterval = 10) -> (success: Bool, output: String) {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/opt/homebrew/bin/aws")
-        process.arguments = arguments
-
-        let pipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-
-            // Add timeout
-            let deadline = Date().addingTimeInterval(timeout)
-            while process.isRunning && Date() < deadline {
-                Thread.sleep(forTimeInterval: 0.1)
+    // MARK: - AWS Command Execution (runs off main thread)
+    
+    nonisolated private func runAWSCommandAsync(_ arguments: [String], timeout: TimeInterval = 15) async -> (success: Bool, output: String) {
+        // Use Task.detached to ensure we're completely off the main actor
+        await Task.detached(priority: .userInitiated) {
+            let process = Process()
+            
+            // Try multiple AWS CLI locations
+            let awsPaths = ["/opt/homebrew/bin/aws", "/usr/local/bin/aws", "/usr/bin/aws"]
+            var awsPath: String? = nil
+            for path in awsPaths {
+                if FileManager.default.fileExists(atPath: path) {
+                    awsPath = path
+                    break
+                }
             }
-
-            if process.isRunning {
-                process.terminate()
-                return (false, "Command timed out after \(Int(timeout))s")
+            
+            guard let foundPath = awsPath else {
+                return (false, "AWS CLI not found")
             }
-
-            let outputData = pipe.fileHandleForReading.readDataToEndOfFile()
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-
-            let output = String(data: outputData, encoding: .utf8) ?? ""
-            let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
-
-            if process.terminationStatus == 0 {
-                return (true, output)
-            } else {
-                return (false, errorOutput.isEmpty ? output : errorOutput)
+            
+            process.executableURL = URL(fileURLWithPath: foundPath)
+            process.arguments = arguments
+            
+            let pipe = Pipe()
+            let errorPipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = errorPipe
+            
+            // Set up timeout
+            var didTimeout = false
+            let timeoutTask = Task {
+                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                if process.isRunning {
+                    didTimeout = true
+                    process.terminate()
+                }
             }
-        } catch {
-            return (false, error.localizedDescription)
-        }
+            
+            do {
+                try process.run()
+                process.waitUntilExit()
+                timeoutTask.cancel()
+                
+                if didTimeout {
+                    return (false, "Timeout after \(Int(timeout))s")
+                }
+                
+                let outputData = pipe.fileHandleForReading.readDataToEndOfFile()
+                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                
+                let output = String(data: outputData, encoding: .utf8) ?? ""
+                let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
+                
+                if process.terminationStatus == 0 {
+                    return (true, output)
+                } else {
+                    return (false, errorOutput.isEmpty ? output : errorOutput)
+                }
+            } catch {
+                timeoutTask.cancel()
+                return (false, error.localizedDescription)
+            }
+        }.value
     }
 
     func startBuild(projectName: String) async {
@@ -692,7 +784,7 @@ class AWSCodeBuildViewModel: ObservableObject {
 
         await MainActor.run { isLoading = true }
 
-        let result = runAWSCommand(["codebuild", "start-build", "--project-name", projectName])
+        let result = await runAWSCommandAsync(["codebuild", "start-build", "--project-name", projectName])
         if !result.success {
             await MainActor.run { error = result.output }
         }
@@ -705,7 +797,7 @@ class AWSCodeBuildViewModel: ObservableObject {
 
         await MainActor.run { isLoading = true }
 
-        let result = runAWSCommand(["codebuild", "stop-build", "--id", buildId])
+        let result = await runAWSCommandAsync(["codebuild", "stop-build", "--id", buildId])
         if !result.success {
             await MainActor.run { error = result.output }
         }

@@ -12,6 +12,8 @@ struct ContentView: View {
     @State private var operationMessage = ""
     @State private var leftPanelWidth: CGFloat = 220
     @State private var rightPanelWidth: CGFloat = 380
+    @State private var showRevertSheet = false
+    @State private var revertCommits: [Commit] = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -34,6 +36,7 @@ struct ContentView: View {
             }
         }
         .background(GitKrakenTheme.background)
+        .withToastNotifications()
         .sheet(isPresented: $showCloneSheet) {
             CloneRepositorySheet()
         }
@@ -84,6 +87,12 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .merge)) { _ in
             showMergeSheet = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: .revertCommit)) { notification in
+            if let commits = notification.object as? [Commit] {
+                revertCommits = commits
+                showRevertSheet = true
+            }
+        }
         // File ignore/tracking handlers
         .onReceive(NotificationCenter.default.publisher(for: .ignoreFile)) { notification in
             handleIgnoreFile(notification)
@@ -96,6 +105,10 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showNewBranchSheet) {
             CreateBranchSheet(isPresented: $showNewBranchSheet)
+                .environmentObject(appState)
+        }
+        .sheet(isPresented: $showRevertSheet) {
+            RevertView(targetCommits: revertCommits)
                 .environmentObject(appState)
         }
         .sheet(isPresented: $showMergeSheet) {

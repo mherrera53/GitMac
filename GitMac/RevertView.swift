@@ -6,7 +6,7 @@ struct RevertView: View {
     @StateObject private var viewModel = RevertViewModel()
     @Environment(\.dismiss) private var dismiss
     
-    let targetCommit: Commit
+    let targetCommits: [Commit]
     
     @State private var noCommit = false
     @State private var isReverting = false
@@ -34,12 +34,19 @@ struct RevertView: View {
             
             Divider()
             
-            // Target commit info
+            // Target commits info
             VStack(alignment: .leading, spacing: 8) {
-                Text("Revert changes from:")
+                Text(targetCommits.count > 1 ? "Revert changes from \(targetCommits.count) commits:" : "Revert changes from:")
                     .font(.headline)
                 
-                CommitInfoCard(commit: targetCommit)
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(targetCommits) { commit in
+                            CommitInfoCard(commit: commit)
+                        }
+                    }
+                }
+                .frame(maxHeight: 150)
             }
             
             Divider()
@@ -101,7 +108,7 @@ struct RevertView: View {
                             .scaleEffect(0.8)
                             .frame(width: 16, height: 16)
                     } else {
-                        Text(noCommit ? "Revert to Staging" : "Revert Commit")
+                        Text(noCommit ? (targetCommits.count > 1 ? "Revert All to Staging" : "Revert to Staging") : (targetCommits.count > 1 ? "Revert All Commits" : "Revert Commit"))
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -118,7 +125,7 @@ struct RevertView: View {
     
     private func performRevert() async {
         isReverting = true
-        let success = await viewModel.revert(commit: targetCommit, noCommit: noCommit)
+        let success = await viewModel.revert(commits: targetCommits, noCommit: noCommit)
         isReverting = false
         
         if success {
@@ -186,15 +193,15 @@ class RevertViewModel: ObservableObject {
         self.appState = appState
     }
     
-    func revert(commit: Commit, noCommit: Bool) async -> Bool {
+    func revert(commits: [Commit], noCommit: Bool) async -> Bool {
         guard let appState = appState else { return false }
         
         isLoading = true
         errorMessage = nil
         
         do {
-            _ = try await appState.gitService.revert(
-                commitSHA: commit.sha,
+            try await appState.gitService.revert(
+                commitSHAs: commits.map { $0.sha },
                 noCommit: noCommit
             )
 

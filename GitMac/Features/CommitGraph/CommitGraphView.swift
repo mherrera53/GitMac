@@ -13,7 +13,8 @@ struct CommitGraphView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var vm = GraphViewModel()
     @StateObject private var tracker = RemoteOperationTracker.shared
-    @State private var selectedId: String?
+    @State private var selectedIds: Set<String> = []
+    @State private var lastSelectedId: String?
     @State private var hoveredId: String?
 
     var body: some View {
@@ -146,20 +147,19 @@ struct CommitGraphView: View {
 
     @ViewBuilder
     private var uncommittedChangesSection: some View {
-        if vm.hasUncommittedChanges {
             UncommittedChangesRow(
                 stagedCount: vm.stagedCount,
                 unstagedCount: vm.unstagedCount,
-                isSelected: selectedId == "uncommitted",
+                isSelected: selectedIds.contains("uncommitted"),
                 isHovered: hoveredId == "uncommitted"
             )
             .onHover { h in hoveredId = h ? "uncommitted" : nil }
             .onTapGesture {
-                selectedId = "uncommitted"
+                selectedIds = ["uncommitted"]
+                lastSelectedId = "uncommitted"
                 appState.selectedCommit = nil
                 appState.selectedStash = nil
             }
-        }
     }
 
     // Merged timeline of commits and stashes, sorted chronologically
@@ -171,14 +171,12 @@ struct CommitGraphView: View {
             case .commit(let node):
                 GraphRow(
                     node: node,
-                    isSelected: selectedId == node.commit.sha,
+                    isSelected: selectedIds.contains(node.commit.sha),
                     isHovered: hoveredId == node.commit.sha
                 )
                 .onHover { h in hoveredId = h ? node.commit.sha : nil }
                 .onTapGesture {
-                    selectedId = node.commit.sha
-                    appState.selectedCommit = node.commit
-                    appState.selectedStash = nil  // Clear stash selection
+                    handleSelection(item: item)
                 }
                 .onAppear {
                     // Trigger load more when near the end of the list
@@ -192,14 +190,12 @@ struct CommitGraphView: View {
             case .stash(let stashNode):
                 GraphStashRow(
                     stash: stashNode,
-                    isSelected: selectedId == stashNode.id,
+                    isSelected: selectedIds.contains(stashNode.id),
                     isHovered: hoveredId == stashNode.id
                 )
                 .onHover { h in hoveredId = h ? stashNode.id : nil }
                 .onTapGesture {
-                    selectedId = stashNode.id
-                    appState.selectedCommit = nil  // Clear commit selection
-                    appState.selectedStash = stashNode.stash  // Set stash selection
+                    handleSelection(item: item)
                 }
                 .onAppear {
                     // Trigger load more when near the end of the list
@@ -216,6 +212,57 @@ struct CommitGraphView: View {
         if vm.hasMore {
             ProgressView().frame(height: 40)
                 .onAppear { Task { await vm.loadMore() } }
+        }
+    }
+
+    private func handleSelection(item: TimelineItem) {
+        let itemId = item.id
+        let modifiers = NSEvent.modifierFlags
+
+        if modifiers.contains(.command) {
+            // Toggle selection
+            if selectedIds.contains(itemId) {
+                selectedIds.remove(itemId)
+            } else {
+                selectedIds.insert(itemId)
+                lastSelectedId = itemId
+            }
+        } else if modifiers.contains(.shift), let lastId = lastSelectedId {
+            // Range selection
+            let allIds = vm.timelineItems.map { $0.id }
+            if let lastIdx = allIds.firstIndex(of: lastId),
+               let currentIdx = allIds.firstIndex(of: itemId) {
+                let start = min(lastIdx, currentIdx)
+                let end = max(lastIdx, currentIdx)
+                let rangeIds = allIds[start...end]
+                selectedIds.formUnion(rangeIds)
+            }
+        } else {
+            // Single selection
+            selectedIds = [itemId]
+            lastSelectedId = itemId
+        }
+
+        // Update AppState for the primarily selected item
+        if let firstId = selectedIds.first {
+            if let commitItem = vm.timelineItems.first(where: { $0.id == firstId }),
+               case .commit(let node) = commitItem {
+                appState.selectedCommit = node.commit
+                appState.selectedStash = nil
+            } else if let stashItem = vm.timelineItems.first(where: { $0.id == firstId }),
+                      case .stash(let stashNode) = stashItem {
+                appState.selectedCommit = nil
+                appState.selectedStash = stashNode.stash
+            }
+        }
+    }
+
+    private var selectedCommits: [Commit] {
+        vm.timelineItems.compactMap { item in
+            if case .commit(let node) = item, selectedIds.contains(node.commit.sha) {
+                return node.commit
+            }
+            return nil
         }
     }
 }
@@ -607,7 +654,7 @@ struct GraphRow: View {
         .frame(height: H)
         .background(isSelected ? GitKrakenTheme.selection : (isHovered ? GitKrakenTheme.hover : Color.clear))
         .contextMenu {
-            CommitContextMenu(commit: node.commit)
+            CommitContextMenu(commits: [node.commit])
         }
     }
 
@@ -944,146 +991,183 @@ extension Commit {
 
 // MARK: - Commit Context Menu
 struct CommitContextMenu: View {
-    let commit: Commit
+    let commits: [Commit]
     @EnvironmentObject var appState: AppState
 
     var body: some View {
         Group {
-            // Copy actions
-            Button {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(commit.sha, forType: .string)
-            } label: {
-                Label("Copy SHA", systemImage: "doc.on.doc")
+            if commits.count == 1, let commit = commits.first {
+                singleCommitActions(commit: commit)
+            } else if commits.count > 1 {
+                multiCommitActions()
             }
+        }
+    }
 
-            Button {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(commit.message, forType: .string)
-            } label: {
-                Label("Copy Message", systemImage: "text.quote")
+    @ViewBuilder
+    private func singleCommitActions(commit: Commit) -> some View {
+        // Copy actions
+        Button {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(commit.sha, forType: .string)
+        } label: {
+            Label("Copy SHA", systemImage: "doc.on.doc")
+        }
+
+        Button {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(commit.message, forType: .string)
+        } label: {
+            Label("Copy Message", systemImage: "text.quote")
+        }
+
+        Divider()
+
+        // Branch/Tag actions
+        Button {
+            NotificationCenter.default.post(
+                name: .createBranchFromCommit,
+                object: commit.sha
+            )
+        } label: {
+            Label("Create Branch Here...", systemImage: "arrow.triangle.branch")
+        }
+
+        Button {
+            NotificationCenter.default.post(
+                name: .createTagFromCommit,
+                object: commit.sha
+            )
+        } label: {
+            Label("Create Tag Here...", systemImage: "tag")
+        }
+
+        Divider()
+
+        // Checkout
+        Button {
+            Task {
+                try? await appState.gitService.checkout(commit.sha)
             }
+        } label: {
+            Label("Checkout This Commit", systemImage: "arrow.uturn.backward")
+        }
 
-            Divider()
+        Divider()
 
-            // Branch/Tag actions
-            Button {
+        // Advanced operations
+        Button {
+            NotificationCenter.default.post(
+                name: .cherryPickCommit,
+                object: commit.sha
+            )
+        } label: {
+            Label("Cherry-pick...", systemImage: "arrow.right.doc.on.clipboard")
+        }
+
+        Button {
+            NotificationCenter.default.post(
+                name: .revertCommit,
+                object: [commit]
+            )
+        } label: {
+            Label("Revert Commit...", systemImage: "arrow.uturn.left")
+        }
+
+        Divider()
+
+        // Rebase actions
+        Button {
+            NotificationCenter.default.post(
+                name: .rebaseOntoCommit,
+                object: commit.sha
+            )
+        } label: {
+            Label("Rebase current branch onto this...", systemImage: "arrow.triangle.pull")
+        }
+
+        Button {
+            NotificationCenter.default.post(
+                name: .interactiveRebase,
+                object: commit.sha
+            )
+        } label: {
+            Label("Interactive Rebase...", systemImage: "list.bullet.rectangle.portrait")
+        }
+
+        Divider()
+
+        Button {
+            // Implementation for Diff with HEAD
+            NotificationCenter.default.post(
+                name: .diffWithHead,
+                object: commit.sha
+            )
+        } label: {
+            Label("Diff with HEAD", systemImage: "arrow.left.arrow.right")
+        }
+
+        Button {
+             let process = Process()
+             process.launchPath = "/usr/bin/open"
+             process.arguments = ["-a", "Terminal", appState.currentRepository?.path ?? "."]
+             try? process.run()
+        } label: {
+            Label("Open in Terminal", systemImage: "terminal")
+        }
+
+        Divider()
+
+        // Reset operations
+        Menu {
+            Button("Soft (keep changes staged)") {
                 NotificationCenter.default.post(
-                    name: .createBranchFromCommit,
-                    object: commit.sha
+                    name: .resetToCommit,
+                    object: ["sha": commit.sha, "mode": "soft"]
                 )
-            } label: {
-                Label("Create Branch Here...", systemImage: "arrow.triangle.branch")
             }
-
-            Button {
+            Button("Mixed (keep changes unstaged)") {
                 NotificationCenter.default.post(
-                    name: .createTagFromCommit,
-                    object: commit.sha
+                    name: .resetToCommit,
+                    object: ["sha": commit.sha, "mode": "mixed"]
                 )
-            } label: {
-                Label("Create Tag Here...", systemImage: "tag")
             }
-
-            Divider()
-
-            // Checkout
-            Button {
-                Task {
-                    try? await appState.gitService.checkout(commit.sha)
-                }
-            } label: {
-                Label("Checkout This Commit", systemImage: "arrow.uturn.backward")
-            }
-
-            Divider()
-
-            // Advanced operations
-            Button {
+            Button("Hard (discard all changes)") {
                 NotificationCenter.default.post(
-                    name: .cherryPickCommit,
-                    object: commit.sha
+                    name: .resetToCommit,
+                    object: ["sha": commit.sha, "mode": "hard"]
                 )
-            } label: {
-                Label("Cherry-pick...", systemImage: "arrow.right.doc.on.clipboard")
             }
+        } label: {
+            Label("Reset to This Commit", systemImage: "clock.arrow.circlepath")
+        }
+    }
 
-            Button {
-                NotificationCenter.default.post(
-                    name: .revertCommit,
-                    object: commit.sha
-                )
-            } label: {
-                Label("Revert Commit...", systemImage: "arrow.uturn.left")
-            }
+    @ViewBuilder
+    private func multiCommitActions() -> some View {
+        Button {
+            NotificationCenter.default.post(
+                name: .revertCommit,
+                object: commits
+            )
+        } label: {
+            Label("Revert \(commits.count) Commits...", systemImage: "arrow.uturn.left")
+        }
 
-            Divider()
+        Button {
+            // Placeholder for multi cherry-pick
+        } label: {
+            Label("Cherry-pick \(commits.count) Commits...", systemImage: "arrow.right.doc.on.clipboard")
+        }
 
-            // Rebase actions
-            Button {
-                NotificationCenter.default.post(
-                    name: .rebaseOntoCommit,
-                    object: commit.sha
-                )
-            } label: {
-                Label("Rebase current branch onto this...", systemImage: "arrow.triangle.pull")
-            }
+        Divider()
 
-            Button {
-                NotificationCenter.default.post(
-                    name: .interactiveRebase,
-                    object: commit.sha
-                )
-            } label: {
-                Label("Interactive Rebase...", systemImage: "list.bullet.rectangle.portrait")
-            }
-
-            Divider()
-
-            Button {
-                // Implementation for Diff with HEAD
-                NotificationCenter.default.post(
-                    name: .diffWithHead,
-                    object: commit.sha
-                )
-            } label: {
-                Label("Diff with HEAD", systemImage: "arrow.left.arrow.right")
-            }
-
-            Button {
-                 let process = Process()
-                 process.launchPath = "/usr/bin/open"
-                 process.arguments = ["-a", "Terminal", appState.currentRepository?.path ?? "."]
-                 try? process.run()
-            } label: {
-                Label("Open in Terminal", systemImage: "terminal")
-            }
-
-            Divider()
-
-            // Reset operations
-            Menu {
-                Button("Soft (keep changes staged)") {
-                    NotificationCenter.default.post(
-                        name: .resetToCommit,
-                        object: ["sha": commit.sha, "mode": "soft"]
-                    )
-                }
-                Button("Mixed (keep changes unstaged)") {
-                    NotificationCenter.default.post(
-                        name: .resetToCommit,
-                        object: ["sha": commit.sha, "mode": "mixed"]
-                    )
-                }
-                Button("Hard (discard all changes)") {
-                    NotificationCenter.default.post(
-                        name: .resetToCommit,
-                        object: ["sha": commit.sha, "mode": "hard"]
-                    )
-                }
-            } label: {
-                Label("Reset to This Commit", systemImage: "clock.arrow.circlepath")
-            }
+        Button {
+            let shas = commits.map { $0.sha }.joined(separator: "\n")
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(shas, forType: .string)
+        } label: {
+            Label("Copy \(commits.count) SHAs", systemImage: "doc.on.doc")
         }
     }
 }
