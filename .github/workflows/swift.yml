@@ -1,7 +1,5 @@
-# This workflow will build a Swift project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-swift
-
-name: Swift
+# Build and test GitMac
+name: Build
 
 permissions:
   contents: read
@@ -14,12 +12,16 @@ on:
 
 jobs:
   build:
-
-    runs-on: macos-latest
+    runs-on: macos-15
 
     steps:
     - uses: actions/checkout@v4
+    
+    - name: Select Xcode
+      run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+    
     - name: Build
-      run: swift build -v
+      run: xcodebuild -scheme GitMac -destination 'platform=macOS' build
+    
     - name: Run tests
-      run: swift test -v
+      run: xcodebuild -scheme GitMac -destination 'platform=macOS' test
