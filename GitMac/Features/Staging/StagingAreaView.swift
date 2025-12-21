@@ -291,8 +291,8 @@ struct StagingAreaView: View {
                             repositoryPath: repoPath,
                             namespace: animation,
                             onSelect: { selectedFile = file.path },
-                            onStage: { Task { await viewModel.stage(file: file.path) } },
-                            onDiscard: { Task { await viewModel.discardChanges(file: file.path) } }
+                            onStage: { await viewModel.stage(file: file.path) },
+                            onDiscard: { await viewModel.discardChanges(file: file.path) }
                         )
                     }
                 }
@@ -322,8 +322,8 @@ struct StagingAreaView: View {
                             repositoryPath: repoPath,
                             namespace: animation,
                             onSelect: { selectedFile = file.path },
-                            onStage: { Task { await viewModel.stage(file: file.path) } },
-                            onDiscard: { Task { await viewModel.discardChanges(file: file.path) } }
+                            onStage: { await viewModel.stage(file: file.path) },
+                            onDiscard: { await viewModel.discardChanges(file: file.path) }
                         )
                     }
                 }
@@ -336,8 +336,8 @@ struct StagingAreaView: View {
                         repositoryPath: repoPath,
                         namespace: animation,
                         onSelect: { selectedFile = file.path },
-                        onStage: { Task { await viewModel.stage(file: file.path) } },
-                        onDiscard: { Task { await viewModel.discardChanges(file: file.path) } }
+                        onStage: { await viewModel.stage(file: file.path) },
+                        onDiscard: { await viewModel.discardChanges(file: file.path) }
                     )
                 }
 
@@ -415,8 +415,8 @@ struct StagingAreaView: View {
                     repositoryPath: repoPath,
                     namespace: animation,
                     onSelect: { selectedFile = file.path },
-                    onUnstage: { Task { await viewModel.unstage(file: file.path) } },
-                    onDiscardStaged: { Task { await viewModel.discardStagedFile(file.path) } }
+                    onUnstage: { await viewModel.unstage(file: file.path) },
+                    onDiscardStaged: { await viewModel.discardStagedFile(file.path) }
                 )
             }
         }
@@ -894,11 +894,6 @@ struct FileRow: View {
         .padding(.vertical, 6)
         .background(isSelected ? Color.accentColor.opacity(0.2) : (isHovered ? Color.secondary.opacity(0.1) : Color.clear))
         .contentShape(Rectangle())
-        .onTapGesture { onSelect() }
-        .onHover { isHovered = $0 }
-        .scaleEffect(isHovered ? 1.02 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHovered)
-        .matchedGeometryEffect(id: file.path, in: namespace ?? Namespace().wrappedValue, isSource: true)
         .contextMenu {
             FileContextMenu(
                 filePath: file.path,
@@ -907,9 +902,11 @@ struct FileRow: View {
                 onStage: onStage != nil ? { Task { await onStage?() } } : nil,
                 onUnstage: onUnstage != nil ? { Task { await onUnstage?() } } : nil,
                 onDiscard: onDiscard != nil ? { Task { await onDiscard?() } } : nil,
+                onDiscardStaged: onDiscardStaged != nil ? { Task { await onDiscardStaged?() } } : nil,
                 onPreview: { showPreview = true }
             )
         }
+        .onTapGesture { onSelect() }
         .sheet(isPresented: $showPreview) {
             FilePreviewView(filePath: file.path, repositoryPath: repositoryPath)
         }
@@ -1104,6 +1101,7 @@ struct FileContextMenu: View {
     var onStage: (() -> Void)?
     var onUnstage: (() -> Void)?
     var onDiscard: (() -> Void)?
+    var onDiscardStaged: (() -> Void)?
     var onPreview: (() -> Void)?
 
     var filename: String {
@@ -1138,6 +1136,16 @@ struct FileContextMenu: View {
                     unstage()
                 } label: {
                     Label("Unstage File", systemImage: "minus.circle")
+                }
+
+                if let discardStaged = onDiscardStaged {
+                    Divider()
+                    
+                    Button(role: .destructive) {
+                        discardStaged()
+                    } label: {
+                        Label("Unstage & Revert", systemImage: "trash")
+                    }
                 }
             }
 
@@ -1195,7 +1203,7 @@ struct FileContextMenu: View {
                 Button(role: .destructive) {
                     discard()
                 } label: {
-                    Label("Discard Changes", systemImage: "xmark.circle")
+                    Label("Revert Changes", systemImage: "arrow.uturn.backward")
                 }
             }
 
@@ -2149,13 +2157,6 @@ struct TreeNodeView: View {
         .padding(.vertical, 4)
         .background(selectedFile == node.path ? Color.accentColor.opacity(0.2) : Color.clear)
         .contentShape(Rectangle())
-        .onTapGesture {
-            selectedFile = node.path
-        }
-        .onHover { isHovered = $0 }
-        .scaleEffect(isHovered ? 1.02 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHovered)
-        .matchedGeometryEffect(id: node.path, in: namespace ?? Namespace().wrappedValue, isSource: true)
         .contextMenu {
             if isStaged {
                 Button {
@@ -2163,18 +2164,30 @@ struct TreeNodeView: View {
                 } label: {
                     Label("Unstage File", systemImage: "minus.circle")
                 }
+                
+                if onDiscardStaged != nil {
+                    Divider()
+                    
+                    Button(role: .destructive) {
+                        onDiscardStaged?(node.path)
+                    } label: {
+                        Label("Unstage & Revert", systemImage: "trash")
+                    }
+                }
             } else {
                 Button {
                     onStage?(node.path)
                 } label: {
-                    Label("Stage File", systemImage: "plus.circle")
+                    Label("Stage File (+)", systemImage: "plus.circle")
                 }
 
-                if !node.isUntracked {
+                if let discard = onDiscard, !node.isUntracked {
+                    Divider()
+                    
                     Button(role: .destructive) {
-                        onDiscard?(node.path)
+                        discard(node.path)
                     } label: {
-                        Label("Discard Changes", systemImage: "xmark.circle")
+                        Label("Revert Changes", systemImage: "arrow.uturn.backward")
                     }
                 }
             }
@@ -2202,6 +2215,28 @@ struct TreeNodeView: View {
             } label: {
                 Label("Reveal in Finder", systemImage: "folder")
             }
+
+            // For untracked files, show Delete option instead of Revert
+            if node.isUntracked {
+                Divider()
+                
+                Button(role: .destructive) {
+                    try? FileManager.default.removeItem(atPath: node.path)
+                } label: {
+                    Label("Delete File", systemImage: "trash")
+                }
+                
+                Divider()
+                
+                Button {
+                    NotificationCenter.default.post(name: .ignoreFile, object: node.path)
+                } label: {
+                    Label("Ignore", systemImage: "eye.slash")
+                }
+            }
+        }
+        .onTapGesture {
+            selectedFile = node.path
         }
     }
 
@@ -2576,7 +2611,7 @@ enum FilePreviewHelper {
         "yml", "yaml", "toml", "ini", "cfg", "conf", "config",
         "env", "envrc", "editorconfig", "gitignore", "gitattributes",
         "dockerfile", "makefile", "cmake", "gradle",
-        "csv", "tsv", "log", "diff", "patch"
+        "csv", "tsv", "log", "diff", "patch", "vue"
     ]
 
     // Binary file extensions

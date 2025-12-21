@@ -29,7 +29,8 @@ actor KeychainManager {
         encryptionKey = Self.deriveKey()
 
         // Load existing data
-        loadFromFile()
+        cache = Self.loadCache(from: storageURL, key: encryptionKey)
+        cacheLoaded = true
     }
 
     /// Derive a key from machine-specific identifier
@@ -57,43 +58,47 @@ actor KeychainManager {
 
     // MARK: - Encrypted File Storage
 
-    private func loadFromFile() {
-        guard FileManager.default.fileExists(atPath: storageURL.path),
-              let encryptedData = try? Data(contentsOf: storageURL) else {
-            return
+    private static func loadCache(from url: URL, key: SymmetricKey) -> [String: String] {
+        guard FileManager.default.fileExists(atPath: url.path),
+              let encryptedData = try? Data(contentsOf: url) else {
+            return [:]
         }
 
-        guard let decrypted = decrypt(encryptedData),
+        guard let decrypted = decrypt(encryptedData, key: key),
               let dict = try? JSONDecoder().decode([String: String].self, from: decrypted) else {
-            return
+            return [:]
         }
 
-        cache = dict
+        return dict
+    }
+
+    private func loadFromFile() {
+        cache = Self.loadCache(from: storageURL, key: encryptionKey)
         cacheLoaded = true
     }
 
     private func saveToFile() {
         guard let jsonData = try? JSONEncoder().encode(cache),
-              let encrypted = encrypt(jsonData) else {
+              let encrypted = Self.encrypt(jsonData, key: encryptionKey) else {
             return
         }
 
         try? encrypted.write(to: storageURL, options: [.atomic, .completeFileProtection])
     }
 
-    private func encrypt(_ data: Data) -> Data? {
+    private static func encrypt(_ data: Data, key: SymmetricKey) -> Data? {
         do {
-            let sealedBox = try AES.GCM.seal(data, using: encryptionKey)
+            let sealedBox = try AES.GCM.seal(data, using: key)
             return sealedBox.combined
         } catch {
             return nil
         }
     }
 
-    private func decrypt(_ data: Data) -> Data? {
+    private static func decrypt(_ data: Data, key: SymmetricKey) -> Data? {
         do {
             let sealedBox = try AES.GCM.SealedBox(combined: data)
-            return try AES.GCM.open(sealedBox, using: encryptionKey)
+            return try AES.GCM.open(sealedBox, using: key)
         } catch {
             return nil
         }

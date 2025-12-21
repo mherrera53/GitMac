@@ -14,8 +14,70 @@ struct ContentView: View {
     @State private var rightPanelWidth: CGFloat = 380
     @State private var showRevertSheet = false
     @State private var revertCommits: [Commit] = []
+    @State private var showDetachedHeadAlert = false
 
     var body: some View {
+        attachGitListeners(to: mainLayout)
+            .background(GitKrakenTheme.background)
+            .withToastNotifications()
+            .sheet(isPresented: $showCloneSheet) {
+                CloneRepositorySheet()
+            }
+            .fileImporter(
+                isPresented: $showOpenPanel,
+                allowedContentTypes: [.folder],
+                allowsMultipleSelection: false
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    if let url = urls.first {
+                        Task {
+                            await appState.openRepository(at: url.path)
+                            if appState.currentRepository != nil {
+                                recentReposManager.addRecent(path: url.path, name: url.lastPathComponent)
+                            }
+                        }
+                    }
+                case .failure(let error):
+                    appState.errorMessage = error.localizedDescription
+                }
+            }
+            .sheet(isPresented: $showNewBranchSheet) {
+                CreateBranchSheet(isPresented: $showNewBranchSheet)
+                    .environmentObject(appState)
+            }
+            .sheet(isPresented: $showRevertSheet) {
+                RevertView(targetCommits: revertCommits)
+                    .environmentObject(appState)
+            }
+            .sheet(isPresented: $showMergeSheet) {
+                MergeBranchSheet(isPresented: $showMergeSheet)
+                    .environmentObject(appState)
+            }
+            .overlay {
+                if isOperationInProgress {
+                    OperationProgressOverlay(message: operationMessage)
+                }
+            }
+            .alert("Error", isPresented: .constant(appState.errorMessage != nil)) {
+                Button("OK") {
+                    appState.errorMessage = nil
+                }
+            } message: {
+                Text(appState.errorMessage ?? "")
+            }
+            .alert("Pull Failed: Detached HEAD", isPresented: $showDetachedHeadAlert) {
+                Button("Create Branch") {
+                    showNewBranchSheet = true
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("You are not currently on a branch. Please create a new branch to save your work before pulling.")
+            }
+    }
+
+    @ViewBuilder
+    private var mainLayout: some View {
         VStack(spacing: 0) {
             // Tab Bar (only show if there are open repos)
             if !appState.openTabs.isEmpty {
@@ -35,98 +97,54 @@ struct ContentView: View {
                 )
             }
         }
-        .background(GitKrakenTheme.background)
-        .withToastNotifications()
-        .sheet(isPresented: $showCloneSheet) {
-            CloneRepositorySheet()
-        }
-        .fileImporter(
-            isPresented: $showOpenPanel,
-            allowedContentTypes: [.folder],
-            allowsMultipleSelection: false
-        ) { result in
-            switch result {
-            case .success(let urls):
-                if let url = urls.first {
-                    Task {
-                        await appState.openRepository(at: url.path)
-                        if appState.currentRepository != nil {
-                            recentReposManager.addRecent(path: url.path, name: url.lastPathComponent)
-                        }
-                    }
+    }
+    
+    private func attachGitListeners<Content: View>(to content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: .openRepository)) { _ in
+                showOpenPanel = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .cloneRepository)) { _ in
+                showCloneSheet = true
+            }
+            // Git operation notifications
+            .onReceive(NotificationCenter.default.publisher(for: .fetch)) { _ in
+                handleFetch()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .pull)) { _ in
+                handlePull()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .push)) { _ in
+                handlePush()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .stash)) { _ in
+                handleStash()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .popStash)) { _ in
+                handlePopStash()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .newBranch)) { _ in
+                showNewBranchSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .merge)) { _ in
+                showMergeSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .revertCommit)) { notification in
+                if let commits = notification.object as? [Commit] {
+                    revertCommits = commits
+                    showRevertSheet = true
                 }
-            case .failure(let error):
-                appState.errorMessage = error.localizedDescription
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openRepository)) { _ in
-            showOpenPanel = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .cloneRepository)) { _ in
-            showCloneSheet = true
-        }
-        // Git operation notifications
-        .onReceive(NotificationCenter.default.publisher(for: .fetch)) { _ in
-            handleFetch()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .pull)) { _ in
-            handlePull()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .push)) { _ in
-            handlePush()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .stash)) { _ in
-            handleStash()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .popStash)) { _ in
-            handlePopStash()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .newBranch)) { _ in
-            showNewBranchSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .merge)) { _ in
-            showMergeSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .revertCommit)) { notification in
-            if let commits = notification.object as? [Commit] {
-                revertCommits = commits
-                showRevertSheet = true
+            // File ignore/tracking handlers
+            .onReceive(NotificationCenter.default.publisher(for: .ignoreFile)) { notification in
+                handleIgnoreFile(notification)
             }
-        }
-        // File ignore/tracking handlers
-        .onReceive(NotificationCenter.default.publisher(for: .ignoreFile)) { notification in
-            handleIgnoreFile(notification)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .assumeUnchanged)) { notification in
-            handleAssumeUnchanged(notification)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .stopTrackingFile)) { notification in
-            handleStopTrackingFile(notification)
-        }
-        .sheet(isPresented: $showNewBranchSheet) {
-            CreateBranchSheet(isPresented: $showNewBranchSheet)
-                .environmentObject(appState)
-        }
-        .sheet(isPresented: $showRevertSheet) {
-            RevertView(targetCommits: revertCommits)
-                .environmentObject(appState)
-        }
-        .sheet(isPresented: $showMergeSheet) {
-            MergeBranchSheet(isPresented: $showMergeSheet)
-                .environmentObject(appState)
-        }
-        .overlay {
-            if isOperationInProgress {
-                OperationProgressOverlay(message: operationMessage)
+            .onReceive(NotificationCenter.default.publisher(for: .assumeUnchanged)) { notification in
+                handleAssumeUnchanged(notification)
             }
-        }
-        .alert("Error", isPresented: .constant(appState.errorMessage != nil)) {
-            Button("OK") {
-                appState.errorMessage = nil
+            .onReceive(NotificationCenter.default.publisher(for: .stopTrackingFile)) { notification in
+                handleStopTrackingFile(notification)
             }
-        } message: {
-            Text(appState.errorMessage ?? "")
-        }
     }
 
     private func handleFetch() {
@@ -176,15 +194,22 @@ struct ContentView: View {
                     remote: "origin"
                 )
             } catch {
-                appState.errorMessage = "Pull failed: \(error.localizedDescription)"
-
-                // Track failed pull
-                RemoteOperationTracker.shared.recordPull(
-                    success: false,
-                    branch: branchName,
-                    remote: "origin",
-                    error: error.localizedDescription
-                )
+                let errorDesc = error.localizedDescription
+                if errorDesc.localizedCaseInsensitiveContains("not currently on a branch") {
+                    await MainActor.run {
+                        showDetachedHeadAlert = true
+                    }
+                } else {
+                    appState.errorMessage = "Pull failed: \(errorDesc)"
+                    
+                    // Track failed pull
+                    RemoteOperationTracker.shared.recordPull(
+                        success: false,
+                        branch: branchName,
+                        remote: "origin",
+                        error: errorDesc
+                    )
+                }
             }
             await MainActor.run {
                 isOperationInProgress = false
