@@ -275,7 +275,7 @@ actor AvatarService {
         }
 
         // Add user-configured email aliases from settings
-        let aliases = EmailAliasSettings.shared.aliases
+        let aliases = await EmailAliasSettings.shared.aliases
         for alias in aliases {
             authenticatedUserEmails.insert(alias.lowercased())
         }
@@ -496,6 +496,7 @@ struct AvatarImageView: View {
 // MARK: - Email Alias Settings
 
 /// Manages email aliases for avatar matching (configured in Settings)
+@MainActor
 class EmailAliasSettings: ObservableObject {
     static let shared = EmailAliasSettings()
 

@@ -63,7 +63,7 @@ actor RepositoryContext {
 
     let path: String
     private let engine: GitEngine
-    private var watcher: GitRepositoryWatcher?
+    nonisolated(unsafe) private var watcher: GitRepositoryWatcher?
 
     // Bounded caches with TTL (scoped to this repository)
     private var branchesCache = CacheWithTTL<[Branch]>(ttl: 30)
@@ -122,11 +122,11 @@ actor RepositoryContext {
         watcher?.startAll()
 
         // Connect watcher signals to changesContinuation and handle cache invalidation
-        watcherTask = Task { [weak watcher] in
-            guard let watcher = watcher else { return }
+        watcherTask = Task { [weak self, weak watcher] in
+            guard let watcher = watcher, let self = self else { return }
 
             for await signal in watcher.signalStream {
-                await handleSignal(signal)
+                await self.handleSignal(signal)
             }
         }
     }

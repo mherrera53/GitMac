@@ -304,6 +304,7 @@ struct JiraTransitionsResponse: Codable {
 
 // MARK: - Jira OAuth
 
+@MainActor
 class JiraOAuth: ObservableObject {
     static let shared = JiraOAuth()
 

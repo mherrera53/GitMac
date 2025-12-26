@@ -52,6 +52,7 @@ struct GeneralSettingsView: View {
     @AppStorage("defaultClonePath") private var defaultClonePath = "~/Developer"
     @AppStorage("confirmBeforePush") private var confirmBeforePush = true
     @AppStorage("confirmBeforeForce") private var confirmBeforeForce = true
+    @State private var showingThemeEditor = false
 
     var body: some View {
         Form {
@@ -71,7 +72,7 @@ struct GeneralSettingsView: View {
 
                 // Custom theme button
                 Button {
-                    themeManager.setTheme(.custom)
+                    showingThemeEditor = true
                 } label: {
                     HStack {
                         Image(systemName: "paintbrush.fill")
@@ -102,8 +103,12 @@ struct GeneralSettingsView: View {
                         panel.canChooseFiles = false
                         panel.canChooseDirectories = true
 
-                        if panel.runModal() == .OK {
-                            defaultClonePath = panel.url?.path ?? defaultClonePath
+                        panel.begin { response in
+                            if response == .OK {
+                                Task { @MainActor in
+                                    defaultClonePath = panel.url?.path ?? defaultClonePath
+                                }
+                            }
                         }
                     }
                 }
@@ -116,6 +121,10 @@ struct GeneralSettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
+        .sheet(isPresented: $showingThemeEditor) {
+            CustomThemeEditor()
+                .frame(minWidth: 600, minHeight: 500)
+        }
     }
 }
 

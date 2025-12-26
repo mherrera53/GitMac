@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 
 /// Remote Operation Status - Tracks push/pull/fetch operations
+@MainActor
 class RemoteOperationTracker: ObservableObject {
     static let shared = RemoteOperationTracker()
     

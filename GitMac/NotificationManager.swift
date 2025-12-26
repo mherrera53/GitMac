@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Notification Manager - Toast notifications system
 /// Displays success, error, warning, and info messages
+@MainActor
 class NotificationManager: ObservableObject {
     static let shared = NotificationManager()
     

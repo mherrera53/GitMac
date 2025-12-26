@@ -1,486 +1,386 @@
 import SwiftUI
 
-// MARK: - Git Hooks View
-
 struct GitHooksView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = GitHooksViewModel()
+    @StateObject private var modalCoordinator = ModalCoordinator<GitHookModal>()
     @State private var selectedHook: GitHook?
-    @State private var showCreateSheet = false
-    
+
     var body: some View {
-        HSplitView {
-            // Hooks list
-            VStack(spacing: 0) {
-                // Header
-                HStack {
-                    Text("Git Hooks")
-                        .font(.system(size: 14, weight: .semibold))
-                    
-                    Spacer()
-                    
-                    Button {
-                        showCreateSheet = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(12)
-                .background(Color.gray.opacity(0.1))
-                
-                // Hooks list
-                if viewModel.hooks.isEmpty {
-                    emptyView
-                } else {
-                    List(viewModel.hooks, selection: $selectedHook) { hook in
-                        HookRow(hook: hook)
-                            .tag(hook)
-                    }
-                    .listStyle(.sidebar)
-                }
-            }
-            .frame(minWidth: 200, maxWidth: 300)
-            
-            // Hook editor
-            if let hook = selectedHook {
-                HookEditorView(hook: hook, viewModel: viewModel)
+        VStack(spacing: 0) {
+            headerSection
+            Separator.horizontal()
+
+            if viewModel.isLoading {
+                loadingView
+            } else if viewModel.hooks.isEmpty {
+                emptyStateView
             } else {
-                VStack(spacing: 12) {
-                    Image(systemName: "terminal")
-                        .font(.system(size: 32))
-                        .foregroundColor(.secondary)
-                    Text("Select a hook to edit")
-                        .font(.system(size: 14))
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                hooksList
             }
         }
+        .background(AppTheme.background)
         .task {
-            if let path = appState.currentRepository?.path {
-                await viewModel.loadHooks(at: path)
+            await loadHooks()
+        }
+        .modalSheet(coordinator: modalCoordinator, for: .editor) {
+            if let hook = selectedHook {
+                GitHookEditorSheet(
+                    hook: hook,
+                    onSave: { updatedHook, content in
+                        await saveHook(updatedHook, content: content)
+                    },
+                    onDismiss: {
+                        modalCoordinator.dismiss()
+                        selectedHook = nil
+                    }
+                )
             }
         }
-        .sheet(isPresented: $showCreateSheet) {
-            CreateHookSheet(viewModel: viewModel)
+        .modalAlert(
+            coordinator: modalCoordinator,
+            for: .deleteConfirm,
+            title: "Delete Hook"
+        ) {
+            Button("Delete", role: .destructive) {
+                if let hook = selectedHook {
+                    Task { await deleteHook(hook) }
+                }
+                modalCoordinator.dismiss()
+                selectedHook = nil
+            }
+            Button("Cancel", role: .cancel) {
+                modalCoordinator.dismiss()
+                selectedHook = nil
+            }
+        } message: {
+            if let hook = selectedHook {
+                Text("Are you sure you want to delete the \(hook.displayName) hook? This action cannot be undone.")
+            }
         }
     }
-    
-    private var emptyView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "terminal.fill")
-                .font(.system(size: 32))
-                .foregroundColor(.secondary)
-            
-            Text("No hooks configured")
-                .font(.system(size: 14, weight: .medium))
-            
-            Text("Git hooks run scripts at specific points in the Git workflow")
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-            
-            Button("Create Hook") {
-                showCreateSheet = true
+
+    // MARK: - Components
+
+    private var headerSection: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Git Hooks")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AppTheme.textPrimary)
+
+                Text("\(viewModel.enabledCount) of \(viewModel.hooks.count) hooks enabled")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-            .buttonStyle(.borderedProminent)
+
+            Spacer()
+
+            Button(action: { Task { await loadHooks() } }) {
+                Label("Refresh", systemImage: "arrow.clockwise")
+                    .foregroundColor(AppTheme.accent)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding()
+    }
+
+    private var hooksList: some View {
+        List {
+            ForEach(GitHookCategory.allCases, id: \.self) { category in
+                if !viewModel.hooks(for: category).isEmpty {
+                    Section(header: Text(category.rawValue)) {
+                        ForEach(viewModel.hooks(for: category)) { hook in
+                            GitHookRow(
+                                hook: hook,
+                                onToggle: { await toggleHook(hook) },
+                                onEdit: {
+                                    selectedHook = hook
+                                    modalCoordinator.show(.editor)
+                                },
+                                onDelete: {
+                                    selectedHook = hook
+                                    modalCoordinator.show(.deleteConfirm)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        .listStyle(.inset)
+    }
+
+    private var loadingView: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .scaleEffect(0.8)
+            Text("Loading hooks...")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "doc.text.fill")
+                .font(.system(size: 48))
+                .foregroundColor(.secondary)
+
+            Text("No Git Hooks")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            Text("Create hooks to automate workflows")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Actions
+
+    private func loadHooks() async {
+        guard let repoPath = appState.currentRepository?.path else { return }
+        await viewModel.loadHooks(at: repoPath)
+    }
+
+    private func toggleHook(_ hook: GitHook) async {
+        guard let repoPath = appState.currentRepository?.path else { return }
+        await viewModel.toggleHook(hook, at: repoPath)
+    }
+
+    private func saveHook(_ hook: GitHook, content: String) async {
+        guard let repoPath = appState.currentRepository?.path else { return }
+        await viewModel.updateHook(hook, content: content, at: repoPath)
+        modalCoordinator.dismiss()
+        selectedHook = nil
+    }
+
+    private func deleteHook(_ hook: GitHook) async {
+        guard let repoPath = appState.currentRepository?.path else { return }
+        await viewModel.deleteHook(hook, at: repoPath)
     }
 }
 
-// MARK: - Hook Row
+// MARK: - Git Hook Row
 
-struct HookRow: View {
+struct GitHookRow: View {
     let hook: GitHook
-    
+    let onToggle: () async -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+
     var body: some View {
-        HStack {
-            Image(systemName: hook.isEnabled ? "checkmark.circle.fill" : "circle")
-                .foregroundColor(hook.isEnabled ? .green : .secondary)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(hook.name)
-                    .font(.system(size: 12, weight: .medium))
-                
-                Text(hook.type.description)
-                    .font(.system(size: 10))
+        HStack(spacing: 12) {
+            Toggle("", isOn: Binding(
+                get: { hook.isEnabled },
+                set: { _ in Task { await onToggle() } }
+            ))
+            .toggleStyle(.switch)
+            .labelsHidden()
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(hook.displayName)
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .foregroundColor(AppTheme.textPrimary)
+
+                Text(hook.description)
+                    .font(.caption)
                     .foregroundColor(.secondary)
+                    .lineLimit(2)
             }
-            
+
             Spacer()
+
+            HStack(spacing: 8) {
+                Button(action: onEdit) {
+                    Image(systemName: "pencil")
+                        .foregroundColor(AppTheme.accent)
+                }
+                .buttonStyle(.plain)
+                .help("Edit hook")
+
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                }
+                .buttonStyle(.plain)
+                .help("Delete hook")
+            }
         }
         .padding(.vertical, 4)
     }
 }
 
-// MARK: - Hook Editor
+// MARK: - Git Hook Editor Sheet
 
-struct HookEditorView: View {
+struct GitHookEditorSheet: View {
     let hook: GitHook
-    @ObservedObject var viewModel: GitHooksViewModel
-    @State private var content: String = ""
-    @State private var hasChanges = false
-    
+    let onSave: (GitHook, String) async -> Void
+    let onDismiss: () -> Void
+
+    @State private var content: String
+    @State private var isSaving = false
+
+    init(hook: GitHook, onSave: @escaping (GitHook, String) async -> Void, onDismiss: @escaping () -> Void) {
+        self.hook = hook
+        self.onSave = onSave
+        self.onDismiss = onDismiss
+        self._content = State(initialValue: hook.content ?? GitHookType(rawValue: hook.name)?.templateContent ?? "")
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(hook.name)
-                        .font(.system(size: 16, weight: .semibold))
-                    Text(hook.type.description)
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                Toggle("Enabled", isOn: Binding(
-                    get: { hook.isEnabled },
-                    set: { newValue in
-                        Task { await viewModel.toggleHook(hook, enabled: newValue) }
-                    }
-                ))
-                
-                Button {
-                    Task { await viewModel.saveHook(hook, content: content) }
-                    hasChanges = false
-                } label: {
-                    Label("Save", systemImage: "square.and.arrow.down")
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!hasChanges)
-            }
-            .padding()
-            .background(Color.gray.opacity(0.1))
-            
-            // Description
-            Text(hook.type.helpText)
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(Color.blue.opacity(0.1))
-            
-            // Editor
+            headerSection
+            Separator.horizontal()
+
             TextEditor(text: $content)
-                .font(.system(size: 12, design: .monospaced))
-                .onChange(of: content) { _, _ in
-                    hasChanges = true
-                }
-            
-            // Actions
-            HStack {
-                Button {
-                    content = hook.type.template
-                } label: {
-                    Label("Insert Template", systemImage: "doc.text")
-                }
-                .buttonStyle(.bordered)
-                
-                Spacer()
-                
-                Button(role: .destructive) {
-                    Task { await viewModel.deleteHook(hook) }
-                } label: {
-                    Label("Delete Hook", systemImage: "trash")
-                }
-                .buttonStyle(.bordered)
-            }
-            .padding()
+                .font(.system(.body, design: .monospaced))
+                .padding()
+
+            Separator.horizontal()
+            footerSection
         }
-        .onAppear {
-            content = hook.content
-            hasChanges = false
-        }
-        .onChange(of: hook.id) { _, _ in
-            content = hook.content
-            hasChanges = false
-        }
+        .frame(width: 600, height: 500)
+        .background(AppTheme.background)
     }
-}
 
-// MARK: - Create Hook Sheet
+    private var headerSection: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Edit \(hook.displayName)")
+                    .font(.title3)
+                    .fontWeight(.semibold)
 
-struct CreateHookSheet: View {
-    @ObservedObject var viewModel: GitHooksViewModel
-    @Environment(\.dismiss) private var dismiss
-    @State private var selectedType: GitHookType = .preCommit
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            Text("Create Git Hook")
-                .font(.system(size: 16, weight: .semibold))
-            
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Hook Type")
-                    .font(.system(size: 12, weight: .medium))
-                
-                Picker("", selection: $selectedType) {
-                    ForEach(GitHookType.allCases, id: \.self) { type in
-                        Text(type.rawValue).tag(type)
-                    }
-                }
-                .labelsHidden()
-                
-                Text(selectedType.description)
-                    .font(.system(size: 11))
+                Text(hook.description)
+                    .font(.caption)
                     .foregroundColor(.secondary)
             }
-            
-            HStack {
-                Button("Cancel") { dismiss() }
-                    .buttonStyle(.bordered)
-                
-                Button("Create") {
-                    Task {
-                        await viewModel.createHook(type: selectedType)
-                        dismiss()
-                    }
-                }
-                .buttonStyle(.borderedProminent)
+
+            Spacer()
+
+            Button("Cancel") {
+                onDismiss()
             }
+            .keyboardShortcut(.cancelAction)
         }
-        .padding(24)
-        .frame(width: 400)
+        .padding()
+    }
+
+    private var footerSection: some View {
+        HStack {
+            Spacer()
+
+            Button("Save") {
+                Task {
+                    isSaving = true
+                    await onSave(hook, content)
+                    isSaving = false
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .keyboardShortcut(.defaultAction)
+            .disabled(isSaving || content.isEmpty)
+        }
+        .padding()
     }
 }
 
-// MARK: - Models
+// MARK: - Supporting Types
 
-struct GitHook: Identifiable, Hashable {
-    let id: String
-    let name: String
-    let type: GitHookType
-    var content: String
-    var isEnabled: Bool
-    let path: String
-    
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-    
-    static func == (lhs: GitHook, rhs: GitHook) -> Bool {
-        lhs.id == rhs.id
-    }
+enum GitHookModal: Hashable {
+    case editor
+    case deleteConfirm
 }
 
-enum GitHookType: String, CaseIterable {
-    case preCommit = "pre-commit"
-    case prepareCommitMsg = "prepare-commit-msg"
-    case commitMsg = "commit-msg"
-    case postCommit = "post-commit"
-    case preRebase = "pre-rebase"
-    case postCheckout = "post-checkout"
-    case postMerge = "post-merge"
-    case prePush = "pre-push"
-    case preReceive = "pre-receive"
-    case update = "update"
-    case postReceive = "post-receive"
-    
-    var description: String {
+enum GitHookCategory: String, CaseIterable {
+    case commit = "Commit Hooks"
+    case push = "Push/Receive Hooks"
+    case email = "Email Hooks"
+    case other = "Other Hooks"
+
+    func contains(_ hookName: String) -> Bool {
         switch self {
-        case .preCommit: return "Run before commit is created"
-        case .prepareCommitMsg: return "Modify default commit message"
-        case .commitMsg: return "Validate commit message"
-        case .postCommit: return "Run after commit is created"
-        case .preRebase: return "Run before rebase starts"
-        case .postCheckout: return "Run after checkout completes"
-        case .postMerge: return "Run after merge completes"
-        case .prePush: return "Run before push to remote"
-        case .preReceive: return "Server-side: before accepting push"
-        case .update: return "Server-side: before updating ref"
-        case .postReceive: return "Server-side: after push completes"
-        }
-    }
-    
-    var helpText: String {
-        switch self {
-        case .preCommit:
-            return "This hook runs before the commit is created. Exit with non-zero to abort the commit. Common uses: run linters, tests, check for debug statements."
-        case .prepareCommitMsg:
-            return "This hook can modify the default commit message before the editor opens. Receives the commit message file path as argument."
-        case .commitMsg:
-            return "This hook validates the commit message. Exit with non-zero to abort. Receives the commit message file path as argument."
-        case .postCommit:
-            return "This hook runs after the commit is created. Cannot affect the commit outcome. Common uses: notifications, CI triggers."
-        case .preRebase:
-            return "This hook runs before rebase starts. Exit with non-zero to abort. Receives upstream and branch as arguments."
-        case .postCheckout:
-            return "This hook runs after checkout completes. Receives previous HEAD, new HEAD, and branch flag as arguments."
-        case .postMerge:
-            return "This hook runs after merge completes. Receives a flag indicating if it was a squash merge."
-        case .prePush:
-            return "This hook runs before push to remote. Exit with non-zero to abort. Receives remote name and URL as arguments."
-        default:
-            return "Server-side hook for managing push operations."
-        }
-    }
-    
-    var template: String {
-        switch self {
-        case .preCommit:
-            return """
-            #!/bin/sh
-            # Pre-commit hook
-            
-            # Run linter
-            # npm run lint
-            
-            # Run tests
-            # npm test
-            
-            # Check for debug statements
-            # if git diff --cached | grep -E 'console\\.log|debugger' > /dev/null; then
-            #     echo "Error: Debug statements found in staged files"
-            #     exit 1
-            # fi
-            
-            exit 0
-            """
-        case .commitMsg:
-            return """
-            #!/bin/sh
-            # Commit message validation hook
-            
-            COMMIT_MSG_FILE=$1
-            COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
-            
-            # Enforce conventional commits
-            # if ! echo "$COMMIT_MSG" | grep -qE '^(feat|fix|docs|style|refactor|test|chore)(\\(.+\\))?: .+'; then
-            #     echo "Error: Commit message must follow conventional commits format"
-            #     echo "Example: feat(auth): add login functionality"
-            #     exit 1
-            # fi
-            
-            exit 0
-            """
-        case .prePush:
-            return """
-            #!/bin/sh
-            # Pre-push hook
-            
-            REMOTE="$1"
-            URL="$2"
-            
-            # Run tests before push
-            # npm test
-            # if [ $? -ne 0 ]; then
-            #     echo "Tests failed. Push aborted."
-            #     exit 1
-            # fi
-            
-            exit 0
-            """
-        default:
-            return """
-            #!/bin/sh
-            # \(rawValue) hook
-            
-            # Add your hook logic here
-            
-            exit 0
-            """
+        case .commit:
+            return hookName.contains("commit") || hookName.contains("rebase") || hookName.contains("merge")
+        case .push:
+            return hookName.contains("push") || hookName.contains("receive") || hookName.contains("update")
+        case .email:
+            return hookName.contains("email") || hookName.contains("applypatch")
+        case .other:
+            return true
         }
     }
 }
 
-// MARK: - View Model
+// MARK: - ViewModel
 
 @MainActor
 class GitHooksViewModel: ObservableObject {
     @Published var hooks: [GitHook] = []
-    @Published var repoPath: String = ""
-    
-    func loadHooks(at path: String) async {
-        repoPath = path
-        let hooksDir = (path as NSString).appendingPathComponent(".git/hooks")
-        
-        guard FileManager.default.fileExists(atPath: hooksDir) else {
-            hooks = []
-            return
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+
+    private let service = GitHooksService()
+
+    var enabledCount: Int {
+        hooks.filter { $0.isEnabled }.count
+    }
+
+    func hooks(for category: GitHookCategory) -> [GitHook] {
+        hooks.filter { category.contains($0.name) }
+    }
+
+    func loadHooks(at repoPath: String) async {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            hooks = try service.getHooks(at: repoPath)
+        } catch {
+            errorMessage = "Failed to load hooks: \(error.localizedDescription)"
         }
-        
-        var loadedHooks: [GitHook] = []
-        
-        for hookType in GitHookType.allCases {
-            let hookPath = (hooksDir as NSString).appendingPathComponent(hookType.rawValue)
-            let samplePath = hookPath + ".sample"
-            
-            if FileManager.default.fileExists(atPath: hookPath) {
-                let content = (try? String(contentsOfFile: hookPath)) ?? ""
-                let isExecutable = FileManager.default.isExecutableFile(atPath: hookPath)
-                
-                loadedHooks.append(GitHook(
-                    id: hookType.rawValue,
-                    name: hookType.rawValue,
-                    type: hookType,
-                    content: content,
-                    isEnabled: isExecutable,
-                    path: hookPath
-                ))
-            } else if FileManager.default.fileExists(atPath: samplePath) {
-                let content = (try? String(contentsOfFile: samplePath)) ?? ""
-                
-                loadedHooks.append(GitHook(
-                    id: hookType.rawValue + ".sample",
-                    name: hookType.rawValue + " (sample)",
-                    type: hookType,
-                    content: content,
-                    isEnabled: false,
-                    path: samplePath
-                ))
+
+        isLoading = false
+    }
+
+    func toggleHook(_ hook: GitHook, at repoPath: String) async {
+        do {
+            if hook.isEnabled {
+                try service.disableHook(hook)
+            } else {
+                try service.enableHook(hook)
             }
+
+            hooks = try service.getHooks(at: repoPath)
+        } catch {
+            errorMessage = "Failed to toggle hook: \(error.localizedDescription)"
         }
-        
-        hooks = loadedHooks
     }
-    
-    func createHook(type: GitHookType) async {
-        let hooksDir = (repoPath as NSString).appendingPathComponent(".git/hooks")
-        let hookPath = (hooksDir as NSString).appendingPathComponent(type.rawValue)
-        
-        // Create hooks directory if needed
-        try? FileManager.default.createDirectory(atPath: hooksDir, withIntermediateDirectories: true)
-        
-        // Write template
-        try? type.template.write(toFile: hookPath, atomically: true, encoding: .utf8)
-        
-        // Make executable
-        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: hookPath)
-        
-        await loadHooks(at: repoPath)
-    }
-    
-    func saveHook(_ hook: GitHook, content: String) async {
-        try? content.write(toFile: hook.path, atomically: true, encoding: .utf8)
-        
-        // Ensure it's executable
-        if hook.isEnabled {
-            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: hook.path)
+
+    func updateHook(_ hook: GitHook, content: String, at repoPath: String) async {
+        do {
+            try service.updateHook(hook, content: content)
+            if !hook.isEnabled {
+                try service.enableHook(hook, content: content)
+            }
+
+            hooks = try service.getHooks(at: repoPath)
+        } catch {
+            errorMessage = "Failed to update hook: \(error.localizedDescription)"
         }
-        
-        await loadHooks(at: repoPath)
     }
-    
-    func toggleHook(_ hook: GitHook, enabled: Bool) async {
-        if enabled {
-            // Make executable
-            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: hook.path)
-        } else {
-            // Remove execute permission
-            try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: hook.path)
+
+    func deleteHook(_ hook: GitHook, at repoPath: String) async {
+        do {
+            try service.deleteHook(hook)
+            hooks = try service.getHooks(at: repoPath)
+        } catch {
+            errorMessage = "Failed to delete hook: \(error.localizedDescription)"
         }
-        
-        await loadHooks(at: repoPath)
-    }
-    
-    func deleteHook(_ hook: GitHook) async {
-        try? FileManager.default.removeItem(atPath: hook.path)
-        await loadHooks(at: repoPath)
     }
 }

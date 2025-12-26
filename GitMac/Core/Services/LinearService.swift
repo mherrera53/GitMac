@@ -332,6 +332,7 @@ struct LinearMutationResult: Codable {
 
 // MARK: - Linear OAuth
 
+@MainActor
 class LinearOAuth: ObservableObject {
     static let shared = LinearOAuth()
 

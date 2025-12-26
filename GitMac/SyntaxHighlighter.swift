@@ -39,6 +39,7 @@ struct SyntaxHighlightedDiffLine: View {
 
 // MARK: - Syntax Highlighter
 
+@MainActor
 class SyntaxHighlighter {
     static let shared = SyntaxHighlighter()
     

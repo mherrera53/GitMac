@@ -3,6 +3,7 @@ import AppKit
 
 /// External Tools Manager - Launch external diff/merge tools
 /// Supports popular tools like Beyond Compare, Kaleidoscope, VS Code, etc.
+@MainActor
 class ExternalToolsManager: ObservableObject {
     static let shared = ExternalToolsManager()
     

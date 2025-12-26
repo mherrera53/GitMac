@@ -3,6 +3,7 @@ import Combine
 
 /// Theme Manager - Sistema completo de temas para GitMac
 /// Soporta temas predefinidos y personalizados
+@MainActor
 class ThemeManager: ObservableObject {
     static let shared = ThemeManager()
     
@@ -469,6 +470,13 @@ struct CodableColor: Codable {
     var nsColor: NSColor {
         NSColor(red: red, green: green, blue: blue, alpha: alpha)
     }
+
+    var hexString: String {
+        let r = Int(red * 255)
+        let g = Int(green * 255)
+        let b = Int(blue * 255)
+        return String(format: "#%02X%02X%02X", r, g, b)
+    }
 }
 
 // MARK: - Theme Settings View
@@ -632,77 +640,308 @@ struct ColorSwatch: View {
 
 // MARK: - Custom Theme Editor
 
+// Theme Palette Presets
+struct ThemePalette: Identifiable {
+    let id = UUID()
+    let name: String
+    let description: String
+    let colors: CustomColorScheme
+
+    static let allPalettes: [ThemePalette] = [
+        ThemePalette(
+            name: "GitHub Dark",
+            description: "Classic GitHub dark theme",
+            colors: CustomColorScheme(
+                background: CodableColor(hex: "#0d1117"),
+                backgroundSecondary: CodableColor(hex: "#161b22"),
+                backgroundTertiary: CodableColor(hex: "#21262d"),
+                text: CodableColor(hex: "#c9d1d9"),
+                textSecondary: CodableColor(hex: "#8b949e"),
+                textMuted: CodableColor(hex: "#6e7681"),
+                accent: CodableColor(hex: "#58a6ff"),
+                accentHover: CodableColor(hex: "#1f6feb"),
+                gitAdded: CodableColor(hex: "#3fb950"),
+                gitModified: CodableColor(hex: "#d29922"),
+                gitDeleted: CodableColor(hex: "#f85149"),
+                gitRenamed: CodableColor(hex: "#58a6ff"),
+                gitConflict: CodableColor(hex: "#da3633"),
+                gitUntracked: CodableColor(hex: "#8b949e"),
+                branchLocal: CodableColor(hex: "#3fb950"),
+                branchRemote: CodableColor(hex: "#58a6ff"),
+                branchCurrent: CodableColor(hex: "#d29922"),
+                graphLine1: CodableColor(hex: "#58a6ff"),
+                graphLine2: CodableColor(hex: "#3fb950"),
+                graphLine3: CodableColor(hex: "#d29922"),
+                graphLine4: CodableColor(hex: "#bc8cff"),
+                graphLine5: CodableColor(hex: "#f85149"),
+                success: CodableColor(hex: "#3fb950"),
+                warning: CodableColor(hex: "#d29922"),
+                error: CodableColor(hex: "#f85149"),
+                info: CodableColor(hex: "#58a6ff")
+            )
+        ),
+        ThemePalette(
+            name: "Dracula",
+            description: "Popular dark theme with vibrant colors",
+            colors: CustomColorScheme(
+                background: CodableColor(hex: "#282a36"),
+                backgroundSecondary: CodableColor(hex: "#21222c"),
+                backgroundTertiary: CodableColor(hex: "#191a21"),
+                text: CodableColor(hex: "#f8f8f2"),
+                textSecondary: CodableColor(hex: "#6272a4"),
+                textMuted: CodableColor(hex: "#44475a"),
+                accent: CodableColor(hex: "#bd93f9"),
+                accentHover: CodableColor(hex: "#9580d6"),
+                gitAdded: CodableColor(hex: "#50fa7b"),
+                gitModified: CodableColor(hex: "#f1fa8c"),
+                gitDeleted: CodableColor(hex: "#ff5555"),
+                gitRenamed: CodableColor(hex: "#8be9fd"),
+                gitConflict: CodableColor(hex: "#ff79c6"),
+                gitUntracked: CodableColor(hex: "#6272a4"),
+                branchLocal: CodableColor(hex: "#50fa7b"),
+                branchRemote: CodableColor(hex: "#8be9fd"),
+                branchCurrent: CodableColor(hex: "#f1fa8c"),
+                graphLine1: CodableColor(hex: "#bd93f9"),
+                graphLine2: CodableColor(hex: "#50fa7b"),
+                graphLine3: CodableColor(hex: "#ffb86c"),
+                graphLine4: CodableColor(hex: "#ff79c6"),
+                graphLine5: CodableColor(hex: "#8be9fd"),
+                success: CodableColor(hex: "#50fa7b"),
+                warning: CodableColor(hex: "#f1fa8c"),
+                error: CodableColor(hex: "#ff5555"),
+                info: CodableColor(hex: "#8be9fd")
+            )
+        ),
+        ThemePalette(
+            name: "Nord",
+            description: "Arctic, north-bluish color palette",
+            colors: CustomColorScheme(
+                background: CodableColor(hex: "#2e3440"),
+                backgroundSecondary: CodableColor(hex: "#3b4252"),
+                backgroundTertiary: CodableColor(hex: "#434c5e"),
+                text: CodableColor(hex: "#eceff4"),
+                textSecondary: CodableColor(hex: "#d8dee9"),
+                textMuted: CodableColor(hex: "#4c566a"),
+                accent: CodableColor(hex: "#88c0d0"),
+                accentHover: CodableColor(hex: "#5e81ac"),
+                gitAdded: CodableColor(hex: "#a3be8c"),
+                gitModified: CodableColor(hex: "#ebcb8b"),
+                gitDeleted: CodableColor(hex: "#bf616a"),
+                gitRenamed: CodableColor(hex: "#81a1c1"),
+                gitConflict: CodableColor(hex: "#b48ead"),
+                gitUntracked: CodableColor(hex: "#4c566a"),
+                branchLocal: CodableColor(hex: "#a3be8c"),
+                branchRemote: CodableColor(hex: "#81a1c1"),
+                branchCurrent: CodableColor(hex: "#ebcb8b"),
+                graphLine1: CodableColor(hex: "#88c0d0"),
+                graphLine2: CodableColor(hex: "#a3be8c"),
+                graphLine3: CodableColor(hex: "#ebcb8b"),
+                graphLine4: CodableColor(hex: "#b48ead"),
+                graphLine5: CodableColor(hex: "#bf616a"),
+                success: CodableColor(hex: "#a3be8c"),
+                warning: CodableColor(hex: "#ebcb8b"),
+                error: CodableColor(hex: "#bf616a"),
+                info: CodableColor(hex: "#88c0d0")
+            )
+        ),
+        ThemePalette(
+            name: "One Dark Pro",
+            description: "Atom's iconic dark theme",
+            colors: CustomColorScheme(
+                background: CodableColor(hex: "#282c34"),
+                backgroundSecondary: CodableColor(hex: "#21252b"),
+                backgroundTertiary: CodableColor(hex: "#2c313a"),
+                text: CodableColor(hex: "#abb2bf"),
+                textSecondary: CodableColor(hex: "#5c6370"),
+                textMuted: CodableColor(hex: "#4b5263"),
+                accent: CodableColor(hex: "#61afef"),
+                accentHover: CodableColor(hex: "#528bff"),
+                gitAdded: CodableColor(hex: "#98c379"),
+                gitModified: CodableColor(hex: "#e5c07b"),
+                gitDeleted: CodableColor(hex: "#e06c75"),
+                gitRenamed: CodableColor(hex: "#61afef"),
+                gitConflict: CodableColor(hex: "#c678dd"),
+                gitUntracked: CodableColor(hex: "#5c6370"),
+                branchLocal: CodableColor(hex: "#98c379"),
+                branchRemote: CodableColor(hex: "#61afef"),
+                branchCurrent: CodableColor(hex: "#e5c07b"),
+                graphLine1: CodableColor(hex: "#61afef"),
+                graphLine2: CodableColor(hex: "#98c379"),
+                graphLine3: CodableColor(hex: "#e5c07b"),
+                graphLine4: CodableColor(hex: "#c678dd"),
+                graphLine5: CodableColor(hex: "#e06c75"),
+                success: CodableColor(hex: "#98c379"),
+                warning: CodableColor(hex: "#e5c07b"),
+                error: CodableColor(hex: "#e06c75"),
+                info: CodableColor(hex: "#61afef")
+            )
+        ),
+        ThemePalette(
+            name: "Monokai Pro",
+            description: "Professional Monokai variant",
+            colors: CustomColorScheme(
+                background: CodableColor(hex: "#2d2a2e"),
+                backgroundSecondary: CodableColor(hex: "#221f22"),
+                backgroundTertiary: CodableColor(hex: "#19181a"),
+                text: CodableColor(hex: "#fcfcfa"),
+                textSecondary: CodableColor(hex: "#939293"),
+                textMuted: CodableColor(hex: "#5b595c"),
+                accent: CodableColor(hex: "#ffd866"),
+                accentHover: CodableColor(hex: "#ffcc66"),
+                gitAdded: CodableColor(hex: "#a9dc76"),
+                gitModified: CodableColor(hex: "#ffd866"),
+                gitDeleted: CodableColor(hex: "#ff6188"),
+                gitRenamed: CodableColor(hex: "#78dce8"),
+                gitConflict: CodableColor(hex: "#ab9df2"),
+                gitUntracked: CodableColor(hex: "#939293"),
+                branchLocal: CodableColor(hex: "#a9dc76"),
+                branchRemote: CodableColor(hex: "#78dce8"),
+                branchCurrent: CodableColor(hex: "#ffd866"),
+                graphLine1: CodableColor(hex: "#78dce8"),
+                graphLine2: CodableColor(hex: "#a9dc76"),
+                graphLine3: CodableColor(hex: "#ffd866"),
+                graphLine4: CodableColor(hex: "#ab9df2"),
+                graphLine5: CodableColor(hex: "#ff6188"),
+                success: CodableColor(hex: "#a9dc76"),
+                warning: CodableColor(hex: "#ffd866"),
+                error: CodableColor(hex: "#ff6188"),
+                info: CodableColor(hex: "#78dce8")
+            )
+        ),
+        ThemePalette(
+            name: "Tokyo Night",
+            description: "Clean, elegant dark theme",
+            colors: CustomColorScheme(
+                background: CodableColor(hex: "#1a1b26"),
+                backgroundSecondary: CodableColor(hex: "#16161e"),
+                backgroundTertiary: CodableColor(hex: "#24283b"),
+                text: CodableColor(hex: "#c0caf5"),
+                textSecondary: CodableColor(hex: "#9aa5ce"),
+                textMuted: CodableColor(hex: "#565f89"),
+                accent: CodableColor(hex: "#7aa2f7"),
+                accentHover: CodableColor(hex: "#2ac3de"),
+                gitAdded: CodableColor(hex: "#9ece6a"),
+                gitModified: CodableColor(hex: "#e0af68"),
+                gitDeleted: CodableColor(hex: "#f7768e"),
+                gitRenamed: CodableColor(hex: "#7aa2f7"),
+                gitConflict: CodableColor(hex: "#bb9af7"),
+                gitUntracked: CodableColor(hex: "#565f89"),
+                branchLocal: CodableColor(hex: "#9ece6a"),
+                branchRemote: CodableColor(hex: "#7aa2f7"),
+                branchCurrent: CodableColor(hex: "#e0af68"),
+                graphLine1: CodableColor(hex: "#7aa2f7"),
+                graphLine2: CodableColor(hex: "#9ece6a"),
+                graphLine3: CodableColor(hex: "#e0af68"),
+                graphLine4: CodableColor(hex: "#bb9af7"),
+                graphLine5: CodableColor(hex: "#f7768e"),
+                success: CodableColor(hex: "#9ece6a"),
+                warning: CodableColor(hex: "#e0af68"),
+                error: CodableColor(hex: "#f7768e"),
+                info: CodableColor(hex: "#7aa2f7")
+            )
+        )
+    ]
+}
+
 struct CustomThemeEditor: View {
     @StateObject private var themeManager = ThemeManager.shared
     @State private var customColors: CustomColorScheme
+    @State private var selectedPalette: UUID?
     @Environment(\.dismiss) private var dismiss
-    
+
     init() {
         let manager = ThemeManager.shared
         _customColors = State(initialValue: manager.customColors ?? .default)
     }
-    
+
     var body: some View {
         NavigationView {
-            Form {
-                Section("Background Colors") {
-                    ColorPicker("Background", selection: Binding(
-                        get: { customColors.background.color },
-                        set: { customColors.background = CodableColor($0) }
-                    ))
-                    
-                    ColorPicker("Secondary", selection: Binding(
-                        get: { customColors.backgroundSecondary.color },
-                        set: { customColors.backgroundSecondary = CodableColor($0) }
-                    ))
-                    
-                    ColorPicker("Tertiary", selection: Binding(
-                        get: { customColors.backgroundTertiary.color },
-                        set: { customColors.backgroundTertiary = CodableColor($0) }
-                    ))
-                }
-                
-                Section("Text Colors") {
-                    ColorPicker("Primary Text", selection: Binding(
-                        get: { customColors.text.color },
-                        set: { customColors.text = CodableColor($0) }
-                    ))
-                    
-                    ColorPicker("Secondary Text", selection: Binding(
-                        get: { customColors.textSecondary.color },
-                        set: { customColors.textSecondary = CodableColor($0) }
-                    ))
-                }
-                
-                Section("Git Status Colors") {
-                    ColorPicker("Added", selection: Binding(
-                        get: { customColors.gitAdded.color },
-                        set: { customColors.gitAdded = CodableColor($0) }
-                    ))
-                    
-                    ColorPicker("Modified", selection: Binding(
-                        get: { customColors.gitModified.color },
-                        set: { customColors.gitModified = CodableColor($0) }
-                    ))
-                    
-                    ColorPicker("Deleted", selection: Binding(
-                        get: { customColors.gitDeleted.color },
-                        set: { customColors.gitDeleted = CodableColor($0) }
-                    ))
-                    
-                    ColorPicker("Conflict", selection: Binding(
-                        get: { customColors.gitConflict.color },
-                        set: { customColors.gitConflict = CodableColor($0) }
-                    ))
-                }
-                
-                Section {
-                    Button("Reset to Default") {
-                        customColors = .default
+            HStack(spacing: 0) {
+                // Left Panel - Palettes
+                ScrollView {
+                    VStack(spacing: 12) {
+                        Text("Predefined Palettes")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal)
+
+                        ForEach(ThemePalette.allPalettes) { palette in
+                            PaletteCard(
+                                palette: palette,
+                                isSelected: selectedPalette == palette.id,
+                                onSelect: {
+                                    selectedPalette = palette.id
+                                    customColors = palette.colors
+                                }
+                            )
+                            .padding(.horizontal)
+                        }
                     }
+                    .padding(.vertical)
                 }
+                .frame(width: 280)
+                .background(Color(NSColor.controlBackgroundColor))
+
+                Divider()
+
+                // Right Panel - Color Customization
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        Text("Customize Colors")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+
+                        ColorSection(title: "Background") {
+                            CompactColorPicker(label: "Primary", color: $customColors.background)
+                            CompactColorPicker(label: "Secondary", color: $customColors.backgroundSecondary)
+                            CompactColorPicker(label: "Tertiary", color: $customColors.backgroundTertiary)
+                        }
+
+                        ColorSection(title: "Text") {
+                            CompactColorPicker(label: "Primary", color: $customColors.text)
+                            CompactColorPicker(label: "Secondary", color: $customColors.textSecondary)
+                            CompactColorPicker(label: "Muted", color: $customColors.textMuted)
+                        }
+
+                        ColorSection(title: "Accent & UI") {
+                            CompactColorPicker(label: "Accent", color: $customColors.accent)
+                            CompactColorPicker(label: "Accent Hover", color: $customColors.accentHover)
+                            CompactColorPicker(label: "Success", color: $customColors.success)
+                            CompactColorPicker(label: "Error", color: $customColors.error)
+                        }
+
+                        ColorSection(title: "Git Status") {
+                            CompactColorPicker(label: "Added", color: $customColors.gitAdded)
+                            CompactColorPicker(label: "Modified", color: $customColors.gitModified)
+                            CompactColorPicker(label: "Deleted", color: $customColors.gitDeleted)
+                            CompactColorPicker(label: "Conflict", color: $customColors.gitConflict)
+                        }
+
+                        ColorSection(title: "Branches") {
+                            CompactColorPicker(label: "Local", color: $customColors.branchLocal)
+                            CompactColorPicker(label: "Remote", color: $customColors.branchRemote)
+                            CompactColorPicker(label: "Current", color: $customColors.branchCurrent)
+                        }
+
+                        ColorSection(title: "Graph Lines") {
+                            CompactColorPicker(label: "Line 1", color: $customColors.graphLine1)
+                            CompactColorPicker(label: "Line 2", color: $customColors.graphLine2)
+                            CompactColorPicker(label: "Line 3", color: $customColors.graphLine3)
+                            CompactColorPicker(label: "Line 4", color: $customColors.graphLine4)
+                            CompactColorPicker(label: "Line 5", color: $customColors.graphLine5)
+                        }
+
+                        Button("Reset to Default") {
+                            customColors = .default
+                            selectedPalette = nil
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    .padding()
+                }
+                .frame(maxWidth: .infinity)
             }
-            .formStyle(.grouped)
             .navigationTitle("Custom Theme")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -710,7 +949,7 @@ struct CustomThemeEditor: View {
                         dismiss()
                     }
                 }
-                
+
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Apply") {
                         themeManager.setCustomColors(customColors)
@@ -719,7 +958,113 @@ struct CustomThemeEditor: View {
                 }
             }
         }
-        .frame(width: 600, height: 700)
+        .frame(width: 900, height: 700)
+    }
+}
+
+// MARK: - Theme Editor Components
+
+struct PaletteCard: View {
+    let palette: ThemePalette
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(palette.name)
+                            .font(.headline)
+                            .foregroundColor(.primary)
+
+                        Text(palette.description)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.system(size: 18))
+                    }
+                }
+
+                // Color preview strip
+                HStack(spacing: 2) {
+                    Rectangle()
+                        .fill(palette.colors.background.color)
+                        .frame(height: 24)
+                    Rectangle()
+                        .fill(palette.colors.accent.color)
+                        .frame(height: 24)
+                    Rectangle()
+                        .fill(palette.colors.gitAdded.color)
+                        .frame(height: 24)
+                    Rectangle()
+                        .fill(palette.colors.gitModified.color)
+                        .frame(height: 24)
+                    Rectangle()
+                        .fill(palette.colors.gitDeleted.color)
+                        .frame(height: 24)
+                }
+                .cornerRadius(4)
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isSelected ? Color.accentColor.opacity(0.1) : Color(NSColor.controlBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.2), lineWidth: isSelected ? 2 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct ColorSection<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+
+            VStack(spacing: 6) {
+                content()
+            }
+        }
+    }
+}
+
+struct CompactColorPicker: View {
+    let label: String
+    @Binding var color: CodableColor
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(label)
+                .frame(width: 100, alignment: .leading)
+                .foregroundColor(.primary)
+
+            ColorPicker("", selection: Binding(
+                get: { color.color },
+                set: { color = CodableColor($0) }
+            ))
+            .labelsHidden()
+
+            Text(color.hexString)
+                .font(.system(.caption, design: .monospaced))
+                .foregroundColor(.secondary)
+                .frame(width: 80, alignment: .trailing)
+        }
+        .padding(.vertical, 2)
     }
 }
 

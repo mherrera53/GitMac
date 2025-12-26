@@ -145,8 +145,10 @@ struct BranchListView: View {
 
     private var localBranchesSection: some View {
         Section {
-            ForEach(filteredLocalBranches) { branch in
-                branchRowView(for: branch)
+            if localBranchesExpanded {
+                ForEach(filteredLocalBranches) { branch in
+                    branchRowView(for: branch)
+                }
             }
         } header: {
             SectionHeader(
@@ -160,8 +162,10 @@ struct BranchListView: View {
 
     private var remoteBranchesSection: some View {
         Section {
-            ForEach(groupedRemoteBranches.keys.sorted(), id: \.self) { remote in
-                remoteGroupView(for: remote)
+            if remoteBranchesExpanded {
+                ForEach(groupedRemoteBranches.keys.sorted(), id: \.self) { remote in
+                    remoteGroupView(for: remote)
+                }
             }
         } header: {
             SectionHeader(
@@ -322,6 +326,11 @@ class BranchListViewModel: ObservableObject {
             return lhs.name < rhs.name
         }
         remoteBranches = repo.remoteBranches.sorted { $0.name < $1.name }
+
+        // Debug: log branch counts
+        print("🔍 Loaded \(localBranches.count) local branches")
+        print("🌐 Loaded \(remoteBranches.count) remote branches:")
+        remoteBranches.forEach { print("  - \($0.name)") }
     }
 
     @Published var uncommittedFiles: [String] = []

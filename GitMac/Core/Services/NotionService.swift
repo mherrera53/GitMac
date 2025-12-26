@@ -414,6 +414,7 @@ struct NotionDatabaseQueryResponse: Decodable {
 
 // MARK: - Notion OAuth
 
+@MainActor
 class NotionOAuth: ObservableObject {
     static let shared = NotionOAuth()
 

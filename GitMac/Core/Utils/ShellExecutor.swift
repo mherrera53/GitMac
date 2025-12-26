@@ -5,6 +5,15 @@ import os.signpost
 
 private let shellLog = OSLog(subsystem: "com.gitmac", category: "shell")
 
+// MARK: - Thread-safe Box for concurrent data capture
+
+private final class Box<T> {
+    var value: T
+    init(_ value: T) {
+        self.value = value
+    }
+}
+
 // MARK: - Shell Errors
 
 enum ShellError: LocalizedError {
@@ -182,21 +191,22 @@ actor ShellExecutor {
                 process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory)
             }
 
-            // Data capture
-            var stdoutData = Data()
-            var stderrData = Data()
+            // Data capture with actor isolation
             let group = DispatchGroup()
             let queue = DispatchQueue(label: "com.gitmac.shell-io", attributes: .concurrent)
 
+            let stdoutDataBox = Box<Data>(Data())
+            let stderrDataBox = Box<Data>(Data())
+
             group.enter()
             queue.async {
-                stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+                stdoutDataBox.value = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
                 group.leave()
             }
 
             group.enter()
             queue.async {
-                stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+                stderrDataBox.value = stderrPipe.fileHandleForReading.readDataToEndOfFile()
                 group.leave()
             }
 
@@ -227,8 +237,8 @@ actor ShellExecutor {
                 timeoutWorkItem.cancel()
                 group.wait() // Wait for IO to finish
 
-                let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
-                let stderr = String(data: stderrData, encoding: .utf8) ?? ""
+                let stdout = String(data: stdoutDataBox.value, encoding: .utf8) ?? ""
+                let stderr = String(data: stderrDataBox.value, encoding: .utf8) ?? ""
 
                 continuation.resume(returning: ShellResult(
                     stdout: stdout,
@@ -252,8 +262,8 @@ actor ShellExecutor {
         arguments: [String] = [],
         workingDirectory: String? = nil,
         environment: [String: String]? = nil,
-        onOutput: @escaping (String) -> Void,
-        onError: @escaping (String) -> Void
+        onOutput: @escaping @Sendable (String) -> Void,
+        onError: @escaping @Sendable (String) -> Void
     ) async -> Int32 {
         await withCheckedContinuation { continuation in
             let process = Process()
@@ -383,8 +393,8 @@ actor ShellExecutor {
                 if process.terminationStatus == 0 {
                     continuation.finish()
                 } else {
-                    let errorMessage = stderrString.isEmpty 
-                        ? "Process exited with code \(process.terminationStatus)" 
+                    _ = stderrString.isEmpty
+                        ? "Process exited with code \(process.terminationStatus)"
                         : stderrString
                     continuation.finish(throwing: ShellError.nonZeroExit(process.terminationStatus))
                 }

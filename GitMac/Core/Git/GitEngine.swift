@@ -217,7 +217,7 @@ actor GitEngine {
                 }
 
                 let remoteName = String(pathParts[0])
-                let branchName = String(pathParts[1])
+                _ = String(pathParts[1])  // branchName - not currently used but parsed for potential future use
 
                 return Branch(
                     name: fullName,

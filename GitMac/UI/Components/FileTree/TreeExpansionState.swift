@@ -4,6 +4,7 @@ import SwiftUI
 
 /// Manages expansion/collapse state for tree views
 /// Shared singleton ensures state persists across view recreations
+@MainActor
 class TreeExpansionState: ObservableObject {
     static let shared = TreeExpansionState()
 

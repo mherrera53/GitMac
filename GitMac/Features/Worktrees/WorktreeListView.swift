@@ -252,8 +252,13 @@ struct AddWorktreeSheet: View {
                             let panel = NSSavePanel()
                             panel.canCreateDirectories = true
                             panel.nameFieldStringValue = "worktree"
-                            if panel.runModal() == .OK {
-                                worktreePath = panel.url?.path ?? ""
+
+                            panel.begin { response in
+                                if response == .OK {
+                                    Task { @MainActor in
+                                        worktreePath = panel.url?.path ?? ""
+                                    }
+                                }
                             }
                         }
                         .buttonStyle(.bordered)

@@ -742,38 +742,37 @@ class AWSCodeBuildViewModel: ObservableObject {
             process.standardOutput = pipe
             process.standardError = errorPipe
             
-            // Set up timeout
-            var didTimeout = false
-            let timeoutTask = Task {
-                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
-                if process.isRunning {
-                    didTimeout = true
-                    process.terminate()
-                }
-            }
-            
+            // Set up timeout with continuation
             do {
                 try process.run()
-                process.waitUntilExit()
-                timeoutTask.cancel()
-                
-                if didTimeout {
-                    return (false, "Timeout after \(Int(timeout))s")
+
+                // Run timeout in background
+                Task.detached { [process] in
+                    try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                    if process.isRunning {
+                        process.terminate()
+                    }
                 }
-                
+
+                process.waitUntilExit()
+
                 let outputData = pipe.fileHandleForReading.readDataToEndOfFile()
                 let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                
+
                 let output = String(data: outputData, encoding: .utf8) ?? ""
                 let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
-                
+
+                // Check if process was terminated (typically SIGTERM = 15)
+                if process.terminationReason == .uncaughtSignal {
+                    return (false, "Timeout after \(Int(timeout))s")
+                }
+
                 if process.terminationStatus == 0 {
                     return (true, output)
                 } else {
                     return (false, errorOutput.isEmpty ? output : errorOutput)
                 }
             } catch {
-                timeoutTask.cancel()
                 return (false, error.localizedDescription)
             }
         }.value

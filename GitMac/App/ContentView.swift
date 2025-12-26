@@ -4,12 +4,11 @@ struct ContentView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var recentReposManager: RecentRepositoriesManager
     @StateObject private var themeManager = ThemeManager.shared
+    @StateObject private var gitOperationHandler = GitOperationHandler()
     @State private var showCloneSheet = false
     @State private var showOpenPanel = false
     @State private var showNewBranchSheet = false
     @State private var showMergeSheet = false
-    @State private var isOperationInProgress = false
-    @State private var operationMessage = ""
     @State private var leftPanelWidth: CGFloat = 220
     @State private var rightPanelWidth: CGFloat = 380
     @State private var showRevertSheet = false
@@ -55,8 +54,8 @@ struct ContentView: View {
                     .environmentObject(appState)
             }
             .overlay {
-                if isOperationInProgress {
-                    OperationProgressOverlay(message: operationMessage)
+                if gitOperationHandler.isOperationInProgress {
+                    OperationProgressOverlay(message: gitOperationHandler.operationMessage)
                 }
             }
             .alert("Error", isPresented: .constant(appState.errorMessage != nil)) {
@@ -73,6 +72,9 @@ struct ContentView: View {
                 Button("Cancel", role: .cancel) { }
             } message: {
                 Text("You are not currently on a branch. Please create a new branch to save your work before pulling.")
+            }
+            .onAppear {
+                gitOperationHandler.appState = appState
             }
     }
 
@@ -109,19 +111,19 @@ struct ContentView: View {
             }
             // Git operation notifications
             .onReceive(NotificationCenter.default.publisher(for: .fetch)) { _ in
-                handleFetch()
+                Task { await gitOperationHandler.handleFetch() }
             }
             .onReceive(NotificationCenter.default.publisher(for: .pull)) { _ in
-                handlePull()
+                Task { await gitOperationHandler.handlePull() }
             }
             .onReceive(NotificationCenter.default.publisher(for: .push)) { _ in
-                handlePush()
+                Task { await gitOperationHandler.handlePush() }
             }
             .onReceive(NotificationCenter.default.publisher(for: .stash)) { _ in
-                handleStash()
+                Task { await gitOperationHandler.handleStash() }
             }
             .onReceive(NotificationCenter.default.publisher(for: .popStash)) { _ in
-                handlePopStash()
+                Task { await gitOperationHandler.handlePopStash() }
             }
             .onReceive(NotificationCenter.default.publisher(for: .newBranch)) { _ in
                 showNewBranchSheet = true
@@ -147,192 +149,38 @@ struct ContentView: View {
             }
     }
 
-    private func handleFetch() {
-        guard appState.currentRepository != nil else { return }
-        isOperationInProgress = true
-        operationMessage = "Fetching from remote..."
-        Task {
-            do {
-                try await appState.gitService.fetch()
-                await appState.refresh()
-
-                // Track successful fetch
-                RemoteOperationTracker.shared.recordFetch(
-                    success: true,
-                    remote: "origin"
-                )
-            } catch {
-                appState.errorMessage = "Fetch failed: \(error.localizedDescription)"
-
-                // Track failed fetch
-                RemoteOperationTracker.shared.recordFetch(
-                    success: false,
-                    remote: "origin",
-                    error: error.localizedDescription
-                )
-            }
-            await MainActor.run {
-                isOperationInProgress = false
-            }
-        }
-    }
-
-    private func handlePull() {
-        guard let repo = appState.currentRepository else { return }
-        let branchName = repo.currentBranch?.name ?? "unknown"
-        isOperationInProgress = true
-        operationMessage = "Pulling changes..."
-        Task {
-            do {
-                try await appState.gitService.pull()
-                await appState.refresh()
-
-                // Track successful pull
-                RemoteOperationTracker.shared.recordPull(
-                    success: true,
-                    branch: branchName,
-                    remote: "origin"
-                )
-            } catch {
-                let errorDesc = error.localizedDescription
-                if errorDesc.localizedCaseInsensitiveContains("not currently on a branch") {
-                    await MainActor.run {
-                        showDetachedHeadAlert = true
-                    }
-                } else {
-                    appState.errorMessage = "Pull failed: \(errorDesc)"
-                    
-                    // Track failed pull
-                    RemoteOperationTracker.shared.recordPull(
-                        success: false,
-                        branch: branchName,
-                        remote: "origin",
-                        error: errorDesc
-                    )
-                }
-            }
-            await MainActor.run {
-                isOperationInProgress = false
-            }
-        }
-    }
-
-    private func handlePush() {
-        guard let repo = appState.currentRepository else { return }
-        let branchName = repo.currentBranch?.name ?? "unknown"
-        isOperationInProgress = true
-        operationMessage = "Pushing to remote..."
-        Task {
-            do {
-                try await appState.gitService.push()
-                await appState.refresh()
-
-                // Track successful push
-                RemoteOperationTracker.shared.recordPush(
-                    success: true,
-                    branch: branchName,
-                    remote: "origin"
-                )
-            } catch {
-                appState.errorMessage = "Push failed: \(error.localizedDescription)"
-
-                // Track failed push
-                RemoteOperationTracker.shared.recordPush(
-                    success: false,
-                    branch: branchName,
-                    remote: "origin",
-                    error: error.localizedDescription
-                )
-            }
-            await MainActor.run {
-                isOperationInProgress = false
-            }
-        }
-    }
-
-    private func handleStash() {
-        guard appState.currentRepository != nil else { return }
-        Task {
-            do {
-                _ = try await appState.gitService.stash()
-                await appState.refresh()
-            } catch {
-                appState.errorMessage = "Stash failed: \(error.localizedDescription)"
-            }
-        }
-    }
-
-    private func handlePopStash() {
-        guard appState.currentRepository != nil else { return }
-        Task {
-            do {
-                try await appState.gitService.stashPop()
-                await appState.refresh()
-            } catch {
-                appState.errorMessage = "Stash pop failed: \(error.localizedDescription)"
-            }
-        }
-    }
-
-    // MARK: - File Ignore/Tracking Handlers
+    // MARK: - File Ignore/Tracking Notification Handlers
 
     private func handleIgnoreFile(_ notification: Notification) {
         guard let repoPath = appState.currentRepository?.path else { return }
 
-        Task {
-            do {
-                let gitignorePath = "\(repoPath)/.gitignore"
-                var currentContent = ""
+        var ignoreType: IgnoreType = .file
+        var filePath = ""
 
-                // Read existing .gitignore content
-                if FileManager.default.fileExists(atPath: gitignorePath) {
-                    currentContent = try String(contentsOfFile: gitignorePath, encoding: .utf8)
-                    if !currentContent.hasSuffix("\n") {
-                        currentContent += "\n"
-                    }
-                }
+        if let info = notification.object as? [String: String] {
+            let type = info["type"] ?? "file"
+            filePath = info["path"] ?? ""
 
-                var entryToAdd = ""
-
-                // Handle different ignore types (Modern)
-                if let info = notification.object as? [String: String] {
-                    let type = info["type"] ?? "file"
-                    let filePath = info["path"] ?? ""
-
-                    switch type {
-                    case "extension":
-                        let ext = info["extension"] ?? URL(fileURLWithPath: filePath).pathExtension
-                        entryToAdd = "*.\(ext)"
-                    case "directory":
-                        let dir = info["directory"] ?? URL(fileURLWithPath: filePath).deletingLastPathComponent().lastPathComponent
-                        // Make path relative to repo
-                        let relativePath = dir.replacingOccurrences(of: repoPath + "/", with: "")
-                        entryToAdd = "\(relativePath)/"
-                    default:
-                        // Single file - make path relative to repo
-                        let relativePath = filePath.replacingOccurrences(of: repoPath + "/", with: "")
-                        entryToAdd = relativePath
-                    }
-                } else if let filePath = notification.object as? String {
-                    // Legacy: simple file path
-                    let relativePath = filePath.replacingOccurrences(of: repoPath + "/", with: "")
-                    entryToAdd = relativePath
-                }
-
-                // Check if entry already exists
-                let lines = currentContent.components(separatedBy: "\n")
-                if !lines.contains(entryToAdd) {
-                    currentContent += entryToAdd + "\n"
-                    try currentContent.write(toFile: gitignorePath, atomically: true, encoding: .utf8)
-                }
-
-                await appState.refresh()
-                NotificationCenter.default.post(name: .repositoryDidRefresh, object: repoPath)
-            } catch {
-                await MainActor.run {
-                    appState.errorMessage = "Failed to add to .gitignore: \(error.localizedDescription)"
-                }
+            switch type {
+            case "extension":
+                let ext = info["extension"] ?? URL(fileURLWithPath: filePath).pathExtension
+                ignoreType = .fileExtension(ext)
+            case "directory":
+                ignoreType = .directory
+            default:
+                ignoreType = .file
             }
+        } else if let path = notification.object as? String {
+            filePath = path
+            ignoreType = .file
+        }
+
+        Task {
+            await gitOperationHandler.handleIgnoreFile(
+                filePath: filePath,
+                type: ignoreType,
+                repoPath: repoPath
+            )
         }
     }
 
@@ -341,22 +189,10 @@ struct ContentView: View {
               let filePath = notification.object as? String else { return }
 
         Task {
-            let shell = ShellExecutor()
-            let relativePath = filePath.replacingOccurrences(of: repoPath + "/", with: "")
-            let result = await shell.execute(
-                "git",
-                arguments: ["update-index", "--assume-unchanged", relativePath],
-                workingDirectory: repoPath
+            await gitOperationHandler.handleAssumeUnchanged(
+                filePath: filePath,
+                repoPath: repoPath
             )
-
-            if result.exitCode != 0 {
-                await MainActor.run {
-                    appState.errorMessage = "Failed to assume unchanged: \(result.stderr)"
-                }
-            } else {
-                await appState.refresh()
-                NotificationCenter.default.post(name: .repositoryDidRefresh, object: repoPath)
-            }
         }
     }
 
@@ -365,22 +201,10 @@ struct ContentView: View {
               let filePath = notification.object as? String else { return }
 
         Task {
-            let shell = ShellExecutor()
-            let relativePath = filePath.replacingOccurrences(of: repoPath + "/", with: "")
-            let result = await shell.execute(
-                "git",
-                arguments: ["rm", "--cached", relativePath],
-                workingDirectory: repoPath
+            await gitOperationHandler.handleStopTrackingFile(
+                filePath: filePath,
+                repoPath: repoPath
             )
-
-            if result.exitCode != 0 {
-                await MainActor.run {
-                    appState.errorMessage = "Failed to stop tracking: \(result.stderr)"
-                }
-            } else {
-                await appState.refresh()
-                NotificationCenter.default.post(name: .repositoryDidRefresh, object: repoPath)
-            }
         }
     }
 }
@@ -723,7 +547,8 @@ struct PanelResizer: View {
 // MARK: - Left Sidebar Panel (Modern)
 struct LeftSidebarPanel: View {
     @EnvironmentObject var appState: AppState
-    @State private var expandedSections: Set<String> = ["repos", "local", "remote"]
+    @State private var expandedSections: Set<String> = ["repos", "local", "remote", "submodules", "githooks"]
+    @State private var branchSearchText = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -751,12 +576,43 @@ struct LeftSidebarPanel: View {
                         RecentRepositoriesList()
                     }
 
+                    // Branch search bar
+                    if appState.currentRepository != nil {
+                        HStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 11))
+                                .foregroundColor(AppTheme.textMuted)
+
+                            TextField("Search branches...", text: $branchSearchText)
+                                .textFieldStyle(.plain)
+                                .font(.system(size: 11))
+
+                            if !branchSearchText.isEmpty {
+                                Button(action: { branchSearchText = "" }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(AppTheme.textMuted)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(AppTheme.backgroundSecondary)
+                        .cornerRadius(6)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                    }
+
                     // LOCAL Section - Show master/main + 3 most recent branches
                     SidebarSection(title: "LOCAL", isExpanded: expandedSections.contains("local")) {
                         expandedSections.toggle("local")
                     } content: {
                         if let repo = appState.currentRepository {
-                            let localBranches = repo.branches.filter { !$0.isRemote }
+                            let allLocal = repo.branches.filter { !$0.isRemote }
+                            let localBranches = branchSearchText.isEmpty ? allLocal : allLocal.filter {
+                                $0.name.localizedCaseInsensitiveContains(branchSearchText)
+                            }
 
                             // Find master or main branch
                             let mainBranch = localBranches.first { $0.name == "master" || $0.name == "main" }
@@ -798,13 +654,29 @@ struct LeftSidebarPanel: View {
                         }
                     }
 
-                    // REMOTE Section
+                    // REMOTE BRANCHES Section
                     SidebarSection(title: "REMOTE", isExpanded: expandedSections.contains("remote")) {
                         expandedSections.toggle("remote")
                     } content: {
                         if let repo = appState.currentRepository {
-                            ForEach(repo.remotes) { remote in
-                                RemoteSidebarRow(remote: remote)
+                            let allRemote = repo.remoteBranches
+                            let filteredRemote = branchSearchText.isEmpty ? allRemote : allRemote.filter {
+                                $0.name.localizedCaseInsensitiveContains(branchSearchText)
+                            }
+                            let remoteBranches = filteredRemote.sorted { $0.name < $1.name }
+                            ForEach(remoteBranches.prefix(10)) { branch in
+                                SidebarBranchRow(branch: branch)
+                            }
+
+                            if remoteBranches.count > 10 {
+                                HStack {
+                                    Text("+ \(remoteBranches.count - 10) more")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(AppTheme.textMuted)
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 4)
                             }
                         }
                     }
@@ -836,6 +708,20 @@ struct LeftSidebarPanel: View {
                         expandedSections.toggle("worktrees")
                     } content: {
                         WorktreeSidebarSection()
+                    }
+
+                    // SUBMODULES Section
+                    SidebarSection(title: "SUBMODULES", isExpanded: expandedSections.contains("submodules")) {
+                        expandedSections.toggle("submodules")
+                    } content: {
+                        SubmoduleSidebarSection()
+                    }
+
+                    // GIT HOOKS Section
+                    SidebarSection(title: "GIT HOOKS", isExpanded: expandedSections.contains("githooks")) {
+                        expandedSections.toggle("githooks")
+                    } content: {
+                        GitHooksSidebarSection()
                     }
 
                     // CI/CD Section
@@ -1243,6 +1129,160 @@ struct WorktreeSidebarRow: View {
     }
 }
 
+// MARK: - Submodule Sidebar Section
+struct SubmoduleSidebarSection: View {
+    @EnvironmentObject var appState: AppState
+    @StateObject private var viewModel = SubmoduleViewModel()
+    @State private var showSubmoduleView = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if viewModel.isLoading {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                    Text("Loading...")
+                        .font(.system(size: 10))
+                        .foregroundColor(AppTheme.textMuted)
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            } else if viewModel.submodules.isEmpty {
+                Button(action: { showSubmoduleView = true }) {
+                    HStack {
+                        Image(systemName: "cube.transparent")
+                            .font(.system(size: 11))
+                        Text("No submodules")
+                            .font(.system(size: 10))
+                            .foregroundColor(AppTheme.textMuted)
+                        Spacer()
+                        Image(systemName: "plus.circle")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.accent)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+            } else {
+                ForEach(viewModel.submodules.prefix(3)) { submodule in
+                    SubmoduleSidebarRow(submodule: submodule)
+                }
+
+                if viewModel.submodules.count > 3 {
+                    Button(action: { showSubmoduleView = true }) {
+                        HStack {
+                            Text("View all \(viewModel.submodules.count) submodules")
+                                .font(.system(size: 10))
+                                .foregroundColor(AppTheme.accent)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 9))
+                                .foregroundColor(AppTheme.accent)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .task {
+            await loadSubmodules()
+        }
+        .sheet(isPresented: $showSubmoduleView) {
+            SubmoduleView()
+                .environmentObject(appState)
+                .frame(minWidth: 600, minHeight: 500)
+        }
+    }
+
+    private func loadSubmodules() async {
+        guard let repoPath = appState.currentRepository?.path else { return }
+        await viewModel.loadSubmodules(at: repoPath)
+    }
+}
+
+// MARK: - Submodule Sidebar Row
+struct SubmoduleSidebarRow: View {
+    let submodule: GitSubmodule
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: submodule.status == .initialized ? "cube.fill" : "cube.transparent")
+                .font(.system(size: 11))
+                .foregroundColor(submodule.status == .initialized ? AppTheme.accent : AppTheme.textMuted)
+
+            Text(submodule.displayName)
+                .font(.system(size: 11))
+                .foregroundColor(AppTheme.textSecondary)
+                .lineLimit(1)
+
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .background(isHovered ? AppTheme.hover : Color.clear)
+        .onHover { isHovered = $0 }
+    }
+}
+
+// MARK: - Git Hooks Sidebar Section
+struct GitHooksSidebarSection: View {
+    @EnvironmentObject var appState: AppState
+    @StateObject private var viewModel = GitHooksViewModel()
+    @State private var showHooksView = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if viewModel.isLoading {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                    Text("Loading...")
+                        .font(.system(size: 10))
+                        .foregroundColor(AppTheme.textMuted)
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            } else {
+                Button(action: { showHooksView = true }) {
+                    HStack {
+                        Image(systemName: "chevron.left.forwardslash.chevron.right")
+                            .font(.system(size: 11))
+                        Text("\(viewModel.enabledCount) of \(viewModel.hooks.count) enabled")
+                            .font(.system(size: 10))
+                            .foregroundColor(AppTheme.textSecondary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9))
+                            .foregroundColor(AppTheme.accent)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .task {
+            await loadHooks()
+        }
+        .sheet(isPresented: $showHooksView) {
+            GitHooksView()
+                .environmentObject(appState)
+                .frame(minWidth: 700, minHeight: 600)
+        }
+    }
+
+    private func loadHooks() async {
+        guard let repoPath = appState.currentRepository?.path else { return }
+        await viewModel.loadHooks(at: repoPath)
+    }
+}
+
 // MARK: - Recent Repositories List
 struct RecentRepositoriesList: View {
     @EnvironmentObject var appState: AppState
@@ -1270,8 +1310,10 @@ struct RecentRepositoriesList: View {
                 panel.allowsMultipleSelection = false
                 panel.message = "Select a Git repository folder"
 
-                if panel.runModal() == .OK, let url = panel.url {
-                    Task {
+                panel.begin { response in
+                    guard response == .OK, let url = panel.url else { return }
+
+                    Task { @MainActor in
                         await appState.openRepository(at: url.path)
                     }
                 }
@@ -4159,8 +4201,13 @@ struct CloneRepositorySheet: View {
                             let panel = NSOpenPanel()
                             panel.canChooseFiles = false
                             panel.canChooseDirectories = true
-                            if panel.runModal() == .OK {
-                                destinationPath = panel.url?.path ?? ""
+
+                            panel.begin { response in
+                                if response == .OK {
+                                    Task { @MainActor in
+                                        destinationPath = panel.url?.path ?? ""
+                                    }
+                                }
                             }
                         }
                         .buttonStyle(.bordered)
@@ -4242,8 +4289,10 @@ struct RepositoryTabBar: View {
         panel.message = "Select a Git repository folder"
         panel.prompt = "Open"
 
-        if panel.runModal() == .OK, let url = panel.url {
-            Task {
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+
+            Task { @MainActor in
                 await appState.openRepository(at: url.path)
                 recentReposManager.addRecent(path: url.path, name: url.lastPathComponent)
             }

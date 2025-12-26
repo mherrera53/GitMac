@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 // MARK: - Nodo de sistema de archivos
-final class FileSystemNode: NSObject {
+final class FileSystemNode: NSObject, @unchecked Sendable {
     let url: URL
     let isDirectory: Bool
     private(set) var children: [FileSystemNode]?
@@ -45,6 +45,7 @@ final class FileSystemNode: NSObject {
 }
 
 // MARK: - Icon cache
+@MainActor
 final class FileIconCache {
     static let shared = FileIconCache()
     private let cache = NSCache<NSString, NSImage>()
@@ -159,7 +160,7 @@ struct OutlineFileBrowserView: NSViewRepresentable {
             return view
         }
 
-        @objc func doubleClick(_ sender: Any?) {
+        @MainActor @objc func doubleClick(_ sender: Any?) {
             guard let outline = outlineView else { return }
             let row = outline.clickedRow
             guard row >= 0,
@@ -177,7 +178,7 @@ struct OutlineFileBrowserView: NSViewRepresentable {
             }
         }
 
-        func outlineView(_ outlineView: NSOutlineView, menuFor event: NSEvent) -> NSMenu? {
+        @MainActor func outlineView(_ outlineView: NSOutlineView, menuFor event: NSEvent) -> NSMenu? {
             let menu = NSMenu()
             let row = outlineView.row(at: outlineView.convert(event.locationInWindow, from: nil))
             guard row >= 0, let node = outlineView.item(atRow: row) as? FileSystemNode else { return nil }

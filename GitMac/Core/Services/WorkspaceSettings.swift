@@ -3,6 +3,7 @@ import Foundation
 // MARK: - Workspace Settings Manager
 
 /// Manages per-repository settings for integrations like Taiga and Microsoft Planner
+@MainActor
 class WorkspaceSettingsManager: ObservableObject {
     static let shared = WorkspaceSettingsManager()
 
