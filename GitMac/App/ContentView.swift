@@ -580,8 +580,8 @@ struct TerminalPanel: View {
             // Resizer handle
             TerminalResizer(height: $height)
 
-            // Terminal content
-            TerminalView()
+            // Terminal content - Ghostty Native
+            GhosttyDirectView()
                 .frame(height: height)
         }
         .background(Color(hex: "1E1E1E"))
@@ -650,7 +650,11 @@ struct CenterPanel: View {
                 if appState.currentRepository != nil {
                     CommitGraphView()
                 } else {
-                    EmptyStateView()
+                    EmptyStateView(
+                        icon: "folder.badge.questionmark",
+                        title: "No Repository",
+                        message: "Open a repository to get started"
+                    )
                 }
             }
         }
@@ -684,16 +688,7 @@ struct DiffViewWithClose: View {
     }
 }
 
-struct EmptyStateView: View {
-    var body: some View {
-        VStack {
-            Spacer()
-            Text("No commits")
-                .foregroundColor(GitKrakenTheme.textMuted)
-            Spacer()
-        }
-    }
-}
+// MARK: - EmptyStateView moved to UI/Components/States/EmptyStateView.swift
 
 // MARK: - Panel Resizer
 struct PanelResizer: View {
@@ -1818,6 +1813,14 @@ struct RightStagingPanel: View {
                 Task { await stagingVM.loadStatus(at: path) }
             }
         }
+        .onReceive(Timer.publish(every: 2.0, on: .main, in: .common).autoconnect()) { _ in
+            // Auto-refresh WIP changes every 2 seconds
+            if let path = appState.currentRepository?.path {
+                Task {
+                    await stagingVM.loadStatus(at: path)
+                }
+            }
+        }
         .onChange(of: appState.selectedCommit) { _, newCommit in
             if let commit = newCommit, let path = appState.currentRepository?.path {
                 Task { await commitDetailVM.loadCommitFiles(sha: commit.sha, at: path) }
@@ -1866,7 +1869,9 @@ struct StagingAreaPanel: View {
                 extensionFilter: extensionFilter,  // Pass filter separately
                 onSelect: loadDiff,
                 onStage: { stagingVM.stage(file: $0) },
-                onStageFolder: { stagingVM.stageFolder($0) }
+                onStageFolder: { stagingVM.stageFolder($0) },
+                onDiscard: { stagingVM.discard(file: $0) },
+                onDelete: { stagingVM.deleteFile($0) }
             )
 
             Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
@@ -1981,8 +1986,14 @@ struct StagingAreaPanel: View {
 
     private func loadDiff(for file: StagingFile) {
         guard let path = appState.currentRepository?.path else { return }
-        isLoadingDiff = true
-        selectedFileDiff = nil
+
+        // Don't clear selectedFileDiff if we're reloading the same file
+        // This prevents the need for double-clicking
+        if selectedFileDiff?.newPath != file.path {
+            isLoadingDiff = true
+            selectedFileDiff = nil
+        }
+
         Task {
             if let diff = await stagingVM.getDiff(for: file, at: path) {
                 selectedFileDiff = diff
@@ -2013,6 +2024,8 @@ struct StagingSectionWithTree: View {
     let onSelect: (StagingFile) -> Void
     let onStage: (StagingFile) -> Void
     let onStageFolder: (String) -> Void
+    var onDiscard: ((StagingFile) -> Void)? = nil
+    var onDelete: ((StagingFile) -> Void)? = nil
 
     @State private var isExpanded = true
 
@@ -2079,7 +2092,9 @@ struct StagingSectionWithTree: View {
                                 extensionFilter: extensionFilter,  // Filter applied in tree
                                 onSelect: onSelect,
                                 onStage: onStage,
-                                onStageFolder: onStageFolder
+                                onStageFolder: onStageFolder,
+                                onDiscard: onDiscard,
+                                onDelete: onDelete
                             )
                         } else {
                             ForEach(filteredFiles) { file in
@@ -2099,7 +2114,7 @@ struct StagingSectionWithTree: View {
     }
 }
 
-// MARK: - Staging Tree View
+// MARK: - Staging Tree View (Now using GenericFileTreeView)
 struct StagingTreeView: View {
     let files: [StagingFile]
     let isStaged: Bool
@@ -2108,120 +2123,51 @@ struct StagingTreeView: View {
     let onSelect: (StagingFile) -> Void
     let onStage: (StagingFile) -> Void
     let onStageFolder: (String) -> Void
+    var onDiscard: ((StagingFile) -> Void)? = nil
+    var onDelete: ((StagingFile) -> Void)? = nil
 
     var body: some View {
-        let tree = buildTree()
-        ForEach(tree.children.sorted(by: sortNodes).filter { nodeMatchesFilter($0) }) { node in
+        GenericFileTreeView<StagingFile, StagingTreeNodeView>.forStagingFiles(
+            files: files,
+            selectedPath: .constant(selectedFilePath),
+            section: isStaged ? "staged" : "unstaged",
+            extensionFilter: extensionFilter,
+            pathExtractor: { $0.path }
+        ) { node, isSelected, section in
             StagingTreeNodeView(
                 node: node,
                 isStaged: isStaged,
-                selectedFilePath: selectedFilePath,
+                isSelected: isSelected,
                 extensionFilter: extensionFilter,
                 onSelect: onSelect,
                 onStage: onStage,
-                onStageFolder: onStageFolder
+                onStageFolder: onStageFolder,
+                onDiscard: onDiscard,
+                onDelete: onDelete
             )
         }
     }
-
-    private func buildTree() -> StagingTreeNode {
-        let root = StagingTreeNode(name: "", path: "", isFolder: true)
-        for file in files {
-            addToTree(root: root, file: file)
-        }
-        return root
-    }
-
-    private func addToTree(root: StagingTreeNode, file: StagingFile) {
-        let components = file.path.split(separator: "/").map(String.init)
-        var current = root
-
-        for (index, component) in components.enumerated() {
-            let isLast = index == components.count - 1
-            let currentPath = components[0...index].joined(separator: "/")
-
-            if isLast {
-                let fileNode = StagingTreeNode(name: component, path: currentPath, isFolder: false, file: file)
-                current.children.append(fileNode)
-            } else {
-                if let existing = current.children.first(where: { $0.name == component && $0.isFolder }) {
-                    current = existing
-                } else {
-                    let folderNode = StagingTreeNode(name: component, path: currentPath, isFolder: true)
-                    current.children.append(folderNode)
-                    current = folderNode
-                }
-            }
-        }
-    }
-
-    private func sortNodes(_ a: StagingTreeNode, _ b: StagingTreeNode) -> Bool {
-        if a.isFolder && !b.isFolder { return true }
-        if !a.isFolder && b.isFolder { return false }
-        return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
-    }
-
-    /// Check if a node or any of its descendants match the extension filter
-    private func nodeMatchesFilter(_ node: StagingTreeNode) -> Bool {
-        guard let ext = extensionFilter else { return true }
-
-        if node.isFolder {
-            // Folder matches if any child matches
-            return node.children.contains { nodeMatchesFilter($0) }
-        } else {
-            // File matches if extension matches
-            let fileExt = (node.path as NSString).pathExtension.lowercased()
-            return fileExt == ext.lowercased()
-        }
-    }
 }
 
-// MARK: - Staging Tree Node
-class StagingTreeNode: Identifiable, ObservableObject {
-    let id: String
-    let name: String
-    let path: String
-    let isFolder: Bool
-    var file: StagingFile?
-    var children: [StagingTreeNode] = []
-
-    init(name: String, path: String, isFolder: Bool, file: StagingFile? = nil) {
-        self.id = path
-        self.name = name
-        self.path = path
-        self.isFolder = isFolder
-        self.file = file
-    }
-
-    var fileCount: Int {
-        isFolder ? children.reduce(0) { $0 + $1.fileCount } : 1
-    }
-}
-
-// MARK: - Staging Tree Node View
+// MARK: - Staging Tree Node View (Renders single node - recursion handled by GenericFileTreeView)
 struct StagingTreeNodeView: View {
-    @ObservedObject var node: StagingTreeNode
+    @ObservedObject var node: GenericTreeNode<StagingFile>
     let isStaged: Bool
-    let selectedFilePath: String?
+    let isSelected: Bool  // Now passed from GenericFileTreeView
     let extensionFilter: String?
     let onSelect: (StagingFile) -> Void
     let onStage: (StagingFile) -> Void
     let onStageFolder: (String) -> Void
+    var onDiscard: ((StagingFile) -> Void)? = nil
+    var onDelete: ((StagingFile) -> Void)? = nil
 
-    @State private var isExpanded = true
     @State private var isHovered = false
+    @State private var showDiscardAlert = false
+    @State private var showDeleteAlert = false
+    @State private var fileToDiscard: StagingFile? = nil
+    @State private var fileToDelete: StagingFile? = nil
 
-    private var isSelected: Bool {
-        guard let file = node.file, let selectedPath = selectedFilePath else { return false }
-        return file.path == selectedPath
-    }
-
-    /// Filtered children based on extension filter
-    private var filteredChildren: [StagingTreeNode] {
-        node.children.sorted(by: { sortNodes($0, $1) }).filter { nodeMatchesFilter($0) }
-    }
-
-    /// Count of files matching the filter
+    /// Count of files matching the filter (for folder display)
     private var filteredFileCount: Int {
         countMatchingFiles(in: node)
     }
@@ -2235,77 +2181,61 @@ struct StagingTreeNodeView: View {
     }
 
     private var folderView: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 6) {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() }
-                } label: {
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 8))
-                        .foregroundColor(GitKrakenTheme.textMuted)
-                        .frame(width: 10)
-                }
-                .buttonStyle(.plain)
+        // Note: Chevron and recursion are handled by GenericTreeNodeView
+        // This view only renders the folder content (icon, name, actions)
+        HStack(spacing: 8) {
+            Image(systemName: "folder.fill")
+                .font(.system(size: 13))
+                .foregroundColor(.yellow)
 
-                Image(systemName: isExpanded ? "folder.fill" : "folder")
-                    .font(.system(size: 12))
-                    .foregroundColor(.yellow)
+            Text(node.name)
+                .font(.system(size: 11, weight: isHovered ? .medium : .regular))
+                .foregroundColor(GitKrakenTheme.textPrimary)
+                .lineLimit(1)
 
-                Text(node.name)
-                    .font(.system(size: 11))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
-                    .lineLimit(1)
+            Text("(\(filteredFileCount))")
+                .font(.system(size: 10))
+                .foregroundColor(GitKrakenTheme.textMuted)
 
-                Text("(\(filteredFileCount))")
-                    .font(.system(size: 10))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+            Spacer()
 
-                Spacer()
-
-                if isHovered {
-                    Button {
-                        onStageFolder(node.path)
-                    } label: {
-                        Image(systemName: isStaged ? "minus.circle" : "plus.circle")
-                            .font(.system(size: 12))
-                            .foregroundColor(isStaged ? GitKrakenTheme.accentRed : GitKrakenTheme.accentGreen)
-                    }
-                    .buttonStyle(.plain)
-                    .help(isStaged ? "Unstage Folder" : "Stage Folder")
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .contentShape(Rectangle())
-            .onHover { isHovered = $0 }
-            .contextMenu {
+            if isHovered {
                 Button {
                     onStageFolder(node.path)
                 } label: {
-                    Label(isStaged ? "Unstage Folder" : "Stage Folder",
-                          systemImage: isStaged ? "minus.circle" : "plus.circle")
+                    Image(systemName: isStaged ? "minus.circle" : "plus.circle")
+                        .font(.system(size: 12))
+                        .foregroundColor(isStaged ? GitKrakenTheme.accentRed : GitKrakenTheme.accentGreen)
                 }
+                .buttonStyle(.plain)
+                .help(isStaged ? "Unstage Folder" : "Stage Folder")
             }
-
-            if isExpanded {
-                ForEach(filteredChildren) { child in
-                    StagingTreeNodeView(
-                        node: child,
-                        isStaged: isStaged,
-                        selectedFilePath: selectedFilePath,
-                        extensionFilter: extensionFilter,
-                        onSelect: onSelect,
-                        onStage: onStage,
-                        onStageFolder: onStageFolder
-                    )
-                    .padding(.leading, 14)
-                }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .contentShape(Rectangle())
+        .onHover { isHovered = $0 }
+        .contextMenu {
+            Button {
+                onStageFolder(node.path)
+            } label: {
+                Label(isStaged ? "Unstage Folder" : "Stage Folder",
+                      systemImage: isStaged ? "minus.circle" : "plus.circle")
             }
         }
     }
 
+    /// Count files matching the filter in a node and its descendants
+    private func countMatchingFiles(in node: GenericTreeNode<StagingFile>) -> Int {
+        if node.isFolder {
+            return node.children.reduce(0) { $0 + countMatchingFiles(in: $1) }
+        } else {
+            return nodeMatchesFilter(node) ? 1 : 0
+        }
+    }
+
     /// Check if a node or any of its descendants match the extension filter
-    private func nodeMatchesFilter(_ node: StagingTreeNode) -> Bool {
+    private func nodeMatchesFilter(_ node: GenericTreeNode<StagingFile>) -> Bool {
         guard let ext = extensionFilter else { return true }
 
         if node.isFolder {
@@ -2316,29 +2246,18 @@ struct StagingTreeNodeView: View {
         }
     }
 
-    /// Count files matching the filter in a node and its descendants
-    private func countMatchingFiles(in node: StagingTreeNode) -> Int {
-        if node.isFolder {
-            return node.children.reduce(0) { $0 + countMatchingFiles(in: $1) }
-        } else {
-            return nodeMatchesFilter(node) ? 1 : 0
-        }
-    }
-
     private var fileView: some View {
         Button(action: {
-            if let file = node.file { onSelect(file) }
+            if let file = node.data { onSelect(file) }
         }) {
             HStack(spacing: 6) {
                 // Status icon
-                if let file = node.file {
-                    FileStatusBadge(status: file.status)
+                if let file = node.data {
+                    StatusIcon(stagingStatus: file.status, size: .small)
                 }
 
-                // File icon
-                Image(systemName: "doc.fill")
-                    .font(.system(size: 11))
-                    .foregroundColor(.blue)
+                // File type icon based on extension
+                FileTypeIcon(fileName: node.name, size: .small)
 
                 // Filename
                 Text(node.name)
@@ -2348,7 +2267,12 @@ struct StagingTreeNodeView: View {
 
                 Spacer()
 
-                if isHovered, let file = node.file {
+                // Diff stats (additions/deletions) - always show if file has changes
+                if let file = node.data, file.hasChanges {
+                    DiffStatsView(additions: file.additions, deletions: file.deletions, size: .small, style: .compact)
+                }
+
+                if isHovered, let file = node.data {
                     Button {
                         onStage(file)
                     } label: {
@@ -2370,13 +2294,36 @@ struct StagingTreeNodeView: View {
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
         .contextMenu {
-            if let file = node.file {
+            if let file = node.data {
                 Button {
                     onStage(file)
                 } label: {
                     Label(isStaged ? "Unstage File" : "Stage File",
                           systemImage: isStaged ? "minus.circle" : "plus.circle")
                 }
+
+                // Discard changes for unstaged modified files (not untracked)
+                if !isStaged, onDiscard != nil, file.status != .untracked {
+                    Divider()
+                    Button(role: .destructive) {
+                        fileToDiscard = file
+                        showDiscardAlert = true
+                    } label: {
+                        Label("Revert Changes", systemImage: "arrow.uturn.backward")
+                    }
+                }
+
+                // Delete option for untracked files
+                if !isStaged, file.status == .untracked {
+                    Divider()
+                    Button(role: .destructive) {
+                        fileToDelete = file
+                        showDeleteAlert = true
+                    } label: {
+                        Label("Delete File", systemImage: "trash")
+                    }
+                }
+
                 Divider()
                 Button {
                     NSPasteboard.general.clearContents()
@@ -2384,38 +2331,43 @@ struct StagingTreeNodeView: View {
                 } label: {
                     Label("Copy Path", systemImage: "doc.on.doc")
                 }
+
+                Button {
+                    NSWorkspace.shared.selectFile(file.path, inFileViewerRootedAtPath: "")
+                } label: {
+                    Label("Reveal in Finder", systemImage: "folder")
+                }
             }
         }
-    }
-
-    private func sortNodes(_ a: StagingTreeNode, _ b: StagingTreeNode) -> Bool {
-        if a.isFolder && !b.isFolder { return true }
-        if !a.isFolder && b.isFolder { return false }
-        return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
-    }
-}
-
-// MARK: - File Status Badge
-struct FileStatusBadge: View {
-    let status: StagingFile.StagingFileStatus
-
-    var body: some View {
-        Text(statusText)
-            .font(.system(size: 9, weight: .bold, design: .monospaced))
-            .foregroundColor(status.color)
-            .frame(width: 14, height: 14)
-            .background(status.color.opacity(0.2))
-            .cornerRadius(3)
-    }
-
-    private var statusText: String {
-        switch status {
-        case .added: return "A"
-        case .modified: return "M"
-        case .deleted: return "D"
-        case .renamed: return "R"
-        case .untracked: return "?"
-        case .conflicted: return "!"
+        .alert("Discard Changes?", isPresented: $showDiscardAlert) {
+            Button("Cancel", role: .cancel) {
+                fileToDiscard = nil
+            }
+            Button("Discard", role: .destructive) {
+                if let file = fileToDiscard {
+                    onDiscard?(file)
+                }
+                fileToDiscard = nil
+            }
+        } message: {
+            if let file = fileToDiscard {
+                Text("This will permanently discard all changes to '\(URL(fileURLWithPath: file.path).lastPathComponent)'. This action cannot be undone.")
+            }
+        }
+        .alert("Delete File?", isPresented: $showDeleteAlert) {
+            Button("Cancel", role: .cancel) {
+                fileToDelete = nil
+            }
+            Button("Delete", role: .destructive) {
+                if let file = fileToDelete {
+                    onDelete?(file)
+                }
+                fileToDelete = nil
+            }
+        } message: {
+            if let file = fileToDelete {
+                Text("This will permanently delete '\(URL(fileURLWithPath: file.path).lastPathComponent)'. This action cannot be undone.")
+            }
         }
     }
 }
@@ -3179,6 +3131,31 @@ class StagingViewModel: ObservableObject {
         }
     }
 
+    func discard(file: StagingFile) {
+        guard let path = currentPath else { return }
+        Task {
+            do {
+                try await engine.discardChanges(files: [file.path], at: path)
+                await loadStatus(at: path)
+            } catch {
+                print("Error discarding changes: \(error)")
+            }
+        }
+    }
+
+    func deleteFile(_ file: StagingFile) {
+        guard let repoPath = currentPath else { return }
+        let absolutePath = URL(fileURLWithPath: repoPath).appendingPathComponent(file.path).path
+        Task {
+            do {
+                try FileManager.default.removeItem(atPath: absolutePath)
+                await loadStatus(at: repoPath)
+            } catch {
+                print("Error deleting file: \(error)")
+            }
+        }
+    }
+
     func commit(message: String, onSuccess: @escaping () -> Void) {
         guard let path = currentPath, !message.isEmpty else { return }
         Task {
@@ -3276,6 +3253,12 @@ struct StagingFile: Identifiable {
     let path: String
     let status: StagingFileStatus
     var isStaged: Bool = false
+    var additions: Int = 0
+    var deletions: Int = 0
+
+    var hasChanges: Bool {
+        additions > 0 || deletions > 0
+    }
 
     enum StagingFileStatus {
         case added, modified, deleted, renamed, untracked, conflicted
@@ -3303,15 +3286,19 @@ struct StagingFile: Identifiable {
         }
     }
 
-    init(path: String, status: StagingFileStatus, isStaged: Bool = false) {
+    init(path: String, status: StagingFileStatus, isStaged: Bool = false, additions: Int = 0, deletions: Int = 0) {
         self.path = path
         self.status = status
         self.isStaged = isStaged
+        self.additions = additions
+        self.deletions = deletions
     }
 
     init(from fileStatus: FileStatus, staged: Bool = false) {
         self.path = fileStatus.path
         self.isStaged = staged
+        self.additions = fileStatus.additions
+        self.deletions = fileStatus.deletions
         switch fileStatus.status {
         case .added: self.status = .added
         case .modified: self.status = .modified

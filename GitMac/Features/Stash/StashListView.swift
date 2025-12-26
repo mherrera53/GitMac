@@ -184,39 +184,76 @@ class StashListViewModel: ObservableObject {
     }
 
     func applyStash(_ stash: Stash) async {
-        guard let gitService = gitService else { return }
         isLoading = true
-        do {
-            try await gitService.stashApply(index: stash.index)
-            // Notify that repository changed so staging area updates
-            NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
-        } catch {
-            self.error = error.localizedDescription
+        
+        if let gitService = gitService {
+            do {
+                try await gitService.stashApply(index: stash.index)
+                // Notify that repository changed so staging area updates
+                NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
+            } catch {
+                self.error = error.localizedDescription
+            }
+        } else if let path = currentPath {
+            // Fallback: use GitEngine directly if gitService not configured
+            do {
+                var options = StashApplyOptions()
+                options.stashRef = stash.reference
+                try await gitEngine.stashApply(options: options, at: path)
+                NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+            } catch {
+                self.error = error.localizedDescription
+            }
+        } else {
+            self.error = "Could not apply stash: no repository configured"
         }
+        
         isLoading = false
     }
 
     func popStash(_ stash: Stash) async {
-        guard let gitService = gitService else { return }
         isLoading = true
-        do {
-            try await gitService.stashPop(index: stash.index)
-            // Notify that repository changed so staging area updates
-            NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
-        } catch {
-            self.error = error.localizedDescription
+        
+        if let gitService = gitService {
+            do {
+                try await gitService.stashPop(index: stash.index)
+                NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
+            } catch {
+                self.error = error.localizedDescription
+            }
+        } else if let path = currentPath {
+            do {
+                try await gitEngine.stashPop(stashRef: stash.reference, at: path)
+                NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+            } catch {
+                self.error = error.localizedDescription
+            }
+        } else {
+            self.error = "Could not pop stash: no repository configured"
         }
+        
         isLoading = false
     }
 
     func dropStash(_ stash: Stash) async {
-        guard let gitService = gitService else { return }
         isLoading = true
-        do {
-            try await gitService.stashDrop(index: stash.index)
-        } catch {
-            self.error = error.localizedDescription
+        
+        if let gitService = gitService {
+            do {
+                try await gitService.stashDrop(index: stash.index)
+            } catch {
+                self.error = error.localizedDescription
+            }
+        } else if let path = currentPath {
+            do {
+                try await gitEngine.stashDrop(stashRef: stash.reference, at: path)
+            } catch {
+                self.error = error.localizedDescription
+            }
+        } else {
+            self.error = "Could not drop stash: no repository configured"
         }
+        
         isLoading = false
     }
 
@@ -228,6 +265,37 @@ class StashListViewModel: ObservableObject {
             arguments: ["stash", "show", "-p", stash.reference]
         )
         return result.stdout
+    }
+
+    /// Apply a single file from a stash without applying the entire stash
+    func applyStashFile(_ stash: Stash, file: StashFile) async {
+        guard let path = currentPath else {
+            self.error = "No repository configured"
+            return
+        }
+        
+        isLoading = true
+        
+        do {
+            // Use git checkout to restore a single file from stash
+            // git checkout stash@{N} -- path/to/file
+            let shell = ShellExecutor()
+            let result = await shell.execute(
+                "git",
+                arguments: ["checkout", stash.reference, "--", file.path],
+                workingDirectory: path
+            )
+            
+            guard result.exitCode == 0 else {
+                throw GitError.checkoutFailed(file.path, result.stderr.isEmpty ? "Failed to restore file from stash" : result.stderr)
+            }
+            
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+        } catch {
+            self.error = error.localizedDescription
+        }
+        
+        isLoading = false
     }
 
     func getFiles(for stash: Stash) -> [StashFile] {

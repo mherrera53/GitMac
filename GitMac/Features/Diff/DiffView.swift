@@ -643,51 +643,275 @@ struct OptimizedSplitDiffView: View {
     }
 
     var body: some View {
-        UnifiedDiffScrollView(scrollOffset: $scrollOffset, viewportHeight: $viewportHeight, viewportWidth: $viewWidth, contentHeight: $contentHeight) {
-            let halfWidth = max(300, (viewWidth - 2) / 2)
-            
-            VStack(spacing: 0) {
-                LazyVStack(spacing: 0, pinnedViews: []) {
-                    ForEach(pairs) { pair in
-                        HStack(spacing: 0) {
-                            // Left side
-                            if let header = pair.hunkHeader {
-                                FastHunkHeader(header: header)
-                                    .frame(width: halfWidth)
-                            } else if let line = pair.left {
-                                FastDiffLine(line: line, side: .left, showLineNumber: showLineNumbers, paired: pair.right)
-                                    .frame(width: halfWidth)
-                            } else {
-                                // Empty on left
-                                FastEmptyLine(
-                                    showLineNumber: showLineNumbers,
-                                    isAdded: pair.right?.type == .addition
-                                )
-                                .frame(width: halfWidth)
-                            }
+        SynchronizedSplitDiffScrollView(
+            scrollOffset: $scrollOffset,
+            viewportHeight: $viewportHeight,
+            contentHeight: $contentHeight,
+            leftContent: {
+                SplitDiffContentView(
+                    pairs: pairs,
+                    side: .left,
+                    showLineNumbers: showLineNumbers
+                )
+            },
+            rightContent: {
+                SplitDiffContentView(
+                    pairs: pairs,
+                    side: .right,
+                    showLineNumbers: showLineNumbers
+                )
+            }
+        )
+    }
+}
 
-                            Rectangle().fill(SwiftUI.Color.gray.opacity(0.3)).frame(width: 2)
+// MARK: - Synchronized Split Diff Scroll View
 
-                            // Right side
-                            if let header = pair.hunkHeader {
-                                FastHunkHeader(header: header)
-                                    .frame(width: halfWidth)
-                            } else if let line = pair.right {
-                                FastDiffLine(line: line, side: .right, showLineNumber: showLineNumbers, paired: pair.left)
-                                    .frame(width: halfWidth)
-                            } else {
-                                // Empty on right
-                                FastEmptyLine(
-                                    showLineNumber: showLineNumbers,
-                                    isDeleted: pair.left?.type == .deletion
-                                )
-                                .frame(width: halfWidth)
-                            }
-                        }
+/// NSViewRepresentable wrapper for split diff with synchronized horizontal and vertical scrolling
+struct SynchronizedSplitDiffScrollView<LeftContent: View, RightContent: View>: NSViewRepresentable {
+    @Binding var scrollOffset: CGFloat
+    @Binding var viewportHeight: CGFloat
+    @Binding var contentHeight: CGFloat
+    @ViewBuilder let leftContent: () -> LeftContent
+    @ViewBuilder let rightContent: () -> RightContent
+
+    func makeNSView(context: Context) -> NSView {
+        let containerView = NSView()
+
+        // Create left scroll view
+        let leftScrollView = NSScrollView()
+        leftScrollView.hasVerticalScroller = true
+        leftScrollView.hasHorizontalScroller = true
+        leftScrollView.autohidesScrollers = false
+        leftScrollView.borderType = .noBorder
+        leftScrollView.drawsBackground = false
+
+        // Create right scroll view
+        let rightScrollView = NSScrollView()
+        rightScrollView.hasVerticalScroller = true
+        rightScrollView.hasHorizontalScroller = true
+        rightScrollView.autohidesScrollers = false
+        rightScrollView.borderType = .noBorder
+        rightScrollView.drawsBackground = false
+
+        // Create hosting views for SwiftUI content
+        let leftHostingView = NSHostingView(rootView: leftContent())
+        let rightHostingView = NSHostingView(rootView: rightContent())
+
+        leftScrollView.documentView = leftHostingView
+        rightScrollView.documentView = rightHostingView
+
+        // Store references in coordinator
+        context.coordinator.leftScrollView = leftScrollView
+        context.coordinator.rightScrollView = rightScrollView
+        context.coordinator.containerView = containerView
+
+        // Add scroll notification observers
+        NotificationCenter.default.addObserver(
+            context.coordinator,
+            selector: #selector(Coordinator.scrollViewDidScroll(_:)),
+            name: NSView.boundsDidChangeNotification,
+            object: leftScrollView.contentView
+        )
+
+        NotificationCenter.default.addObserver(
+            context.coordinator,
+            selector: #selector(Coordinator.scrollViewDidScroll(_:)),
+            name: NSView.boundsDidChangeNotification,
+            object: rightScrollView.contentView
+        )
+
+        // Layout scroll views side by side with divider
+        containerView.addSubview(leftScrollView)
+
+        let divider = NSView()
+        divider.wantsLayer = true
+        divider.layer?.backgroundColor = NSColor.separatorColor.cgColor
+        containerView.addSubview(divider)
+
+        containerView.addSubview(rightScrollView)
+
+        // Store divider reference
+        context.coordinator.divider = divider
+
+        // Initialize viewport and content height after layout
+        DispatchQueue.main.async {
+            // Force initial layout
+            containerView.needsLayout = true
+            containerView.layoutSubtreeIfNeeded()
+
+            // Update viewport height
+            viewportHeight = containerView.bounds.height
+
+            // Update content height from document views
+            if let leftDocView = leftScrollView.documentView,
+               let rightDocView = rightScrollView.documentView {
+                let maxHeight = max(leftDocView.fittingSize.height, rightDocView.fittingSize.height)
+                if maxHeight > 0 {
+                    contentHeight = maxHeight
+                }
+            }
+        }
+
+        return containerView
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        guard let leftScrollView = context.coordinator.leftScrollView,
+              let rightScrollView = context.coordinator.rightScrollView,
+              let divider = context.coordinator.divider else { return }
+
+        // Update layout
+        let frame = nsView.bounds
+        let dividerWidth: CGFloat = 2
+        let halfWidth = (frame.width - dividerWidth) / 2
+
+        leftScrollView.frame = NSRect(x: 0, y: 0, width: halfWidth, height: frame.height)
+        divider.frame = NSRect(x: halfWidth, y: 0, width: dividerWidth, height: frame.height)
+        rightScrollView.frame = NSRect(x: halfWidth + dividerWidth, y: 0, width: halfWidth, height: frame.height)
+
+        // Update content if needed
+        if let leftDoc = leftScrollView.documentView as? NSHostingView<LeftContent> {
+            leftDoc.rootView = leftContent()
+        }
+        if let rightDoc = rightScrollView.documentView as? NSHostingView<RightContent> {
+            rightDoc.rootView = rightContent()
+        }
+
+        // Sync document view sizes (use max height for both)
+        if let leftDocView = leftScrollView.documentView,
+           let rightDocView = rightScrollView.documentView {
+            let maxHeight = max(leftDocView.fittingSize.height, rightDocView.fittingSize.height)
+            let leftWidth = max(leftDocView.fittingSize.width, halfWidth)
+            let rightWidth = max(rightDocView.fittingSize.width, halfWidth)
+
+            leftDocView.frame = NSRect(x: 0, y: 0, width: leftWidth, height: maxHeight)
+            rightDocView.frame = NSRect(x: 0, y: 0, width: rightWidth, height: maxHeight)
+
+            // Update contentHeight binding
+            if maxHeight > 0 {
+                contentHeight = maxHeight
+            }
+        }
+
+        // Update viewport height
+        if frame.height > 0 {
+            viewportHeight = frame.height
+        }
+
+        // Handle programmatic scrolling from SwiftUI (e.g., minimap clicks)
+        if !context.coordinator.isSyncing {
+            let targetPoint = NSPoint(x: 0, y: scrollOffset)
+            leftScrollView.contentView.scroll(to: targetPoint)
+            rightScrollView.contentView.scroll(to: targetPoint)
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    // MARK: - Coordinator
+
+    class Coordinator: NSObject {
+        var parent: SynchronizedSplitDiffScrollView
+        var isSyncing = false
+
+        weak var leftScrollView: NSScrollView?
+        weak var rightScrollView: NSScrollView?
+        weak var containerView: NSView?
+        weak var divider: NSView?
+
+        private var lastScrollTime: Date = Date()
+        private let scrollDebounceInterval: TimeInterval = 0.01 // 10ms
+
+        init(_ parent: SynchronizedSplitDiffScrollView) {
+            self.parent = parent
+        }
+
+        deinit {
+            NotificationCenter.default.removeObserver(self)
+        }
+
+        @objc func scrollViewDidScroll(_ notification: Notification) {
+            guard !isSyncing else { return }
+            guard let clipView = notification.object as? NSClipView else { return }
+
+            // Debounce rapid scroll events
+            let now = Date()
+            guard now.timeIntervalSince(lastScrollTime) >= scrollDebounceInterval else { return }
+            lastScrollTime = now
+
+            isSyncing = true
+            defer { isSyncing = false }
+
+            let scrollPosition = clipView.bounds.origin
+
+            // Determine which scroll view triggered the event
+            if clipView == leftScrollView?.contentView {
+                // Left scrolled, sync to right
+                rightScrollView?.contentView.scroll(to: scrollPosition)
+            } else if clipView == rightScrollView?.contentView {
+                // Right scrolled, sync to left
+                leftScrollView?.contentView.scroll(to: scrollPosition)
+            }
+
+            // Update SwiftUI binding for minimap integration
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.parent.scrollOffset = max(0, scrollPosition.y)
+
+                // Update viewport height if container is available
+                if let container = self.containerView {
+                    self.parent.viewportHeight = container.bounds.height
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Split Diff Content View
+
+/// Renders one side (left or right) of the split diff
+struct SplitDiffContentView: View {
+    let pairs: [DiffPair]
+    let side: DiffSide
+    let showLineNumbers: Bool
+
+    var body: some View {
+        LazyVStack(spacing: 0, pinnedViews: []) {
+            ForEach(pairs) { pair in
+                if let header = pair.hunkHeader {
+                    // Hunk header - same on both sides
+                    FastHunkHeader(header: header)
+                } else {
+                    // Render line for this side
+                    if let line = lineForSide(pair, side) {
+                        FastDiffLine(
+                            line: line,
+                            side: side,
+                            showLineNumber: showLineNumbers,
+                            paired: pairedLine(pair, side)
+                        )
+                    } else {
+                        // Empty line on this side
+                        FastEmptyLine(
+                            showLineNumber: showLineNumbers,
+                            isDeleted: side == .left && pair.right?.type == .addition,
+                            isAdded: side == .right && pair.left?.type == .deletion
+                        )
                     }
                 }
             }
         }
+    }
+
+    private func lineForSide(_ pair: DiffPair, _ side: DiffSide) -> DiffLine? {
+        side == .left ? pair.left : pair.right
+    }
+
+    private func pairedLine(_ pair: DiffPair, _ side: DiffSide) -> DiffLine? {
+        side == .left ? pair.right : pair.left
     }
 }
 
@@ -746,453 +970,11 @@ struct IdentifiedDiffLine: Identifiable {
     let hunkHeader: String?
 }
 
-struct FastHunkHeader: View {
-    let header: String
+// FastHunkHeader, FastEmptyLine, FastDiffLine, FastInlineLine are now in UI/Components/Diff/DiffLineView.swift
+// DiffViewMode, DiffToolbar, ToolbarButton, DiffModeButton are now in UI/Components/Diff/DiffToolbar.swift
+// DiffSide enum is now in UI/Components/Diff/DiffLineView.swift
 
-    var body: some View {
-        Text(header)
-            .font(.system(size: 11, design: .monospaced))
-            .foregroundColor(.cyan)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.cyan.opacity(0.1))
-            .frame(height: 22)
-    }
-}
-
-struct FastEmptyLine: View {
-    let showLineNumber: Bool
-    var isDeleted: Bool = false  // True when line was deleted on this side
-    var isAdded: Bool = false    // True when line was added on other side
-
-    var body: some View {
-        HStack(spacing: 0) {
-            if showLineNumber {
-                Text("")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.secondary.opacity(0.3))
-                    .frame(width: 45, alignment: .trailing)
-                    .padding(.trailing, 8)
-            }
-
-            // Show visual indicator for missing lines
-            if isDeleted || isAdded {
-                // Diagonal stripes pattern to indicate "no content here"
-                ZStack {
-                    // Background color
-                    Rectangle()
-                        .fill(isDeleted ? SwiftUI.Color.red.opacity(0.05) : SwiftUI.Color.green.opacity(0.05))
-
-                    // Diagonal pattern
-                    GeometryReader { geo in
-                        Path { path in
-                            let spacing: CGFloat = 8
-                            for x in stride(from: -geo.size.height, through: geo.size.width, by: spacing) {
-                                path.move(to: CGPoint(x: x, y: geo.size.height))
-                                path.addLine(to: CGPoint(x: x + geo.size.height, y: 0))
-                            }
-                        }
-                        .stroke(
-                            isDeleted ? SwiftUI.Color.red.opacity(0.15) : SwiftUI.Color.green.opacity(0.15),
-                            lineWidth: 1
-                        )
-                    }
-                }
-                .frame(maxWidth: .infinity)
-            } else {
-                Text(" ")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .frame(height: 22)
-        .background(SwiftUI.Color.gray.opacity(0.03))
-    }
-}
-
-struct FastDiffLine: View {
-    let line: DiffLine
-    let side: DiffSide
-    let showLineNumber: Bool
-    let paired: DiffLine?
-
-    var body: some View {
-        HStack(spacing: 0) {
-            if showLineNumber {
-                Text(lineNumber)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.secondary.opacity(0.6))
-                    .frame(width: 45, alignment: .trailing)
-                    .padding(.trailing, 8)
-            }
-
-            Text(indicator)
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundColor(indicatorColor)
-                .frame(width: 16)
-
-            // Use simple text for speed, word-level diff only when needed
-            if shouldHighlightWords, let p = paired {
-                highlightedText(old: side == .left ? line.content : p.content,
-                               new: side == .right ? line.content : p.content)
-            } else {
-                Text(line.content)
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundColor(textColor)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 2)
-        .background(backgroundColor)
-        .frame(height: 22)
-    }
-
-    private var shouldHighlightWords: Bool {
-        paired != nil && line.type != .context && paired?.type != .context
-    }
-
-    private var lineNumber: String {
-        switch side {
-        case .left: return line.oldLineNumber.map { "\($0)" } ?? ""
-        case .right: return line.newLineNumber.map { "\($0)" } ?? ""
-        }
-    }
-
-    private var indicator: String {
-        switch line.type {
-        case .addition: return "+"
-        case .deletion: return "-"
-        case .context: return " "
-        case .hunkHeader: return "@"
-        }
-    }
-
-    private var indicatorColor: SwiftUI.Color {
-        switch line.type {
-        case .addition: return .green
-        case .deletion: return .red
-        default: return .secondary
-        }
-    }
-
-    private var textColor: SwiftUI.Color {
-        switch line.type {
-        case .addition: return .green
-        case .deletion: return .red
-        default: return SwiftUI.Color(NSColor.textColor)
-        }
-    }
-
-    private var backgroundColor: SwiftUI.Color {
-        switch line.type {
-        case .addition: return .green.opacity(0.1)
-        case .deletion: return .red.opacity(0.1)
-        default: return .clear
-        }
-    }
-
-    @ViewBuilder
-    private func highlightedText(old: String, new: String) -> some View {
-        let result = WordLevelDiff.compare(oldLine: old, newLine: new)
-        let segments = side == .left ? result.oldSegments : result.newSegments
-
-        HStack(spacing: 0) {
-            ForEach(segments) { seg in
-                Text(seg.text)
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundColor(segmentColor(seg.type))
-                    .background(segmentBg(seg.type))
-            }
-        }
-    }
-
-    private func segmentColor(_ type: DiffSegment.SegmentType) -> SwiftUI.Color {
-        switch type {
-        case .added: return .green
-        case .removed: return .red
-        default: return textColor
-        }
-    }
-
-    private func segmentBg(_ type: DiffSegment.SegmentType) -> SwiftUI.Color {
-        switch type {
-        case .added: return .green.opacity(0.3)
-        case .removed: return .red.opacity(0.3)
-        default: return .clear
-        }
-    }
-}
-
-struct FastInlineLine: View {
-    let line: DiffLine
-    let showLineNumber: Bool
-
-    var body: some View {
-        HStack(spacing: 0) {
-            if showLineNumber {
-                HStack(spacing: 2) {
-                    Text(line.oldLineNumber.map { "\($0)" } ?? "")
-                        .frame(width: 35, alignment: .trailing)
-                    Text(line.newLineNumber.map { "\($0)" } ?? "")
-                        .frame(width: 35, alignment: .trailing)
-                }
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(.secondary.opacity(0.6))
-                .padding(.trailing, 8)
-            }
-
-            Text(indicator)
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundColor(indicatorColor)
-                .frame(width: 16)
-
-            Text(line.content)
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundColor(textColor)
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 2)
-        .background(backgroundColor)
-        .frame(height: 22)
-    }
-
-    private var indicator: String {
-        switch line.type {
-        case .addition: return "+"
-        case .deletion: return "-"
-        case .context: return " "
-        case .hunkHeader: return "@"
-        }
-    }
-
-    private var indicatorColor: SwiftUI.Color {
-        switch line.type {
-        case .addition: return .green
-        case .deletion: return .red
-        default: return .secondary
-        }
-    }
-
-    private var textColor: SwiftUI.Color {
-        switch line.type {
-        case .addition: return .green
-        case .deletion: return .red
-        default: return SwiftUI.Color(NSColor.textColor)
-        }
-    }
-
-    private var backgroundColor: SwiftUI.Color {
-        switch line.type {
-        case .addition: return .green.opacity(0.1)
-        case .deletion: return .red.opacity(0.1)
-        default: return .clear
-        }
-    }
-}
-
-enum DiffViewMode: String, CaseIterable {
-    case split = "Split"
-    case inline = "Inline"
-    case hunk = "Hunk"
-    case preview = "Preview"
-
-    var icon: String {
-        switch self {
-        case .split: return "rectangle.split.2x1"
-        case .inline: return "rectangle.stack"
-        case .hunk: return "text.alignleft"
-        case .preview: return "eye"
-        }
-    }
-
-    /// Modes available for regular files
-    static var standardModes: [DiffViewMode] {
-        [.split, .inline, .hunk]
-    }
-
-    /// Modes available for markdown files (includes preview)
-    static var markdownModes: [DiffViewMode] {
-        [.split, .inline, .hunk, .preview]
-    }
-}
-
-// MARK: - Diff Toolbar (GitKraken Style)
-
-struct DiffToolbar: View {
-    let filename: String
-    let additions: Int
-    let deletions: Int
-    @Binding var viewMode: DiffViewMode
-    @Binding var showLineNumbers: Bool
-    @Binding var wordWrap: Bool
-    var isMarkdown: Bool = false
-    @Binding var showMinimap: Bool
-
-    /// Available modes based on file type
-    private var availableModes: [DiffViewMode] {
-        isMarkdown ? DiffViewMode.markdownModes : DiffViewMode.standardModes
-    }
-
-    var body: some View {
-        HStack(spacing: 16) {
-            // File info
-            HStack(spacing: 8) {
-                Image(systemName: "doc.fill")
-                    .font(.system(size: 14))
-                    .foregroundColor(.blue)
-
-                Text(filename)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
-                    .lineLimit(1)
-            }
-
-            // Stats badges
-            HStack(spacing: 8) {
-                // Additions badge
-                HStack(spacing: 4) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 9, weight: .bold))
-                    Text("\(additions)")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(GitKrakenTheme.accentGreen)
-                .cornerRadius(4)
-
-                // Deletions badge
-                HStack(spacing: 4) {
-                    Image(systemName: "minus")
-                        .font(.system(size: 9, weight: .bold))
-                    Text("\(deletions)")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(GitKrakenTheme.accentRed)
-                .cornerRadius(4)
-            }
-
-            Spacer()
-
-            // View options
-            HStack(spacing: 4) {
-                ToolbarButton(
-                    icon: "number",
-                    isActive: showLineNumbers,
-                    tooltip: "Line numbers"
-                ) {
-                    showLineNumbers.toggle()
-                }
-
-                ToolbarButton(
-                    icon: "text.word.spacing",
-                    isActive: wordWrap,
-                    tooltip: "Word wrap"
-                ) {
-                    wordWrap.toggle()
-                }
-
-                ToolbarButton(
-                    icon: "chart.bar.doc.horizontal",
-                    isActive: showMinimap,
-                    tooltip: "Minimap"
-                ) {
-                    showMinimap.toggle()
-                }
-            }
-
-            // Divider
-            Rectangle()
-                .fill(GitKrakenTheme.border)
-                .frame(width: 1, height: 20)
-
-            // View mode selector
-            HStack(spacing: 2) {
-                ForEach(availableModes, id: \.self) { mode in
-                    DiffModeButton(
-                        mode: mode,
-                        isSelected: viewMode == mode
-                    ) {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            viewMode = mode
-                        }
-                    }
-                }
-            }
-            .padding(3)
-            .background(GitKrakenTheme.backgroundTertiary)
-            .cornerRadius(6)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(GitKrakenTheme.toolbar)
-    }
-}
-
-// MARK: - Toolbar Button
-
-struct ToolbarButton: View {
-    let icon: String
-    let isActive: Bool
-    let tooltip: String
-    let action: () -> Void
-
-    @State private var isHovered = false
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isActive ? GitKrakenTheme.accent : GitKrakenTheme.textSecondary)
-                .frame(width: 28, height: 28)
-                .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(isActive ? GitKrakenTheme.accent.opacity(0.15) : (isHovered ? GitKrakenTheme.hover : SwiftUI.Color.clear))
-                )
-        }
-        .buttonStyle(.plain)
-        .help(tooltip)
-        .onHover { isHovered = $0 }
-    }
-}
-
-// MARK: - Diff Mode Button
-
-struct DiffModeButton: View {
-    let mode: DiffViewMode
-    let isSelected: Bool
-    let action: () -> Void
-
-    @State private var isHovered = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: mode.icon)
-                    .font(.system(size: 10, weight: .medium))
-                Text(mode.rawValue)
-                    .font(.system(size: 11, weight: .medium))
-            }
-            .foregroundColor(isSelected ? .white : GitKrakenTheme.textSecondary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(isSelected ? GitKrakenTheme.accent : (isHovered ? GitKrakenTheme.hover : SwiftUI.Color.clear))
-            )
-        }
-        .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
-    }
-}
+// MARK: - Diff Toolbar components moved to UI/Components/Diff/DiffToolbar.swift
 
 // MARK: - Split Diff View (Side by Side) with Synchronized Scrolling
 
@@ -2050,11 +1832,9 @@ struct HunkCard: View {
     }
 }
 
-// MARK: - Line Components
+// MARK: - DiffSide moved to UI/Components/Diff/DiffLineView.swift
 
-enum DiffSide {
-    case left, right
-}
+// MARK: - Line Components
 
 struct DiffLineRow: View {
     let line: DiffLine

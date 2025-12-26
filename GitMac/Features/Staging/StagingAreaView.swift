@@ -288,8 +288,6 @@ struct StagingAreaView: View {
                         FileRow(
                             file: file,
                             isSelected: selectedFile == file.path,
-                            repositoryPath: repoPath,
-                            namespace: animation,
                             onSelect: { selectedFile = file.path },
                             onStage: { await viewModel.stage(file: file.path) },
                             onDiscard: { await viewModel.discardChanges(file: file.path) }
@@ -319,8 +317,6 @@ struct StagingAreaView: View {
                         FileRow(
                             file: file,
                             isSelected: selectedFile == file.path,
-                            repositoryPath: repoPath,
-                            namespace: animation,
                             onSelect: { selectedFile = file.path },
                             onStage: { await viewModel.stage(file: file.path) },
                             onDiscard: { await viewModel.discardChanges(file: file.path) }
@@ -333,8 +329,6 @@ struct StagingAreaView: View {
                     FileRow(
                         file: file,
                         isSelected: selectedFile == file.path,
-                        repositoryPath: repoPath,
-                        namespace: animation,
                         onSelect: { selectedFile = file.path },
                         onStage: { await viewModel.stage(file: file.path) },
                         onDiscard: { await viewModel.discardChanges(file: file.path) }
@@ -412,8 +406,6 @@ struct StagingAreaView: View {
                 FileRow(
                     file: file,
                     isSelected: selectedFile == file.path,
-                    repositoryPath: repoPath,
-                    namespace: animation,
                     onSelect: { selectedFile = file.path },
                     onUnstage: { await viewModel.unstage(file: file.path) },
                     onDiscardStaged: { await viewModel.discardStagedFile(file.path) }
@@ -727,191 +719,11 @@ class StagingAreaViewModel: ObservableObject {
     }
 }
 
+// MARK: - FileListSection moved to UI/Components/Layout/FileListSection.swift
+
+// MARK: - FileRow moved to UI/Components/Rows/FileRow.swift
+
 // MARK: - Subviews
-
-struct FileListSection<HeaderActions: View, Content: View>: View {
-    let title: String
-    let count: Int
-    let icon: String
-    let headerColor: Color
-    @ViewBuilder let headerActions: () -> HeaderActions
-    @ViewBuilder let content: () -> Content
-
-    @State private var isExpanded = true
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() }
-                } label: {
-                    HStack {
-                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-
-                        Image(systemName: icon)
-                            .foregroundColor(headerColor)
-
-                        Text(title)
-                            .fontWeight(.medium)
-
-                        Text("(\(count))")
-                            .foregroundColor(.secondary)
-
-                        Spacer()
-                    }
-                }
-                .buttonStyle(.plain)
-
-                headerActions()
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color(nsColor: .controlBackgroundColor))
-
-            // Content - LazyVStack for performance with stable ID to prevent jumping
-            if isExpanded {
-                ScrollView {
-                    LazyVStack(spacing: 0, pinnedViews: []) {
-                        content()
-                    }
-                    .id(count)  // Stable ID prevents view jumping
-                    .animation(.none, value: count)
-                }
-            }
-        }
-    }
-}
-
-struct FileRow: View {
-    let file: FileStatus
-    let isSelected: Bool
-    var repositoryPath: String = ""
-    var namespace: Namespace.ID? = nil
-    var onSelect: () -> Void = {}
-    var onStage: (() async -> Void)? = nil
-    var onUnstage: (() async -> Void)? = nil
-    var onDiscard: (() async -> Void)? = nil
-    var onDiscardStaged: (() async -> Void)? = nil
-
-    @State private var isHovered = false
-    @State private var isStaging = false
-    @State private var isUnstaging = false
-    @State private var isDiscarding = false
-    @State private var isDiscardingStaged = false
-    @State private var showPreview = false
-
-    var body: some View {
-        HStack(spacing: 8) {
-            // Status indicator
-            StatusIcon(status: file.status)
-
-            // File icon
-            Image(systemName: "doc.fill") // FileTypeIcon.systemIcon(for: file.filename))
-                .foregroundColor(.blue) // FileTypeIcon.color(for: file.filename))
-                .frame(width: 16)
-
-            // File path
-            VStack(alignment: .leading, spacing: 0) {
-                Text(file.filename)
-                    .lineLimit(1)
-
-                if !file.directory.isEmpty && file.directory != "." {
-                    Text(file.directory)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-            }
-
-            Spacer()
-
-            // Line change counters
-            if file.hasChanges {
-                DiffStatsView(additions: file.additions, deletions: file.deletions)
-            }
-
-            // Actions (shown on hover)
-            if isHovered {
-                HStack(spacing: 4) {
-                    if let stage = onStage {
-                        FileActionButton(
-                            icon: "plus.circle",
-                            color: GitKrakenTheme.accentGreen,
-                            isLoading: isStaging,
-                            tooltip: "Stage"
-                        ) {
-                            isStaging = true
-                            await stage()
-                            isStaging = false
-                        }
-                    }
-
-                    if let unstage = onUnstage {
-                        FileActionButton(
-                            icon: "minus.circle",
-                            color: GitKrakenTheme.accentOrange,
-                            isLoading: isUnstaging,
-                            tooltip: "Unstage"
-                        ) {
-                            isUnstaging = true
-                            await unstage()
-                            isUnstaging = false
-                        }
-                    }
-
-                    if let discard = onDiscard {
-                        FileActionButton(
-                            icon: "xmark.circle",
-                            color: GitKrakenTheme.accentRed,
-                            isLoading: isDiscarding,
-                            tooltip: "Discard changes"
-                        ) {
-                            isDiscarding = true
-                            await discard()
-                            isDiscarding = false
-                        }
-                    }
-
-                    if let discardStaged = onDiscardStaged {
-                        FileActionButton(
-                            icon: "xmark.circle",
-                            color: GitKrakenTheme.accentRed,
-                            isLoading: isDiscardingStaged,
-                            tooltip: "Discard staged changes"
-                        ) {
-                            isDiscardingStaged = true
-                            await discardStaged()
-                            isDiscardingStaged = false
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(isSelected ? Color.accentColor.opacity(0.2) : (isHovered ? Color.secondary.opacity(0.1) : Color.clear))
-        .contentShape(Rectangle())
-        .contextMenu {
-            FileContextMenu(
-                filePath: file.path,
-                isStaged: onUnstage != nil,
-                repositoryPath: repositoryPath,
-                onStage: onStage != nil ? { Task { await onStage?() } } : nil,
-                onUnstage: onUnstage != nil ? { Task { await onUnstage?() } } : nil,
-                onDiscard: onDiscard != nil ? { Task { await onDiscard?() } } : nil,
-                onDiscardStaged: onDiscardStaged != nil ? { Task { await onDiscardStaged?() } } : nil,
-                onPreview: { showPreview = true }
-            )
-        }
-        .onTapGesture { onSelect() }
-        .sheet(isPresented: $showPreview) {
-            FilePreviewView(filePath: file.path, repositoryPath: repositoryPath)
-        }
-    }
-}
 
 // MARK: - Header Action Button (with loading state)
 
@@ -987,36 +799,7 @@ struct FileActionButton: View {
     }
 }
 
-// MARK: - Diff Stats View
-
-struct DiffStatsView: View {
-    let additions: Int
-    let deletions: Int
-
-    var body: some View {
-        HStack(spacing: 4) {
-            if additions > 0 {
-                HStack(spacing: 1) {
-                    Text("+")
-                        .foregroundColor(.green)
-                    Text("\(additions)")
-                        .foregroundColor(.green)
-                }
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-            }
-
-            if deletions > 0 {
-                HStack(spacing: 1) {
-                    Text("−")
-                        .foregroundColor(.red)
-                    Text("\(deletions)")
-                        .foregroundColor(.red)
-                }
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-            }
-        }
-    }
-}
+// MARK: - DiffStatsView moved to UI/Components/Diff/DiffStatsView.swift
 
 // MARK: - Conflicted File Row
 
@@ -1368,32 +1151,7 @@ struct UntrackedFileRow: View {
     }
 }
 
-struct StatusIcon: View {
-    let status: FileStatusType
-
-    var body: some View {
-        Text(status.rawValue)
-            .font(.system(size: 10, weight: .bold, design: .monospaced))
-            .foregroundColor(statusColor)
-            .frame(width: 16, height: 16)
-            .background(statusColor.opacity(0.2))
-            .cornerRadius(3)
-    }
-
-    var statusColor: Color {
-        switch status {
-        case .added: return .green
-        case .modified: return .orange
-        case .deleted: return .red
-        case .renamed: return .blue
-        case .copied: return .blue
-        case .untracked: return .gray
-        case .ignored: return .gray
-        case .typeChanged: return .purple
-        case .unmerged: return .red
-        }
-    }
-}
+// MARK: - StatusIcon moved to UI/Components/Icons/StatusIcon.swift
 
 // MARK: - File Status Separator
 
@@ -1427,113 +1185,7 @@ struct FileStatusSeparator: View {
     }
 }
 
-struct CommitMessageArea: View {
-    @Binding var message: String
-    @Binding var isAmending: Bool
-    let canCommit: Bool
-    var validationError: CommitValidationError? = nil
-    var hasConflicts: Bool = false
-    let onCommit: () -> Void
-    let onGenerateAI: () -> Void
-
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Text("Commit Message")
-                    .font(.headline)
-
-                Spacer()
-
-                Button {
-                    onGenerateAI()
-                } label: {
-                    Label("Generate with AI", systemImage: "sparkles")
-                }
-                .buttonStyle(.borderless)
-            }
-
-            // Conflict warning
-            if hasConflicts {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
-                    Text("Resolve merge conflicts before committing")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                    Spacer()
-                }
-                .padding(8)
-                .background(Color.orange.opacity(0.1))
-                .cornerRadius(4)
-            }
-
-            TextEditor(text: $message)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 80, maxHeight: 120)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(borderColor, lineWidth: 1)
-                )
-
-            // Validation hint
-            if !canCommit && !message.isEmpty {
-                HStack(spacing: 4) {
-                    Image(systemName: "info.circle")
-                        .font(.caption)
-                    Text(validationHint)
-                        .font(.caption)
-                    Spacer()
-                }
-                .foregroundColor(.secondary)
-            }
-
-            // Character count
-            HStack {
-                Text("\(message.count) characters")
-                    .font(.caption2)
-                    .foregroundColor(message.count < 3 ? .orange : .secondary)
-
-                Spacer()
-            }
-
-            HStack {
-                Toggle("Amend last commit", isOn: $isAmending)
-                    .toggleStyle(.checkbox)
-
-                Spacer()
-
-                Button("Commit") {
-                    onCommit()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!canCommit)
-                .keyboardShortcut(.return, modifiers: .command)
-            }
-        }
-        .padding()
-        .background(Color(nsColor: .controlBackgroundColor))
-    }
-
-    var borderColor: Color {
-        if hasConflicts {
-            return .orange
-        }
-        if !canCommit && !message.isEmpty {
-            return .orange.opacity(0.5)
-        }
-        return Color.secondary.opacity(0.3)
-    }
-
-    var validationHint: String {
-        if message.trimmingCharacters(in: .whitespacesAndNewlines).count < 3 {
-            return "Message should be at least 3 characters"
-        }
-        if let error = validationError {
-            return error.errorDescription ?? "Cannot commit"
-        }
-        return "Ready to commit"
-    }
-}
+// MARK: - CommitMessageArea moved to UI/Components/Commit/CommitMessageArea.swift
 
 struct DiffPreviewView: View {
     let path: String
@@ -1870,37 +1522,7 @@ struct FileTreeView: View {
     }
 }
 
-// MARK: - Tree Expansion State (shared across all tree views)
-
-class TreeExpansionState: ObservableObject {
-    static let shared = TreeExpansionState()
-
-    @Published var expandedPaths: Set<String> = []
-
-    // Track explicitly collapsed paths to distinguish from "never seen"
-    private var collapsedPaths: Set<String> = []
-
-    func isExpanded(_ path: String, section: String = "") -> Bool {
-        let key = section.isEmpty ? path : "\(section):\(path)"
-        // Default to expanded for new paths
-        if !expandedPaths.contains(key) && !collapsedPaths.contains(key) {
-            expandedPaths.insert(key)
-            return true
-        }
-        return expandedPaths.contains(key)
-    }
-
-    func toggle(_ path: String, section: String = "") {
-        let key = section.isEmpty ? path : "\(section):\(path)"
-        if expandedPaths.contains(key) {
-            expandedPaths.remove(key)
-            collapsedPaths.insert(key)
-        } else {
-            expandedPaths.insert(key)
-            collapsedPaths.remove(key)
-        }
-    }
-}
+// MARK: - TreeExpansionState moved to UI/Components/FileTree/TreeExpansionState.swift
 
 // MARK: - Tree Node Model
 
@@ -1967,30 +1589,45 @@ struct TreeNodeView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Folder header
             HStack(spacing: 6) {
-                // Clickable folder name area
-                HStack(spacing: 6) {
+                // Clickable folder name area - LARGE CLICKABLE AREA
+                HStack(spacing: 8) {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                        .frame(width: 12)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(isHovered ? .primary : .secondary)
+                        .frame(width: 20)
 
                     Image(systemName: isExpanded ? "folder.fill" : "folder")
                         .foregroundColor(.yellow)
-                        .frame(width: 16)
+                        .frame(width: 18)
 
                     Text(node.name)
                         .lineLimit(1)
+                        .fontWeight(isHovered ? .medium : .regular)
 
                     Text("(\(node.fileCount))")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(isHovered ? Color.secondary.opacity(0.15) : Color.clear)
+                )
                 .contentShape(Rectangle())
                 .onTapGesture {
                     withAnimation(.easeInOut(duration: 0.15)) {
                         expansionState.toggle(node.path, section: section)
                     }
                 }
+                .onHover { hovering in
+                    if hovering {
+                        NSCursor.pointingHand.push()
+                    } else {
+                        NSCursor.pop()
+                    }
+                }
+                .help(isExpanded ? "Click to collapse folder" : "Click to expand folder")
 
                 Spacer()
                     .contentShape(Rectangle())
@@ -2043,6 +1680,18 @@ struct TreeNodeView: View {
                     } label: {
                         Label("Stage Folder", systemImage: "plus.circle")
                     }
+                    
+                    // Discard all changes in folder
+                    if onDiscard != nil {
+                        Divider()
+                        
+                        Button(role: .destructive) {
+                            // Discard all files in this folder
+                            discardFilesInFolder(node)
+                        } label: {
+                            Label("Discard Changes in Folder", systemImage: "arrow.uturn.backward")
+                        }
+                    }
                 }
 
                 Divider()
@@ -2052,6 +1701,12 @@ struct TreeNodeView: View {
                     NSPasteboard.general.setString(node.path, forType: .string)
                 } label: {
                     Label("Copy Path", systemImage: "doc.on.doc")
+                }
+                
+                Button {
+                    NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: node.path)
+                } label: {
+                    Label("Reveal in Finder", systemImage: "folder")
                 }
             }
 
@@ -2156,7 +1811,6 @@ struct TreeNodeView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
         .background(selectedFile == node.path ? Color.accentColor.opacity(0.2) : Color.clear)
-        .contentShape(Rectangle())
         .contextMenu {
             if isStaged {
                 Button {
@@ -2178,16 +1832,19 @@ struct TreeNodeView: View {
                 Button {
                     onStage?(node.path)
                 } label: {
-                    Label("Stage File (+)", systemImage: "plus.circle")
+                    Label("Stage File [TREE]", systemImage: "plus.circle")
                 }
-
-                if let discard = onDiscard, !node.isUntracked {
-                    Divider()
-                    
-                    Button(role: .destructive) {
-                        discard(node.path)
-                    } label: {
-                        Label("Revert Changes", systemImage: "arrow.uturn.backward")
+                
+                // ALWAYS show Revert Changes for modified files (not untracked)
+                if !node.isUntracked {
+                    if let discard = onDiscard {
+                        Divider()
+                        
+                        Button(role: .destructive) {
+                            discard(node.path)
+                        } label: {
+                            Label("Revert Changes", systemImage: "arrow.uturn.backward")
+                        }
                     }
                 }
             }
@@ -2235,6 +1892,7 @@ struct TreeNodeView: View {
                 }
             }
         }
+        .contentShape(Rectangle())
         .onTapGesture {
             selectedFile = node.path
         }
@@ -2245,6 +1903,18 @@ struct TreeNodeView: View {
         if a.isFolder && !b.isFolder { return true }
         if !a.isFolder && b.isFolder { return false }
         return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
+    }
+    
+    // Discard all modified files in a folder recursively
+    private func discardFilesInFolder(_ folder: FileTreeNode) {
+        for child in folder.children {
+            if child.isFolder {
+                discardFilesInFolder(child)
+            } else if !child.isUntracked {
+                // Only discard tracked (modified) files, not untracked
+                onDiscard?(child.path)
+            }
+        }
     }
 }
 

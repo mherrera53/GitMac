@@ -3,6 +3,8 @@
 DerivedData/
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
+build_artifact/
+build_log*.txt
 
 # Swift Package Manager
 .swiftpm/
@@ -15,3 +17,17 @@ DerivedData/
 xcuserdata/
 *.xcscmblueprint
 *.xccheckout
+
+# Frameworks (external)
+Frameworks/
+
+# Backups
+*.backup-*
+
+# Build scripts
+*.sh
+*.py
+
+# Work in progress documentation
+GHOSTTY_*.md
+TERMINAL_INTEGRATION_STEPS.md
