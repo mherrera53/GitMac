@@ -613,7 +613,7 @@ MIT License - see [LICENSE](LICENSE) for details
 
 If you find GitMac useful, consider supporting its development:
 
-[![PayPal](https://img.shields.io/badge/PayPal-Donate-blue.svg?logo=paypal)](https://www.paypal.com/paypalme/marioherrera53)
+[![PayPal](https://img.shields.io/badge/PayPal-Donate-blue.svg?logo=paypal)](https://www.paypal.com/donate/?business=mario53128%40live.com&no_recurring=0&currency_code=USD)
 
 Your support helps maintain and improve GitMac!
 
