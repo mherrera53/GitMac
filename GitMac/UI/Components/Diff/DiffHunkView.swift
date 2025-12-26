@@ -72,7 +72,7 @@ struct FastHunkHeader: View {
 
     private var headerColor: Color {
         switch style {
-        case .default, .compact: return GitKrakenTheme.accentCyan
+        case .default, .compact: return AppTheme.accentCyan
         case .prominent: return .white
         }
     }
@@ -80,9 +80,9 @@ struct FastHunkHeader: View {
     private var backgroundColor: Color {
         switch style {
         case .default, .compact:
-            return GitKrakenTheme.accentCyan.opacity(isHovered ? 0.15 : 0.1)
+            return AppTheme.accentCyan.opacity(isHovered ? 0.15 : 0.1)
         case .prominent:
-            return GitKrakenTheme.accentCyan.opacity(isHovered ? 0.9 : 0.7)
+            return AppTheme.accentCyan.opacity(isHovered ? 0.9 : 0.7)
         }
     }
 
@@ -123,7 +123,7 @@ struct HunkHeaderWithActions: View {
         if let stage = onStage {
             result.append(FastHunkHeader.HunkAction(
                 icon: "plus.circle.fill",
-                color: GitKrakenTheme.success,
+                color: AppTheme.success,
                 tooltip: "Stage Hunk",
                 action: stage
             ))
@@ -132,7 +132,7 @@ struct HunkHeaderWithActions: View {
         if let discard = onDiscard {
             result.append(FastHunkHeader.HunkAction(
                 icon: "trash.fill",
-                color: GitKrakenTheme.error,
+                color: AppTheme.error,
                 tooltip: "Discard Hunk",
                 action: discard
             ))
@@ -168,7 +168,7 @@ extension FastHunkHeader {
     static func withStage(header: String, onStage: @escaping () async -> Void) -> FastHunkHeader {
         let action = HunkAction(
             icon: "plus.circle.fill",
-            color: GitKrakenTheme.success,
+            color: AppTheme.success,
             tooltip: "Stage Hunk",
             action: onStage
         )
@@ -179,7 +179,7 @@ extension FastHunkHeader {
     static func withDiscard(header: String, onDiscard: @escaping () async -> Void) -> FastHunkHeader {
         let action = HunkAction(
             icon: "trash.fill",
-            color: GitKrakenTheme.error,
+            color: AppTheme.error,
             tooltip: "Discard Hunk",
             action: onDiscard
         )
@@ -195,13 +195,13 @@ extension FastHunkHeader {
         let actions = [
             HunkAction(
                 icon: "plus.circle.fill",
-                color: GitKrakenTheme.success,
+                color: AppTheme.success,
                 tooltip: "Stage Hunk",
                 action: onStage
             ),
             HunkAction(
                 icon: "trash.fill",
-                color: GitKrakenTheme.error,
+                color: AppTheme.error,
                 tooltip: "Discard Hunk",
                 action: onDiscard
             )

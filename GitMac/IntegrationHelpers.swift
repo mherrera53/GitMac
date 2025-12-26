@@ -57,7 +57,7 @@ struct ContentView: View {
                 )
             }
         }
-        .background(GitKrakenTheme.background)
+        .background(AppTheme.background)
         .withToastNotifications() // 👈 AGREGAR ESTO
         // 👇 AGREGAR TODOS ESTOS SHEETS
         .sheet(isPresented: $showCloneSheet) {
@@ -144,7 +144,7 @@ struct ContentView: View {
     private var mainContentWithTerminal: some View {
         VStack(spacing: 0) {
             // Contenido principal existente
-            GitKrakenLayout(
+            MainLayout(
                 leftPanelWidth: .constant(220),
                 rightPanelWidth: .constant(380)
             )

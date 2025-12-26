@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Split Diff View - Side-by-side comparison (like GitKraken)
+/// Split Diff View - Side-by-side comparison (with advanced features)
 /// Optimized for performance with large files
 struct SplitDiffView: View {
     let filePath: String

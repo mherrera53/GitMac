@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// GitKraken-style theme colors for consistent UI
-enum GitKrakenTheme {
+/// Modern theme colors for consistent UI
+enum AppTheme {
     // MARK: - Primary Colors
     static let accent = Color.blue
     static let accentGreen = Color.green

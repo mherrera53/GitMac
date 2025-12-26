@@ -1,7 +1,7 @@
 import Foundation
 
 /// Manipulates git patches for line-level staging/discarding operations
-/// Like GitKraken, allows staging or discarding individual lines from a diff
+/// Advanced feature, allows staging or discarding individual lines from a diff
 actor PatchManipulator {
 
     private let shellExecutor = ShellExecutor()

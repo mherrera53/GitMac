@@ -55,9 +55,9 @@ struct DiffStatsView: View {
             if additions > 0 {
                 HStack(spacing: 1) {
                     Text("+")
-                        .foregroundColor(GitKrakenTheme.success)
+                        .foregroundColor(AppTheme.success)
                     Text("\(additions)")
-                        .foregroundColor(GitKrakenTheme.success)
+                        .foregroundColor(AppTheme.success)
                 }
                 .font(.system(size: size.fontSize, weight: .medium, design: .monospaced))
             }
@@ -65,9 +65,9 @@ struct DiffStatsView: View {
             if deletions > 0 {
                 HStack(spacing: 1) {
                     Text("−")
-                        .foregroundColor(GitKrakenTheme.error)
+                        .foregroundColor(AppTheme.error)
                     Text("\(deletions)")
-                        .foregroundColor(GitKrakenTheme.error)
+                        .foregroundColor(AppTheme.error)
                 }
                 .font(.system(size: size.fontSize, weight: .medium, design: .monospaced))
             }
@@ -89,7 +89,7 @@ struct DiffStatsView: View {
                 .foregroundColor(.white)
                 .padding(.horizontal, size.fontSize * 0.8)
                 .padding(.vertical, size.fontSize * 0.4)
-                .background(GitKrakenTheme.success)
+                .background(AppTheme.success)
                 .cornerRadius(4)
             }
 
@@ -103,7 +103,7 @@ struct DiffStatsView: View {
                 .foregroundColor(.white)
                 .padding(.horizontal, size.fontSize * 0.8)
                 .padding(.vertical, size.fontSize * 0.4)
-                .background(GitKrakenTheme.error)
+                .background(AppTheme.error)
                 .cornerRadius(4)
             }
         }
@@ -118,10 +118,10 @@ struct DiffStatsView: View {
                 HStack(spacing: size.spacing) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: size.fontSize))
-                        .foregroundColor(GitKrakenTheme.success)
+                        .foregroundColor(AppTheme.success)
                     Text("\(additions) addition\(additions == 1 ? "" : "s")")
                         .font(.system(size: size.fontSize, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textPrimary)
+                        .foregroundColor(AppTheme.textPrimary)
                 }
             }
 
@@ -129,10 +129,10 @@ struct DiffStatsView: View {
                 HStack(spacing: size.spacing) {
                     Image(systemName: "minus.circle.fill")
                         .font(.system(size: size.fontSize))
-                        .foregroundColor(GitKrakenTheme.error)
+                        .foregroundColor(AppTheme.error)
                     Text("\(deletions) deletion\(deletions == 1 ? "" : "s")")
                         .font(.system(size: size.fontSize, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textPrimary)
+                        .foregroundColor(AppTheme.textPrimary)
                 }
             }
         }

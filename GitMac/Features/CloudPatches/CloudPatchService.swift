@@ -4,7 +4,7 @@ import CryptoKit
 // MARK: - Cloud Patch Service
 
 /// Service for creating and sharing code patches without committing
-/// Similar to GitKraken's Cloud Patches feature
+/// Advanced feature's Cloud Patches feature
 actor CloudPatchService {
     static let shared = CloudPatchService()
     

@@ -21,7 +21,7 @@ struct PlannerTasksPanel: View {
 
                 Text("Planner")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
 
                 // Plan selector
                 if !viewModel.plans.isEmpty {
@@ -45,7 +45,7 @@ struct PlannerTasksPanel: View {
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
 
                 // Settings
                 Button {
@@ -55,7 +55,7 @@ struct PlannerTasksPanel: View {
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
 
                 // Close
                 Button(action: onClose) {
@@ -63,13 +63,13 @@ struct PlannerTasksPanel: View {
                         .font(.system(size: 10, weight: .bold))
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(GitKrakenTheme.toolbar)
+            .background(AppTheme.toolbar)
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+            Rectangle().fill(AppTheme.border).frame(height: 1)
 
             // Content
             if !viewModel.isAuthenticated {
@@ -86,7 +86,7 @@ struct PlannerTasksPanel: View {
             }
         }
         .frame(height: height)
-        .background(GitKrakenTheme.panel)
+        .background(AppTheme.panel)
         .sheet(isPresented: $viewModel.showSettings) {
             PlannerSettingsSheet(viewModel: viewModel)
         }
@@ -240,21 +240,21 @@ struct PlannerKanbanColumn: View {
             HStack(spacing: 8) {
                 Text(bucket.name)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
 
                 Text("\(tasks.count)")
                     .font(.system(size: 10))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(GitKrakenTheme.backgroundTertiary)
+                    .background(AppTheme.backgroundTertiary)
                     .cornerRadius(4)
 
                 Spacer()
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(GitKrakenTheme.backgroundSecondary)
+            .background(AppTheme.backgroundSecondary)
             .cornerRadius(6)
 
             // Cards
@@ -287,7 +287,7 @@ struct PlannerTaskCard: View {
                 
                 Text(task.title)
                     .font(.system(size: 12))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(3)
                     .strikethrough(task.percentComplete == 100)
                 
@@ -315,18 +315,18 @@ struct PlannerTaskCard: View {
                 } label: {
                     Image(systemName: "arrow.right.doc.on.clipboard")
                         .font(.system(size: 10))
-                        .foregroundColor(GitKrakenTheme.accent)
+                        .foregroundColor(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
                 .help("Insert into commit message")
             }
         }
         .padding(10)
-        .background(isHovered ? GitKrakenTheme.hover : GitKrakenTheme.backgroundSecondary)
+        .background(isHovered ? AppTheme.hover : AppTheme.backgroundSecondary)
         .cornerRadius(6)
         .overlay(
             RoundedRectangle(cornerRadius: 6)
-                .stroke(isHovered ? Color.blue.opacity(0.5) : GitKrakenTheme.border, lineWidth: 1)
+                .stroke(isHovered ? Color.blue.opacity(0.5) : AppTheme.border, lineWidth: 1)
         )
         .onHover { isHovered = $0 }
     }
@@ -347,11 +347,11 @@ struct PlannerEmptyView: View {
         VStack(spacing: 12) {
             Image(systemName: "tray")
                 .font(.system(size: 32))
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
 
             Text(type)
                 .font(.system(size: 13))
-                .foregroundColor(GitKrakenTheme.textSecondary)
+                .foregroundColor(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -369,19 +369,19 @@ struct PlannerSettingsSheet: View {
             HStack {
                 Text("Planner Settings")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
             .padding(16)
-            .background(GitKrakenTheme.toolbar)
+            .background(AppTheme.toolbar)
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+            Rectangle().fill(AppTheme.border).frame(height: 1)
 
             // Content
             VStack(alignment: .leading, spacing: 16) {
@@ -391,7 +391,7 @@ struct PlannerSettingsSheet: View {
                             .foregroundColor(.green)
                         Text("Connected to Microsoft Planner")
                             .font(.system(size: 13))
-                            .foregroundColor(GitKrakenTheme.textPrimary)
+                            .foregroundColor(AppTheme.textPrimary)
                     }
 
                     Button("Disconnect") {
@@ -402,7 +402,7 @@ struct PlannerSettingsSheet: View {
                 } else {
                     Text("Not connected to Planner")
                         .font(.system(size: 13))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
             }
             .padding(16)
@@ -410,7 +410,7 @@ struct PlannerSettingsSheet: View {
             Spacer()
         }
         .frame(width: 350, height: 200)
-        .background(GitKrakenTheme.panel)
+        .background(AppTheme.panel)
     }
 }
 
@@ -422,7 +422,7 @@ struct PlannerPanelResizer: View {
 
     var body: some View {
         Rectangle()
-            .fill(GitKrakenTheme.border)
+            .fill(AppTheme.border)
             .frame(height: 4)
             .contentShape(Rectangle())
             .gesture(

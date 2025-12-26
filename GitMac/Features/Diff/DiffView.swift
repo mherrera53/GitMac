@@ -374,7 +374,7 @@ struct DiffView: View {
             }
 
             Rectangle()
-                .fill(GitKrakenTheme.border)
+                .fill(AppTheme.border)
                 .frame(height: 1)
 
             HStack(spacing: 0) {
@@ -421,7 +421,7 @@ struct DiffView: View {
 
                 if showMinimap && !fileDiff.isBinary && viewMode != .preview && !isLargeFile {
                     Rectangle()
-                        .fill(GitKrakenTheme.border)
+                        .fill(AppTheme.border)
                         .frame(width: 1)
 
                     OptimizedMinimapView(
@@ -439,7 +439,7 @@ struct DiffView: View {
             }
             }
 
-        .background(GitKrakenTheme.background)
+        .background(AppTheme.background)
     }
 }
 
@@ -1108,11 +1108,11 @@ struct SplitHunkHeaderRow: View {
             Text(header)
                 .font(.system(size: 11, design: .monospaced))
         }
-        .foregroundColor(GitKrakenTheme.accent)
+        .foregroundColor(AppTheme.accent)
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(GitKrakenTheme.accent.opacity(0.08))
+        .background(AppTheme.accent.opacity(0.08))
     }
 }
 
@@ -1157,13 +1157,13 @@ struct SplitDiffLineRow: View {
                 // No special highlighting
                 break
             case .added:
-                segmentAttr.backgroundColor = GitKrakenTheme.accentGreen.opacity(0.4)
+                segmentAttr.backgroundColor = AppTheme.accentGreen.opacity(0.4)
                 segmentAttr.foregroundColor = SwiftUI.Color.green
             case .removed:
-                segmentAttr.backgroundColor = GitKrakenTheme.accentRed.opacity(0.4)
+                segmentAttr.backgroundColor = AppTheme.accentRed.opacity(0.4)
                 segmentAttr.foregroundColor = SwiftUI.Color.red
             case .changed:
-                let color = line.type == .addition ? GitKrakenTheme.accentGreen : GitKrakenTheme.accentRed
+                let color = line.type == .addition ? AppTheme.accentGreen : AppTheme.accentRed
                 segmentAttr.backgroundColor = color.opacity(0.4)
             }
 
@@ -1214,33 +1214,33 @@ struct SplitDiffLineRow: View {
 
     var indicatorColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.accentGreen
-        case .deletion: return GitKrakenTheme.accentRed
-        default: return GitKrakenTheme.textMuted
+        case .addition: return AppTheme.accentGreen
+        case .deletion: return AppTheme.accentRed
+        default: return AppTheme.textMuted
         }
     }
 
     var backgroundColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.accentGreen.opacity(0.12)
-        case .deletion: return GitKrakenTheme.accentRed.opacity(0.12)
+        case .addition: return AppTheme.accentGreen.opacity(0.12)
+        case .deletion: return AppTheme.accentRed.opacity(0.12)
         case .context, .hunkHeader: return SwiftUI.Color.clear
         }
     }
 
     var lineNumberBackground: SwiftUI.Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.accentGreen.opacity(0.06)
-        case .deletion: return GitKrakenTheme.accentRed.opacity(0.06)
-        case .context, .hunkHeader: return GitKrakenTheme.backgroundSecondary
+        case .addition: return AppTheme.accentGreen.opacity(0.06)
+        case .deletion: return AppTheme.accentRed.opacity(0.06)
+        case .context, .hunkHeader: return AppTheme.backgroundSecondary
         }
     }
 
     var textColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.accentGreen
-        case .deletion: return GitKrakenTheme.accentRed
-        case .context, .hunkHeader: return GitKrakenTheme.textPrimary
+        case .addition: return AppTheme.accentGreen
+        case .deletion: return AppTheme.accentRed
+        case .context, .hunkHeader: return AppTheme.textPrimary
         }
     }
 }
@@ -1404,7 +1404,7 @@ struct HunkSummaryHeader: View {
                 Text("\(hunkCount) hunk\(hunkCount == 1 ? "" : "s")")
                     .font(.system(size: 12, weight: .medium))
             }
-            .foregroundColor(GitKrakenTheme.textSecondary)
+            .foregroundColor(AppTheme.textSecondary)
 
             Spacer()
 
@@ -1414,20 +1414,20 @@ struct HunkSummaryHeader: View {
                         .font(.system(size: 10, weight: .bold))
                     Text("\(totalAdditions)")
                 }
-                .foregroundColor(GitKrakenTheme.accentGreen)
+                .foregroundColor(AppTheme.accentGreen)
 
                 HStack(spacing: 4) {
                     Image(systemName: "minus")
                         .font(.system(size: 10, weight: .bold))
                     Text("\(totalDeletions)")
                 }
-                .foregroundColor(GitKrakenTheme.accentRed)
+                .foregroundColor(AppTheme.accentRed)
             }
             .font(.system(size: 12, weight: .semibold, design: .monospaced))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(GitKrakenTheme.backgroundSecondary)
+        .background(AppTheme.backgroundSecondary)
         .cornerRadius(8)
     }
 }
@@ -1464,11 +1464,11 @@ struct HunkSelectionToolbar: View {
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(isSelectionMode ? GitKrakenTheme.accent.opacity(0.2) : Color.clear)
+                .background(isSelectionMode ? AppTheme.accent.opacity(0.2) : Color.clear)
                 .cornerRadius(4)
             }
             .buttonStyle(.plain)
-            .foregroundColor(isSelectionMode ? GitKrakenTheme.accent : GitKrakenTheme.textSecondary)
+            .foregroundColor(isSelectionMode ? AppTheme.accent : AppTheme.textSecondary)
 
             if isSelectionMode {
                 Divider()
@@ -1477,18 +1477,18 @@ struct HunkSelectionToolbar: View {
                 // Selection counter
                 Text("\(selectedCount)/\(totalCount)")
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(GitKrakenTheme.textSecondary)
+                    .foregroundColor(AppTheme.textSecondary)
 
                 // Select/Deselect all buttons
                 Button("All") { onSelectAll?() }
                     .font(.system(size: 10, weight: .medium))
                     .buttonStyle(.plain)
-                    .foregroundColor(GitKrakenTheme.accent)
+                    .foregroundColor(AppTheme.accent)
 
                 Button("None") { onDeselectAll?() }
                     .font(.system(size: 10, weight: .medium))
                     .buttonStyle(.plain)
-                    .foregroundColor(GitKrakenTheme.textSecondary)
+                    .foregroundColor(AppTheme.textSecondary)
 
                 if selectedCount > 0 {
                     Divider()
@@ -1507,7 +1507,7 @@ struct HunkSelectionToolbar: View {
                             }
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
-                            .background(GitKrakenTheme.accentGreen)
+                            .background(AppTheme.accentGreen)
                             .foregroundColor(.white)
                             .cornerRadius(4)
                         }
@@ -1526,7 +1526,7 @@ struct HunkSelectionToolbar: View {
                             }
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
-                            .background(GitKrakenTheme.accentOrange)
+                            .background(AppTheme.accentOrange)
                             .foregroundColor(.white)
                             .cornerRadius(4)
                         }
@@ -1545,7 +1545,7 @@ struct HunkSelectionToolbar: View {
                             }
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
-                            .background(GitKrakenTheme.accentRed)
+                            .background(AppTheme.accentRed)
                             .foregroundColor(.white)
                             .cornerRadius(4)
                         }
@@ -1596,7 +1596,7 @@ struct CollapsibleHunkCard: View {
                     } label: {
                         Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                             .font(.system(size: 14))
-                            .foregroundColor(isSelected ? GitKrakenTheme.accent : GitKrakenTheme.textSecondary)
+                            .foregroundColor(isSelected ? AppTheme.accent : AppTheme.textSecondary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -1605,7 +1605,7 @@ struct CollapsibleHunkCard: View {
                 Button(action: { onToggleCollapse?() }) {
                     Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
                         .frame(width: 16, height: 16)
                 }
                 .buttonStyle(.plain)
@@ -1616,23 +1616,23 @@ struct CollapsibleHunkCard: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(GitKrakenTheme.accent)
+                    .background(AppTheme.accent)
                     .cornerRadius(4)
 
                 // Line range
                 Text("Lines \(hunk.oldStart)-\(hunk.oldStart + hunk.oldLines) → \(hunk.newStart)-\(hunk.newStart + hunk.newLines)")
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
 
                 // Change stats
                 HStack(spacing: 6) {
                     if additions > 0 {
                         Text("+\(additions)")
-                            .foregroundColor(GitKrakenTheme.accentGreen)
+                            .foregroundColor(AppTheme.accentGreen)
                     }
                     if deletions > 0 {
                         Text("-\(deletions)")
-                            .foregroundColor(GitKrakenTheme.accentRed)
+                            .foregroundColor(AppTheme.accentRed)
                     }
                 }
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
@@ -1651,7 +1651,7 @@ struct CollapsibleHunkCard: View {
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
-                                    .background(GitKrakenTheme.accentGreen)
+                                    .background(AppTheme.accentGreen)
                                     .cornerRadius(4)
                             }
                             .buttonStyle(.plain)
@@ -1664,7 +1664,7 @@ struct CollapsibleHunkCard: View {
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
-                                    .background(GitKrakenTheme.accentRed)
+                                    .background(AppTheme.accentRed)
                                     .cornerRadius(4)
                             }
                             .buttonStyle(.plain)
@@ -1677,7 +1677,7 @@ struct CollapsibleHunkCard: View {
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
-                                    .background(GitKrakenTheme.accentOrange)
+                                    .background(AppTheme.accentOrange)
                                     .cornerRadius(4)
                             }
                             .buttonStyle(.plain)
@@ -1687,7 +1687,7 @@ struct CollapsibleHunkCard: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(GitKrakenTheme.accent.opacity(0.08))
+            .background(AppTheme.accent.opacity(0.08))
 
             // Lines (collapsible)
             if !isCollapsed {
@@ -1700,23 +1700,23 @@ struct CollapsibleHunkCard: View {
                 // Collapsed preview
                 HStack(spacing: 8) {
                     Text("...")
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                     Text("\(hunk.lines.count) lines")
                         .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(GitKrakenTheme.backgroundTertiary)
+                .background(AppTheme.backgroundTertiary)
             }
         }
-        .background(isSelected ? GitKrakenTheme.accent.opacity(0.1) : GitKrakenTheme.backgroundSecondary)
+        .background(isSelected ? AppTheme.accent.opacity(0.1) : AppTheme.backgroundSecondary)
         .cornerRadius(8)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
                 .stroke(
-                    isSelected ? GitKrakenTheme.accent : (isHovered ? GitKrakenTheme.accent.opacity(0.6) : GitKrakenTheme.border),
+                    isSelected ? AppTheme.accent : (isHovered ? AppTheme.accent.opacity(0.6) : AppTheme.border),
                     lineWidth: isSelected || isHovered ? 2 : 1
                 )
         )
@@ -1766,7 +1766,7 @@ struct HunkCard: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(GitKrakenTheme.accentGreen)
+                                .background(AppTheme.accentGreen)
                                 .cornerRadius(4)
                             }
                             .buttonStyle(.plain)
@@ -1783,7 +1783,7 @@ struct HunkCard: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(GitKrakenTheme.accentRed)
+                                .background(AppTheme.accentRed)
                                 .cornerRadius(4)
                             }
                             .buttonStyle(.plain)
@@ -1800,7 +1800,7 @@ struct HunkCard: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(GitKrakenTheme.accentOrange)
+                                .background(AppTheme.accentOrange)
                                 .cornerRadius(4)
                             }
                             .buttonStyle(.plain)
@@ -1826,7 +1826,7 @@ struct HunkCard: View {
         .cornerRadius(8)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(isHovered ? GitKrakenTheme.accent.opacity(0.5) : Color.secondary.opacity(0.2), lineWidth: isHovered ? 2 : 1)
+                .stroke(isHovered ? AppTheme.accent.opacity(0.5) : Color.secondary.opacity(0.2), lineWidth: isHovered ? 2 : 1)
         )
         .onHover { isHovered = $0 }
     }
@@ -1977,7 +1977,7 @@ struct HunkLineRow: View {
                         .frame(width: 35, alignment: .trailing)
                 }
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
                 .padding(.trailing, 8)
                 .background(lineNumberBackground)
             }
@@ -2009,33 +2009,33 @@ struct HunkLineRow: View {
 
     var prefixColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.accentGreen
-        case .deletion: return GitKrakenTheme.accentRed
-        default: return GitKrakenTheme.textMuted
+        case .addition: return AppTheme.accentGreen
+        case .deletion: return AppTheme.accentRed
+        default: return AppTheme.textMuted
         }
     }
 
     var backgroundColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.accentGreen.opacity(0.1)
-        case .deletion: return GitKrakenTheme.accentRed.opacity(0.1)
+        case .addition: return AppTheme.accentGreen.opacity(0.1)
+        case .deletion: return AppTheme.accentRed.opacity(0.1)
         default: return SwiftUI.Color.clear
         }
     }
 
     var lineNumberBackground: SwiftUI.Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.accentGreen.opacity(0.06)
-        case .deletion: return GitKrakenTheme.accentRed.opacity(0.06)
-        default: return GitKrakenTheme.backgroundSecondary
+        case .addition: return AppTheme.accentGreen.opacity(0.06)
+        case .deletion: return AppTheme.accentRed.opacity(0.06)
+        default: return AppTheme.backgroundSecondary
         }
     }
 
     var textColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.accentGreen
-        case .deletion: return GitKrakenTheme.accentRed
-        default: return GitKrakenTheme.textPrimary
+        case .addition: return AppTheme.accentGreen
+        case .deletion: return AppTheme.accentRed
+        default: return AppTheme.textPrimary
         }
     }
 }
@@ -2050,11 +2050,11 @@ struct HunkHeaderRow: View {
             Text(header)
                 .font(.system(size: 11, design: .monospaced))
         }
-        .foregroundColor(GitKrakenTheme.accent)
+        .foregroundColor(AppTheme.accent)
         .padding(.vertical, 6)
         .padding(.horizontal, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(GitKrakenTheme.accent.opacity(0.08))
+        .background(AppTheme.accent.opacity(0.08))
     }
 }
 
@@ -2066,10 +2066,10 @@ struct EmptyLineRow: View {
             if showLineNumber {
                 Text("")
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
                     .frame(width: 45, alignment: .trailing)
                     .padding(.trailing, 8)
-                    .background(GitKrakenTheme.backgroundSecondary)
+                    .background(AppTheme.backgroundSecondary)
             }
             Text(" ")
                 .frame(width: 16)
@@ -2077,7 +2077,7 @@ struct EmptyLineRow: View {
         }
         .font(.system(size: 12, design: .monospaced))
         .padding(.vertical, 2)
-        .background(GitKrakenTheme.backgroundTertiary.opacity(0.3))
+        .background(AppTheme.backgroundTertiary.opacity(0.3))
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -2663,15 +2663,15 @@ struct LargeFileDiffViewWrapper: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(GitKrakenTheme.backgroundSecondary)
+                        .background(AppTheme.backgroundSecondary)
                     }
                     .buttonStyle(.plain)
-                    .foregroundColor(GitKrakenTheme.accent)
+                    .foregroundColor(AppTheme.accent)
                 }
             }
         }
 
-        .background(GitKrakenTheme.background)
+        .background(AppTheme.background)
     }
 
     private func loadMore() {
@@ -2831,7 +2831,7 @@ class LargeFileDiffNSView: NSView {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
 
         // Background
-        context.setFillColor(NSColor(GitKrakenTheme.background).cgColor)
+        context.setFillColor(NSColor(AppTheme.background).cgColor)
         context.fill(dirtyRect)
 
         let visibleMinY = dirtyRect.minY

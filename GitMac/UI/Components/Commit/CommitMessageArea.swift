@@ -42,14 +42,14 @@ struct CommitMessageArea: View {
             if hasConflicts {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(GitKrakenTheme.warning)
+                        .foregroundColor(AppTheme.warning)
                     Text("Resolve merge conflicts before committing")
                         .font(.caption)
-                        .foregroundColor(GitKrakenTheme.warning)
+                        .foregroundColor(AppTheme.warning)
                     Spacer()
                 }
                 .padding(8)
-                .background(GitKrakenTheme.warning.opacity(0.1))
+                .background(AppTheme.warning.opacity(0.1))
                 .cornerRadius(4)
             }
 
@@ -78,7 +78,7 @@ struct CommitMessageArea: View {
             HStack {
                 Text("\(message.count) characters")
                     .font(.caption2)
-                    .foregroundColor(message.count < 3 ? GitKrakenTheme.warning : .secondary)
+                    .foregroundColor(message.count < 3 ? AppTheme.warning : .secondary)
 
                 Spacer()
             }
@@ -105,10 +105,10 @@ struct CommitMessageArea: View {
 
     var borderColor: Color {
         if hasConflicts {
-            return GitKrakenTheme.warning
+            return AppTheme.warning
         }
         if !canCommit && !message.isEmpty {
-            return GitKrakenTheme.warning.opacity(0.5)
+            return AppTheme.warning.opacity(0.5)
         }
         return Color.secondary.opacity(0.3)
     }

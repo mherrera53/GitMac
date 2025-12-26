@@ -87,7 +87,7 @@ struct FileRow: View {
             actions.append(
                 RowAction(
                     icon: "xmark.circle",
-                    color: GitKrakenTheme.error,
+                    color: AppTheme.error,
                     tooltip: "Discard staged changes",
                     action: discardStaged
                 )

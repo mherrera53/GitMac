@@ -72,24 +72,24 @@ struct FastDiffLine: View {
 
     private var indicatorColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.success
-        case .deletion: return GitKrakenTheme.error
+        case .addition: return AppTheme.success
+        case .deletion: return AppTheme.error
         default: return .secondary
         }
     }
 
     private var textColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.success
-        case .deletion: return GitKrakenTheme.error
+        case .addition: return AppTheme.success
+        case .deletion: return AppTheme.error
         default: return SwiftUI.Color(NSColor.textColor)
         }
     }
 
     private var backgroundColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.success.opacity(0.1)
-        case .deletion: return GitKrakenTheme.error.opacity(0.1)
+        case .addition: return AppTheme.success.opacity(0.1)
+        case .deletion: return AppTheme.error.opacity(0.1)
         default: return .clear
         }
     }
@@ -111,16 +111,16 @@ struct FastDiffLine: View {
 
     private func segmentColor(_ type: DiffSegment.SegmentType) -> SwiftUI.Color {
         switch type {
-        case .added: return GitKrakenTheme.success
-        case .removed: return GitKrakenTheme.error
+        case .added: return AppTheme.success
+        case .removed: return AppTheme.error
         default: return textColor
         }
     }
 
     private func segmentBg(_ type: DiffSegment.SegmentType) -> SwiftUI.Color {
         switch type {
-        case .added: return GitKrakenTheme.success.opacity(0.3)
-        case .removed: return GitKrakenTheme.error.opacity(0.3)
+        case .added: return AppTheme.success.opacity(0.3)
+        case .removed: return AppTheme.error.opacity(0.3)
         default: return .clear
         }
     }
@@ -176,24 +176,24 @@ struct FastInlineLine: View {
 
     private var indicatorColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.success
-        case .deletion: return GitKrakenTheme.error
+        case .addition: return AppTheme.success
+        case .deletion: return AppTheme.error
         default: return .secondary
         }
     }
 
     private var textColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.success
-        case .deletion: return GitKrakenTheme.error
+        case .addition: return AppTheme.success
+        case .deletion: return AppTheme.error
         default: return SwiftUI.Color(NSColor.textColor)
         }
     }
 
     private var backgroundColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.success.opacity(0.1)
-        case .deletion: return GitKrakenTheme.error.opacity(0.1)
+        case .addition: return AppTheme.success.opacity(0.1)
+        case .deletion: return AppTheme.error.opacity(0.1)
         default: return .clear
         }
     }
@@ -224,7 +224,7 @@ struct FastEmptyLine: View {
                 ZStack {
                     // Background color
                     Rectangle()
-                        .fill(isDeleted ? GitKrakenTheme.error.opacity(0.05) : GitKrakenTheme.success.opacity(0.05))
+                        .fill(isDeleted ? AppTheme.error.opacity(0.05) : AppTheme.success.opacity(0.05))
 
                     // Diagonal pattern
                     GeometryReader { geo in
@@ -236,7 +236,7 @@ struct FastEmptyLine: View {
                             }
                         }
                         .stroke(
-                            isDeleted ? GitKrakenTheme.error.opacity(0.15) : GitKrakenTheme.success.opacity(0.15),
+                            isDeleted ? AppTheme.error.opacity(0.15) : AppTheme.success.opacity(0.15),
                             lineWidth: 1
                         )
                     }

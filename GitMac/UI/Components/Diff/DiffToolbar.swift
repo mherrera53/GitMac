@@ -28,7 +28,7 @@ enum DiffViewMode: String, CaseIterable {
     }
 }
 
-// MARK: - Diff Toolbar (GitKraken Style)
+// MARK: - Diff Toolbar (Modern Style)
 
 /// Main toolbar for diff views
 /// Shows file info, stats, view options, and mode selector
@@ -65,7 +65,7 @@ struct DiffToolbar: View {
 
                 Text(filename)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(1)
             }
 
@@ -86,7 +86,7 @@ struct DiffToolbar: View {
                 }
 
                 Rectangle()
-                    .fill(GitKrakenTheme.border)
+                    .fill(AppTheme.border)
                     .frame(width: 1, height: 20)
             }
 
@@ -119,7 +119,7 @@ struct DiffToolbar: View {
 
             // Divider
             Rectangle()
-                .fill(GitKrakenTheme.border)
+                .fill(AppTheme.border)
                 .frame(width: 1, height: 20)
 
             // View mode selector
@@ -136,12 +136,12 @@ struct DiffToolbar: View {
                 }
             }
             .padding(3)
-            .background(GitKrakenTheme.backgroundTertiary)
+            .background(AppTheme.backgroundTertiary)
             .cornerRadius(6)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(GitKrakenTheme.toolbar)
+        .background(AppTheme.toolbar)
     }
 }
 
@@ -160,11 +160,11 @@ struct ToolbarButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isActive ? GitKrakenTheme.accent : GitKrakenTheme.textSecondary)
+                .foregroundColor(isActive ? AppTheme.accent : AppTheme.textSecondary)
                 .frame(width: 28, height: 28)
                 .background(
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(isActive ? GitKrakenTheme.accent.opacity(0.15) : (isHovered ? GitKrakenTheme.hover : SwiftUI.Color.clear))
+                        .fill(isActive ? AppTheme.accent.opacity(0.15) : (isHovered ? AppTheme.hover : SwiftUI.Color.clear))
                 )
         }
         .buttonStyle(.plain)
@@ -191,12 +191,12 @@ struct DiffModeButton: View {
                 Text(mode.rawValue)
                     .font(.system(size: 11, weight: .medium))
             }
-            .foregroundColor(isSelected ? .white : GitKrakenTheme.textSecondary)
+            .foregroundColor(isSelected ? .white : AppTheme.textSecondary)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(isSelected ? GitKrakenTheme.accent : (isHovered ? GitKrakenTheme.hover : SwiftUI.Color.clear))
+                    .fill(isSelected ? AppTheme.accent : (isHovered ? AppTheme.hover : SwiftUI.Color.clear))
             )
         }
         .buttonStyle(.plain)
@@ -222,7 +222,7 @@ extension DiffToolbar {
 
                 Text(filename)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(1)
             }
 
@@ -233,7 +233,7 @@ extension DiffToolbar {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(GitKrakenTheme.toolbar)
+        .background(AppTheme.toolbar)
     }
 }
 
@@ -261,7 +261,7 @@ struct DiffToolbar_Previews: PreviewProvider {
             )
 
             Rectangle()
-                .fill(GitKrakenTheme.border)
+                .fill(AppTheme.border)
                 .frame(height: 1)
 
             // Toolbar with markdown preview option
@@ -277,7 +277,7 @@ struct DiffToolbar_Previews: PreviewProvider {
             )
 
             Rectangle()
-                .fill(GitKrakenTheme.border)
+                .fill(AppTheme.border)
                 .frame(height: 1)
 
             // Toolbar with extra actions
@@ -297,7 +297,7 @@ struct DiffToolbar_Previews: PreviewProvider {
             )
 
             Rectangle()
-                .fill(GitKrakenTheme.border)
+                .fill(AppTheme.border)
                 .frame(height: 1)
 
             // Minimal toolbar
@@ -310,7 +310,7 @@ struct DiffToolbar_Previews: PreviewProvider {
             Spacer()
         }
         .frame(width: 800, height: 400)
-        .background(GitKrakenTheme.background)
+        .background(AppTheme.background)
     }
 }
 #endif

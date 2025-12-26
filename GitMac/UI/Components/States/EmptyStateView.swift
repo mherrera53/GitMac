@@ -38,12 +38,12 @@ struct EmptyStateView: View {
             Text(title)
                 .font(style.titleFont)
                 .fontWeight(style.titleWeight)
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(AppTheme.textPrimary)
 
             if let message = message {
                 Text(message)
                     .font(style.messageFont)
-                    .foregroundColor(GitKrakenTheme.textSecondary)
+                    .foregroundColor(AppTheme.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, style.messagePadding)
             }
@@ -63,7 +63,7 @@ struct EmptyStateView: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, style.buttonHorizontalPadding)
                     .padding(.vertical, style.buttonVerticalPadding)
-                    .background(GitKrakenTheme.accent)
+                    .background(AppTheme.accent)
                     .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
@@ -95,7 +95,7 @@ extension EmptyStateView.EmptyStyle {
     }
 
     var iconColor: Color {
-        GitKrakenTheme.textSecondary.opacity(0.6)
+        AppTheme.textSecondary.opacity(0.6)
     }
 
     var titleFont: Font {
@@ -331,7 +331,7 @@ struct EmptyStateView_Previews: PreviewProvider {
             // Prominent style
             EmptyStateView.noRepository { print("Open repository") }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(GitKrakenTheme.background)
+                .background(AppTheme.background)
                 .tabItem { Label("Prominent", systemImage: "folder") }
 
             // No action

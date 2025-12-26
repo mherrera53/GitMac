@@ -99,23 +99,23 @@ struct StatusIcon: View {
     private var statusColor: Color {
         switch status {
         case .added:
-            return GitKrakenTheme.success
+            return AppTheme.success
         case .modified:
-            return GitKrakenTheme.warning
+            return AppTheme.warning
         case .deleted:
-            return GitKrakenTheme.error
+            return AppTheme.error
         case .renamed:
-            return GitKrakenTheme.accent
+            return AppTheme.accent
         case .copied:
-            return GitKrakenTheme.accent
+            return AppTheme.accent
         case .untracked:
             return Color.gray
         case .ignored:
             return Color.gray.opacity(0.5)
         case .typeChanged:
-            return GitKrakenTheme.accentPurple
+            return AppTheme.accentPurple
         case .unmerged:
-            return GitKrakenTheme.error
+            return AppTheme.error
         }
     }
 }

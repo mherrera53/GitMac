@@ -38,7 +38,7 @@ struct CommitRow: View {
     private var commitContent: some View {
         // Graph/indicator (could be customized)
         Circle()
-            .fill(commit.isMerge ? GitKrakenTheme.accentPurple : GitKrakenTheme.accent)
+            .fill(commit.isMerge ? AppTheme.accentPurple : AppTheme.accent)
             .frame(width: 8, height: 8)
 
         // Commit info
@@ -48,7 +48,7 @@ struct CommitRow: View {
                 if showHash {
                     Text(commit.abbreviatedHash)
                         .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
 
                 Text(commit.subject)
@@ -78,7 +78,7 @@ struct CommitRow: View {
         if commit.isMerge {
             Image(systemName: "arrow.triangle.merge")
                 .font(.caption)
-                .foregroundColor(GitKrakenTheme.accentPurple)
+                .foregroundColor(AppTheme.accentPurple)
         }
     }
 
@@ -89,7 +89,7 @@ struct CommitRow: View {
             actions.append(
                 RowAction(
                     icon: "arrow.uturn.backward",
-                    color: GitKrakenTheme.accent,
+                    color: AppTheme.accent,
                     tooltip: "Checkout",
                     action: checkout
                 )
@@ -100,7 +100,7 @@ struct CommitRow: View {
             actions.append(
                 RowAction(
                     icon: "doc.on.doc",
-                    color: GitKrakenTheme.success,
+                    color: AppTheme.success,
                     tooltip: "Cherry-pick",
                     action: cherryPick
                 )
@@ -111,7 +111,7 @@ struct CommitRow: View {
             actions.append(
                 RowAction(
                     icon: "arrow.counterclockwise",
-                    color: GitKrakenTheme.warning,
+                    color: AppTheme.warning,
                     tooltip: "Revert",
                     action: revert
                 )
@@ -137,13 +137,13 @@ extension Commit: RowData {
     var leadingIcon: RowIcon? {
         RowIcon(
             systemName: isMerge ? "arrow.triangle.merge" : "circle.fill",
-            color: isMerge ? GitKrakenTheme.accentPurple : GitKrakenTheme.accent,
+            color: isMerge ? AppTheme.accentPurple : AppTheme.accent,
             size: 8
         )
     }
 
     var trailingContent: RowTrailingContent? {
-        .text(abbreviatedHash, GitKrakenTheme.textSecondary)
+        .text(abbreviatedHash, AppTheme.textSecondary)
     }
 }
 */

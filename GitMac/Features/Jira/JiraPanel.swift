@@ -20,7 +20,7 @@ struct JiraPanel: View {
 
                 Text("Jira")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
 
                 // Project selector
                 if !viewModel.projects.isEmpty {
@@ -52,7 +52,7 @@ struct JiraPanel: View {
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
 
                 // Settings
                 Button {
@@ -62,7 +62,7 @@ struct JiraPanel: View {
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
 
                 // Close
                 Button(action: onClose) {
@@ -70,13 +70,13 @@ struct JiraPanel: View {
                         .font(.system(size: 10, weight: .bold))
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(GitKrakenTheme.toolbar)
+            .background(AppTheme.toolbar)
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+            Rectangle().fill(AppTheme.border).frame(height: 1)
 
             // Content
             if !viewModel.isAuthenticated {
@@ -89,7 +89,7 @@ struct JiraPanel: View {
             }
         }
         .frame(height: height)
-        .background(GitKrakenTheme.panel)
+        .background(AppTheme.panel)
         .sheet(isPresented: $viewModel.showSettings) {
             JiraSettingsSheet(viewModel: viewModel)
         }
@@ -196,11 +196,11 @@ struct JiraLoginPrompt: View {
 
             Text("Connect to Jira")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(AppTheme.textPrimary)
 
             Text("Enter your Jira Cloud credentials")
                 .font(.system(size: 12))
-                .foregroundColor(GitKrakenTheme.textSecondary)
+                .foregroundColor(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
 
             VStack(spacing: 8) {
@@ -333,7 +333,7 @@ struct JiraIssueRow: View {
             // Summary
             Text(issue.fields.summary)
                 .font(.system(size: 12))
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(AppTheme.textPrimary)
                 .lineLimit(1)
 
             Spacer()
@@ -366,14 +366,14 @@ struct JiraIssueRow: View {
             } label: {
                 Image(systemName: "arrow.right.doc.on.clipboard")
                     .font(.system(size: 10))
-                    .foregroundColor(GitKrakenTheme.accent)
+                    .foregroundColor(AppTheme.accent)
             }
             .buttonStyle(.plain)
             .help("Insert into commit message")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(isHovered ? GitKrakenTheme.hover : Color.clear)
+        .background(isHovered ? AppTheme.hover : Color.clear)
         .cornerRadius(4)
         .onHover { isHovered = $0 }
     }
@@ -434,19 +434,19 @@ struct JiraSettingsSheet: View {
             HStack {
                 Text("Jira Settings")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
             .padding(16)
-            .background(GitKrakenTheme.toolbar)
+            .background(AppTheme.toolbar)
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+            Rectangle().fill(AppTheme.border).frame(height: 1)
 
             VStack(alignment: .leading, spacing: 16) {
                 if viewModel.isAuthenticated {
@@ -455,7 +455,7 @@ struct JiraSettingsSheet: View {
                             .foregroundColor(.green)
                         Text("Connected to Jira")
                             .font(.system(size: 13))
-                            .foregroundColor(GitKrakenTheme.textPrimary)
+                            .foregroundColor(AppTheme.textPrimary)
                     }
 
                     Button("Disconnect") {
@@ -466,7 +466,7 @@ struct JiraSettingsSheet: View {
                 } else {
                     Text("Not connected to Jira")
                         .font(.system(size: 13))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
             }
             .padding(16)
@@ -474,7 +474,7 @@ struct JiraSettingsSheet: View {
             Spacer()
         }
         .frame(width: 350, height: 200)
-        .background(GitKrakenTheme.panel)
+        .background(AppTheme.panel)
     }
 }
 
@@ -486,7 +486,7 @@ struct JiraPanelResizer: View {
 
     var body: some View {
         Rectangle()
-            .fill(GitKrakenTheme.border)
+            .fill(AppTheme.border)
             .frame(height: 4)
             .contentShape(Rectangle())
             .gesture(

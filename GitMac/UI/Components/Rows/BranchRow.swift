@@ -45,7 +45,7 @@ struct BranchRow: View {
         .overlay(
             isDropTarget ?
             RoundedRectangle(cornerRadius: 6)
-                .stroke(GitKrakenTheme.accent, lineWidth: 2)
+                .stroke(AppTheme.accent, lineWidth: 2)
                 .padding(2)
             : nil
         )
@@ -68,7 +68,7 @@ struct BranchRow: View {
                 if showCurrentIndicator && branch.isCurrent {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.caption)
-                        .foregroundColor(GitKrakenTheme.success)
+                        .foregroundColor(AppTheme.success)
                 }
             }
 
@@ -92,7 +92,7 @@ struct BranchRow: View {
                         Text("\(ahead)")
                             .font(.caption.monospacedDigit())
                     }
-                    .foregroundColor(GitKrakenTheme.success)
+                    .foregroundColor(AppTheme.success)
                 }
 
                 if behind > 0 {
@@ -102,7 +102,7 @@ struct BranchRow: View {
                         Text("\(behind)")
                             .font(.caption.monospacedDigit())
                     }
-                    .foregroundColor(GitKrakenTheme.warning)
+                    .foregroundColor(AppTheme.warning)
                 }
             }
         }
@@ -120,11 +120,11 @@ struct BranchRow: View {
 
     private var branchColor: Color {
         if branch.isRemote {
-            return GitKrakenTheme.accentCyan
+            return AppTheme.accentCyan
         } else if branch.isCurrent {
-            return GitKrakenTheme.success
+            return AppTheme.success
         } else {
-            return GitKrakenTheme.accent
+            return AppTheme.accent
         }
     }
 
@@ -135,7 +135,7 @@ struct BranchRow: View {
             actions.append(
                 RowAction(
                     icon: "arrow.uturn.backward",
-                    color: GitKrakenTheme.accent,
+                    color: AppTheme.accent,
                     tooltip: "Checkout",
                     action: checkout
                 )
@@ -146,7 +146,7 @@ struct BranchRow: View {
             actions.append(
                 RowAction(
                     icon: "arrow.up.doc",
-                    color: GitKrakenTheme.success,
+                    color: AppTheme.success,
                     tooltip: "Push",
                     action: push
                 )
@@ -157,7 +157,7 @@ struct BranchRow: View {
             actions.append(
                 RowAction(
                     icon: "arrow.down.doc",
-                    color: GitKrakenTheme.accentCyan,
+                    color: AppTheme.accentCyan,
                     tooltip: "Pull",
                     action: pull
                 )
@@ -168,7 +168,7 @@ struct BranchRow: View {
             actions.append(
                 RowAction(
                     icon: "arrow.triangle.merge",
-                    color: GitKrakenTheme.accentPurple,
+                    color: AppTheme.accentPurple,
                     tooltip: "Merge",
                     action: merge
                 )
@@ -179,7 +179,7 @@ struct BranchRow: View {
             actions.append(
                 RowAction(
                     icon: "trash",
-                    color: GitKrakenTheme.error,
+                    color: AppTheme.error,
                     tooltip: "Delete",
                     action: delete
                 )
@@ -227,7 +227,7 @@ extension Branch: RowData {
 
     var leadingIcon: RowIcon? {
         let icon = isRemote ? "cloud" : (isCurrent ? "checkmark.circle.fill" : "arrow.branch")
-        let color = isRemote ? GitKrakenTheme.accentCyan : (isCurrent ? GitKrakenTheme.success : GitKrakenTheme.accent)
+        let color = isRemote ? AppTheme.accentCyan : (isCurrent ? AppTheme.success : AppTheme.accent)
         return RowIcon(systemName: icon, color: color, size: 16)
     }
 

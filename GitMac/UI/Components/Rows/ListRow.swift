@@ -10,7 +10,7 @@ struct ListRow: View {
     var icon: String? = nil
     var iconColor: Color = .primary
     var badge: String? = nil
-    var badgeColor: Color = GitKrakenTheme.accent
+    var badgeColor: Color = AppTheme.accent
     var trailing: ListRowTrailing? = nil
     var isSelected: Bool = false
     var style: RowStyle = .default
@@ -21,7 +21,7 @@ struct ListRow: View {
     enum ListRowTrailing {
         case text(String)
         case icon(String, Color = .secondary)
-        case badge(String, Color = GitKrakenTheme.accent)
+        case badge(String, Color = AppTheme.accent)
         case chevron
         case custom(AnyView)
     }
@@ -164,7 +164,7 @@ extension ListRow {
         title: String,
         value: String,
         icon: String? = nil,
-        iconColor: Color = GitKrakenTheme.accent,
+        iconColor: Color = AppTheme.accent,
         isSelected: Bool = false,
         onSelect: (() -> Void)? = nil
     ) -> ListRow {
@@ -208,7 +208,7 @@ struct ListRow_Previews: PreviewProvider {
                 title: "Pull Requests",
                 icon: "arrow.triangle.pull",
                 badge: "3",
-                badgeColor: GitKrakenTheme.success
+                badgeColor: AppTheme.success
             )
 
             // Navigation style
@@ -229,7 +229,7 @@ struct ListRow_Previews: PreviewProvider {
             ListRow(
                 title: "Selected Item",
                 icon: "checkmark.circle.fill",
-                iconColor: GitKrakenTheme.success,
+                iconColor: AppTheme.success,
                 isSelected: true
             )
 

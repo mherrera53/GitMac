@@ -50,7 +50,7 @@ struct FilterMenu: View {
                 Text(selectedExtension.map { ".\($0)" } ?? "All")
                     .font(.system(size: 11))
             }
-            .foregroundColor(GitKrakenTheme.textSecondary)
+            .foregroundColor(AppTheme.textSecondary)
         }
         .menuStyle(.borderlessButton)
         .help("Filter by file extension")
@@ -69,19 +69,19 @@ struct FilterBadge: View {
             HStack(spacing: 4) {
                 Text(".\(ext)")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
 
                 Button(action: onClear) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 12))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
                 .help("Clear filter")
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(GitKrakenTheme.backgroundTertiary)
+            .background(AppTheme.backgroundTertiary)
             .cornerRadius(LayoutConstants.CornerRadius.sm)
         }
     }

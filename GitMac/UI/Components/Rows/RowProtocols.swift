@@ -53,7 +53,7 @@ struct RowAction: Identifiable {
     let tooltip: String
     let action: () async -> Void
 
-    init(icon: String, color: Color = GitKrakenTheme.accent, tooltip: String, action: @escaping () async -> Void) {
+    init(icon: String, color: Color = AppTheme.accent, tooltip: String, action: @escaping () async -> Void) {
         self.icon = icon
         self.color = color
         self.tooltip = tooltip
@@ -65,7 +65,7 @@ struct RowAction: Identifiable {
     static func stage(action: @escaping () async -> Void) -> RowAction {
         RowAction(
             icon: "plus.circle",
-            color: GitKrakenTheme.success,
+            color: AppTheme.success,
             tooltip: "Stage",
             action: action
         )
@@ -74,7 +74,7 @@ struct RowAction: Identifiable {
     static func unstage(action: @escaping () async -> Void) -> RowAction {
         RowAction(
             icon: "minus.circle",
-            color: GitKrakenTheme.warning,
+            color: AppTheme.warning,
             tooltip: "Unstage",
             action: action
         )
@@ -83,7 +83,7 @@ struct RowAction: Identifiable {
     static func discard(action: @escaping () async -> Void) -> RowAction {
         RowAction(
             icon: "xmark.circle",
-            color: GitKrakenTheme.error,
+            color: AppTheme.error,
             tooltip: "Discard",
             action: action
         )
@@ -92,7 +92,7 @@ struct RowAction: Identifiable {
     static func delete(action: @escaping () async -> Void) -> RowAction {
         RowAction(
             icon: "trash",
-            color: GitKrakenTheme.error,
+            color: AppTheme.error,
             tooltip: "Delete",
             action: action
         )
@@ -101,7 +101,7 @@ struct RowAction: Identifiable {
     static func edit(action: @escaping () async -> Void) -> RowAction {
         RowAction(
             icon: "pencil",
-            color: GitKrakenTheme.accent,
+            color: AppTheme.accent,
             tooltip: "Edit",
             action: action
         )

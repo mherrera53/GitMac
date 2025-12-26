@@ -18,7 +18,7 @@ struct ContentView: View {
 
     var body: some View {
         attachGitListeners(to: mainLayout)
-            .background(GitKrakenTheme.background)
+            .background(AppTheme.background)
             .withToastNotifications()
             .sheet(isPresented: $showCloneSheet) {
                 CloneRepositorySheet()
@@ -86,7 +86,7 @@ struct ContentView: View {
 
             // Main content
             if appState.currentRepository != nil {
-                GitKrakenLayout(
+                MainLayout(
                     leftPanelWidth: $leftPanelWidth,
                     rightPanelWidth: $rightPanelWidth
                 )
@@ -294,7 +294,7 @@ struct ContentView: View {
 
                 var entryToAdd = ""
 
-                // Handle different ignore types (GitKraken style)
+                // Handle different ignore types (Modern)
                 if let info = notification.object as? [String: String] {
                     let type = info["type"] ?? "file"
                     let filePath = info["path"] ?? ""
@@ -385,8 +385,8 @@ struct ContentView: View {
     }
 }
 
-// MARK: - GitKraken-style 3-Panel Layout
-struct GitKrakenLayout: View {
+// MARK: - Modern 3-Panel Layout
+struct MainLayout: View {
     @EnvironmentObject var appState: AppState
     @Binding var leftPanelWidth: CGFloat
     @Binding var rightPanelWidth: CGFloat
@@ -412,7 +412,7 @@ struct GitKrakenLayout: View {
                 // Left Panel - Branches/Remotes/Tags
                 LeftSidebarPanel()
                     .frame(width: leftPanelWidth)
-                    .background(GitKrakenTheme.sidebar)
+                    .background(AppTheme.sidebar)
 
                 // Resizer
                 PanelResizer(width: $leftPanelWidth, minWidth: 180, maxWidth: 350)
@@ -420,7 +420,7 @@ struct GitKrakenLayout: View {
                 // Center Panel - Graph OR Diff
                 CenterPanel(selectedFileDiff: $selectedFileDiff, isLoadingDiff: $isLoadingDiff, showTerminal: $showTerminal, showTaiga: $showTaiga)
                     .frame(maxWidth: .infinity)
-                    .background(GitKrakenTheme.background)
+                    .background(AppTheme.background)
 
                 // Resizer
                 PanelResizer(width: $rightPanelWidth, minWidth: 300, maxWidth: 500, isRight: true)
@@ -428,7 +428,7 @@ struct GitKrakenLayout: View {
                 // Right Panel - Staging/Commit
                 RightStagingPanel(selectedFileDiff: $selectedFileDiff, isLoadingDiff: $isLoadingDiff)
                     .frame(width: rightPanelWidth)
-                    .background(GitKrakenTheme.panel)
+                    .background(AppTheme.panel)
             }
 
             // Terminal Panel (togglable)
@@ -595,7 +595,7 @@ struct TerminalResizer: View {
 
     var body: some View {
         Rectangle()
-            .fill(GitKrakenTheme.border)
+            .fill(AppTheme.border)
             .frame(height: 4)
             .contentShape(Rectangle())
             .gesture(
@@ -636,10 +636,10 @@ struct CenterPanel: View {
                         .scaleEffect(1.2)
                     Text("Loading preview...")
                         .font(.system(size: 13))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(GitKrakenTheme.background)
+                .background(AppTheme.background)
             } else if let fileDiff = selectedFileDiff {
                 // Diff View with close button
                 DiffViewWithClose(fileDiff: fileDiff, repoPath: appState.currentRepository?.path) {
@@ -675,12 +675,12 @@ struct DiffViewWithClose: View {
                 Button(action: onClose) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
                 .padding(8)
             }
-            .background(GitKrakenTheme.toolbar.opacity(0.8))
+            .background(AppTheme.toolbar.opacity(0.8))
 
             // Use the new DiffView component with split/inline/hunk modes
             DiffView(fileDiff: fileDiff, repoPath: repoPath)
@@ -699,7 +699,7 @@ struct PanelResizer: View {
 
     var body: some View {
         Rectangle()
-            .fill(GitKrakenTheme.border)
+            .fill(AppTheme.border)
             .frame(width: 1)
             .contentShape(Rectangle().inset(by: -3))
             .gesture(
@@ -720,7 +720,7 @@ struct PanelResizer: View {
     }
 }
 
-// MARK: - Left Sidebar Panel (GitKraken style)
+// MARK: - Left Sidebar Panel (Modern)
 struct LeftSidebarPanel: View {
     @EnvironmentObject var appState: AppState
     @State private var expandedSections: Set<String> = ["repos", "local", "remote"]
@@ -731,15 +731,15 @@ struct LeftSidebarPanel: View {
             if let repo = appState.currentRepository {
                 HStack(spacing: 8) {
                     Image(systemName: "folder.fill")
-                        .foregroundColor(GitKrakenTheme.accent)
+                        .foregroundColor(AppTheme.accent)
                     Text(repo.name)
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(GitKrakenTheme.textPrimary)
+                        .foregroundColor(AppTheme.textPrimary)
                     Spacer()
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(GitKrakenTheme.backgroundSecondary)
+                .background(AppTheme.backgroundSecondary)
             }
 
             ScrollView {
@@ -789,7 +789,7 @@ struct LeftSidebarPanel: View {
                                 HStack {
                                     Text("+ \(totalLocal - shownCount) more")
                                         .font(.system(size: 10))
-                                        .foregroundColor(GitKrakenTheme.textMuted)
+                                        .foregroundColor(AppTheme.textMuted)
                                     Spacer()
                                 }
                                 .padding(.horizontal, 12)
@@ -1171,7 +1171,7 @@ struct WorktreeSidebarSection: View {
                 if viewModel.worktrees.isEmpty {
                     Text("No worktrees")
                         .font(.system(size: 10))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 4)
                 }
@@ -1186,7 +1186,7 @@ struct WorktreeSidebarSection: View {
                         Text("Add Worktree")
                             .font(.system(size: 10))
                     }
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
                 }
@@ -1215,24 +1215,24 @@ struct WorktreeSidebarRow: View {
         HStack(spacing: 8) {
             Image(systemName: worktree.isMain ? "house.fill" : "folder.fill")
                 .font(.system(size: 11))
-                .foregroundColor(worktree.isMain ? GitKrakenTheme.accent : GitKrakenTheme.accentPurple)
+                .foregroundColor(worktree.isMain ? AppTheme.accent : AppTheme.accentPurple)
 
             Text(worktree.name)
                 .font(.system(size: 11))
-                .foregroundColor(worktree.isMain ? GitKrakenTheme.textPrimary : GitKrakenTheme.textSecondary)
+                .foregroundColor(worktree.isMain ? AppTheme.textPrimary : AppTheme.textSecondary)
                 .lineLimit(1)
 
             if worktree.isLocked {
                 Image(systemName: "lock.fill")
                     .font(.system(size: 9))
-                    .foregroundColor(GitKrakenTheme.accentOrange)
+                    .foregroundColor(AppTheme.accentOrange)
             }
 
             Spacer()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
-        .background(isHovered ? GitKrakenTheme.hover : Color.clear)
+        .background(isHovered ? AppTheme.hover : Color.clear)
         .onHover { isHovered = $0 }
         .onTapGesture(count: 2) {
             // Open worktree in new tab
@@ -1257,7 +1257,7 @@ struct RecentRepositoriesList: View {
             if recentReposManager.recentRepos.isEmpty {
                 Text("No recent repositories")
                     .font(.system(size: 10))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
             }
@@ -1282,7 +1282,7 @@ struct RecentRepositoriesList: View {
                     Text("Open Repository")
                         .font(.system(size: 10))
                 }
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 12)
@@ -1301,24 +1301,24 @@ struct SidebarRecentRepoRow: View {
         HStack(spacing: 8) {
             Image(systemName: "folder.fill.badge.gearshape")
                 .font(.system(size: 11))
-                .foregroundColor(isActive ? GitKrakenTheme.accent : GitKrakenTheme.accentCyan)
+                .foregroundColor(isActive ? AppTheme.accent : AppTheme.accentCyan)
 
             Text(repo.name)
                 .font(.system(size: 11))
-                .foregroundColor(isActive ? GitKrakenTheme.accent : GitKrakenTheme.textSecondary)
+                .foregroundColor(isActive ? AppTheme.accent : AppTheme.textSecondary)
                 .lineLimit(1)
 
             Spacer()
 
             if isActive {
                 Circle()
-                    .fill(GitKrakenTheme.accentGreen)
+                    .fill(AppTheme.accentGreen)
                     .frame(width: 6, height: 6)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
-        .background(isHovered ? GitKrakenTheme.hover : (isActive ? GitKrakenTheme.hover.opacity(0.5) : Color.clear))
+        .background(isHovered ? AppTheme.hover : (isActive ? AppTheme.hover.opacity(0.5) : Color.clear))
         .onHover { isHovered = $0 }
         .onTapGesture {
             Task {
@@ -1354,11 +1354,11 @@ struct SidebarSection<Content: View>: View {
                 HStack(spacing: 6) {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                         .frame(width: 12)
                     Text(title)
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                     Spacer()
                 }
                 .padding(.horizontal, 12)
@@ -1390,16 +1390,16 @@ struct SidebarBranchRow: View {
     var body: some View {
         HStack(spacing: 8) {
             Circle()
-                .fill(branch.isCurrent ? GitKrakenTheme.accentGreen : GitKrakenTheme.textMuted)
+                .fill(branch.isCurrent ? AppTheme.accentGreen : AppTheme.textMuted)
                 .frame(width: 8, height: 8)
 
             Image(systemName: "arrow.triangle.branch")
                 .font(.system(size: 12))
-                .foregroundColor(branch.isCurrent ? GitKrakenTheme.accentGreen : GitKrakenTheme.textSecondary)
+                .foregroundColor(branch.isCurrent ? AppTheme.accentGreen : AppTheme.textSecondary)
 
             Text(branch.name)
                 .font(.system(size: 12))
-                .foregroundColor(branch.isCurrent ? GitKrakenTheme.textPrimary : GitKrakenTheme.textSecondary)
+                .foregroundColor(branch.isCurrent ? AppTheme.textPrimary : AppTheme.textSecondary)
                 .lineLimit(1)
 
             Spacer()
@@ -1407,12 +1407,12 @@ struct SidebarBranchRow: View {
             if branch.isCurrent {
                 Image(systemName: "checkmark")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(GitKrakenTheme.accentGreen)
+                    .foregroundColor(AppTheme.accentGreen)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
-        .background(isHovered ? GitKrakenTheme.hover : Color.clear)
+        .background(isHovered ? AppTheme.hover : Color.clear)
         .onHover { isHovered = $0 }
         .onTapGesture {
             appState.selectedBranch = branch
@@ -1685,22 +1685,22 @@ struct RemoteSidebarRow: View {
             HStack(spacing: 8) {
                 Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                     .font(.system(size: 9))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
                     .frame(width: 12)
 
                 Image(systemName: "network")
                     .font(.system(size: 12))
-                    .foregroundColor(GitKrakenTheme.textSecondary)
+                    .foregroundColor(AppTheme.textSecondary)
 
                 Text(remote.name)
                     .font(.system(size: 12))
-                    .foregroundColor(GitKrakenTheme.textSecondary)
+                    .foregroundColor(AppTheme.textSecondary)
 
                 Spacer()
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
-            .background(isHovered ? GitKrakenTheme.hover : Color.clear)
+            .background(isHovered ? AppTheme.hover : Color.clear)
             .onHover { isHovered = $0 }
             .onTapGesture { isExpanded.toggle() }
 
@@ -1723,18 +1723,18 @@ struct StashSidebarRow: View {
         HStack(spacing: 8) {
             Image(systemName: "archivebox")
                 .font(.system(size: 12))
-                .foregroundColor(GitKrakenTheme.accentPurple)
+                .foregroundColor(AppTheme.accentPurple)
 
             Text(stash.message)
                 .font(.system(size: 12))
-                .foregroundColor(GitKrakenTheme.textSecondary)
+                .foregroundColor(AppTheme.textSecondary)
                 .lineLimit(1)
 
             Spacer()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
-        .background(isHovered ? GitKrakenTheme.hover : Color.clear)
+        .background(isHovered ? AppTheme.hover : Color.clear)
         .onHover { isHovered = $0 }
     }
 }
@@ -1748,18 +1748,18 @@ struct TagSidebarRow: View {
         HStack(spacing: 8) {
             Image(systemName: "tag")
                 .font(.system(size: 12))
-                .foregroundColor(GitKrakenTheme.accentOrange)
+                .foregroundColor(AppTheme.accentOrange)
 
             Text(tag.name)
                 .font(.system(size: 12))
-                .foregroundColor(GitKrakenTheme.textSecondary)
+                .foregroundColor(AppTheme.textSecondary)
                 .lineLimit(1)
 
             Spacer()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
-        .background(isHovered ? GitKrakenTheme.hover : Color.clear)
+        .background(isHovered ? AppTheme.hover : Color.clear)
         .onHover { isHovered = $0 }
     }
 }
@@ -1860,7 +1860,7 @@ struct StagingAreaPanel: View {
                 title: "Unstaged Files",
                 count: filteredUnstagedFiles.count,
                 actionIcon: "plus.circle.fill",
-                actionColor: GitKrakenTheme.accentGreen,
+                actionColor: AppTheme.accentGreen,
                 onAction: { stagingVM.stageAll() },
                 viewMode: viewMode,
                 files: stagingVM.unstagedFiles,  // Pass ALL files
@@ -1874,14 +1874,14 @@ struct StagingAreaPanel: View {
                 onDelete: { stagingVM.deleteFile($0) }
             )
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+            Rectangle().fill(AppTheme.border).frame(height: 1)
 
             // Staged Files
             StagingSectionWithTree(
                 title: "Staged Files",
                 count: filteredStagedFiles.count,
                 actionIcon: "minus.circle.fill",
-                actionColor: GitKrakenTheme.accentRed,
+                actionColor: AppTheme.accentRed,
                 onAction: { stagingVM.unstageAll() },
                 viewMode: viewMode,
                 files: stagingVM.stagedFiles,  // Pass ALL files
@@ -1948,11 +1948,11 @@ struct StagingAreaPanel: View {
 
             Text("\(stagingVM.unstagedFiles.count + stagingVM.stagedFiles.count)")
                 .font(.system(size: 10))
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(GitKrakenTheme.backgroundSecondary)
+        .background(AppTheme.backgroundSecondary)
     }
 
     private var availableExtensions: [String] {
@@ -2044,20 +2044,20 @@ struct StagingSectionWithTree: View {
                 } label: {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
 
                 Text(title)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
 
                 Text("\(count)")
                     .font(.system(size: 10))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(GitKrakenTheme.backgroundTertiary)
+                    .background(AppTheme.backgroundTertiary)
                     .cornerRadius(4)
 
                 Spacer()
@@ -2072,7 +2072,7 @@ struct StagingSectionWithTree: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .background(GitKrakenTheme.backgroundSecondary)
+            .background(AppTheme.backgroundSecondary)
 
             // Content
             if isExpanded {
@@ -2081,7 +2081,7 @@ struct StagingSectionWithTree: View {
                         if filteredFiles.isEmpty {
                             Text(isStaged ? "No staged changes" : "No unstaged changes")
                                 .font(.system(size: 11))
-                                .foregroundColor(GitKrakenTheme.textMuted)
+                                .foregroundColor(AppTheme.textMuted)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
                         } else if viewMode == .tree {
@@ -2190,12 +2190,12 @@ struct StagingTreeNodeView: View {
 
             Text(node.name)
                 .font(.system(size: 11, weight: isHovered ? .medium : .regular))
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(AppTheme.textPrimary)
                 .lineLimit(1)
 
             Text("(\(filteredFileCount))")
                 .font(.system(size: 10))
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
 
             Spacer()
 
@@ -2205,7 +2205,7 @@ struct StagingTreeNodeView: View {
                 } label: {
                     Image(systemName: isStaged ? "minus.circle" : "plus.circle")
                         .font(.system(size: 12))
-                        .foregroundColor(isStaged ? GitKrakenTheme.accentRed : GitKrakenTheme.accentGreen)
+                        .foregroundColor(isStaged ? AppTheme.accentRed : AppTheme.accentGreen)
                 }
                 .buttonStyle(.plain)
                 .help(isStaged ? "Unstage Folder" : "Stage Folder")
@@ -2262,7 +2262,7 @@ struct StagingTreeNodeView: View {
                 // Filename
                 Text(node.name)
                     .font(.system(size: 11))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(1)
 
                 Spacer()
@@ -2278,7 +2278,7 @@ struct StagingTreeNodeView: View {
                     } label: {
                         Image(systemName: isStaged ? "minus.circle" : "plus.circle")
                             .font(.system(size: 12))
-                            .foregroundColor(isStaged ? GitKrakenTheme.accentRed : GitKrakenTheme.accentGreen)
+                            .foregroundColor(isStaged ? AppTheme.accentRed : AppTheme.accentGreen)
                     }
                     .buttonStyle(.plain)
                 }
@@ -2287,7 +2287,7 @@ struct StagingTreeNodeView: View {
             .padding(.vertical, 3)
             .background(
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(isSelected ? Color.accentColor.opacity(0.3) : (isHovered ? GitKrakenTheme.hover : Color.clear))
+                    .fill(isSelected ? Color.accentColor.opacity(0.3) : (isHovered ? AppTheme.hover : Color.clear))
             )
             .contentShape(Rectangle())
         }
@@ -2387,12 +2387,12 @@ struct CommitDetailPanel: View {
                 HStack {
                     Text("Commit Details")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                     Spacer()
                     Button(action: onClose) {
                         Image(systemName: "xmark")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(GitKrakenTheme.textMuted)
+                            .foregroundColor(AppTheme.textMuted)
                     }
                     .buttonStyle(.plain)
                 }
@@ -2400,7 +2400,7 @@ struct CommitDetailPanel: View {
                 // Commit message
                 Text(commit.message)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(3)
 
                 // Author and date
@@ -2408,53 +2408,53 @@ struct CommitDetailPanel: View {
                     AuthorAvatar(name: commit.author, size: 20)
                     Text(commit.author)
                         .font(.system(size: 12))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
                     Spacer()
                     Text(commit.relativeDate)
                         .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
 
                 // SHA
                 HStack {
                     Text(String(commit.sha.prefix(8)))
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(GitKrakenTheme.accent)
+                        .foregroundColor(AppTheme.accent)
                     Button {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(commit.sha, forType: .string)
                     } label: {
                         Image(systemName: "doc.on.doc")
                             .font(.system(size: 10))
-                            .foregroundColor(GitKrakenTheme.textMuted)
+                            .foregroundColor(AppTheme.textMuted)
                     }
                     .buttonStyle(.plain)
                     Spacer()
                 }
             }
             .padding(12)
-            .background(GitKrakenTheme.backgroundSecondary)
+            .background(AppTheme.backgroundSecondary)
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+            Rectangle().fill(AppTheme.border).frame(height: 1)
 
             // Changed files
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
                     Text("Changed Files")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                     Spacer()
                     Text("\(viewModel.changedFiles.count)")
                         .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(GitKrakenTheme.backgroundTertiary)
+                        .background(AppTheme.backgroundTertiary)
                         .cornerRadius(4)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(GitKrakenTheme.backgroundSecondary)
+                .background(AppTheme.backgroundSecondary)
 
                 if viewModel.isLoading {
                     HStack {
@@ -2477,7 +2477,7 @@ struct CommitDetailPanel: View {
                             if viewModel.changedFiles.isEmpty {
                                 Text("No files changed")
                                     .font(.system(size: 11))
-                                    .foregroundColor(GitKrakenTheme.textMuted)
+                                    .foregroundColor(AppTheme.textMuted)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
                             }
@@ -2580,13 +2580,13 @@ struct StashDetailPanel: View {
                             .foregroundColor(stashColor)
                         Text("Stash Details")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(GitKrakenTheme.textMuted)
+                            .foregroundColor(AppTheme.textMuted)
                     }
                     Spacer()
                     Button(action: onClose) {
                         Image(systemName: "xmark")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(GitKrakenTheme.textMuted)
+                            .foregroundColor(AppTheme.textMuted)
                     }
                     .buttonStyle(.plain)
                 }
@@ -2594,7 +2594,7 @@ struct StashDetailPanel: View {
                 // Stash message
                 Text(stash.displayMessage)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(3)
 
                 // Branch and date
@@ -2606,12 +2606,12 @@ struct StashDetailPanel: View {
                             Text(branch)
                         }
                         .font(.system(size: 12))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
                     }
                     Spacer()
                     Text(stash.relativeDate)
                         .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
 
                 // Reference
@@ -2623,28 +2623,28 @@ struct StashDetailPanel: View {
                 }
             }
             .padding(12)
-            .background(GitKrakenTheme.backgroundSecondary)
+            .background(AppTheme.backgroundSecondary)
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+            Rectangle().fill(AppTheme.border).frame(height: 1)
 
             // Stash files
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
                     Text("Stashed Files")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                     Spacer()
                     Text("\(viewModel.stashFiles.count)")
                         .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(GitKrakenTheme.backgroundTertiary)
+                        .background(AppTheme.backgroundTertiary)
                         .cornerRadius(4)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(GitKrakenTheme.backgroundSecondary)
+                .background(AppTheme.backgroundSecondary)
 
                 if viewModel.isLoading {
                     HStack {
@@ -2666,7 +2666,7 @@ struct StashDetailPanel: View {
                             if viewModel.stashFiles.isEmpty {
                                 Text("No files in stash")
                                     .font(.system(size: 11))
-                                    .foregroundColor(GitKrakenTheme.textMuted)
+                                    .foregroundColor(AppTheme.textMuted)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
                             }
@@ -2709,7 +2709,7 @@ struct StashDetailPanel: View {
                 .buttonStyle(.bordered)
             }
             .padding(12)
-            .background(GitKrakenTheme.backgroundSecondary)
+            .background(AppTheme.backgroundSecondary)
         }
         .task {
             // Load files when panel appears
@@ -2790,12 +2790,12 @@ struct StashDetailFileRow: View {
                 // File icon
                 Image(systemName: fileIcon(for: file.filename))
                     .font(.system(size: 10))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
 
                 // File path
                 Text(file.filename)
                     .font(.system(size: 11))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
 
@@ -2805,14 +2805,14 @@ struct StashDetailFileRow: View {
                 if file.path != file.filename {
                     Text(String(file.path.dropLast(file.filename.count + 1)))
                         .font(.system(size: 10))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                         .lineLimit(1)
                         .truncationMode(.head)
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(isHovered ? GitKrakenTheme.hover : Color.clear)
+            .background(isHovered ? AppTheme.hover : Color.clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -2865,11 +2865,11 @@ struct CommitFile: Identifiable {
 
         var color: Color {
             switch self {
-            case .added: return GitKrakenTheme.accentGreen
-            case .modified: return GitKrakenTheme.accentOrange
-            case .deleted: return GitKrakenTheme.accentRed
-            case .renamed: return GitKrakenTheme.accent
-            case .copied: return GitKrakenTheme.accent
+            case .added: return AppTheme.accentGreen
+            case .modified: return AppTheme.accentOrange
+            case .deleted: return AppTheme.accentRed
+            case .renamed: return AppTheme.accent
+            case .copied: return AppTheme.accent
             }
         }
 
@@ -2917,7 +2917,7 @@ struct CommitFileRow: View {
             // Filename
             Text(filename)
                 .font(.system(size: 12))
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(AppTheme.textPrimary)
                 .lineLimit(1)
 
             Spacer()
@@ -2926,17 +2926,17 @@ struct CommitFileRow: View {
             if file.additions > 0 {
                 Text("+\(file.additions)")
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(GitKrakenTheme.accentGreen)
+                    .foregroundColor(AppTheme.accentGreen)
             }
             if file.deletions > 0 {
                 Text("-\(file.deletions)")
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(GitKrakenTheme.accentRed)
+                    .foregroundColor(AppTheme.accentRed)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(isHovered ? GitKrakenTheme.hover : Color.clear)
+        .background(isHovered ? AppTheme.hover : Color.clear)
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
         .onTapGesture { onSelect() }
@@ -3010,7 +3010,7 @@ struct AuthorAvatar: View {
     let size: CGFloat
 
     var color: Color {
-        let colors = GitKrakenTheme.laneColors
+        let colors = AppTheme.laneColors
         let hash = abs(name.hashValue)
         return colors[hash % colors.count]
     }
@@ -3265,12 +3265,12 @@ struct StagingFile: Identifiable {
 
         var color: Color {
             switch self {
-            case .added: return GitKrakenTheme.accentGreen
-            case .modified: return GitKrakenTheme.accentOrange
-            case .deleted: return GitKrakenTheme.accentRed
-            case .renamed: return GitKrakenTheme.accent
-            case .untracked: return GitKrakenTheme.textMuted
-            case .conflicted: return GitKrakenTheme.accentRed
+            case .added: return AppTheme.accentGreen
+            case .modified: return AppTheme.accentOrange
+            case .deleted: return AppTheme.accentRed
+            case .renamed: return AppTheme.accent
+            case .untracked: return AppTheme.textMuted
+            case .conflicted: return AppTheme.accentRed
             }
         }
 
@@ -3323,14 +3323,14 @@ struct StagingSection<Content: View>: View {
             HStack {
                 Text(title)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
                 Spacer()
                 Text("\(count)")
                     .font(.system(size: 11))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(GitKrakenTheme.backgroundTertiary)
+                    .background(AppTheme.backgroundTertiary)
                     .cornerRadius(4)
                 Button(action: onAction) {
                     Image(systemName: actionIcon)
@@ -3341,7 +3341,7 @@ struct StagingSection<Content: View>: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(GitKrakenTheme.backgroundSecondary)
+            .background(AppTheme.backgroundSecondary)
 
             ScrollView {
                 LazyVStack(spacing: 0) {
@@ -3374,7 +3374,7 @@ struct ClickableFileRow: View {
                 // File path
                 Text(file.path)
                     .font(.system(size: 11))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
 
@@ -3384,7 +3384,7 @@ struct ClickableFileRow: View {
                     Button(action: onStage) {
                         Image(systemName: isStaged ? "minus.circle" : "plus.circle")
                             .font(.system(size: 12))
-                            .foregroundColor(isStaged ? GitKrakenTheme.accentRed : GitKrakenTheme.accentGreen)
+                            .foregroundColor(isStaged ? AppTheme.accentRed : AppTheme.accentGreen)
                     }
                     .buttonStyle(.plain)
                 }
@@ -3393,7 +3393,7 @@ struct ClickableFileRow: View {
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(isSelected ? Color.accentColor.opacity(0.3) : (isHovered ? GitKrakenTheme.hover : Color.clear))
+                    .fill(isSelected ? Color.accentColor.opacity(0.3) : (isHovered ? AppTheme.hover : Color.clear))
             )
             .contentShape(Rectangle())
         }
@@ -3446,7 +3446,7 @@ struct CommitSection: View {
                     if let subject = linkedTaigaSubject {
                         Text(subject)
                             .font(.system(size: 10))
-                            .foregroundColor(GitKrakenTheme.textSecondary)
+                            .foregroundColor(AppTheme.textSecondary)
                             .lineLimit(1)
                     }
 
@@ -3465,7 +3465,7 @@ struct CommitSection: View {
                     } label: {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .font(.system(size: 10))
-                            .foregroundColor(GitKrakenTheme.accent)
+                            .foregroundColor(AppTheme.accent)
                     }
                     .menuStyle(.borderlessButton)
                     .frame(width: 20)
@@ -3477,7 +3477,7 @@ struct CommitSection: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 10))
-                            .foregroundColor(GitKrakenTheme.textMuted)
+                            .foregroundColor(AppTheme.textMuted)
                     }
                     .buttonStyle(.plain)
                     .help("Remove Taiga link")
@@ -3491,13 +3491,13 @@ struct CommitSection: View {
             ZStack(alignment: .topLeading) {
                 if commitMessage.isEmpty {
                     Text("Commit message...")
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 10)
                 }
                 TextEditor(text: $commitMessage)
                     .font(.system(size: 12))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                     .scrollContentBackground(.hidden)
                     .background(Color.clear)
                     .frame(minHeight: 60, maxHeight: 100)
@@ -3521,9 +3521,9 @@ struct CommitSection: View {
                         } else {
                             Image(systemName: "sparkles")
                                 .font(.system(size: 10))
-                                .foregroundColor(GitKrakenTheme.accentPurple)
+                                .foregroundColor(AppTheme.accentPurple)
                                 .padding(6)
-                                .background(GitKrakenTheme.background.opacity(0.8))
+                                .background(AppTheme.background.opacity(0.8))
                                 .clipShape(Circle())
                         }
                     }
@@ -3534,7 +3534,7 @@ struct CommitSection: View {
                 }
             }
             .padding(4)
-            .background(GitKrakenTheme.backgroundTertiary)
+            .background(AppTheme.backgroundTertiary)
             .cornerRadius(6)
 
             Button(action: onCommit) {
@@ -3545,15 +3545,15 @@ struct CommitSection: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(canCommit && !commitMessage.isEmpty ? GitKrakenTheme.accentGreen : GitKrakenTheme.backgroundTertiary)
-                .foregroundColor(canCommit && !commitMessage.isEmpty ? .white : GitKrakenTheme.textMuted)
+                .background(canCommit && !commitMessage.isEmpty ? AppTheme.accentGreen : AppTheme.backgroundTertiary)
+                .foregroundColor(canCommit && !commitMessage.isEmpty ? .white : AppTheme.textMuted)
                 .cornerRadius(6)
             }
             .buttonStyle(.plain)
             .disabled(!canCommit || commitMessage.isEmpty)
         }
         .padding(12)
-        .background(GitKrakenTheme.backgroundSecondary)
+        .background(AppTheme.backgroundSecondary)
         .onReceive(NotificationCenter.default.publisher(for: .insertTaigaRef)) { notification in
             if let userInfo = notification.userInfo,
                let ref = userInfo["ref"] as? String {
@@ -3705,16 +3705,16 @@ struct TabButton: View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
-                .foregroundColor(isSelected ? GitKrakenTheme.textPrimary : GitKrakenTheme.textMuted)
+                .foregroundColor(isSelected ? AppTheme.textPrimary : AppTheme.textMuted)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(isSelected ? GitKrakenTheme.panel : Color.clear)
+                .background(isSelected ? AppTheme.panel : Color.clear)
         }
         .buttonStyle(.plain)
     }
 }
 
-// MARK: - Staging View (GitKraken style)
+// MARK: - Staging View (Modern)
 struct StagingView: View {
     @EnvironmentObject var appState: AppState
     @Binding var commitMessage: String
@@ -3728,51 +3728,51 @@ struct StagingView: View {
                 HStack {
                     Text("Unstaged Files")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                     Spacer()
                     Text("\(unstagedFiles.count)")
                         .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                     Button {
                         // Stage all
                     } label: {
                         Image(systemName: "plus.circle")
-                            .foregroundColor(GitKrakenTheme.accentGreen)
+                            .foregroundColor(AppTheme.accentGreen)
                     }
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(GitKrakenTheme.backgroundSecondary)
+                .background(AppTheme.backgroundSecondary)
 
                 FileListView(files: unstagedFiles, isStaged: false)
                     .frame(minHeight: 100)
             }
 
             Divider()
-                .background(GitKrakenTheme.border)
+                .background(AppTheme.border)
 
             // Staged Files
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
                     Text("Staged Files")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                     Spacer()
                     Text("\(stagedFiles.count)")
                         .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                     Button {
                         // Unstage all
                     } label: {
                         Image(systemName: "minus.circle")
-                            .foregroundColor(GitKrakenTheme.accentRed)
+                            .foregroundColor(AppTheme.accentRed)
                     }
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(GitKrakenTheme.backgroundSecondary)
+                .background(AppTheme.backgroundSecondary)
 
                 FileListView(files: stagedFiles, isStaged: true)
                     .frame(minHeight: 100)
@@ -3786,19 +3786,19 @@ struct StagingView: View {
                 ZStack(alignment: .topLeading) {
                     if commitMessage.isEmpty {
                         Text("Commit message...")
-                            .foregroundColor(GitKrakenTheme.textMuted)
+                            .foregroundColor(AppTheme.textMuted)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 10)
                     }
                     TextEditor(text: $commitMessage)
                         .font(.system(size: 12))
-                        .foregroundColor(GitKrakenTheme.textPrimary)
+                        .foregroundColor(AppTheme.textPrimary)
                         .scrollContentBackground(.hidden)
                         .background(Color.clear)
                         .frame(minHeight: 60, maxHeight: 100)
                 }
                 .padding(4)
-                .background(GitKrakenTheme.backgroundTertiary)
+                .background(AppTheme.backgroundTertiary)
                 .cornerRadius(6)
 
                 // Commit button
@@ -3812,15 +3812,15 @@ struct StagingView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(stagedFiles.isEmpty ? GitKrakenTheme.backgroundTertiary : GitKrakenTheme.accentGreen)
-                    .foregroundColor(stagedFiles.isEmpty ? GitKrakenTheme.textMuted : .white)
+                    .background(stagedFiles.isEmpty ? AppTheme.backgroundTertiary : AppTheme.accentGreen)
+                    .foregroundColor(stagedFiles.isEmpty ? AppTheme.textMuted : .white)
                     .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
                 .disabled(stagedFiles.isEmpty || commitMessage.isEmpty)
             }
             .padding(12)
-            .background(GitKrakenTheme.backgroundSecondary)
+            .background(AppTheme.backgroundSecondary)
         }
     }
 }
@@ -3851,13 +3851,13 @@ struct FileListView: View {
                 if files.isEmpty {
                     Text(isStaged ? "No staged files" : "No unstaged files")
                         .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 20)
                 }
             }
         }
-        .background(GitKrakenTheme.panel)
+        .background(AppTheme.panel)
     }
 }
 
@@ -3869,11 +3869,11 @@ struct StagingFileRow: View {
 
     var statusColor: Color {
         switch file.status {
-        case .added: return GitKrakenTheme.accentGreen
-        case .modified: return GitKrakenTheme.accentOrange
-        case .deleted: return GitKrakenTheme.accentRed
-        case .renamed: return GitKrakenTheme.accent
-        case .untracked: return GitKrakenTheme.textMuted
+        case .added: return AppTheme.accentGreen
+        case .modified: return AppTheme.accentOrange
+        case .deleted: return AppTheme.accentRed
+        case .renamed: return AppTheme.accent
+        case .untracked: return AppTheme.textMuted
         }
     }
 
@@ -3900,7 +3900,7 @@ struct StagingFileRow: View {
 
             Text((file.path as NSString).lastPathComponent)
                 .font(.system(size: 12))
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(AppTheme.textPrimary)
                 .lineLimit(1)
 
             Spacer()
@@ -3910,14 +3910,14 @@ struct StagingFileRow: View {
                     // Stage/Unstage file
                 } label: {
                     Image(systemName: isStaged ? "minus.circle" : "plus.circle")
-                        .foregroundColor(isStaged ? GitKrakenTheme.accentRed : GitKrakenTheme.accentGreen)
+                        .foregroundColor(isStaged ? AppTheme.accentRed : AppTheme.accentGreen)
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(isHovered ? GitKrakenTheme.hover : Color.clear)
+        .background(isHovered ? AppTheme.hover : Color.clear)
         .onHover { isHovered = $0 }
     }
 }
@@ -3933,27 +3933,27 @@ struct DiffPanelView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text(commit.message)
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(GitKrakenTheme.textPrimary)
+                            .foregroundColor(AppTheme.textPrimary)
 
                         HStack {
                             Text(commit.author)
-                                .foregroundColor(GitKrakenTheme.textSecondary)
+                                .foregroundColor(AppTheme.textSecondary)
                             Text("•")
-                                .foregroundColor(GitKrakenTheme.textMuted)
+                                .foregroundColor(AppTheme.textMuted)
                             Text(commit.date, style: .relative)
-                                .foregroundColor(GitKrakenTheme.textMuted)
+                                .foregroundColor(AppTheme.textMuted)
                         }
                         .font(.system(size: 12))
 
                         Text(commit.sha)
                             .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(GitKrakenTheme.textMuted)
+                            .foregroundColor(AppTheme.textMuted)
 
                         Divider()
-                            .background(GitKrakenTheme.border)
+                            .background(AppTheme.border)
 
                         Text("Changes will appear here...")
-                            .foregroundColor(GitKrakenTheme.textMuted)
+                            .foregroundColor(AppTheme.textMuted)
                     }
                     .padding()
                 }
@@ -3962,18 +3962,18 @@ struct DiffPanelView: View {
                     Spacer()
                     Image(systemName: "doc.text.magnifyingglass")
                         .font(.system(size: 40))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                     Text("Select a commit to view diff")
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                     Spacer()
                 }
             }
         }
-        .background(GitKrakenTheme.panel)
+        .background(AppTheme.panel)
     }
 }
 
-// MARK: - Welcome View (GitKraken style)
+// MARK: - Welcome View (Modern)
 struct WelcomeView: View {
     let onOpen: () -> Void
     let onClone: () -> Void
@@ -3990,7 +3990,7 @@ struct WelcomeView: View {
                     .font(.system(size: 80))
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [GitKrakenTheme.accent, GitKrakenTheme.accentCyan],
+                            colors: [AppTheme.accent, AppTheme.accentCyan],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -3998,16 +3998,16 @@ struct WelcomeView: View {
 
                 Text("GitMac")
                     .font(.system(size: 36, weight: .bold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
 
                 Text("A Git client for Mac")
                     .font(.system(size: 16))
-                    .foregroundColor(GitKrakenTheme.textSecondary)
+                    .foregroundColor(AppTheme.textSecondary)
 
                 HStack(spacing: 16) {
-                    WelcomeButton(icon: "folder", title: "Open", color: GitKrakenTheme.accent, action: onOpen)
-                    WelcomeButton(icon: "arrow.down.circle", title: "Clone", color: GitKrakenTheme.accentGreen, action: onClone)
-                    WelcomeButton(icon: "plus.circle", title: "Init", color: GitKrakenTheme.accentPurple) {
+                    WelcomeButton(icon: "folder", title: "Open", color: AppTheme.accent, action: onOpen)
+                    WelcomeButton(icon: "arrow.down.circle", title: "Clone", color: AppTheme.accentGreen, action: onClone)
+                    WelcomeButton(icon: "plus.circle", title: "Init", color: AppTheme.accentPurple) {
                         NotificationCenter.default.post(name: .initRepository, object: nil)
                     }
                 }
@@ -4015,13 +4015,13 @@ struct WelcomeView: View {
                 Spacer()
             }
             .frame(maxWidth: .infinity)
-            .background(GitKrakenTheme.background)
+            .background(AppTheme.background)
 
             // Right side - Recent repos
             VStack(alignment: .leading, spacing: 0) {
                 Text("RECENT REPOSITORIES")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
                     .padding(.bottom, 12)
@@ -4032,9 +4032,9 @@ struct WelcomeView: View {
                             VStack(spacing: 12) {
                                 Image(systemName: "clock")
                                     .font(.system(size: 32))
-                                    .foregroundColor(GitKrakenTheme.textMuted)
+                                    .foregroundColor(AppTheme.textMuted)
                                 Text("No recent repositories")
-                                    .foregroundColor(GitKrakenTheme.textMuted)
+                                    .foregroundColor(AppTheme.textMuted)
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.top, 60)
@@ -4047,7 +4047,7 @@ struct WelcomeView: View {
                 }
             }
             .frame(width: 320)
-            .background(GitKrakenTheme.sidebar)
+            .background(AppTheme.sidebar)
         }
     }
 }
@@ -4094,15 +4094,15 @@ struct RecentRepoRow: View {
             HStack(spacing: 12) {
                 Image(systemName: "folder.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(GitKrakenTheme.accent)
+                    .foregroundColor(AppTheme.accent)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(repo.name)
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textPrimary)
+                        .foregroundColor(AppTheme.textPrimary)
                     Text(repo.path)
                         .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
@@ -4111,7 +4111,7 @@ struct RecentRepoRow: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
-            .background(isHovered ? GitKrakenTheme.hover : Color.clear)
+            .background(isHovered ? AppTheme.hover : Color.clear)
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
@@ -4130,29 +4130,29 @@ struct CloneRepositorySheet: View {
         VStack(spacing: 20) {
             Text("Clone Repository")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(AppTheme.textPrimary)
 
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Repository URL")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                     TextField("https://github.com/user/repo.git", text: $repoURL)
                         .textFieldStyle(.plain)
                         .padding(10)
-                        .background(GitKrakenTheme.backgroundTertiary)
+                        .background(AppTheme.backgroundTertiary)
                         .cornerRadius(6)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Destination")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                     HStack {
                         TextField("Select destination folder", text: $destinationPath)
                             .textFieldStyle(.plain)
                             .padding(10)
-                            .background(GitKrakenTheme.backgroundTertiary)
+                            .background(AppTheme.backgroundTertiary)
                             .cornerRadius(6)
 
                         Button("Browse") {
@@ -4188,11 +4188,11 @@ struct CloneRepositorySheet: View {
         }
         .padding(24)
         .frame(width: 480)
-        .background(GitKrakenTheme.panel)
+        .background(AppTheme.panel)
     }
 }
 
-// MARK: - Repository Tab Bar (GitKraken style)
+// MARK: - Repository Tab Bar (Modern)
 struct RepositoryTabBar: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var recentReposManager: RecentRepositoriesManager
@@ -4216,19 +4216,19 @@ struct RepositoryTabBar: View {
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(GitKrakenTheme.textSecondary)
+                    .foregroundColor(AppTheme.textSecondary)
                     .frame(width: 28, height: 28)
-                    .background(GitKrakenTheme.hover)
+                    .background(AppTheme.hover)
                     .cornerRadius(4)
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 8)
         }
         .frame(height: 36)
-        .background(GitKrakenTheme.toolbar)
+        .background(AppTheme.toolbar)
         .overlay(
             Rectangle()
-                .fill(GitKrakenTheme.border)
+                .fill(AppTheme.border)
                 .frame(height: 1),
             alignment: .bottom
         )
@@ -4265,13 +4265,13 @@ struct RepoTab: View {
         HStack(spacing: 8) {
             // Branch indicator dot
             Circle()
-                .fill(GitKrakenTheme.accentGreen)
+                .fill(AppTheme.accentGreen)
                 .frame(width: 8, height: 8)
 
             // Repo name
             Text(tab.repository.name)
                 .font(.system(size: 12, weight: isActive ? .semibold : .regular))
-                .foregroundColor(isActive ? GitKrakenTheme.textPrimary : GitKrakenTheme.textSecondary)
+                .foregroundColor(isActive ? AppTheme.textPrimary : AppTheme.textSecondary)
                 .lineLimit(1)
 
             // Close button (show on hover or if active)
@@ -4281,9 +4281,9 @@ struct RepoTab: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                         .frame(width: 16, height: 16)
-                        .background(isHovered ? GitKrakenTheme.backgroundTertiary : Color.clear)
+                        .background(isHovered ? AppTheme.backgroundTertiary : Color.clear)
                         .cornerRadius(3)
                 }
                 .buttonStyle(.plain)
@@ -4291,10 +4291,10 @@ struct RepoTab: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isActive ? GitKrakenTheme.background : (isHovered ? GitKrakenTheme.backgroundSecondary : GitKrakenTheme.toolbar))
+        .background(isActive ? AppTheme.background : (isHovered ? AppTheme.backgroundSecondary : AppTheme.toolbar))
         .overlay(
             Rectangle()
-                .fill(isActive ? GitKrakenTheme.accent : Color.clear)
+                .fill(isActive ? AppTheme.accent : Color.clear)
                 .frame(height: 2),
             alignment: .bottom
         )
@@ -4337,21 +4337,21 @@ struct CreateBranchSheet: View {
             HStack {
                 Text("Create New Branch")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                 Spacer()
                 Button {
                     isPresented = false
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
             .padding(16)
-            .background(GitKrakenTheme.toolbar)
+            .background(AppTheme.toolbar)
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+            Rectangle().fill(AppTheme.border).frame(height: 1)
 
             // Content
             VStack(alignment: .leading, spacing: 16) {
@@ -4359,17 +4359,17 @@ struct CreateBranchSheet: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Branch Name")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
 
                     TextField("feature/my-branch", text: $branchName)
                         .textFieldStyle(.plain)
                         .font(.system(size: 13))
                         .padding(8)
-                        .background(GitKrakenTheme.backgroundSecondary)
+                        .background(AppTheme.backgroundSecondary)
                         .cornerRadius(6)
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
-                                .stroke(GitKrakenTheme.border, lineWidth: 1)
+                                .stroke(AppTheme.border, lineWidth: 1)
                         )
                 }
 
@@ -4377,7 +4377,7 @@ struct CreateBranchSheet: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Based On")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
 
                     Picker("", selection: $baseBranch) {
                         Text("Current HEAD").tag("HEAD")
@@ -4393,21 +4393,21 @@ struct CreateBranchSheet: View {
                 Toggle(isOn: $checkoutAfterCreate) {
                     Text("Checkout after creating")
                         .font(.system(size: 12))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
                 .toggleStyle(.checkbox)
 
                 if let error = errorMessage {
                     Text(error)
                         .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.accentRed)
+                        .foregroundColor(AppTheme.accentRed)
                 }
             }
             .padding(16)
 
             Spacer()
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+            Rectangle().fill(AppTheme.border).frame(height: 1)
 
             // Footer
             HStack {
@@ -4415,7 +4415,7 @@ struct CreateBranchSheet: View {
                     isPresented = false
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(GitKrakenTheme.textSecondary)
+                .foregroundColor(AppTheme.textSecondary)
 
                 Spacer()
 
@@ -4438,7 +4438,7 @@ struct CreateBranchSheet: View {
             .padding(16)
         }
         .frame(width: 380, height: 320)
-        .background(GitKrakenTheme.panel)
+        .background(AppTheme.panel)
     }
 
     private func createBranch() {
@@ -4482,12 +4482,12 @@ struct OperationProgressOverlay: View {
 
                 Text(message)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
             }
             .padding(32)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(GitKrakenTheme.panel)
+                    .fill(AppTheme.panel)
                     .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
             )
         }
@@ -4516,7 +4516,7 @@ struct MergeBranchSheet: View {
             HStack {
                 Text("Merge Branch")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                 Spacer()
 
                 if isLoadingBranches {
@@ -4530,14 +4530,14 @@ struct MergeBranchSheet: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
             .padding(16)
-            .background(GitKrakenTheme.toolbar)
+            .background(AppTheme.toolbar)
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+            Rectangle().fill(AppTheme.border).frame(height: 1)
 
             // Content
             VStack(alignment: .leading, spacing: 16) {
@@ -4545,7 +4545,7 @@ struct MergeBranchSheet: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Merge Branch")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
 
                     Picker("", selection: $selectedBranch) {
                         Text("Select a branch...").tag("")
@@ -4562,13 +4562,13 @@ struct MergeBranchSheet: View {
                 if !selectedBranch.isEmpty {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.triangle.merge")
-                            .foregroundColor(GitKrakenTheme.accent)
+                            .foregroundColor(AppTheme.accent)
                         Text("Merge '\(selectedBranch)' into '\(currentBranchName)'")
                             .font(.system(size: 12))
-                            .foregroundColor(GitKrakenTheme.textSecondary)
+                            .foregroundColor(AppTheme.textSecondary)
                     }
                     .padding(10)
-                    .background(GitKrakenTheme.backgroundSecondary)
+                    .background(AppTheme.backgroundSecondary)
                     .cornerRadius(6)
                 }
 
@@ -4576,21 +4576,21 @@ struct MergeBranchSheet: View {
                 Toggle(isOn: $noFastForward) {
                     Text("Create merge commit (no fast-forward)")
                         .font(.system(size: 12))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
                 .toggleStyle(.checkbox)
 
                 if let error = errorMessage {
                     Text(error)
                         .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.accentRed)
+                        .foregroundColor(AppTheme.accentRed)
                 }
             }
             .padding(16)
 
             Spacer()
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+            Rectangle().fill(AppTheme.border).frame(height: 1)
 
             // Footer
             HStack {
@@ -4598,7 +4598,7 @@ struct MergeBranchSheet: View {
                     isPresented = false
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(GitKrakenTheme.textSecondary)
+                .foregroundColor(AppTheme.textSecondary)
 
                 Spacer()
 
@@ -4621,7 +4621,7 @@ struct MergeBranchSheet: View {
             .padding(16)
         }
         .frame(width: 400, height: 300)
-        .background(GitKrakenTheme.panel)
+        .background(AppTheme.panel)
         .task {
             await loadBranches()
         }

@@ -234,14 +234,14 @@ public actor SyntaxHighlightEngine {
     public init() {
         let theme = Theme(
             font: .init(size: 12),
-            plainTextColor: Color(GitKrakenTheme.textPrimary),
+            plainTextColor: Color(AppTheme.textPrimary),
             tokenColors: [
                 .keyword: Color(red: 0.6, green: 0.4, blue: 0.8),
                 .string: Color(red: 0.8, green: 0.6, blue: 0.4),
                 .type: Color(red: 0.4, green: 0.7, blue: 0.8),
                 .call: Color(red: 0.6, green: 0.8, blue: 0.6),
                 .number: Color(red: 0.8, green: 0.7, blue: 0.5),
-                .comment: Color(GitKrakenTheme.textMuted),
+                .comment: Color(AppTheme.textMuted),
                 .property: Color(red: 0.7, green: 0.6, blue: 0.8),
                 .dotAccess: Color(red: 0.6, green: 0.7, blue: 0.8),
                 .preprocessing: Color(red: 0.8, green: 0.5, blue: 0.5)
@@ -592,7 +592,7 @@ struct IntralineDiffLineView: View {
                         .frame(width: 35, alignment: .trailing)
                 }
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
                 .padding(.trailing, 8)
                 .background(lineNumberBackground)
             }
@@ -647,9 +647,9 @@ struct IntralineDiffLineView: View {
         case .unchanged:
             return textColor
         case .added:
-            return preferences.useHighContrastColors ? .white : GitKrakenTheme.accentGreen
+            return preferences.useHighContrastColors ? .white : AppTheme.accentGreen
         case .removed:
-            return preferences.useHighContrastColors ? .white : GitKrakenTheme.accentRed
+            return preferences.useHighContrastColors ? .white : AppTheme.accentRed
         }
     }
 
@@ -658,9 +658,9 @@ struct IntralineDiffLineView: View {
         case .unchanged:
             return .clear
         case .added:
-            return GitKrakenTheme.accentGreen.opacity(0.3)
+            return AppTheme.accentGreen.opacity(0.3)
         case .removed:
-            return GitKrakenTheme.accentRed.opacity(0.3)
+            return AppTheme.accentRed.opacity(0.3)
         }
     }
 
@@ -675,26 +675,26 @@ struct IntralineDiffLineView: View {
 
     private var prefixColor: Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.accentGreen
-        case .deletion: return GitKrakenTheme.accentRed
-        default: return GitKrakenTheme.textMuted
+        case .addition: return AppTheme.accentGreen
+        case .deletion: return AppTheme.accentRed
+        default: return AppTheme.textMuted
         }
     }
 
     private var textColor: Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.accentGreen
-        case .deletion: return GitKrakenTheme.accentRed
-        default: return GitKrakenTheme.textPrimary
+        case .addition: return AppTheme.accentGreen
+        case .deletion: return AppTheme.accentRed
+        default: return AppTheme.textPrimary
         }
     }
 
     private var backgroundColor: Color {
         switch line.type {
         case .addition:
-            return GitKrakenTheme.accentGreen.opacity(preferences.additionBackgroundOpacity)
+            return AppTheme.accentGreen.opacity(preferences.additionBackgroundOpacity)
         case .deletion:
-            return GitKrakenTheme.accentRed.opacity(preferences.deletionBackgroundOpacity)
+            return AppTheme.accentRed.opacity(preferences.deletionBackgroundOpacity)
         default:
             return .clear
         }
@@ -703,11 +703,11 @@ struct IntralineDiffLineView: View {
     private var lineNumberBackground: Color {
         switch line.type {
         case .addition:
-            return GitKrakenTheme.accentGreen.opacity(0.06)
+            return AppTheme.accentGreen.opacity(0.06)
         case .deletion:
-            return GitKrakenTheme.accentRed.opacity(0.06)
+            return AppTheme.accentRed.opacity(0.06)
         default:
-            return GitKrakenTheme.backgroundSecondary
+            return AppTheme.backgroundSecondary
         }
     }
 }
@@ -730,7 +730,7 @@ struct SyntaxHighlightedLineView: View {
                         .frame(width: 35, alignment: .trailing)
                 }
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
                 .padding(.trailing, 8)
             }
 
@@ -767,24 +767,24 @@ struct SyntaxHighlightedLineView: View {
 
     private var prefixColor: Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.accentGreen
-        case .deletion: return GitKrakenTheme.accentRed
-        default: return GitKrakenTheme.textMuted
+        case .addition: return AppTheme.accentGreen
+        case .deletion: return AppTheme.accentRed
+        default: return AppTheme.textMuted
         }
     }
 
     private var textColor: Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.accentGreen
-        case .deletion: return GitKrakenTheme.accentRed
-        default: return GitKrakenTheme.textPrimary
+        case .addition: return AppTheme.accentGreen
+        case .deletion: return AppTheme.accentRed
+        default: return AppTheme.textPrimary
         }
     }
 
     private var backgroundColor: Color {
         switch line.type {
-        case .addition: return GitKrakenTheme.accentGreen.opacity(0.15)
-        case .deletion: return GitKrakenTheme.accentRed.opacity(0.15)
+        case .addition: return AppTheme.accentGreen.opacity(0.15)
+        case .deletion: return AppTheme.accentRed.opacity(0.15)
         default: return .clear
         }
     }

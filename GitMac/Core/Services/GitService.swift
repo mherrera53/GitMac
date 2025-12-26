@@ -681,7 +681,7 @@ class GitService: ObservableObject {
         NotificationCenter.default.post(name: .repositoryDidRefresh, object: repo.path)
     }
 
-    // MARK: - Line-Level Operations (GitKraken-style)
+    // MARK: - Line-Level Operations (Modern)
 
     private let patchManipulator = PatchManipulator()
 

@@ -229,7 +229,7 @@ struct StagingAreaView: View {
             HStack(spacing: 8) {
                 HeaderActionButton(
                     icon: "plus.circle.fill",
-                    color: GitKrakenTheme.accentGreen,
+                    color: AppTheme.accentGreen,
                     isLoading: isStagingAll,
                     tooltip: "Stage All"
                 ) {
@@ -241,7 +241,7 @@ struct StagingAreaView: View {
 
                 HeaderActionButton(
                     icon: "xmark.circle.fill",
-                    color: GitKrakenTheme.accentRed,
+                    color: AppTheme.accentRed,
                     isLoading: isDiscardingAll,
                     tooltip: "Discard All"
                 ) {
@@ -358,7 +358,7 @@ struct StagingAreaView: View {
             HStack(spacing: 4) {
                 HeaderActionButton(
                     icon: "minus.circle.fill",
-                    color: GitKrakenTheme.accentOrange,
+                    color: AppTheme.accentOrange,
                     isLoading: isUnstagingAll,
                     tooltip: "Unstage All"
                 ) {
@@ -370,7 +370,7 @@ struct StagingAreaView: View {
 
                 HeaderActionButton(
                     icon: "xmark.circle.fill",
-                    color: GitKrakenTheme.accentRed,
+                    color: AppTheme.accentRed,
                     isLoading: isDiscardingAllStaged,
                     tooltip: "Discard All Staged"
                 ) {
@@ -992,7 +992,7 @@ struct FileContextMenu: View {
 
             Divider()
 
-            // Ignore submenu (GitKraken style)
+            // Ignore submenu (Modern)
             Menu {
                 Button {
                     NotificationCenter.default.post(name: .ignoreFile, object: ["type": "file", "path": filePath])

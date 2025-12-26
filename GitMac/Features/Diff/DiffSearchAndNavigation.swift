@@ -104,7 +104,7 @@ struct DiffSearchBar: View {
         HStack(spacing: 8) {
             // Search icon
             Image(systemName: "magnifyingglass")
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
                 .font(.system(size: 12))
 
             // Search field
@@ -121,12 +121,12 @@ struct DiffSearchBar: View {
                 if searchState.hasMatches {
                     Text("\(searchState.currentMatchIndex + 1)/\(searchState.matchCount)")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
                         .monospacedDigit()
                 } else {
                     Text("No matches")
                         .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.accentRed)
+                        .foregroundColor(AppTheme.accentRed)
                 }
             }
 
@@ -173,18 +173,18 @@ struct DiffSearchBar: View {
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.escape, modifiers: [])
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(GitKrakenTheme.toolbar)
+        .background(AppTheme.toolbar)
         .cornerRadius(6)
         .overlay(
             RoundedRectangle(cornerRadius: 6)
-                .stroke(GitKrakenTheme.border, lineWidth: 1)
+                .stroke(AppTheme.border, lineWidth: 1)
         )
         .onAppear {
             isFocused = true
@@ -338,7 +338,7 @@ struct DiffNavigationToolbar: View {
                     Text("Next")
                         .font(.system(size: 10))
                 }
-                .foregroundColor(GitKrakenTheme.accentGreen)
+                .foregroundColor(AppTheme.accentGreen)
             }
             .buttonStyle(.plain)
             .help("Next Addition")
@@ -356,7 +356,7 @@ struct DiffNavigationToolbar: View {
                     Text("Next")
                         .font(.system(size: 10))
                 }
-                .foregroundColor(GitKrakenTheme.accentRed)
+                .foregroundColor(AppTheme.accentRed)
             }
             .buttonStyle(.plain)
             .help("Next Deletion")
@@ -367,7 +367,7 @@ struct DiffNavigationToolbar: View {
             if navigationState.changeCount > 0 {
                 Text("\(navigationState.currentChangeIndex + 1)/\(navigationState.changeCount) changes")
                     .font(.system(size: 11))
-                    .foregroundColor(GitKrakenTheme.textSecondary)
+                    .foregroundColor(AppTheme.textSecondary)
                     .monospacedDigit()
             }
         }
@@ -398,7 +398,7 @@ struct DiffStatusBar: View {
                         Text("\(stats.additions)")
                             .monospacedDigit()
                     }
-                    .foregroundColor(GitKrakenTheme.accentGreen)
+                    .foregroundColor(AppTheme.accentGreen)
 
                     // Deletions
                     HStack(spacing: 2) {
@@ -407,7 +407,7 @@ struct DiffStatusBar: View {
                         Text("\(stats.deletions)")
                             .monospacedDigit()
                     }
-                    .foregroundColor(GitKrakenTheme.accentRed)
+                    .foregroundColor(AppTheme.accentRed)
                 }
                 .font(.system(size: 11, weight: .medium))
             }
@@ -433,26 +433,26 @@ struct DiffStatusBar: View {
             if let parseTime = parseTimeMs {
                 Text("Parse: \(String(format: "%.1f", parseTime))ms")
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
             }
 
             if let renderTime = renderTimeMs {
                 Text("Render: \(String(format: "%.1f", renderTime))ms")
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(renderTime > 16 ? GitKrakenTheme.accentRed : GitKrakenTheme.textMuted)
+                    .foregroundColor(renderTime > 16 ? AppTheme.accentRed : AppTheme.textMuted)
             }
 
             if let cache = cacheStats {
                 Text("Cache: \(cache.entries) (\(formatBytes(cache.bytesUsed)))")
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
             }
             #endif
         }
         .font(.system(size: 11))
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(GitKrakenTheme.toolbar)
+        .background(AppTheme.toolbar)
     }
 
     private func formatBytes(_ bytes: Int) -> String {
@@ -495,16 +495,16 @@ struct SideBySideDiffView: View {
                     }
                 }
                 .frame(width: columnWidth)
-                .background(GitKrakenTheme.background)
+                .background(AppTheme.background)
 
                 // Divider
                 Rectangle()
-                    .fill(GitKrakenTheme.border)
+                    .fill(AppTheme.border)
                     .frame(width: 1)
 
                 // Gutter with line connectors
                 Rectangle()
-                    .fill(GitKrakenTheme.backgroundSecondary)
+                    .fill(AppTheme.backgroundSecondary)
                     .frame(width: 18)
 
                 // Right side (new/additions)
@@ -523,7 +523,7 @@ struct SideBySideDiffView: View {
                     }
                 }
                 .frame(width: columnWidth)
-                .background(GitKrakenTheme.background)
+                .background(AppTheme.background)
             }
         }
     }
@@ -546,12 +546,12 @@ private struct SideBySideHunkView: View {
             HStack {
                 Text(hunk.header)
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(GitKrakenTheme.accent)
+                    .foregroundColor(AppTheme.accent)
                 Spacer()
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(GitKrakenTheme.accent.opacity(0.1))
+            .background(AppTheme.accent.opacity(0.1))
 
             // Lines
             ForEach(Array(filteredLines.enumerated()), id: \.offset) { index, line in
@@ -583,7 +583,7 @@ private struct SideBySideLineRow: View {
             if showLineNumber {
                 Text(lineNumber)
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
                     .frame(width: 40, alignment: .trailing)
                     .padding(.trailing, 8)
                     .background(lineNumberBackground)
@@ -611,9 +611,9 @@ private struct SideBySideLineRow: View {
     private var backgroundColor: Color {
         switch line.type {
         case .addition:
-            return GitKrakenTheme.accentGreen.opacity(0.15)
+            return AppTheme.accentGreen.opacity(0.15)
         case .deletion:
-            return GitKrakenTheme.accentRed.opacity(0.15)
+            return AppTheme.accentRed.opacity(0.15)
         default:
             return .clear
         }
@@ -622,22 +622,22 @@ private struct SideBySideLineRow: View {
     private var lineNumberBackground: Color {
         switch line.type {
         case .addition:
-            return GitKrakenTheme.accentGreen.opacity(0.08)
+            return AppTheme.accentGreen.opacity(0.08)
         case .deletion:
-            return GitKrakenTheme.accentRed.opacity(0.08)
+            return AppTheme.accentRed.opacity(0.08)
         default:
-            return GitKrakenTheme.backgroundSecondary
+            return AppTheme.backgroundSecondary
         }
     }
 
     private var textColor: Color {
         switch line.type {
         case .addition:
-            return GitKrakenTheme.accentGreen
+            return AppTheme.accentGreen
         case .deletion:
-            return GitKrakenTheme.accentRed
+            return AppTheme.accentRed
         default:
-            return GitKrakenTheme.textPrimary
+            return AppTheme.textPrimary
         }
     }
 }
@@ -747,7 +747,7 @@ struct EnhancedDiffViewer: View {
                 DiffNavigationToolbar(navigationState: navigationState) { yOffset in
                     // TODO: Scroll to position
                 }
-                .background(GitKrakenTheme.backgroundSecondary)
+                .background(AppTheme.backgroundSecondary)
             }
 
             Divider()
@@ -777,7 +777,7 @@ struct EnhancedDiffViewer: View {
                 cacheStats: nil
             )
         }
-        .background(GitKrakenTheme.background)
+        .background(AppTheme.background)
         .task {
             await loadDiff()
         }
@@ -821,7 +821,7 @@ struct EnhancedDiffViewer: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(GitKrakenTheme.toolbar)
+        .background(AppTheme.toolbar)
     }
 
     private var loadingView: some View {
@@ -837,7 +837,7 @@ struct EnhancedDiffViewer: View {
         VStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 40))
-                .foregroundColor(GitKrakenTheme.accentOrange)
+                .foregroundColor(AppTheme.accentOrange)
             Text("Failed to load diff")
                 .font(.headline)
             Text(error.localizedDescription)
@@ -850,7 +850,7 @@ struct EnhancedDiffViewer: View {
         VStack(spacing: 12) {
             Image(systemName: "doc.text")
                 .font(.system(size: 40))
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
             Text("No changes")
                 .font(.headline)
                 .foregroundColor(.secondary)

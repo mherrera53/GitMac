@@ -106,7 +106,7 @@
 		D5351C2C701B487793E0C515 /* Core/Services/TaigaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 624FBC21EE1949A182255005 /* Core/Services/TaigaService.swift */; };
 		F915E96872D140E997144CF7 /* Core/Services/GitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E8E5E6A6DC644C3BE12AC71 /* Core/Services/GitService.swift */; };
 		FLVIEW01B526F46E3958E34A /* GitMac/Features/FileViewer/FileContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FLVIEW01F526F46E3958E34A /* GitMac/Features/FileViewer/FileContentView.swift */; };
-		GKTHEME1B526F46E3958E34A /* UI/Components/GitKrakenTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTHEME1F526F46E3958E34A /* UI/Components/GitKrakenTheme.swift */; };
+		GKTHEME1B526F46E3958E34A /* UI/Components/AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = GKTHEME1F526F46E3958E34A /* UI/Components/AppTheme.swift */; };
 		JIRAPNL1B526F46E3958E34A /* Features/Jira/JiraPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = JIRAPNL1F526F46E3958E34A /* Features/Jira/JiraPanel.swift */; };
 		JIRASVC1B526F46E3958E34A /* Core/Services/JiraService.swift in Sources */ = {isa = PBXBuildFile; fileRef = JIRASVC1F526F46E3958E34A /* Core/Services/JiraService.swift */; };
 		KBSHRT01B526F46E3958E34A /* UI/Components/KeyboardShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = KBSHRT01F526F46E3958E34A /* UI/Components/KeyboardShortcuts.swift */; };
@@ -241,7 +241,7 @@
 		FCD7E4FE60FC4D2AA634276B /* Core/Git/Stash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Git/Stash.swift; sourceTree = "<group>"; };
 		FCE46C5A51584BEAA7157198 /* Core/Utils/ShellExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Utils/ShellExecutor.swift; sourceTree = "<group>"; };
 		FLVIEW01F526F46E3958E34A /* GitMac/Features/FileViewer/FileContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/Features/FileViewer/FileContentView.swift; sourceTree = "<group>"; };
-		GKTHEME1F526F46E3958E34A /* UI/Components/GitKrakenTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI/Components/GitKrakenTheme.swift; sourceTree = "<group>"; };
+		GKTHEME1F526F46E3958E34A /* UI/Components/AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI/Components/AppTheme.swift; sourceTree = "<group>"; };
 		INFO01 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		JIRAPNL1F526F46E3958E34A /* Features/Jira/JiraPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Jira/JiraPanel.swift; sourceTree = "<group>"; };
 		JIRASVC1F526F46E3958E34A /* Core/Services/JiraService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Services/JiraService.swift; sourceTree = "<group>"; };
@@ -347,7 +347,7 @@
 				NOTNPNL1F526F46E3958E34A /* Features/Notion/NotionPanel.swift */,
 				AVTRSVC1F526F46E3958E34A /* Core/Services/AvatarService.swift */,
 				CTXMNU01F526F46E3958E34A /* UI/Components/ContextMenus.swift */,
-				GKTHEME1F526F46E3958E34A /* UI/Components/GitKrakenTheme.swift */,
+				GKTHEME1F526F46E3958E34A /* UI/Components/AppTheme.swift */,
 				LDBTN001F526F46E3958E34A /* UI/Components/LoadingButton.swift */,
 				KBSHRT01F526F46E3958E34A /* UI/Components/KeyboardShortcuts.swift */,
 				RES001 /* Assets.xcassets */,
@@ -601,7 +601,7 @@
 				AVTRSVC1B526F46E3958E34A /* Core/Services/AvatarService.swift in Sources */,
 				AC9431942EE97A6D00A59026 /* RemoteManagementView.swift in Sources */,
 				CTXMNU01B526F46E3958E34A /* UI/Components/ContextMenus.swift in Sources */,
-				GKTHEME1B526F46E3958E34A /* UI/Components/GitKrakenTheme.swift in Sources */,
+				GKTHEME1B526F46E3958E34A /* UI/Components/AppTheme.swift in Sources */,
 				AC9431882EE978E500A59026 /* ReflogView.swift in Sources */,
 				LDBTN001B526F46E3958E34A /* UI/Components/LoadingButton.swift in Sources */,
 				KBSHRT01B526F46E3958E34A /* UI/Components/KeyboardShortcuts.swift in Sources */,

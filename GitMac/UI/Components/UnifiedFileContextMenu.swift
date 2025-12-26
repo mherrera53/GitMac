@@ -4,7 +4,7 @@ import AppKit
 // MARK: - Unified File Context Menu
 
 /// A unified, reusable context menu component for all file operations in GitMac.
-/// Inspired by GitKraken's comprehensive context menu with additional improvements.
+/// Advanced's comprehensive context menu with additional improvements.
 /// Use this instead of defining context menus inline to ensure consistency.
 struct UnifiedFileContextMenu: View {
     // MARK: - File Info

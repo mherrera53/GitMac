@@ -85,7 +85,7 @@ struct KeyboardShortcutsHelpView: View {
             HStack {
                 Text("Keyboard Shortcuts")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -94,12 +94,12 @@ struct KeyboardShortcutsHelpView: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
             .padding()
-            .background(GitKrakenTheme.toolbar)
+            .background(AppTheme.toolbar)
 
             Divider()
 
@@ -114,7 +114,7 @@ struct KeyboardShortcutsHelpView: View {
             }
         }
         .frame(width: 500, height: 600)
-        .background(GitKrakenTheme.background)
+        .background(AppTheme.background)
     }
 }
 
@@ -131,11 +131,11 @@ struct ShortcutCategorySection: View {
             HStack(spacing: 8) {
                 Image(systemName: categoryIcon)
                     .font(.system(size: 12))
-                    .foregroundColor(GitKrakenTheme.accent)
+                    .foregroundColor(AppTheme.accent)
 
                 Text(category.rawValue)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
             }
             .padding(.bottom, 4)
 
@@ -165,7 +165,7 @@ struct KeyboardShortcutRow: View {
         HStack {
             Text(shortcut.description)
                 .font(.system(size: 13))
-                .foregroundColor(GitKrakenTheme.textSecondary)
+                .foregroundColor(AppTheme.textSecondary)
 
             Spacer()
 
@@ -187,16 +187,16 @@ struct KeyCap: View {
     var body: some View {
         Text(text)
             .font(.system(size: 11, weight: .medium, design: .rounded))
-            .foregroundColor(GitKrakenTheme.textPrimary)
+            .foregroundColor(AppTheme.textPrimary)
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background(
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(GitKrakenTheme.backgroundSecondary)
+                    .fill(AppTheme.backgroundSecondary)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 4)
-                    .stroke(GitKrakenTheme.border, lineWidth: 1)
+                    .stroke(AppTheme.border, lineWidth: 1)
             )
     }
 }
@@ -226,7 +226,7 @@ struct QuickActionsPalette: View {
             // Search field
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
 
                 TextField("Search actions...", text: $searchText)
                     .textFieldStyle(.plain)
@@ -238,13 +238,13 @@ struct QuickActionsPalette: View {
                         searchText = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(GitKrakenTheme.textMuted)
+                            .foregroundColor(AppTheme.textMuted)
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(12)
-            .background(GitKrakenTheme.backgroundSecondary)
+            .background(AppTheme.backgroundSecondary)
 
             Divider()
 
@@ -262,7 +262,7 @@ struct QuickActionsPalette: View {
             .frame(maxHeight: 400)
         }
         .frame(width: 400)
-        .background(GitKrakenTheme.panel)
+        .background(AppTheme.panel)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.3), radius: 20)
         .onAppear {
@@ -290,17 +290,17 @@ struct QuickActionRow: View {
             HStack(spacing: 12) {
                 Image(systemName: action.icon)
                     .font(.system(size: 14))
-                    .foregroundColor(GitKrakenTheme.accent)
+                    .foregroundColor(AppTheme.accent)
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(action.title)
                         .font(.system(size: 13))
-                        .foregroundColor(GitKrakenTheme.textPrimary)
+                        .foregroundColor(AppTheme.textPrimary)
 
                     Text(action.category)
                         .font(.system(size: 11))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
 
                 Spacer()
@@ -308,16 +308,16 @@ struct QuickActionRow: View {
                 if let shortcut = action.shortcut {
                     Text(shortcut)
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(GitKrakenTheme.backgroundSecondary)
+                        .background(AppTheme.backgroundSecondary)
                         .cornerRadius(4)
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(isHovered ? GitKrakenTheme.hover : Color.clear)
+            .background(isHovered ? AppTheme.hover : Color.clear)
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }

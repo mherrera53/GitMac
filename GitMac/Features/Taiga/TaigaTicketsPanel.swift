@@ -21,7 +21,7 @@ struct TaigaTicketsPanel: View {
 
                 Text("Taiga")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
 
                 // Project selector
                 if !viewModel.projects.isEmpty {
@@ -54,7 +54,7 @@ struct TaigaTicketsPanel: View {
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
 
                 // Settings
                 Button {
@@ -64,7 +64,7 @@ struct TaigaTicketsPanel: View {
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
 
                 // Close
                 Button(action: onClose) {
@@ -72,13 +72,13 @@ struct TaigaTicketsPanel: View {
                         .font(.system(size: 10, weight: .bold))
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(GitKrakenTheme.toolbar)
+            .background(AppTheme.toolbar)
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+            Rectangle().fill(AppTheme.border).frame(height: 1)
 
             // Content
             if !viewModel.isAuthenticated {
@@ -100,7 +100,7 @@ struct TaigaTicketsPanel: View {
             }
         }
         .frame(height: height)
-        .background(GitKrakenTheme.panel)
+        .background(AppTheme.panel)
         .sheet(isPresented: $viewModel.showSettings) {
             TaigaSettingsSheet(viewModel: viewModel)
         }
@@ -264,25 +264,25 @@ struct TaigaLoginPrompt: View {
 
             Text("Connect to Taiga")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(AppTheme.textPrimary)
 
             Text("Log in to view your project tickets from tree.taiga.io")
                 .font(.system(size: 12))
-                .foregroundColor(GitKrakenTheme.textSecondary)
+                .foregroundColor(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
 
             VStack(spacing: 10) {
                 TextField("Username or Email", text: $username)
                     .textFieldStyle(.plain)
                     .padding(8)
-                    .background(GitKrakenTheme.backgroundSecondary)
+                    .background(AppTheme.backgroundSecondary)
                     .cornerRadius(6)
                     .frame(width: 250)
 
                 SecureField("Password", text: $password)
                     .textFieldStyle(.plain)
                     .padding(8)
-                    .background(GitKrakenTheme.backgroundSecondary)
+                    .background(AppTheme.backgroundSecondary)
                     .cornerRadius(6)
                     .frame(width: 250)
             }
@@ -290,7 +290,7 @@ struct TaigaLoginPrompt: View {
             if let error = viewModel.error {
                 Text(error)
                     .font(.system(size: 11))
-                    .foregroundColor(GitKrakenTheme.accentRed)
+                    .foregroundColor(AppTheme.accentRed)
             }
 
             Button {
@@ -359,21 +359,21 @@ struct TaigaKanbanColumn: View {
 
                 Text(status?.name ?? "Unknown")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
 
                 Text("\(items.count)")
                     .font(.system(size: 10))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(GitKrakenTheme.backgroundTertiary)
+                    .background(AppTheme.backgroundTertiary)
                     .cornerRadius(4)
 
                 Spacer()
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(GitKrakenTheme.backgroundSecondary)
+            .background(AppTheme.backgroundSecondary)
             .cornerRadius(6)
 
             // Cards
@@ -423,7 +423,7 @@ struct TaigaStoryCard: View {
 
                 Text(story.subject)
                     .font(.system(size: 12))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(2)
             }
 
@@ -453,7 +453,7 @@ struct TaigaStoryCard: View {
                         Text("\(Int(points))")
                             .font(.system(size: 10))
                     }
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
                 }
 
                 Spacer()
@@ -468,7 +468,7 @@ struct TaigaStoryCard: View {
                 } label: {
                     Image(systemName: "arrow.right.doc.on.clipboard")
                         .font(.system(size: 10))
-                        .foregroundColor(GitKrakenTheme.accent)
+                        .foregroundColor(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
                 .help("Insert \(taigaRef) into commit message")
@@ -476,16 +476,16 @@ struct TaigaStoryCard: View {
                 if let assignee = story.assignedToExtraInfo {
                     Text(assignee.fullName.split(separator: " ").first.map(String.init) ?? assignee.username)
                         .font(.system(size: 10))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
             }
         }
         .padding(10)
-        .background(isHovered ? GitKrakenTheme.hover : GitKrakenTheme.backgroundSecondary)
+        .background(isHovered ? AppTheme.hover : AppTheme.backgroundSecondary)
         .cornerRadius(6)
         .overlay(
             RoundedRectangle(cornerRadius: 6)
-                .stroke(isHovered ? Color.green.opacity(0.5) : GitKrakenTheme.border, lineWidth: 1)
+                .stroke(isHovered ? Color.green.opacity(0.5) : AppTheme.border, lineWidth: 1)
         )
         .onHover { isHovered = $0 }
         .overlay(alignment: .topTrailing) {
@@ -572,7 +572,7 @@ struct TaigaTaskRow: View {
             // Subject
             Text(task.subject)
                 .font(.system(size: 12))
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(AppTheme.textPrimary)
                 .lineLimit(1)
 
             Spacer()
@@ -588,7 +588,7 @@ struct TaigaTaskRow: View {
                 } label: {
                     Image(systemName: "arrow.right.doc.on.clipboard")
                         .font(.system(size: 10))
-                        .foregroundColor(GitKrakenTheme.accent)
+                        .foregroundColor(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
                 .help("Insert into commit")
@@ -609,7 +609,7 @@ struct TaigaTaskRow: View {
             if let assignee = task.assignedToExtraInfo {
                 Text(assignee.username)
                     .font(.system(size: 10))
-                    .foregroundColor(GitKrakenTheme.textSecondary)
+                    .foregroundColor(AppTheme.textSecondary)
             }
         }
         .padding(.vertical, 4)
@@ -672,7 +672,7 @@ struct TaigaIssueRow: View {
             // Subject
             Text(issue.subject)
                 .font(.system(size: 12))
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(AppTheme.textPrimary)
                 .lineLimit(1)
 
             Spacer()
@@ -688,7 +688,7 @@ struct TaigaIssueRow: View {
                 } label: {
                     Image(systemName: "arrow.right.doc.on.clipboard")
                         .font(.system(size: 10))
-                        .foregroundColor(GitKrakenTheme.accent)
+                        .foregroundColor(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
                 .help("Insert into commit")
@@ -756,12 +756,12 @@ struct TaigaEpicRow: View {
             // Ref
             Text("#\(epic.ref)")
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
 
             // Subject
             Text(epic.subject)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(AppTheme.textPrimary)
                 .lineLimit(1)
 
             Spacer()
@@ -790,11 +790,11 @@ struct TaigaEmptyView: View {
         VStack(spacing: 12) {
             Image(systemName: "tray")
                 .font(.system(size: 32))
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
 
             Text("No \(type) found")
                 .font(.system(size: 13))
-                .foregroundColor(GitKrakenTheme.textSecondary)
+                .foregroundColor(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -812,19 +812,19 @@ struct TaigaSettingsSheet: View {
             HStack {
                 Text("Taiga Settings")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
             .padding(16)
-            .background(GitKrakenTheme.toolbar)
+            .background(AppTheme.toolbar)
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+            Rectangle().fill(AppTheme.border).frame(height: 1)
 
             // Content
             VStack(alignment: .leading, spacing: 16) {
@@ -834,7 +834,7 @@ struct TaigaSettingsSheet: View {
                             .foregroundColor(.green)
                         Text("Connected to Taiga")
                             .font(.system(size: 13))
-                            .foregroundColor(GitKrakenTheme.textPrimary)
+                            .foregroundColor(AppTheme.textPrimary)
                     }
 
                     Button("Disconnect") {
@@ -845,7 +845,7 @@ struct TaigaSettingsSheet: View {
                 } else {
                     Text("Not connected to Taiga")
                         .font(.system(size: 13))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
             }
             .padding(16)
@@ -853,7 +853,7 @@ struct TaigaSettingsSheet: View {
             Spacer()
         }
         .frame(width: 350, height: 200)
-        .background(GitKrakenTheme.panel)
+        .background(AppTheme.panel)
     }
 }
 
@@ -865,7 +865,7 @@ struct TaigaPanelResizer: View {
 
     var body: some View {
         Rectangle()
-            .fill(GitKrakenTheme.border)
+            .fill(AppTheme.border)
             .frame(height: 4)
             .contentShape(Rectangle())
             .gesture(

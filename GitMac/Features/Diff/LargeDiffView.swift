@@ -31,7 +31,7 @@ struct LargeDiffView: NSViewRepresentable {
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
         scrollView.drawsBackground = true
-        scrollView.backgroundColor = NSColor(GitKrakenTheme.background)
+        scrollView.backgroundColor = NSColor(AppTheme.background)
 
         let diffView = LargeDiffNSView(frame: .zero)
         diffView.coordinator = context.coordinator
@@ -169,7 +169,7 @@ class LargeDiffNSView: NSView {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
 
         // Background
-        context.setFillColor(NSColor(GitKrakenTheme.background).cgColor)
+        context.setFillColor(NSColor(AppTheme.background).cgColor)
         context.fill(dirtyRect)
 
         // Only draw visible items
@@ -212,14 +212,14 @@ class LargeDiffNSView: NSView {
 
         // Background
         let rect = CGRect(x: 0, y: y, width: width, height: Self.lineHeight + 8)
-        context.setFillColor(NSColor(GitKrakenTheme.accent).withAlphaComponent(0.1).cgColor)
+        context.setFillColor(NSColor(AppTheme.accent).withAlphaComponent(0.1).cgColor)
         context.fill(rect)
 
         // Header text
         let headerText = hunk.header
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium),
-            .foregroundColor: NSColor(GitKrakenTheme.accent)
+            .foregroundColor: NSColor(AppTheme.accent)
         ]
 
         let textRect = CGRect(x: Self.horizontalPadding, y: y + 4, width: width - Self.horizontalPadding * 2, height: Self.lineHeight)
@@ -229,7 +229,7 @@ class LargeDiffNSView: NSView {
         let indicatorText = hunk.isCollapsed ? "▶" : "▼"
         let indicatorAttrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 10, weight: .bold),
-            .foregroundColor: NSColor(GitKrakenTheme.textSecondary)
+            .foregroundColor: NSColor(AppTheme.textSecondary)
         ]
         let indicatorRect = CGRect(x: width - 30, y: y + 4, width: 20, height: Self.lineHeight)
         (indicatorText as NSString).draw(in: indicatorRect, withAttributes: indicatorAttrs)
@@ -242,9 +242,9 @@ class LargeDiffNSView: NSView {
         let bgColor: NSColor
         switch line.type {
         case .addition:
-            bgColor = NSColor(GitKrakenTheme.accentGreen).withAlphaComponent(0.1)
+            bgColor = NSColor(AppTheme.accentGreen).withAlphaComponent(0.1)
         case .deletion:
-            bgColor = NSColor(GitKrakenTheme.accentRed).withAlphaComponent(0.1)
+            bgColor = NSColor(AppTheme.accentRed).withAlphaComponent(0.1)
         default:
             bgColor = .clear
         }
@@ -259,7 +259,7 @@ class LargeDiffNSView: NSView {
         // Line numbers
         let lineNumAttrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
-            .foregroundColor: NSColor(GitKrakenTheme.textMuted)
+            .foregroundColor: NSColor(AppTheme.textMuted)
         ]
 
         // Old line number
@@ -280,16 +280,16 @@ class LargeDiffNSView: NSView {
         switch line.type {
         case .addition:
             prefix = "+"
-            prefixColor = NSColor(GitKrakenTheme.accentGreen)
+            prefixColor = NSColor(AppTheme.accentGreen)
         case .deletion:
             prefix = "-"
-            prefixColor = NSColor(GitKrakenTheme.accentRed)
+            prefixColor = NSColor(AppTheme.accentRed)
         case .context:
             prefix = " "
-            prefixColor = NSColor(GitKrakenTheme.textMuted)
+            prefixColor = NSColor(AppTheme.textMuted)
         case .hunkHeader:
             prefix = "@"
-            prefixColor = NSColor(GitKrakenTheme.accent)
+            prefixColor = NSColor(AppTheme.accent)
         }
 
         let prefixAttrs: [NSAttributedString.Key: Any] = [
@@ -304,11 +304,11 @@ class LargeDiffNSView: NSView {
         let contentColor: NSColor
         switch line.type {
         case .addition:
-            contentColor = NSColor(GitKrakenTheme.accentGreen)
+            contentColor = NSColor(AppTheme.accentGreen)
         case .deletion:
-            contentColor = NSColor(GitKrakenTheme.accentRed)
+            contentColor = NSColor(AppTheme.accentRed)
         default:
-            contentColor = NSColor(GitKrakenTheme.textPrimary)
+            contentColor = NSColor(AppTheme.textPrimary)
         }
 
         let contentAttrs: [NSAttributedString.Key: Any] = [
@@ -324,14 +324,14 @@ class LargeDiffNSView: NSView {
         let rect = CGRect(x: Self.horizontalPadding, y: y, width: width - Self.horizontalPadding * 2, height: Self.lineHeight)
 
         // Background
-        context.setFillColor(NSColor(GitKrakenTheme.backgroundSecondary).cgColor)
+        context.setFillColor(NSColor(AppTheme.backgroundSecondary).cgColor)
         context.fill(rect)
 
         // Text
         let text = "... \(lineCount) lines (click to expand)"
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 11, weight: .regular),
-            .foregroundColor: NSColor(GitKrakenTheme.textMuted)
+            .foregroundColor: NSColor(AppTheme.textMuted)
         ]
 
         let textRect = CGRect(x: Self.horizontalPadding + 8, y: y, width: width - Self.horizontalPadding * 2, height: Self.lineHeight)
@@ -459,7 +459,7 @@ struct OptimizedDiffView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 40))
-                        .foregroundColor(GitKrakenTheme.accentOrange)
+                        .foregroundColor(AppTheme.accentOrange)
                     Text("Failed to load diff")
                         .font(.headline)
                     Text(error.localizedDescription)
@@ -471,7 +471,7 @@ struct OptimizedDiffView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "doc.text")
                         .font(.system(size: 40))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                     Text("No changes")
                         .font(.headline)
                         .foregroundColor(.secondary)
@@ -496,7 +496,7 @@ struct OptimizedDiffView: View {
                 StandardDiffContent(hunks: hunks, options: options)
             }
         }
-        .background(GitKrakenTheme.background)
+        .background(AppTheme.background)
         .task {
             await loadDiff()
         }

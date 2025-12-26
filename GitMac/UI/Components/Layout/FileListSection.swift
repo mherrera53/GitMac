@@ -54,7 +54,7 @@ extension FileListSection where HeaderActions == EmptyView {
         title: String,
         count: Int,
         icon: String,
-        headerColor: Color = GitKrakenTheme.accent,
+        headerColor: Color = AppTheme.accent,
         style: SectionHeader<EmptyView>.HeaderStyle = .default,
         maxHeight: CGFloat? = nil,
         @ViewBuilder content: @escaping () -> Content
@@ -77,7 +77,7 @@ struct ListSection<HeaderActions: View, Content: View>: View {
     let title: String
     let count: Int
     let icon: String
-    var color: Color = GitKrakenTheme.accent
+    var color: Color = AppTheme.accent
     var style: SectionHeader<HeaderActions>.HeaderStyle = .default
     var isScrollable: Bool = true
     var maxHeight: CGFloat? = nil
@@ -127,7 +127,7 @@ extension ListSection where HeaderActions == EmptyView {
         title: String,
         count: Int,
         icon: String,
-        color: Color = GitKrakenTheme.accent,
+        color: Color = AppTheme.accent,
         style: SectionHeader<EmptyView>.HeaderStyle = .default,
         isScrollable: Bool = true,
         maxHeight: CGFloat? = nil,
@@ -164,7 +164,7 @@ struct FileListSection_Previews: PreviewProvider {
                 title: "Unstaged Files",
                 count: 5,
                 icon: "doc.badge.ellipsis",
-                headerColor: GitKrakenTheme.warning,
+                headerColor: AppTheme.warning,
                 headerActions: {
                     HStack(spacing: 4) {
                         ActionButton.stage(tooltip: "Stage All") { print("Stage all") }
@@ -195,7 +195,7 @@ struct FileListSection_Previews: PreviewProvider {
                 title: "Branches",
                 count: 3,
                 icon: "arrow.branch",
-                color: GitKrakenTheme.accent,
+                color: AppTheme.accent,
                 isScrollable: false
             ) {
                 VStack(spacing: 4) {
@@ -213,7 +213,7 @@ struct FileListSection_Previews: PreviewProvider {
                 title: "Stashed Changes",
                 count: 2,
                 icon: "tray.fill",
-                headerColor: GitKrakenTheme.accentPurple,
+                headerColor: AppTheme.accentPurple,
                 style: .compact
             ) {
                 Text("Stash 1: WIP on main")

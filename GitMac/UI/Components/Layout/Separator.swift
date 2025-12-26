@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Separator
 
 /// Styled separator/divider for layouts
-/// Provides horizontal and vertical separators with GitKraken styling
+/// Provides horizontal and vertical separators with modern styling
 struct Separator: View {
     var orientation: Orientation = .horizontal
     var style: SeparatorStyle = .default
@@ -16,7 +16,7 @@ struct Separator: View {
     }
 
     enum SeparatorStyle {
-        case `default`      // Standard GitKraken border color
+        case `default`      // Standard border color
         case subtle         // Very light separator
         case prominent      // Darker, more visible
         case accent         // Uses accent color
@@ -38,13 +38,13 @@ struct Separator: View {
 
         switch style {
         case .default:
-            return GitKrakenTheme.border
+            return AppTheme.border
         case .subtle:
-            return GitKrakenTheme.border.opacity(0.3)
+            return AppTheme.border.opacity(0.3)
         case .prominent:
-            return GitKrakenTheme.border.opacity(1.5)
+            return AppTheme.border.opacity(1.5)
         case .accent:
-            return GitKrakenTheme.accent.opacity(0.5)
+            return AppTheme.accent.opacity(0.5)
         }
     }
 

@@ -93,7 +93,7 @@ extension ActionButton {
     /// Creates a standard-sized action button (24x24)
     init(
         icon: String,
-        color: Color = GitKrakenTheme.accent,
+        color: Color = AppTheme.accent,
         tooltip: String,
         action: @escaping () async -> Void
     ) {
@@ -110,7 +110,7 @@ extension ActionButton {
     static func stage(tooltip: String = "Stage", action: @escaping () async -> Void) -> ActionButton {
         ActionButton(
             icon: "plus.circle.fill",
-            color: GitKrakenTheme.success,
+            color: AppTheme.success,
             size: .compact,
             tooltip: tooltip,
             action: action
@@ -121,7 +121,7 @@ extension ActionButton {
     static func unstage(tooltip: String = "Unstage", action: @escaping () async -> Void) -> ActionButton {
         ActionButton(
             icon: "minus.circle.fill",
-            color: GitKrakenTheme.warning,
+            color: AppTheme.warning,
             size: .compact,
             tooltip: tooltip,
             action: action
@@ -132,7 +132,7 @@ extension ActionButton {
     static func discard(tooltip: String = "Discard", action: @escaping () async -> Void) -> ActionButton {
         ActionButton(
             icon: "trash",
-            color: GitKrakenTheme.error,
+            color: AppTheme.error,
             size: .compact,
             tooltip: tooltip,
             action: action
@@ -143,7 +143,7 @@ extension ActionButton {
     static func refresh(tooltip: String = "Refresh", action: @escaping () async -> Void) -> ActionButton {
         ActionButton(
             icon: "arrow.clockwise",
-            color: GitKrakenTheme.accent,
+            color: AppTheme.accent,
             size: .standard,
             tooltip: tooltip,
             action: action
@@ -154,7 +154,7 @@ extension ActionButton {
     static func expandAll(tooltip: String = "Expand All", action: @escaping () async -> Void) -> ActionButton {
         ActionButton(
             icon: "arrow.down.right.and.arrow.up.left",
-            color: GitKrakenTheme.accent,
+            color: AppTheme.accent,
             size: .standard,
             tooltip: tooltip,
             action: action
@@ -165,7 +165,7 @@ extension ActionButton {
     static func collapseAll(tooltip: String = "Collapse All", action: @escaping () async -> Void) -> ActionButton {
         ActionButton(
             icon: "arrow.up.left.and.arrow.down.right",
-            color: GitKrakenTheme.accent,
+            color: AppTheme.accent,
             size: .standard,
             tooltip: tooltip,
             action: action

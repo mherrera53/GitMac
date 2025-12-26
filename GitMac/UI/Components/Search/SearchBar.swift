@@ -60,7 +60,7 @@ struct SearchBar: View {
     }
 
     private var borderColor: Color {
-        isFocused ? GitKrakenTheme.accent : Color.secondary.opacity(0.2)
+        isFocused ? AppTheme.accent : Color.secondary.opacity(0.2)
     }
 }
 

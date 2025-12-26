@@ -66,11 +66,11 @@ enum LoadingButtonStyle {
 
     var backgroundColor: Color {
         switch self {
-        case .default: return GitKrakenTheme.backgroundSecondary
-        case .primary: return GitKrakenTheme.accent
-        case .success: return GitKrakenTheme.accentGreen
-        case .danger: return GitKrakenTheme.accentRed
-        case .warning: return GitKrakenTheme.accentOrange
+        case .default: return AppTheme.backgroundSecondary
+        case .primary: return AppTheme.accent
+        case .success: return AppTheme.accentGreen
+        case .danger: return AppTheme.accentRed
+        case .warning: return AppTheme.accentOrange
         case .ghost: return Color.clear
         case .outline: return Color.clear
         }
@@ -78,22 +78,22 @@ enum LoadingButtonStyle {
 
     var foregroundColor: Color {
         switch self {
-        case .default: return GitKrakenTheme.textPrimary
+        case .default: return AppTheme.textPrimary
         case .primary, .success, .danger, .warning: return .white
-        case .ghost: return GitKrakenTheme.textSecondary
-        case .outline: return GitKrakenTheme.accent
+        case .ghost: return AppTheme.textSecondary
+        case .outline: return AppTheme.accent
         }
     }
 
     var hoverBackgroundColor: Color {
         switch self {
-        case .default: return GitKrakenTheme.hover
-        case .primary: return GitKrakenTheme.accent.opacity(0.85)
-        case .success: return GitKrakenTheme.accentGreen.opacity(0.85)
-        case .danger: return GitKrakenTheme.accentRed.opacity(0.85)
-        case .warning: return GitKrakenTheme.accentOrange.opacity(0.85)
-        case .ghost: return GitKrakenTheme.hover
-        case .outline: return GitKrakenTheme.accent.opacity(0.1)
+        case .default: return AppTheme.hover
+        case .primary: return AppTheme.accent.opacity(0.85)
+        case .success: return AppTheme.accentGreen.opacity(0.85)
+        case .danger: return AppTheme.accentRed.opacity(0.85)
+        case .warning: return AppTheme.accentOrange.opacity(0.85)
+        case .ghost: return AppTheme.hover
+        case .outline: return AppTheme.accent.opacity(0.1)
         }
     }
 }
@@ -116,7 +116,7 @@ struct LoadingButtonStyleModifier: ButtonStyle {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
-                    .stroke(style == .outline ? GitKrakenTheme.accent : Color.clear, lineWidth: 1)
+                    .stroke(style == .outline ? AppTheme.accent : Color.clear, lineWidth: 1)
             )
             .opacity(configuration.isPressed ? 0.8 : 1)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
@@ -278,7 +278,7 @@ struct LineActionButtons: View {
         .padding(.vertical, 2)
         .background(
             RoundedRectangle(cornerRadius: 4)
-                .fill(GitKrakenTheme.backgroundSecondary.opacity(0.95))
+                .fill(AppTheme.backgroundSecondary.opacity(0.95))
         )
         .opacity(isHovered ? 1 : 0)
         .onHover { isHovered = $0 }
@@ -299,11 +299,11 @@ struct BatchActionBar: View {
             // Selection info
             HStack(spacing: 6) {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(GitKrakenTheme.accent)
+                    .foregroundColor(AppTheme.accent)
                 Text("\(selectedCount) selected")
                     .font(.system(size: 12, weight: .medium))
             }
-            .foregroundColor(GitKrakenTheme.textPrimary)
+            .foregroundColor(AppTheme.textPrimary)
 
             Spacer()
 
@@ -328,16 +328,16 @@ struct BatchActionBar: View {
                         .font(.system(size: 10, weight: .bold))
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
                 .help("Clear selection")
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(GitKrakenTheme.accent.opacity(0.1))
+        .background(AppTheme.accent.opacity(0.1))
         .overlay(
             Rectangle()
-                .fill(GitKrakenTheme.accent)
+                .fill(AppTheme.accent)
                 .frame(height: 2),
             alignment: .top
         )
@@ -361,17 +361,17 @@ struct ConfirmationDialog: View {
             // Icon
             Image(systemName: confirmStyle == .danger ? "exclamationmark.triangle.fill" : "questionmark.circle.fill")
                 .font(.system(size: 40))
-                .foregroundColor(confirmStyle == .danger ? GitKrakenTheme.accentRed : GitKrakenTheme.accent)
+                .foregroundColor(confirmStyle == .danger ? AppTheme.accentRed : AppTheme.accent)
 
             // Title
             Text(title)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(AppTheme.textPrimary)
 
             // Message
             Text(message)
                 .font(.system(size: 13))
-                .foregroundColor(GitKrakenTheme.textSecondary)
+                .foregroundColor(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
 
             // Actions
@@ -385,7 +385,7 @@ struct ConfirmationDialog: View {
                 .buttonStyle(.plain)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(GitKrakenTheme.backgroundSecondary)
+                .background(AppTheme.backgroundSecondary)
                 .cornerRadius(6)
 
                 LoadingButton(style: confirmStyle, loadingLabel: "Processing...") {
@@ -399,7 +399,7 @@ struct ConfirmationDialog: View {
             }
         }
         .padding(24)
-        .background(GitKrakenTheme.panel)
+        .background(AppTheme.panel)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.3), radius: 20)
     }
@@ -440,7 +440,7 @@ struct LoadingButton_Previews: PreviewProvider {
             }
         }
         .padding()
-        .background(GitKrakenTheme.background)
+        .background(AppTheme.background)
     }
 }
 #endif

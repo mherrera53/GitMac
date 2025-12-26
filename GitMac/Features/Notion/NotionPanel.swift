@@ -20,7 +20,7 @@ struct NotionPanel: View {
 
                 Text("Notion")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
 
                 // Database selector
                 if !viewModel.databases.isEmpty {
@@ -44,7 +44,7 @@ struct NotionPanel: View {
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
 
                 // Settings
                 Button {
@@ -54,7 +54,7 @@ struct NotionPanel: View {
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
 
                 // Close
                 Button(action: onClose) {
@@ -62,13 +62,13 @@ struct NotionPanel: View {
                         .font(.system(size: 10, weight: .bold))
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(GitKrakenTheme.toolbar)
+            .background(AppTheme.toolbar)
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+            Rectangle().fill(AppTheme.border).frame(height: 1)
 
             // Content
             if !viewModel.isAuthenticated {
@@ -83,7 +83,7 @@ struct NotionPanel: View {
             }
         }
         .frame(height: height)
-        .background(GitKrakenTheme.panel)
+        .background(AppTheme.panel)
         .sheet(isPresented: $viewModel.showSettings) {
             NotionSettingsSheet(viewModel: viewModel)
         }
@@ -179,11 +179,11 @@ struct NotionLoginPrompt: View {
 
             Text("Connect to Notion")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(AppTheme.textPrimary)
 
             Text("Enter your Notion integration token")
                 .font(.system(size: 12))
-                .foregroundColor(GitKrakenTheme.textSecondary)
+                .foregroundColor(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
 
             SecureField("Integration Token", text: $integrationToken)
@@ -216,7 +216,7 @@ struct NotionLoginPrompt: View {
 
                 Text("Make sure to share your databases with the integration")
                     .font(.system(size: 10))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -282,7 +282,7 @@ struct NotionTaskRow: View {
             // Title
             Text(task.title)
                 .font(.system(size: 12))
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(AppTheme.textPrimary)
                 .lineLimit(1)
                 .strikethrough(task.status?.lowercased() == "done")
 
@@ -304,7 +304,7 @@ struct NotionTaskRow: View {
                 Link(destination: URL(string: url)!) {
                     Image(systemName: "arrow.up.right.square")
                         .font(.system(size: 10))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 .help("Open in Notion")
             }
@@ -319,14 +319,14 @@ struct NotionTaskRow: View {
             } label: {
                 Image(systemName: "arrow.right.doc.on.clipboard")
                     .font(.system(size: 10))
-                    .foregroundColor(GitKrakenTheme.accent)
+                    .foregroundColor(AppTheme.accent)
             }
             .buttonStyle(.plain)
             .help("Insert into commit message")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(isHovered ? GitKrakenTheme.hover : Color.clear)
+        .background(isHovered ? AppTheme.hover : Color.clear)
         .cornerRadius(4)
         .onHover { isHovered = $0 }
     }
@@ -357,11 +357,11 @@ struct NotionEmptyView: View {
         VStack(spacing: 12) {
             Image(systemName: "tray")
                 .font(.system(size: 32))
-                .foregroundColor(GitKrakenTheme.textMuted)
+                .foregroundColor(AppTheme.textMuted)
 
             Text(message)
                 .font(.system(size: 13))
-                .foregroundColor(GitKrakenTheme.textSecondary)
+                .foregroundColor(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -378,19 +378,19 @@ struct NotionSettingsSheet: View {
             HStack {
                 Text("Notion Settings")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(GitKrakenTheme.textPrimary)
+                    .foregroundColor(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
             .padding(16)
-            .background(GitKrakenTheme.toolbar)
+            .background(AppTheme.toolbar)
 
-            Rectangle().fill(GitKrakenTheme.border).frame(height: 1)
+            Rectangle().fill(AppTheme.border).frame(height: 1)
 
             VStack(alignment: .leading, spacing: 16) {
                 if viewModel.isAuthenticated {
@@ -399,12 +399,12 @@ struct NotionSettingsSheet: View {
                             .foregroundColor(.green)
                         Text("Connected to Notion")
                             .font(.system(size: 13))
-                            .foregroundColor(GitKrakenTheme.textPrimary)
+                            .foregroundColor(AppTheme.textPrimary)
                     }
 
                     Text("\(viewModel.databases.count) databases available")
                         .font(.system(size: 12))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
 
                     Button("Disconnect") {
                         viewModel.logout()
@@ -414,7 +414,7 @@ struct NotionSettingsSheet: View {
                 } else {
                     Text("Not connected to Notion")
                         .font(.system(size: 13))
-                        .foregroundColor(GitKrakenTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
             }
             .padding(16)
@@ -422,7 +422,7 @@ struct NotionSettingsSheet: View {
             Spacer()
         }
         .frame(width: 350, height: 220)
-        .background(GitKrakenTheme.panel)
+        .background(AppTheme.panel)
     }
 }
 
@@ -434,7 +434,7 @@ struct NotionPanelResizer: View {
 
     var body: some View {
         Rectangle()
-            .fill(GitKrakenTheme.border)
+            .fill(AppTheme.border)
             .frame(height: 4)
             .contentShape(Rectangle())
             .gesture(

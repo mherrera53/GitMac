@@ -214,10 +214,10 @@ struct ToastView: View {
 
         var color: Color {
             switch self {
-            case .success: return GitKrakenTheme.accentGreen
-            case .error: return GitKrakenTheme.accentRed
-            case .info: return GitKrakenTheme.accent
-            case .warning: return GitKrakenTheme.accentOrange
+            case .success: return AppTheme.accentGreen
+            case .error: return AppTheme.accentRed
+            case .info: return AppTheme.accent
+            case .warning: return AppTheme.accentOrange
             }
         }
     }
@@ -230,13 +230,13 @@ struct ToastView: View {
 
             Text(message)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(GitKrakenTheme.textPrimary)
+                .foregroundColor(AppTheme.textPrimary)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(GitKrakenTheme.backgroundSecondary)
+                .fill(AppTheme.backgroundSecondary)
                 .shadow(color: Color.black.opacity(0.3), radius: 10, x: 0, y: 4)
         )
         .overlay(

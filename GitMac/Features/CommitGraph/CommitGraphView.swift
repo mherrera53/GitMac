@@ -29,7 +29,7 @@ struct CommitGraphView: View {
             Divider()
             graphContent
         }
-        .background(GitKrakenTheme.background)
+        .background(AppTheme.background)
         .task {
             if let p = appState.currentRepository?.path {
                 await vm.load(at: p)
@@ -117,9 +117,9 @@ struct CommitGraphView: View {
                 .padding(.leading, 8)
         }
         .font(.system(size: 10, weight: .semibold))
-        .foregroundColor(GitKrakenTheme.textMuted)
+        .foregroundColor(AppTheme.textMuted)
         .frame(height: 28)
-        .background(GitKrakenTheme.backgroundSecondary)
+        .background(AppTheme.backgroundSecondary)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Graph Header: Branch, Graph, Commit Message")
     }
@@ -325,7 +325,7 @@ struct UncommittedChangesRow: View {
                     // Dotted circle
                     let nodeRect = CGRect(x: myX - R, y: cy - R, width: R * 2, height: R * 2)
                     // Fill with background to hide line passing through
-                    ctx.fill(Circle().path(in: nodeRect), with: .color(GitKrakenTheme.background))
+                    ctx.fill(Circle().path(in: nodeRect), with: .color(AppTheme.background))
                     ctx.stroke(Circle().path(in: nodeRect), with: .color(.orange), style: StrokeStyle(lineWidth: 2, dash: [3, 3]))
                 }
                 .frame(width: 110, height: H)
@@ -345,14 +345,14 @@ struct UncommittedChangesRow: View {
                         .foregroundColor(.orange)
                     Text("\(stagedCount) staged, \(unstagedCount) unstaged")
                         .font(.system(size: 10))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 Spacer()
             }
             .padding(.horizontal, 8)
         }
         .frame(height: H)
-        .background(isSelected ? GitKrakenTheme.selection : (isHovered ? GitKrakenTheme.hover : Color.clear))
+        .background(isSelected ? AppTheme.selection : (isHovered ? AppTheme.hover : Color.clear))
     }
 
     func drawDottedLine(_ ctx: GraphicsContext, from: CGPoint, to: CGPoint, color: Color) {
@@ -363,7 +363,7 @@ struct UncommittedChangesRow: View {
     }
 }
 
-// MARK: - Graph Stash Row (GitKraken style)
+// MARK: - Graph Stash Row (Modern)
 struct GraphStashRow: View {
     let stash: StashNode
     let isSelected: Bool
@@ -373,7 +373,7 @@ struct GraphStashRow: View {
     private let W: CGFloat = 26
     private let boxSize: CGFloat = 18
     private let LW: CGFloat = 2
-    private let stashColor = Color(hex: "009999") // Teal/Cyan like GitKraken
+    private let stashColor = Color(hex: "009999") // Teal/Cyan with advanced features
 
     var body: some View {
         HStack(spacing: 0) {
@@ -426,7 +426,7 @@ struct GraphStashRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(stash.stash.displayMessage)
                         .font(.system(size: 12))
-                        .foregroundColor(GitKrakenTheme.textPrimary)
+                        .foregroundColor(AppTheme.textPrimary)
                         .lineLimit(1)
 
                     HStack(spacing: 6) {
@@ -437,7 +437,7 @@ struct GraphStashRow: View {
                         if let branch = stash.stash.branchName {
                             Text("on \(branch)")
                                 .font(.system(size: 10))
-                                .foregroundColor(GitKrakenTheme.textMuted)
+                                .foregroundColor(AppTheme.textMuted)
                         }
                     }
                 }
@@ -446,13 +446,13 @@ struct GraphStashRow: View {
 
                 Text(stash.stash.relativeDate)
                     .font(.system(size: 10))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
                     .frame(width: 70, alignment: .trailing)
             }
             .padding(.horizontal, 8)
         }
         .frame(height: H)
-        .background(isSelected ? GitKrakenTheme.selection : (isHovered ? GitKrakenTheme.hover : Color.clear))
+        .background(isSelected ? AppTheme.selection : (isHovered ? AppTheme.hover : Color.clear))
         .contextMenu {
             Button {
                 NotificationCenter.default.post(name: .applyStash, object: stash.stash.index)
@@ -474,7 +474,7 @@ struct GraphStashRow: View {
     }
 }
 
-// MARK: - Stash Badge (GitKraken style - solid background)
+// MARK: - Stash Badge (Modern - solid background)
 struct StashBadge: View {
     let name: String
     private let stashColor = Color(red: 0.3, green: 0.7, blue: 0.7)
@@ -508,7 +508,7 @@ extension Notification.Name {
     static let dropStash = Notification.Name("dropStash")
 }
 
-// MARK: - Branch Badge (GitKraken style)
+// MARK: - Branch Badge (Modern)
 struct BranchBadge: View {
     let name: String
     let color: Color
@@ -605,7 +605,7 @@ struct GraphRow: View {
                     let nodeRect = CGRect(x: myX - R, y: cy - R, width: R * 2, height: R * 2)
                     ctx.fill(Circle().path(in: nodeRect), with: .color(c))
                     // Add a white/background stroke to separate node from lines
-                    ctx.stroke(Circle().path(in: nodeRect), with: .color(GitKrakenTheme.background), lineWidth: 2)
+                    ctx.stroke(Circle().path(in: nodeRect), with: .color(AppTheme.background), lineWidth: 2)
                 }
                 .frame(width: 110, height: H)
 
@@ -619,7 +619,7 @@ struct GraphRow: View {
                     )
                     .background(
                         Circle()
-                            .fill(GitKrakenTheme.background)
+                            .fill(AppTheme.background)
                     )
                     .offset(x: x(node.lane) - 55) // Center on node position (55 is half of 110 width)
                     .scaleEffect(isHovered ? 1.15 : 1.0)
@@ -631,28 +631,28 @@ struct GraphRow: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(node.commit.summary)
                         .font(.system(size: 12))
-                        .foregroundColor(GitKrakenTheme.textPrimary)
+                        .foregroundColor(AppTheme.textPrimary)
                         .lineLimit(1)
                     Text(node.commit.author)
                         .font(.system(size: 10))
-                        .foregroundColor(GitKrakenTheme.textMuted)
+                        .foregroundColor(AppTheme.textMuted)
                 }
 
                 Spacer()
 
                 Text(node.commit.shortSha)
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
 
                 Text(node.commit.relativeDate)
                     .font(.system(size: 10))
-                    .foregroundColor(GitKrakenTheme.textMuted)
+                    .foregroundColor(AppTheme.textMuted)
                     .frame(width: 70, alignment: .trailing)
             }
             .padding(.horizontal, 8)
         }
         .frame(height: H)
-        .background(isSelected ? GitKrakenTheme.selection : (isHovered ? GitKrakenTheme.hover : Color.clear))
+        .background(isSelected ? AppTheme.selection : (isHovered ? AppTheme.hover : Color.clear))
         .contextMenu {
             CommitContextMenu(commits: [node.commit])
         }
@@ -680,7 +680,7 @@ struct GraphRow: View {
     func drawBezier(_ ctx: GraphicsContext, from: CGPoint, to: CGPoint, color: Color) {
         var p = Path()
         p.move(to: from)
-        // More GitKraken-like smooth curve (less S-shape, more like railroad tracks that merge)
+        // More smooth smooth curve (less S-shape, more like railroad tracks that merge)
         let controlY = from.y + (to.y - from.y) * 0.6 // Push control point further down
         p.addCurve(
             to: to,

@@ -8,7 +8,7 @@ struct SectionHeader<Actions: View>: View {
     let title: String
     let count: Int
     let icon: String
-    var color: Color = GitKrakenTheme.accent
+    var color: Color = AppTheme.accent
     var isCollapsible: Bool = true
     @Binding var isExpanded: Bool
     @ViewBuilder var actions: () -> Actions
@@ -82,7 +82,7 @@ struct SectionHeader<Actions: View>: View {
     private var backgroundColor: Color {
         switch style {
         case .default:
-            return isHovered ? GitKrakenTheme.hover : Color(nsColor: .controlBackgroundColor)
+            return isHovered ? AppTheme.hover : Color(nsColor: .controlBackgroundColor)
         case .compact:
             return .clear
         case .prominent:
@@ -167,7 +167,7 @@ extension SectionHeader where Actions == EmptyView {
         title: String,
         count: Int,
         icon: String,
-        color: Color = GitKrakenTheme.accent,
+        color: Color = AppTheme.accent,
         isCollapsible: Bool = true,
         isExpanded: Binding<Bool>,
         style: HeaderStyle = .default
@@ -187,7 +187,7 @@ extension SectionHeader where Actions == EmptyView {
         title: String,
         count: Int,
         icon: String,
-        color: Color = GitKrakenTheme.accent,
+        color: Color = AppTheme.accent,
         style: HeaderStyle = .default
     ) -> SectionHeader<EmptyView> {
         SectionHeader(
@@ -217,7 +217,7 @@ struct SectionHeader_Previews: PreviewProvider {
                 title: "Unstaged Files",
                 count: 15,
                 icon: "doc.badge.ellipsis",
-                color: GitKrakenTheme.warning,
+                color: AppTheme.warning,
                 isExpanded: $isExpanded1
             )
 
@@ -226,7 +226,7 @@ struct SectionHeader_Previews: PreviewProvider {
                 title: "Staged Files",
                 count: 8,
                 icon: "checkmark.circle.fill",
-                color: GitKrakenTheme.success,
+                color: AppTheme.success,
                 isExpanded: $isExpanded2
             ) {
                 HStack(spacing: 4) {
@@ -240,7 +240,7 @@ struct SectionHeader_Previews: PreviewProvider {
                 title: "Local Branches",
                 count: 12,
                 icon: "arrow.branch",
-                color: GitKrakenTheme.accent,
+                color: AppTheme.accent,
                 isExpanded: $isExpanded3,
                 style: .compact
             )
@@ -250,7 +250,7 @@ struct SectionHeader_Previews: PreviewProvider {
                 title: "Recent Commits",
                 count: 42,
                 icon: "clock",
-                color: GitKrakenTheme.accentPurple,
+                color: AppTheme.accentPurple,
                 isExpanded: .constant(true),
                 style: .prominent
             )
@@ -260,7 +260,7 @@ struct SectionHeader_Previews: PreviewProvider {
                 title: "Remote Branches",
                 count: 5,
                 icon: "cloud",
-                color: GitKrakenTheme.accentCyan
+                color: AppTheme.accentCyan
             )
         }
         .padding()
