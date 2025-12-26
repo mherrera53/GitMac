@@ -80,10 +80,8 @@
 		AC9431AA2EE97DE700A59026 /* FASE3_PROGRESS.md in Resources */ = {isa = PBXBuildFile; fileRef = AC9431A92EE97DE700A59026 /* FASE3_PROGRESS.md */; };
 		AC9431B02EE97F5B00A59026 /* INTEGRATION_GUIDE.md in Resources */ = {isa = PBXBuildFile; fileRef = AC9431AF2EE97F5B00A59026 /* INTEGRATION_GUIDE.md */; };
 		AC9431B22EE97FAF00A59026 /* REVIEW_GUIDE.md in Resources */ = {isa = PBXBuildFile; fileRef = AC9431B12EE97FAF00A59026 /* REVIEW_GUIDE.md */; };
-		AC9431B42EE9804700A59026 /* fix_build.sh in Resources */ = {isa = PBXBuildFile; fileRef = AC9431B32EE9804700A59026 /* fix_build.sh */; };
 		AC9431B82EE980A900A59026 /* INTEGRATION_CHECKLIST.md in Resources */ = {isa = PBXBuildFile; fileRef = AC9431B72EE980A900A59026 /* INTEGRATION_CHECKLIST.md */; };
 		AC9431BA2EE980CD00A59026 /* FIX_BUILD_NOW.md in Resources */ = {isa = PBXBuildFile; fileRef = AC9431B92EE980CD00A59026 /* FIX_BUILD_NOW.md */; };
-		AC9431BC2EE981EA00A59026 /* remove_duplicates.sh in Resources */ = {isa = PBXBuildFile; fileRef = AC9431BB2EE981EA00A59026 /* remove_duplicates.sh */; };
 		AC9431BE2EE9822D00A59026 /* QUICK_START.md in Resources */ = {isa = PBXBuildFile; fileRef = AC9431BD2EE9822D00A59026 /* QUICK_START.md */; };
 		AC9431C02EE99A4800A59026 /* RemoteOperationTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC9431BF2EE99A4800A59026 /* RemoteOperationTracker.swift */; };
 		AC9431C22EE99AA000A59026 /* REMOTE_STATUS_INTEGRATION.md in Resources */ = {isa = PBXBuildFile; fileRef = AC9431C12EE99AA000A59026 /* REMOTE_STATUS_INTEGRATION.md */; };
@@ -211,10 +209,8 @@
 		AC9431A92EE97DE700A59026 /* FASE3_PROGRESS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = FASE3_PROGRESS.md; sourceTree = "<group>"; };
 		AC9431AF2EE97F5B00A59026 /* INTEGRATION_GUIDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = INTEGRATION_GUIDE.md; sourceTree = "<group>"; };
 		AC9431B12EE97FAF00A59026 /* REVIEW_GUIDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = REVIEW_GUIDE.md; sourceTree = "<group>"; };
-		AC9431B32EE9804700A59026 /* fix_build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = fix_build.sh; sourceTree = "<group>"; };
 		AC9431B72EE980A900A59026 /* INTEGRATION_CHECKLIST.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = INTEGRATION_CHECKLIST.md; sourceTree = "<group>"; };
 		AC9431B92EE980CD00A59026 /* FIX_BUILD_NOW.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = FIX_BUILD_NOW.md; sourceTree = "<group>"; };
-		AC9431BB2EE981EA00A59026 /* remove_duplicates.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = remove_duplicates.sh; sourceTree = "<group>"; };
 		AC9431BD2EE9822D00A59026 /* QUICK_START.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = QUICK_START.md; sourceTree = "<group>"; };
 		AC9431BF2EE99A4800A59026 /* RemoteOperationTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteOperationTracker.swift; sourceTree = "<group>"; };
 		AC9431C12EE99AA000A59026 /* REMOTE_STATUS_INTEGRATION.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = REMOTE_STATUS_INTEGRATION.md; sourceTree = "<group>"; };
@@ -381,10 +377,8 @@
 				AC9431A92EE97DE700A59026 /* FASE3_PROGRESS.md */,
 				AC9431AF2EE97F5B00A59026 /* INTEGRATION_GUIDE.md */,
 				AC9431B12EE97FAF00A59026 /* REVIEW_GUIDE.md */,
-				AC9431B32EE9804700A59026 /* fix_build.sh */,
 				AC9431B72EE980A900A59026 /* INTEGRATION_CHECKLIST.md */,
 				AC9431B92EE980CD00A59026 /* FIX_BUILD_NOW.md */,
-				AC9431BB2EE981EA00A59026 /* remove_duplicates.sh */,
 				AC9431BD2EE9822D00A59026 /* QUICK_START.md */,
 				AC9431BF2EE99A4800A59026 /* RemoteOperationTracker.swift */,
 				AC9431C12EE99AA000A59026 /* REMOTE_STATUS_INTEGRATION.md */,
@@ -488,12 +482,10 @@
 			files = (
 				APP002 /* Assets.xcassets in Resources */,
 				AC9431A42EE97D6000A59026 /* BUILD_FIX.md in Resources */,
-				AC9431B42EE9804700A59026 /* fix_build.sh in Resources */,
 				AC9431AA2EE97DE700A59026 /* FASE3_PROGRESS.md in Resources */,
 				AC9431B82EE980A900A59026 /* INTEGRATION_CHECKLIST.md in Resources */,
 				AC9431BE2EE9822D00A59026 /* QUICK_START.md in Resources */,
 				AC9431982EE97AF100A59026 /* IMPLEMENTATION_ROADMAP.md in Resources */,
-				AC9431BC2EE981EA00A59026 /* remove_duplicates.sh in Resources */,
 				AC9431B02EE97F5B00A59026 /* INTEGRATION_GUIDE.md in Resources */,
 				AC9431C22EE99AA000A59026 /* REMOTE_STATUS_INTEGRATION.md in Resources */,
 				AC9431BA2EE980CD00A59026 /* FIX_BUILD_NOW.md in Resources */,
