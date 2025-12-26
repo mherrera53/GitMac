@@ -31,3 +31,9 @@ Frameworks/
 # Work in progress documentation
 GHOSTTY_*.md
 TERMINAL_INTEGRATION_STEPS.md
+
+# Ghostty terminal integration (WIP - requires external framework)
+GitMac/Features/Terminal/Ghostty*.swift
+GitMac/Features/Terminal/Ghostty*.h
+GitMac/Features/Terminal/Ghostty*.m
+GitMac/GitMac-Bridging-Header.h
