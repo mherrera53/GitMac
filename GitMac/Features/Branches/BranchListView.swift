@@ -11,99 +11,19 @@ struct BranchListView: View {
     @State private var showRebaseSheet = false
     @State private var showDeleteAlert = false
     @State private var showPRSheet = false
+    @State private var localBranchesExpanded = true
+    @State private var remoteBranchesExpanded = true
+
+    // Drag and drop state
+    @State private var showDragDropActionSheet = false
+    @State private var draggedBranch: Branch?
+    @State private var targetBranch: Branch?
 
     var body: some View {
         VStack(spacing: 0) {
-            // Search and actions
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-
-                TextField("Search branches...", text: $searchText)
-                    .textFieldStyle(.plain)
-
-                Button {
-                    showNewBranchSheet = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .buttonStyle(.borderless)
-                .help("New branch")
-            }
-            .padding(8)
-            .background(Color(nsColor: .controlBackgroundColor))
-
+            searchHeader
             Divider()
-
-            // Branch list
-            ScrollView {
-                LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                    // Local branches
-                    Section {
-                        ForEach(filteredLocalBranches) { branch in
-                            BranchRow(
-                                branch: branch,
-                                isSelected: selectedBranch?.id == branch.id,
-                                onSelect: { selectedBranch = branch },
-                                onCheckout: { Task { await viewModel.checkout(branch) } },
-                                onMerge: {
-                                    selectedBranch = branch
-                                    showMergeSheet = true
-                                },
-                                onRebase: {
-                                    selectedBranch = branch
-                                    showRebaseSheet = true
-                                },
-                                onRename: {
-                                    // TODO: Implement Rename Sheet
-                                    NotificationCenter.default.post(name: .renameBranch, object: branch)
-                                },
-                                onPush: { Task { await viewModel.push(branch) } },
-                                onPull: { Task { await viewModel.pull(branch) } },
-                                onDelete: {
-                                    selectedBranch = branch
-                                    showDeleteAlert = true
-                                },
-                                onStartPR: {
-                                    selectedBranch = branch
-                                    showPRSheet = true
-                                }
-                            )
-                        }
-                    } header: {
-                        SectionHeader(title: "Local", count: filteredLocalBranches.count, icon: "arrow.triangle.branch")
-                    }
-
-                    // Remote branches
-                    Section {
-                        ForEach(groupedRemoteBranches.keys.sorted(), id: \.self) { remote in
-                            DisclosureGroup {
-                                ForEach(groupedRemoteBranches[remote] ?? []) { branch in
-                                    RemoteBranchRow(
-                                        branch: branch,
-                                        isSelected: selectedBranch?.id == branch.id,
-                                        onSelect: { selectedBranch = branch },
-                                        onCheckout: { Task { await viewModel.checkoutRemote(branch) } }
-                                    )
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: "network")
-                                        .foregroundColor(.orange)
-                                    Text(remote)
-                                        .fontWeight(.medium)
-                                    Text("(\(groupedRemoteBranches[remote]?.count ?? 0))")
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 4)
-                        }
-                    } header: {
-                        SectionHeader(title: "Remote", count: filteredRemoteBranches.count, icon: "network")
-                    }
-                }
-            }
+            branchListContent
         }
         .sheet(isPresented: $showNewBranchSheet) {
             NewBranchSheet(viewModel: viewModel)
@@ -159,12 +79,153 @@ struct BranchListView: View {
                 }
             }
         }
+        .alert("Merge or Rebase?", isPresented: $showDragDropActionSheet) {
+            Button("Cancel", role: .cancel) {
+                draggedBranch = nil
+                targetBranch = nil
+            }
+            Button("Merge") {
+                performDragDropMerge()
+            }
+            Button("Rebase") {
+                performDragDropRebase()
+            }
+        } message: {
+            if let dragged = draggedBranch, let target = targetBranch {
+                Text("Merge '\(dragged.name)' into '\(target.name)' or rebase '\(target.name)' onto '\(dragged.name)'?")
+            }
+        }
         .task {
             if let repo = appState.currentRepository {
                 viewModel.loadBranches(from: repo)
             }
         }
+        .onChange(of: appState.currentRepository?.path) { _ in
+            if let repo = appState.currentRepository {
+                viewModel.loadBranches(from: repo)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { notification in
+            if let repo = appState.currentRepository {
+                viewModel.loadBranches(from: repo)
+            }
+        }
     }
+
+    // MARK: - Subviews
+
+    private var searchHeader: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+
+            TextField("Search branches...", text: $searchText)
+                .textFieldStyle(.plain)
+
+            Button {
+                showNewBranchSheet = true
+            } label: {
+                Image(systemName: "plus")
+            }
+            .buttonStyle(.borderless)
+            .help("New branch")
+        }
+        .padding(8)
+        .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    private var branchListContent: some View {
+        ScrollView {
+            LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                localBranchesSection
+                remoteBranchesSection
+            }
+        }
+    }
+
+    private var localBranchesSection: some View {
+        Section {
+            ForEach(filteredLocalBranches) { branch in
+                branchRowView(for: branch)
+            }
+        } header: {
+            SectionHeader(
+                title: "Local",
+                count: filteredLocalBranches.count,
+                icon: "arrow.triangle.branch",
+                isExpanded: $localBranchesExpanded
+            )
+        }
+    }
+
+    private var remoteBranchesSection: some View {
+        Section {
+            ForEach(groupedRemoteBranches.keys.sorted(), id: \.self) { remote in
+                remoteGroupView(for: remote)
+            }
+        } header: {
+            SectionHeader(
+                title: "Remote",
+                count: filteredRemoteBranches.count,
+                icon: "network",
+                isExpanded: $remoteBranchesExpanded
+            )
+        }
+    }
+
+    private func branchRowView(for branch: Branch) -> some View {
+        Group {
+            BranchRow(
+                branch: branch,
+                isSelected: selectedBranch?.id == branch.id,
+                onSelect: { selectedBranch = branch },
+                onCheckout: { Task { await viewModel.checkout(branch) } },
+                onMerge: {
+                    selectedBranch = branch
+                    showMergeSheet = true
+                },
+                onDelete: {
+                    selectedBranch = branch
+                    showDeleteAlert = true
+                },
+                onPush: { Task { await viewModel.push(branch) } },
+                onPull: { Task { await viewModel.pull(branch) } },
+                onRebase: {
+                    selectedBranch = branch
+                    showRebaseSheet = true
+                },
+                onBranchDropped: { droppedBranch in
+                    handleBranchDrop(dragged: droppedBranch, onto: branch)
+                }
+            )
+        }
+    }
+
+    private func remoteGroupView(for remote: String) -> some View {
+        DisclosureGroup {
+            ForEach(groupedRemoteBranches[remote] ?? []) { branch in
+                RemoteBranchRow(
+                    branch: branch,
+                    isSelected: selectedBranch?.id == branch.id,
+                    onSelect: { selectedBranch = branch },
+                    onCheckout: { Task { await viewModel.checkoutRemote(branch) } }
+                )
+            }
+        } label: {
+            HStack {
+                Image(systemName: "network")
+                    .foregroundColor(.orange)
+                Text(remote)
+                    .fontWeight(.medium)
+                Text("(\(groupedRemoteBranches[remote]?.count ?? 0))")
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+    }
+
+    // MARK: - Filtered Data
 
     var filteredLocalBranches: [Branch] {
         if searchText.isEmpty {
@@ -183,6 +244,62 @@ struct BranchListView: View {
     var groupedRemoteBranches: [String: [Branch]] {
         Dictionary(grouping: filteredRemoteBranches) { branch in
             branch.remoteName ?? "origin"
+        }
+    }
+
+    // MARK: - Drag and Drop Handlers
+
+    private func handleBranchDrop(dragged: Branch, onto target: Branch) {
+        // Find the actual branch objects from the viewModel's list
+        guard let actualDragged = viewModel.localBranches.first(where: { $0.name == dragged.name }),
+              let actualTarget = viewModel.localBranches.first(where: { $0.name == target.name }) else {
+            return
+        }
+
+        draggedBranch = actualDragged
+        targetBranch = actualTarget
+        showDragDropActionSheet = true
+    }
+
+    private func performDragDropMerge() {
+        guard let dragged = draggedBranch, let target = targetBranch else { return }
+
+        Task {
+            // First checkout the target branch
+            await viewModel.checkout(target)
+
+            // Then merge the dragged branch into it
+            do {
+                try await viewModel.gitService.merge(branch: dragged.name)
+            } catch {
+                // Error handling - could show an error alert
+                print("Merge failed: \(error)")
+            }
+
+            // Clear the state
+            draggedBranch = nil
+            targetBranch = nil
+        }
+    }
+
+    private func performDragDropRebase() {
+        guard let dragged = draggedBranch, let target = targetBranch else { return }
+
+        Task {
+            // First checkout the target branch
+            await viewModel.checkout(target)
+
+            // Then rebase it onto the dragged branch
+            do {
+                try await viewModel.gitService.rebase(onto: dragged.name)
+            } catch {
+                // Error handling - could show an error alert
+                print("Rebase failed: \(error)")
+            }
+
+            // Clear the state
+            draggedBranch = nil
+            targetBranch = nil
         }
     }
 }
@@ -507,134 +624,11 @@ class BranchListViewModel: ObservableObject {
     }
 }
 
+// MARK: - SectionHeader moved to UI/Components/Layout/SectionHeader.swift
+
+// MARK: - BranchRow moved to UI/Components/Rows/BranchRow.swift
+
 // MARK: - Subviews
-
-struct SectionHeader: View {
-    let title: String
-    let count: Int
-    let icon: String
-
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundColor(.accentColor)
-            Text(title)
-                .fontWeight(.semibold)
-            Text("(\(count))")
-                .foregroundColor(.secondary)
-            Spacer()
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color(nsColor: .windowBackgroundColor))
-    }
-}
-
-struct BranchRow: View {
-    let branch: Branch
-    let isSelected: Bool
-    var onSelect: () -> Void = {}
-    var onCheckout: () -> Void = {}
-    var onMerge: () -> Void = {}
-    var onRebase: () -> Void = {}
-    var onRename: () -> Void = {}
-    var onPush: () -> Void = {}
-    var onPull: () -> Void = {}
-    var onDelete: () -> Void = {}
-    var onStartPR: () -> Void = {}
-
-    @State private var isHovered = false
-
-    var body: some View {
-        HStack(spacing: 8) {
-            // Branch icon
-            Image(systemName: branch.isHead ? "checkmark.circle.fill" : "arrow.triangle.branch")
-                .foregroundColor(branch.isHead ? .green : .blue)
-                .frame(width: 16)
-
-            // Branch name
-            Text(branch.name)
-                .fontWeight(branch.isHead ? .semibold : .regular)
-
-            // Upstream info
-            if let upstream = branch.upstream {
-                Text(upstream.statusText)
-                    .font(.caption)
-                    .foregroundColor(upstream.hasChanges ? .orange : .green)
-            }
-
-            Spacer()
-
-            // Actions on hover
-            if isHovered && !branch.isHead {
-                HStack(spacing: 4) {
-                    Button {
-                        onCheckout()
-                    } label: {
-                        Image(systemName: "arrow.right.circle")
-                    }
-                    .buttonStyle(.borderless)
-                    .help("Checkout")
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(isSelected ? Color.accentColor.opacity(0.2) : (isHovered ? Color.secondary.opacity(0.1) : Color.clear))
-        .contentShape(Rectangle())
-        .onTapGesture(count: 2) {
-            if !branch.isHead { onCheckout() }
-        }
-        .onTapGesture { onSelect() }
-        .onHover { isHovered = $0 }
-        .scaleEffect(isHovered ? 1.02 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHovered)
-        .contextMenu {
-            Button("Checkout") { onCheckout() }
-                .disabled(branch.isHead)
-
-            if branch.isHead {
-                Divider()
-                Button { onPull() } label: { Label("Pull", systemImage: "arrow.down") }
-                Button { onPush() } label: { Label("Push", systemImage: "arrow.up") }
-            }
-            
-            Divider()
-
-            Button {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(branch.name, forType: .string)
-            } label: {
-                Label("Copy Branch Name", systemImage: "doc.on.doc")
-            }
-
-            Divider()
-
-            Button {
-                onStartPR()
-            } label: {
-                Label("Start a Pull Request", systemImage: "arrow.triangle.pull")
-            }
-
-            Divider()
-
-            Button("Merge into current branch...") { onMerge() }
-                .disabled(branch.isHead)
-
-            Button("Rebase current branch onto this...") { onRebase() }
-                .disabled(branch.isHead)
-
-            Divider()
-
-            Button("Rename...") { onRename() }
-
-            Divider()
-
-            Button("Delete", role: .destructive) { onDelete() }
-                .disabled(branch.isHead || branch.isMainBranch)
-        }
-    }
-}
 
 struct RemoteBranchRow: View {
     let branch: Branch

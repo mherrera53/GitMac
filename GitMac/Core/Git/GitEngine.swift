@@ -211,8 +211,13 @@ actor GitEngine {
 
                 // Extract remote name and branch name
                 let pathParts = fullName.split(separator: "/", maxSplits: 1)
-                let remoteName = pathParts.count > 0 ? String(pathParts[0]) : "origin"
-                _ = pathParts.count > 1 ? String(pathParts[1]) : fullName
+                guard pathParts.count > 1 else {
+                    // Skip refs that don't have a branch name (like bare "origin" from origin/HEAD)
+                    return nil
+                }
+
+                let remoteName = String(pathParts[0])
+                let branchName = String(pathParts[1])
 
                 return Branch(
                     name: fullName,
