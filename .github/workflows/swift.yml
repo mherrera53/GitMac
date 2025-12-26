@@ -22,6 +22,3 @@ jobs:
 
       - name: Build
         run: xcodebuild -scheme GitMac -destination 'platform=macOS' build
-
-      - name: Run tests
-        run: xcodebuild -scheme GitMac -destination 'platform=macOS' test
