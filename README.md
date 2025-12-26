@@ -43,12 +43,20 @@ GitMac is a powerful, native macOS Git client designed to provide an exceptional
 - ✅ **Stash Management** - Save, apply, and manage stashes effortlessly
 
 ### Advanced Features
-- 🤖 **AI-Powered Terminal** - Integrated terminal with AI command suggestions
+- 🤖 **AI-Powered Features** - Commit message generation, code review suggestions
 - 🎯 **Smart Merge** - Intelligent conflict resolution with visual merge tools
 - 📊 **Git Flow** - Built-in Git Flow and custom workflow support
 - 🔍 **Advanced Search** - Search commits, files, and content across history
 - 🏷️ **Tag Management** - Create, push, and manage tags with ease
 - 🌐 **Remote Management** - Configure and manage multiple remotes
+
+### Automation & Extensibility
+- ⚡️ **Custom Workflows** - Scriptable automation for Git operations
+- 🧩 **Plugin System** - Extend functionality with custom plugins
+- 🔧 **Git Hooks UI** - Visual management of Git hooks
+- 👥 **Team Features** - Shared settings, templates, and conventions
+- 🌲 **Worktree Support** - Multiple working trees management
+- 📦 **Submodules & LFS** - Full support for submodules and large files
 
 ### Integrations
 - **GitHub** - Issues, pull requests, and actions integration
@@ -491,21 +499,54 @@ graph TB
 
 ## Roadmap
 
-### Upcoming Features
+### ✅ Completed Features
 
-- [ ] **Git LFS Support** - Large file storage integration
-- [ ] **Submodule Management** - Visual submodule operations
-- [ ] **Worktree Support** - Multiple working trees
-- [ ] **Custom Workflows** - Scriptable automation
-- [ ] **Team Features** - Shared settings and templates
-- [ ] **Plugin System** - Extend functionality with plugins
+All major features have been implemented! GitMac now includes:
 
-### In Progress
+- [x] **Git LFS Support** - Large file storage integration with visual management
+- [x] **Submodule Management** - Complete visual submodule operations
+- [x] **Worktree Support** - Multiple working trees with full UI
+- [x] **Custom Workflows** - Scriptable automation with bash scripts
+- [x] **Team Features** - Shared settings, templates, and team profiles
+- [x] **Plugin System** - Fully extensible plugin architecture
+- [x] **AI-Powered Commit Messages** - OpenAI, Anthropic Claude, and Gemini support
+- [x] **Advanced Merge Conflict Resolution** - Visual 3-way merge editor
+- [x] **Git Hooks Management UI** - Complete hooks management interface
+- [x] **Performance Profiling** - OSSignpost instrumentation throughout
 
-- [x] AI-powered commit message generation
-- [x] Advanced merge conflict resolution
-- [ ] Git hooks management UI
-- [ ] Performance profiling tools
+### 🚀 What's New
+
+#### Custom Workflows
+Create and automate your Git operations with custom scripts:
+- Pre/post commit hooks
+- Custom commands
+- Event-based triggers
+- Import/export workflows
+- 6 pre-built workflow templates
+
+#### Team Features
+Collaborate better with team profiles:
+- Shared settings and conventions
+- Commit message templates
+- Branch naming strategies
+- Git Flow, GitHub Flow, Trunk-Based
+- PR and issue templates
+
+#### Plugin System
+Extend GitMac with custom plugins:
+- Custom commands and panels
+- Event hooks (commits, pushes, etc.)
+- Built-in plugin examples
+- Import/export plugins
+- Scriptable plugin architecture
+
+### 🔮 Future Enhancements
+
+- Cloud sync for workflows and settings
+- Advanced code review tools
+- Real-time collaboration features
+- More AI integrations
+- Enhanced performance analytics
 
 ---
 
@@ -565,6 +606,18 @@ MIT License - see [LICENSE](LICENSE) for details
 - **Apple** - For SwiftUI and macOS frameworks
 - **Git** - For the amazing version control system
 - **Open Source Community** - For inspiration and contributions
+
+---
+
+## Support the Project
+
+If you find GitMac useful, consider supporting its development:
+
+[![PayPal](https://img.shields.io/badge/PayPal-Donate-blue.svg?logo=paypal)](https://paypal.me/mario53128@live.com)
+
+**PayPal**: mario53128@live.com
+
+Your support helps maintain and improve GitMac!
 
 ---
 
