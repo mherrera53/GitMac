@@ -794,6 +794,66 @@ actor AIService {
         )
     }
 
+    /// Suggest code improvements for a file diff
+    func suggestCodeImprovements(
+        filename: String,
+        patch: String
+    ) async throws -> [AISuggestion] {
+        let prompt = """
+        Review this code change in \(filename) and suggest improvements.
+
+        Diff:
+        ```diff
+        \(patch.prefix(3000))
+        ```
+
+        Analyze the code for:
+        1. Performance issues or optimizations
+        2. Security vulnerabilities
+        3. Code style and best practices
+        4. Potential bugs or edge cases
+        5. Readability improvements
+
+        For each issue found, provide:
+        - Line number (from the + lines in the diff)
+        - Category (performance/security/style/bug/readability)
+        - Specific suggestion
+
+        Respond in JSON format as an array:
+        [
+            {
+                "line": 42,
+                "category": "performance",
+                "comment": "Consider using a Set instead of Array for O(1) lookup"
+            }
+        ]
+        """
+
+        let response = try await sendMessage(prompt)
+
+        // Parse JSON response
+        guard let data = response.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            // If JSON parsing fails, return empty array
+            return []
+        }
+
+        var suggestions: [AISuggestion] = []
+        for item in json {
+            if let line = item["line"] as? Int,
+               let category = item["category"] as? String,
+               let comment = item["comment"] as? String {
+                suggestions.append(AISuggestion(
+                    line: line,
+                    category: category,
+                    comment: comment
+                ))
+            }
+        }
+
+        return suggestions
+    }
+
     // MARK: - Private API Methods
 
     private func sendMessage(_ message: String) async throws -> String {
@@ -961,6 +1021,13 @@ struct ConflictResolution {
         case medium
         case low
     }
+}
+
+struct AISuggestion: Identifiable {
+    let id = UUID()
+    let line: Int
+    let category: String
+    let comment: String
 }
 
 // MARK: - Errors

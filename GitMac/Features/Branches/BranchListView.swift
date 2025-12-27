@@ -79,10 +79,13 @@ struct BranchListView: View {
                 }
             }
         }
-        .alert("Merge or Rebase?", isPresented: $showDragDropActionSheet) {
+        .alert("Branch Action", isPresented: $showDragDropActionSheet) {
             Button("Cancel", role: .cancel) {
                 draggedBranch = nil
                 targetBranch = nil
+            }
+            Button("Create Pull Request") {
+                performDragDropCreatePR()
             }
             Button("Merge") {
                 performDragDropMerge()
@@ -92,7 +95,16 @@ struct BranchListView: View {
             }
         } message: {
             if let dragged = draggedBranch, let target = targetBranch {
-                Text("Merge '\(dragged.name)' into '\(target.name)' or rebase '\(target.name)' onto '\(dragged.name)'?")
+                Text("What would you like to do with '\(dragged.name)' and '\(target.name)'?")
+            }
+        }
+        .sheet(isPresented: $showPRSheet) {
+            if let headBranch = draggedBranch, let baseBranch = targetBranch {
+                CreatePRFromDragDropSheet(
+                    headBranch: headBranch.name,
+                    baseBranch: baseBranch.name,
+                    repository: appState.currentRepository
+                )
             }
         }
         .task {
@@ -304,6 +316,203 @@ struct BranchListView: View {
             // Clear the state
             draggedBranch = nil
             targetBranch = nil
+        }
+    }
+
+    private func performDragDropCreatePR() {
+        // Open PR sheet with branches pre-filled
+        showPRSheet = true
+    }
+}
+
+// MARK: - Create PR from Drag & Drop
+
+struct CreatePRFromDragDropSheet: View {
+    let headBranch: String
+    let baseBranch: String
+    let repository: Repository?
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var title = ""
+    @State private var prBody = ""
+    @State private var isDraft = false
+    @State private var isGenerating = false
+    @State private var selectedReviewers: Set<String> = []
+    @State private var selectedLabels: Set<String> = []
+    @State private var availableReviewers: [GitHubUser] = []
+    @State private var availableLabels: [GitHubLabel] = []
+
+    private let aiService = AIService()
+
+    var body: some View {
+        VStack(spacing: 16) {
+            // Header
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Create Pull Request")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+
+                    HStack(spacing: 8) {
+                        Text(headBranch)
+                            .font(.caption)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.2))
+                            .foregroundColor(.blue)
+                            .cornerRadius(4)
+
+                        Image(systemName: "arrow.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Text(baseBranch)
+                            .font(.caption)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.green.opacity(0.2))
+                            .foregroundColor(.green)
+                            .cornerRadius(4)
+                    }
+                }
+
+                Spacer()
+
+                Button {
+                    Task { await generateWithAI() }
+                } label: {
+                    HStack {
+                        if isGenerating {
+                            ProgressView().scaleEffect(0.7)
+                            Text("Generating...")
+                        } else {
+                            Image(systemName: "sparkles")
+                            Text("Generate with AI")
+                        }
+                    }
+                    .font(.subheadline)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isGenerating)
+            }
+
+            ScrollView {
+                VStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Title").font(.caption).foregroundColor(.secondary)
+                        TextField("Enter PR title", text: $title)
+                            .textFieldStyle(.roundedBorder)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Description").font(.caption).foregroundColor(.secondary)
+                        TextEditor(text: $prBody)
+                            .font(.system(.body, design: .monospaced))
+                            .frame(minHeight: 200)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                            )
+                    }
+
+                    Toggle("Create as draft", isOn: $isDraft)
+                }
+                .padding(.horizontal)
+            }
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button("Create Pull Request") {
+                    Task {
+                        await createPR()
+                        dismiss()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(title.isEmpty || isGenerating)
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding()
+        .frame(width: 600, height: 550)
+        .task {
+            await loadMetadata()
+        }
+    }
+
+    private func generateWithAI() async {
+        isGenerating = true
+        do {
+            guard let repoPath = repository?.path else { return }
+            let gitService = GitService()
+            let diff = try await gitService.getDiff(from: baseBranch, to: headBranch)
+            let commits = try await gitService.getCommits(branch: headBranch, limit: 20)
+
+            async let generatedTitle = aiService.generatePRTitle(commits: commits, diff: diff)
+            async let generatedDescription = aiService.generatePRDescription(
+                diff: diff,
+                commits: commits,
+                template: nil
+            )
+
+            title = try await generatedTitle
+            prBody = try await generatedDescription
+        } catch {
+            print("Failed to generate: \(error)")
+        }
+        isGenerating = false
+    }
+
+    private func createPR() async {
+        guard let repo = repository,
+              let remote = repo.remotes.first(where: { $0.isGitHub }),
+              let ownerRepo = remote.ownerAndRepo else { return }
+
+        do {
+            let githubService = GitHubService()
+            let newPR = try await githubService.createPullRequest(
+                owner: ownerRepo.owner,
+                repo: ownerRepo.repo,
+                title: title,
+                body: prBody,
+                head: headBranch,
+                base: baseBranch,
+                draft: isDraft
+            )
+
+            NotificationManager.shared.success(
+                "PR #\(newPR.number) created",
+                detail: title
+            )
+        } catch {
+            NotificationManager.shared.error(
+                "Failed to create PR",
+                detail: error.localizedDescription
+            )
+        }
+    }
+
+    private func loadMetadata() async {
+        guard let repo = repository,
+              let remote = repo.remotes.first(where: { $0.isGitHub }),
+              let ownerRepo = remote.ownerAndRepo else { return }
+
+        do {
+            let githubService = GitHubService()
+            availableReviewers = try await githubService.getCollaborators(
+                owner: ownerRepo.owner,
+                repo: ownerRepo.repo
+            )
+            availableLabels = try await githubService.getLabels(
+                owner: ownerRepo.owner,
+                repo: ownerRepo.repo
+            )
+        } catch {
+            print("Failed to load metadata: \(error)")
         }
     }
 }

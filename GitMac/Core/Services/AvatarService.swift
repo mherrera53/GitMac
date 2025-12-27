@@ -236,7 +236,7 @@ actor AvatarService {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         guard let (data, _) = try? await URLSession.shared.data(for: request),
-              let commits = try? JSONDecoder().decode([GitHubCommitResponse].self, from: data) else {
+              let commits = try? JSONDecoder().decode([AvatarGitHubCommitResponse].self, from: data) else {
             return
         }
 
@@ -380,20 +380,20 @@ private struct GitHubEmail: Codable {
     let verified: Bool
 }
 
-private struct GitHubCommitResponse: Codable {
-    let commit: GitHubCommitData
-    let author: GitHubCommitAuthor?
+private struct AvatarGitHubCommitResponse: Codable {
+    let commit: AvatarGitHubCommitData
+    let author: AvatarGitHubCommitAuthor?
 }
 
-private struct GitHubCommitData: Codable {
-    let author: GitHubCommitPerson?
+private struct AvatarGitHubCommitData: Codable {
+    let author: AvatarGitHubCommitPerson?
 }
 
-private struct GitHubCommitPerson: Codable {
+private struct AvatarGitHubCommitPerson: Codable {
     let email: String?
 }
 
-private struct GitHubCommitAuthor: Codable {
+private struct AvatarGitHubCommitAuthor: Codable {
     let avatarUrl: String?
 
     enum CodingKeys: String, CodingKey {

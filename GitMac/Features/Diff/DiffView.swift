@@ -911,8 +911,8 @@ struct InlineDiffView: View {
     var body: some View {
         ScrollView([.vertical, .horizontal]) {
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(hunks) { hunk in
-                    HunkHeaderRow(header: hunk.header)
+                ForEach(Array(hunks.enumerated()), id: \.element.id) { index, hunk in
+                    HunkHeaderRow(header: hunk.header, hunkIndex: index)
 
                     ForEach(hunk.lines) { line in
                         InlineDiffLineRow(

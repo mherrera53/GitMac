@@ -150,6 +150,30 @@ class PRListViewModel: ObservableObject {
         }
     }
 
+    func getPRComments(_ pr: GitHubPullRequest) async -> [GitHubComment] {
+        do {
+            return try await githubService.getPullRequestComments(owner: owner, repo: repo, number: pr.number)
+        } catch {
+            self.error = error.localizedDescription
+            return []
+        }
+    }
+
+    func addComment(_ pr: GitHubPullRequest, body: String) async -> Bool {
+        do {
+            _ = try await githubService.addPullRequestComment(
+                owner: owner,
+                repo: repo,
+                number: pr.number,
+                body: body
+            )
+            return true
+        } catch {
+            self.error = error.localizedDescription
+            return false
+        }
+    }
+
     func mergePR(_ pr: GitHubPullRequest, method: MergeMethod = .merge) async {
         do {
             try await githubService.mergePullRequest(
@@ -194,6 +218,28 @@ class PRListViewModel: ObservableObject {
     }
 
     func createPR(title: String, body: String, head: String, base: String, draft: Bool) async {
+        await createPRWithMetadata(
+            title: title,
+            body: body,
+            head: head,
+            base: base,
+            draft: draft,
+            reviewers: [],
+            assignees: [],
+            labels: []
+        )
+    }
+
+    func createPRWithMetadata(
+        title: String,
+        body: String,
+        head: String,
+        base: String,
+        draft: Bool,
+        reviewers: [String],
+        assignees: [String],
+        labels: [String]
+    ) async {
         do {
             let newPR = try await githubService.createPullRequest(
                 owner: owner,
@@ -204,6 +250,37 @@ class PRListViewModel: ObservableObject {
                 base: base,
                 draft: draft
             )
+
+            // Add reviewers if specified
+            if !reviewers.isEmpty {
+                try? await githubService.requestReviewers(
+                    owner: owner,
+                    repo: repo,
+                    number: newPR.number,
+                    reviewers: reviewers
+                )
+            }
+
+            // Add assignees if specified
+            if !assignees.isEmpty {
+                try? await githubService.addAssignees(
+                    owner: owner,
+                    repo: repo,
+                    number: newPR.number,
+                    assignees: assignees
+                )
+            }
+
+            // Add labels if specified
+            if !labels.isEmpty {
+                try? await githubService.addLabels(
+                    owner: owner,
+                    repo: repo,
+                    number: newPR.number,
+                    labels: labels
+                )
+            }
+
             NotificationManager.shared.success(
                 "PR #\(newPR.number) created",
                 detail: title
@@ -379,8 +456,13 @@ struct PRDetailView: View {
     let pr: GitHubPullRequest
     @ObservedObject var viewModel: PRListViewModel
     @State private var files: [GitHubPRFile] = []
+    @State private var checks: [GitHubCheckRun] = []
+    @State private var comments: [GitHubComment] = []
     @State private var selectedMergeMethod: MergeMethod = .merge
     @State private var showMergeConfirm = false
+    @State private var showComments = false
+    @State private var newCommentText = ""
+    @State private var showReviewView = false
 
     var body: some View {
         ScrollView {
@@ -395,6 +477,28 @@ struct PRDetailView: View {
                             .foregroundColor(.secondary)
 
                         Spacer()
+
+                        // CI/CD Status indicator
+                        if !checks.isEmpty {
+                            HStack(spacing: 4) {
+                                Image(systemName: checksIcon)
+                                    .foregroundColor(checksColor)
+                                Text(checksStatus)
+                                    .font(.caption)
+                                    .foregroundColor(checksColor)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(checksColor.opacity(0.1))
+                            .cornerRadius(12)
+                        }
+
+                        Button {
+                            showReviewView = true
+                        } label: {
+                            Label("Review Changes", systemImage: "text.bubble")
+                        }
+                        .buttonStyle(.bordered)
 
                         Button {
                             NSWorkspace.shared.open(URL(string: pr.htmlUrl)!)
@@ -432,6 +536,136 @@ struct PRDetailView: View {
                     StatItem(icon: "doc.text", label: "Files", value: "\(pr.changedFiles ?? 0)")
                     StatItem(icon: "plus", label: "Additions", value: "+\(pr.additions ?? 0)", color: .green)
                     StatItem(icon: "minus", label: "Deletions", value: "-\(pr.deletions ?? 0)", color: .red)
+                }
+                .padding()
+                .background(Color(nsColor: .controlBackgroundColor))
+                .cornerRadius(8)
+
+                // CI/CD Checks
+                if !checks.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Checks")
+                            .font(.headline)
+
+                        ForEach(checks) { check in
+                            HStack(spacing: 8) {
+                                Image(systemName: checkIcon(for: check))
+                                    .foregroundColor(checkColor(for: check))
+                                    .frame(width: 20)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(check.name)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+
+                                    Text(check.status.capitalized)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                Spacer()
+
+                                if let conclusion = check.conclusion {
+                                    Text(conclusion.capitalized)
+                                        .font(.caption)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(checkColor(for: check).opacity(0.2))
+                                        .foregroundColor(checkColor(for: check))
+                                        .cornerRadius(4)
+                                }
+                            }
+                            .padding(.vertical, 8)
+                            Divider()
+                        }
+                    }
+                    .padding()
+                    .background(Color(nsColor: .controlBackgroundColor))
+                    .cornerRadius(8)
+                }
+
+                // Comments
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Comments")
+                            .font(.headline)
+
+                        Text("(\(comments.count))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Spacer()
+
+                        Button {
+                            withAnimation {
+                                showComments.toggle()
+                            }
+                        } label: {
+                            Image(systemName: showComments ? "chevron.up" : "chevron.down")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    if showComments {
+                        // Existing comments
+                        ForEach(comments) { comment in
+                            HStack(alignment: .top, spacing: 12) {
+                                AsyncImage(url: URL(string: comment.user.avatarUrl)) { image in
+                                    image.resizable()
+                                } placeholder: {
+                                    Image(systemName: "person.circle.fill")
+                                        .resizable()
+                                        .foregroundColor(.secondary)
+                                }
+                                .frame(width: 32, height: 32)
+                                .clipShape(Circle())
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Text(comment.user.login)
+                                            .font(.subheadline)
+                                            .fontWeight(.semibold)
+
+                                        Text(formatCommentDate(comment.createdAt))
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+
+                                    Text(comment.body)
+                                        .font(.body)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .padding(.vertical, 8)
+                            Divider()
+                        }
+
+                        // New comment input
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Add comment")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            TextEditor(text: $newCommentText)
+                                .font(.body)
+                                .frame(minHeight: 80)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                                )
+
+                            HStack {
+                                Spacer()
+                                Button("Add Comment") {
+                                    Task { await addComment() }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            }
+                        }
+                        .padding(.top, 8)
+                    }
                 }
                 .padding()
                 .background(Color(nsColor: .controlBackgroundColor))
@@ -485,9 +719,141 @@ struct PRDetailView: View {
         } message: {
             Text("Are you sure you want to merge this pull request using \(selectedMergeMethod.rawValue)?")
         }
-        .task {
-            files = await viewModel.getPRFiles(pr)
+        .sheet(isPresented: $showReviewView) {
+            NavigationStack {
+                PRReviewView(
+                    pr: pr,
+                    owner: viewModel.owner,
+                    repo: viewModel.repo
+                )
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Done") {
+                            showReviewView = false
+                        }
+                    }
+                }
+            }
+            .frame(minWidth: 1000, minHeight: 700)
         }
+        .task {
+            async let filesTask = viewModel.getPRFiles(pr)
+            async let checksTask = loadChecks()
+            async let commentsTask = viewModel.getPRComments(pr)
+
+            files = await filesTask
+            checks = await checksTask
+            comments = await commentsTask
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func loadChecks() async -> [GitHubCheckRun] {
+        let headSha = pr.head.sha
+        do {
+            let githubService = GitHubService()
+            let checkRuns = try await githubService.getCheckRuns(
+                owner: viewModel.owner,
+                repo: viewModel.repo,
+                ref: headSha
+            )
+            return checkRuns.checkRuns
+        } catch {
+            print("Failed to load checks: \(error)")
+            return []
+        }
+    }
+
+    private var checksStatus: String {
+        let failedChecks = checks.filter { $0.conclusion == "failure" }
+        let successChecks = checks.filter { $0.conclusion == "success" }
+        let inProgressChecks = checks.filter { $0.status != "completed" }
+
+        if !failedChecks.isEmpty {
+            return "\(failedChecks.count) failed"
+        } else if !inProgressChecks.isEmpty {
+            return "\(inProgressChecks.count) in progress"
+        } else if successChecks.count == checks.count {
+            return "All checks passed"
+        } else {
+            return "\(checks.count) checks"
+        }
+    }
+
+    private var checksIcon: String {
+        let hasFailures = checks.contains { $0.conclusion == "failure" }
+        let inProgress = checks.contains { $0.status != "completed" }
+
+        if hasFailures {
+            return "xmark.circle.fill"
+        } else if inProgress {
+            return "clock.fill"
+        } else {
+            return "checkmark.circle.fill"
+        }
+    }
+
+    private var checksColor: Color {
+        let hasFailures = checks.contains { $0.conclusion == "failure" }
+        let inProgress = checks.contains { $0.status != "completed" }
+
+        if hasFailures {
+            return .red
+        } else if inProgress {
+            return .orange
+        } else {
+            return .green
+        }
+    }
+
+    private func checkIcon(for check: GitHubCheckRun) -> String {
+        if check.status != "completed" {
+            return "clock"
+        }
+
+        switch check.conclusion {
+        case "success": return "checkmark.circle.fill"
+        case "failure": return "xmark.circle.fill"
+        case "cancelled": return "xmark.circle"
+        case "skipped": return "arrow.forward.circle"
+        default: return "circle"
+        }
+    }
+
+    private func checkColor(for check: GitHubCheckRun) -> Color {
+        if check.status != "completed" {
+            return .orange
+        }
+
+        switch check.conclusion {
+        case "success": return .green
+        case "failure": return .red
+        case "cancelled": return .gray
+        case "skipped": return .blue
+        default: return .gray
+        }
+    }
+
+    private func addComment() async {
+        let body = newCommentText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !body.isEmpty else { return }
+
+        let success = await viewModel.addComment(pr, body: body)
+        if success {
+            newCommentText = ""
+            // Reload comments
+            comments = await viewModel.getPRComments(pr)
+        }
+    }
+
+    private func formatCommentDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        guard let date = formatter.date(from: dateString) else { return dateString }
+
+        let relative = RelativeDateTimeFormatter()
+        relative.unitsStyle = .abbreviated
+        return relative.localizedString(for: date, relativeTo: Date())
     }
 }
 
@@ -624,66 +990,163 @@ struct CreatePRSheet: View {
     @State private var headBranch = ""
     @State private var baseBranch = "main"
     @State private var isDraft = false
-    @State private var isGeneratingBody = false
+    @State private var isGenerating = false
+    @State private var selectedReviewers: Set<String> = []
+    @State private var selectedAssignees: Set<String> = []
+    @State private var selectedLabels: Set<String> = []
+    @State private var availableReviewers: [GitHubUser] = []
+    @State private var availableLabels: [GitHubLabel] = []
+    @State private var prTemplate: String?
 
     private let aiService = AIService()
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("Create Pull Request")
-                .font(.title2)
-                .fontWeight(.semibold)
+            HStack {
+                Text("Create Pull Request")
+                    .font(.title2)
+                    .fontWeight(.semibold)
 
-            Form {
-                // Branches
-                HStack {
-                    Picker("From", selection: $headBranch) {
-                        ForEach(appState.currentRepository?.branches ?? [], id: \.id) { branch in
-                            Text(branch.name).tag(branch.name)
+                Spacer()
+
+                // AI Generate Button - Prominent placement
+                Button {
+                    Task { await generateTitleAndDescription() }
+                } label: {
+                    HStack(spacing: 6) {
+                        if isGenerating {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                            Text("Generating...")
+                        } else {
+                            Image(systemName: "sparkles")
+                            Text("Generate with AI")
+                        }
+                    }
+                    .font(.subheadline)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isGenerating || headBranch.isEmpty)
+            }
+
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Branches
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("From").font(.caption).foregroundColor(.secondary)
+                            Picker("", selection: $headBranch) {
+                                ForEach(appState.currentRepository?.branches ?? [], id: \.id) { branch in
+                                    Text(branch.name).tag(branch.name)
+                                }
+                            }
+                            .labelsHidden()
+                        }
+
+                        Image(systemName: "arrow.right")
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 8)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("To").font(.caption).foregroundColor(.secondary)
+                            Picker("", selection: $baseBranch) {
+                                Text("main").tag("main")
+                                Text("master").tag("master")
+                                Text("develop").tag("develop")
+                            }
+                            .labelsHidden()
+                        }
+                    }
+                    .padding()
+                    .background(Color(nsColor: .controlBackgroundColor))
+                    .cornerRadius(8)
+
+                    // Title
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Title").font(.caption).foregroundColor(.secondary)
+                        TextField("Enter PR title", text: $title)
+                            .textFieldStyle(.roundedBorder)
+                    }
+
+                    // Description
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Description").font(.caption).foregroundColor(.secondary)
+                        TextEditor(text: $prBody)
+                            .font(.system(.body, design: .monospaced))
+                            .frame(minHeight: 150)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                            )
+
+                        if let template = prTemplate {
+                            Text("Using template")
+                                .font(.caption2)
+                                .foregroundColor(.blue)
                         }
                     }
 
-                    Image(systemName: "arrow.right")
-                        .foregroundColor(.secondary)
+                    // Reviewers
+                    if !availableReviewers.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Reviewers (optional)").font(.caption).foregroundColor(.secondary)
+                            FlowLayout(spacing: 6) {
+                                ForEach(availableReviewers.prefix(10), id: \.id) { user in
+                                    Button {
+                                        toggleSelection(user.login, in: &selectedReviewers)
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            AsyncImage(url: URL(string: user.avatarUrl)) { image in
+                                                image.resizable()
+                                            } placeholder: {
+                                                Image(systemName: "person.circle.fill")
+                                            }
+                                            .frame(width: 16, height: 16)
+                                            .clipShape(Circle())
 
-                    Picker("To", selection: $baseBranch) {
-                        Text("main").tag("main")
-                        Text("master").tag("master")
-                        Text("develop").tag("develop")
-                    }
-                }
-
-                TextField("Title", text: $title)
-                    .textFieldStyle(.roundedBorder)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("Description")
-                        Spacer()
-                        Button {
-                            Task { await generateDescription() }
-                        } label: {
-                            if isGeneratingBody {
-                                ProgressView()
-                                    .scaleEffect(0.7)
-                            } else {
-                                Label("Generate with AI", systemImage: "sparkles")
+                                            Text(user.login)
+                                                .font(.caption)
+                                        }
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(selectedReviewers.contains(user.login) ? Color.accentColor : Color.gray.opacity(0.2))
+                                        .foregroundColor(selectedReviewers.contains(user.login) ? .white : .primary)
+                                        .cornerRadius(12)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
                         }
-                        .buttonStyle(.borderless)
-                        .disabled(isGeneratingBody)
                     }
 
-                    TextEditor(text: $prBody)
-                        .font(.system(.body, design: .monospaced))
-                        .frame(minHeight: 150)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 4)
-                                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                        )
-                }
+                    // Labels
+                    if !availableLabels.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Labels (optional)").font(.caption).foregroundColor(.secondary)
+                            FlowLayout(spacing: 6) {
+                                ForEach(availableLabels.prefix(15), id: \.id) { label in
+                                    Button {
+                                        toggleSelection(label.name, in: &selectedLabels)
+                                    } label: {
+                                        Text(label.name)
+                                            .font(.caption)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(selectedLabels.contains(label.name) ? Color.blue : Color.gray.opacity(0.2))
+                                            .foregroundColor(selectedLabels.contains(label.name) ? .white : .primary)
+                                            .cornerRadius(12)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
 
-                Toggle("Create as draft", isOn: $isDraft)
+                    // Options
+                    Toggle("Create as draft", isOn: $isDraft)
+                        .padding(.vertical, 8)
+                }
+                .padding(.horizontal)
             }
 
             HStack {
@@ -694,45 +1157,1024 @@ struct CreatePRSheet: View {
 
                 Button("Create Pull Request") {
                     Task {
-                        await viewModel.createPR(
-                            title: title,
-                            body: prBody,
-                            head: headBranch,
-                            base: baseBranch,
-                            draft: isDraft
-                        )
+                        await createPullRequest()
                         dismiss()
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(title.isEmpty || headBranch.isEmpty)
+                .disabled(title.isEmpty || headBranch.isEmpty || isGenerating)
                 .keyboardShortcut(.defaultAction)
             }
         }
         .padding()
-        .frame(width: 600, height: 500)
-        .onAppear {
+        .frame(width: 700, height: 650)
+        .task {
+            await loadMetadata()
             if let currentBranch = appState.currentRepository?.head?.name {
                 headBranch = currentBranch
             }
         }
     }
 
-    private func generateDescription() async {
-        isGeneratingBody = true
+    // MARK: - Actions
+
+    private func generateTitleAndDescription() async {
+        isGenerating = true
         do {
             let diff = try await GitService().getDiff(from: baseBranch, to: headBranch)
             let commits = try await GitService().getCommits(branch: headBranch, limit: 20)
-            prBody = try await aiService.generatePRDescription(diff: diff, commits: commits)
+
+            // Generate both in parallel
+            async let generatedTitle = aiService.generatePRTitle(commits: commits, diff: diff)
+            async let generatedDescription = aiService.generatePRDescription(
+                diff: diff,
+                commits: commits,
+                template: prTemplate
+            )
+
+            title = try await generatedTitle
+            prBody = try await generatedDescription
         } catch {
-            // Handle error
+            print("Failed to generate PR content: \(error)")
         }
-        isGeneratingBody = false
+        isGenerating = false
+    }
+
+    private func createPullRequest() async {
+        await viewModel.createPRWithMetadata(
+            title: title,
+            body: prBody,
+            head: headBranch,
+            base: baseBranch,
+            draft: isDraft,
+            reviewers: Array(selectedReviewers),
+            assignees: Array(selectedAssignees),
+            labels: Array(selectedLabels)
+        )
+    }
+
+    private func loadMetadata() async {
+        guard let repo = appState.currentRepository,
+              let remote = repo.remotes.first(where: { $0.isGitHub }),
+              let ownerRepo = remote.ownerAndRepo else { return }
+
+        // Load PR template
+        await loadPRTemplate()
+
+        // Load collaborators (potential reviewers)
+        do {
+            let githubService = GitHubService()
+            availableReviewers = try await githubService.getCollaborators(
+                owner: ownerRepo.owner,
+                repo: ownerRepo.repo
+            )
+        } catch {
+            print("Failed to load collaborators: \(error)")
+        }
+
+        // Load labels
+        do {
+            let githubService = GitHubService()
+            availableLabels = try await githubService.getLabels(
+                owner: ownerRepo.owner,
+                repo: ownerRepo.repo
+            )
+        } catch {
+            print("Failed to load labels: \(error)")
+        }
+    }
+
+    private func loadPRTemplate() async {
+        guard let repoPath = appState.currentRepository?.path else { return }
+
+        let templatePaths = [
+            ".github/PULL_REQUEST_TEMPLATE.md",
+            ".github/pull_request_template.md",
+            "PULL_REQUEST_TEMPLATE.md",
+            "docs/PULL_REQUEST_TEMPLATE.md"
+        ]
+
+        for templatePath in templatePaths {
+            let fullPath = (repoPath as NSString).appendingPathComponent(templatePath)
+            if FileManager.default.fileExists(atPath: fullPath),
+               let content = try? String(contentsOfFile: fullPath, encoding: .utf8) {
+                prTemplate = content
+                prBody = content
+                break
+            }
+        }
+    }
+
+    private func toggleSelection(_ item: String, in set: inout Set<String>) {
+        if set.contains(item) {
+            set.remove(item)
+        } else {
+            set.insert(item)
+        }
     }
 }
 
-// #Preview {
-//     PRListView()
-//         .environmentObject(AppState())
-//         .frame(width: 900, height: 600)
-// }
+/// PR code review interface with inline comments and AI suggestions
+struct PRReviewView: View {
+    let pr: GitHubPullRequest
+    let owner: String
+    let repo: String
+
+    @StateObject private var viewModel = PRReviewViewModel()
+    @State private var selectedFile: GitHubPRFile?
+    @State private var showAIPanel = false
+    @State private var selectedLines: Set<Int> = []
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        HSplitView {
+            // Left: File list
+            VStack(spacing: 0) {
+                fileListHeader
+                Divider()
+                fileList
+            }
+            .frame(minWidth: 250, idealWidth: 300)
+
+            // Right: Code viewer with inline comments
+            if let file = selectedFile {
+                codeReviewPanel(file: file)
+            } else {
+                emptyStateView
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    Task { await submitReview() }
+                } label: {
+                    Label("Submit Review", systemImage: "checkmark.circle")
+                }
+                .disabled(viewModel.pendingComments.isEmpty)
+            }
+        }
+        .task {
+            await viewModel.loadReviewData(pr: pr, owner: owner, repo: repo)
+            if let firstFile = viewModel.files.first {
+                selectedFile = firstFile
+            }
+        }
+    }
+
+    // MARK: - File List Header
+
+    private var fileListHeader: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Files Changed")
+                    .font(.headline)
+
+                Text("\(viewModel.files.count) files")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            // Review type picker
+            Menu {
+                Button {
+                    viewModel.reviewEvent = .approve
+                } label: {
+                    Label("Approve", systemImage: "checkmark.circle")
+                }
+
+                Button {
+                    viewModel.reviewEvent = .requestChanges
+                } label: {
+                    Label("Request Changes", systemImage: "exclamationmark.triangle")
+                }
+
+                Button {
+                    viewModel.reviewEvent = .comment
+                } label: {
+                    Label("Comment", systemImage: "text.bubble")
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: reviewEventIcon)
+                        .foregroundColor(reviewEventColor)
+                    Text(reviewEventText)
+                        .font(.caption)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(reviewEventColor.opacity(0.2))
+                .cornerRadius(12)
+            }
+            .menuStyle(.borderlessButton)
+        }
+        .padding()
+        .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    private var reviewEventIcon: String {
+        switch viewModel.reviewEvent {
+        case .approve: return "checkmark.circle.fill"
+        case .requestChanges: return "exclamationmark.triangle.fill"
+        case .comment: return "text.bubble.fill"
+        }
+    }
+
+    private var reviewEventColor: Color {
+        switch viewModel.reviewEvent {
+        case .approve: return .green
+        case .requestChanges: return .red
+        case .comment: return .blue
+        }
+    }
+
+    private var reviewEventText: String {
+        switch viewModel.reviewEvent {
+        case .approve: return "Approve"
+        case .requestChanges: return "Request Changes"
+        case .comment: return "Comment"
+        }
+    }
+
+    // MARK: - File List
+
+    private var fileList: some View {
+        ScrollView {
+            LazyVStack(spacing: 4) {
+                ForEach(viewModel.files, id: \.filename) { file in
+                    ReviewFileRow(
+                        file: file,
+                        isSelected: selectedFile?.filename == file.filename,
+                        commentCount: viewModel.commentCountForFile(file.filename),
+                        onSelect: { selectedFile = file }
+                    )
+                }
+            }
+            .padding(8)
+        }
+    }
+
+    // MARK: - Code Review Panel
+
+    private func codeReviewPanel(file: GitHubPRFile) -> some View {
+        VStack(spacing: 0) {
+            // File header
+            HStack {
+                Image(systemName: fileIcon(for: file))
+                    .foregroundColor(fileColor(for: file))
+
+                Text(file.filename)
+                    .font(.headline)
+
+                Spacer()
+
+                // Stats
+                HStack(spacing: 12) {
+                    HStack(spacing: 4) {
+                        Text("+\(file.additions)")
+                            .foregroundColor(.green)
+                        Text("-\(file.deletions)")
+                            .foregroundColor(.red)
+                    }
+                    .font(.caption.monospacedDigit())
+
+                    // AI Suggest Button
+                    Button {
+                        Task { await suggestImprovements(for: file) }
+                    } label: {
+                        HStack(spacing: 4) {
+                            if viewModel.isGeneratingAI {
+                                ProgressView()
+                                    .scaleEffect(0.6)
+                            } else {
+                                Image(systemName: "sparkles")
+                            }
+                            Text("AI Suggestions")
+                                .font(.caption)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(viewModel.isGeneratingAI)
+                }
+            }
+            .padding()
+            .background(Color(nsColor: .controlBackgroundColor))
+
+            Divider()
+
+            // Code diff view with inline comments
+            ScrollView {
+                if let patch = file.patch {
+                    DiffCodeView(
+                        patch: patch,
+                        filename: file.filename,
+                        reviewComments: viewModel.reviewComments.filter { $0.path == file.filename },
+                        pendingComments: viewModel.pendingComments.filter { $0.path == file.filename },
+                        selectedLines: $selectedLines,
+                        onAddComment: { line in
+                            viewModel.selectedLine = line
+                            viewModel.selectedFile = file.filename
+                            viewModel.showAddComment = true
+                        },
+                        onDeletePendingComment: { commentId in
+                            viewModel.deletePendingComment(commentId)
+                        }
+                    )
+                } else {
+                    VStack(spacing: 16) {
+                        Image(systemName: "doc.text")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary)
+                        Text("No diff available for this file")
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding()
+                }
+            }
+        }
+        .sheet(isPresented: $viewModel.showAddComment) {
+            AddReviewCommentSheet(
+                filename: viewModel.selectedFile ?? "",
+                line: viewModel.selectedLine ?? 1,
+                onAdd: { body in
+                    viewModel.addPendingComment(
+                        path: viewModel.selectedFile ?? "",
+                        line: viewModel.selectedLine ?? 1,
+                        body: body
+                    )
+                }
+            )
+        }
+        .sheet(isPresented: $viewModel.showAISuggestions) {
+            if let suggestions = viewModel.aiSuggestions {
+                AISuggestionsSheet(
+                    suggestions: suggestions,
+                    onAccept: { suggestion in
+                        viewModel.addPendingComment(
+                            path: file.filename,
+                            line: suggestion.line,
+                            body: suggestion.comment
+                        )
+                    }
+                )
+            }
+        }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "doc.text.magnifyingglass")
+                .font(.system(size: 64))
+                .foregroundColor(.secondary)
+
+            Text("Select a file to review")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text("Choose a file from the list to view changes and add review comments")
+                .font(.callout)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Helpers
+
+    private func fileIcon(for file: GitHubPRFile) -> String {
+        switch file.status {
+        case "added": return "plus.circle.fill"
+        case "removed": return "minus.circle.fill"
+        case "renamed": return "arrow.triangle.2.circlepath"
+        default: return "pencil.circle.fill"
+        }
+    }
+
+    private func fileColor(for file: GitHubPRFile) -> Color {
+        switch file.status {
+        case "added": return .green
+        case "removed": return .red
+        case "renamed": return .blue
+        default: return .orange
+        }
+    }
+
+    private func suggestImprovements(for file: GitHubPRFile) async {
+        await viewModel.generateAISuggestions(for: file)
+    }
+
+    private func submitReview() async {
+        await viewModel.submitReview(pr: pr, owner: owner, repo: repo)
+        dismiss()
+    }
+}
+
+// MARK: - View Model
+
+@MainActor
+class PRReviewViewModel: ObservableObject {
+    @Published var files: [GitHubPRFile] = []
+    @Published var reviewComments: [GitHubReviewComment] = []
+    @Published var pendingComments: [PendingReviewComment] = []
+    @Published var reviewEvent: ReviewEvent = .comment
+    @Published var reviewBody: String = ""
+    @Published var isLoading = false
+    @Published var isGeneratingAI = false
+    @Published var showAddComment = false
+    @Published var showAISuggestions = false
+    @Published var selectedLine: Int?
+    @Published var selectedFile: String?
+    @Published var aiSuggestions: [AISuggestion]?
+
+    private var commitId: String?
+    private let githubService = GitHubService()
+    private let aiService = AIService()
+
+    func loadReviewData(pr: GitHubPullRequest, owner: String, repo: String) async {
+        isLoading = true
+        commitId = pr.head.sha
+
+        do {
+            async let filesTask = githubService.getPullRequestFiles(owner: owner, repo: repo, number: pr.number)
+            async let commentsTask = githubService.getPullRequestReviewComments(owner: owner, repo: repo, number: pr.number)
+
+            files = try await filesTask
+            reviewComments = try await commentsTask
+        } catch {
+            print("Failed to load review data: \(error)")
+        }
+
+        isLoading = false
+    }
+
+    func addPendingComment(path: String, line: Int, body: String) {
+        let comment = PendingReviewComment(
+            id: UUID(),
+            path: path,
+            line: line,
+            body: body
+        )
+        pendingComments.append(comment)
+        showAddComment = false
+    }
+
+    func deletePendingComment(_ id: UUID) {
+        pendingComments.removeAll { $0.id == id }
+    }
+
+    func commentCountForFile(_ filename: String) -> Int {
+        let existing = reviewComments.filter { $0.path == filename }.count
+        let pending = pendingComments.filter { $0.path == filename }.count
+        return existing + pending
+    }
+
+    func generateAISuggestions(for file: GitHubPRFile) async {
+        guard let patch = file.patch else { return }
+
+        isGeneratingAI = true
+
+        do {
+            let suggestions = try await aiService.suggestCodeImprovements(
+                filename: file.filename,
+                patch: patch
+            )
+            aiSuggestions = suggestions
+            showAISuggestions = true
+        } catch {
+            print("Failed to generate AI suggestions: \(error)")
+        }
+
+        isGeneratingAI = false
+    }
+
+    func submitReview(pr: GitHubPullRequest, owner: String, repo: String) async {
+        guard let commitId = commitId else { return }
+
+        isLoading = true
+
+        do {
+            let commentInputs = pendingComments.map { comment in
+                ReviewCommentInput(
+                    path: comment.path,
+                    line: comment.line,
+                    body: comment.body
+                )
+            }
+
+            _ = try await githubService.createReview(
+                owner: owner,
+                repo: repo,
+                number: pr.number,
+                commitId: commitId,
+                body: reviewBody.isEmpty ? nil : reviewBody,
+                event: reviewEvent,
+                comments: commentInputs.isEmpty ? nil : commentInputs
+            )
+
+            NotificationManager.shared.success(
+                "Review submitted",
+                detail: "Your review has been posted to PR #\(pr.number)"
+            )
+
+            pendingComments.removeAll()
+        } catch {
+            NotificationManager.shared.error(
+                "Failed to submit review",
+                detail: error.localizedDescription
+            )
+        }
+
+        isLoading = false
+    }
+}
+
+// MARK: - Supporting Views
+
+struct ReviewFileRow: View {
+    let file: GitHubPRFile
+    let isSelected: Bool
+    let commentCount: Int
+    let onSelect: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: statusIcon)
+                .foregroundColor(statusColor)
+                .frame(width: 20)
+
+            Text(file.filename)
+                .font(.caption)
+                .lineLimit(2)
+
+            Spacer()
+
+            if commentCount > 0 {
+                Text("\(commentCount)")
+                    .font(.caption2)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.blue.opacity(0.2))
+                    .foregroundColor(.blue)
+                    .cornerRadius(8)
+            }
+
+            HStack(spacing: 4) {
+                Text("+\(file.additions)")
+                    .foregroundColor(.green)
+                Text("-\(file.deletions)")
+                    .foregroundColor(.red)
+            }
+            .font(.caption2.monospacedDigit())
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
+        .cornerRadius(6)
+        .onTapGesture { onSelect() }
+    }
+
+    private var statusIcon: String {
+        switch file.status {
+        case "added": return "plus.circle.fill"
+        case "removed": return "minus.circle.fill"
+        case "renamed": return "arrow.triangle.2.circlepath"
+        default: return "pencil.circle.fill"
+        }
+    }
+
+    private var statusColor: Color {
+        switch file.status {
+        case "added": return .green
+        case "removed": return .red
+        case "renamed": return .blue
+        default: return .orange
+        }
+    }
+}
+
+struct DiffCodeView: View {
+    let patch: String
+    let filename: String
+    let reviewComments: [GitHubReviewComment]
+    let pendingComments: [PendingReviewComment]
+    @Binding var selectedLines: Set<Int>
+    let onAddComment: (Int) -> Void
+    let onDeletePendingComment: (UUID) -> Void
+
+    @State private var hoveredLine: Int?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(parsedDiffLines, id: \.lineNumber) { diffLine in
+                HStack(spacing: 0) {
+                    // Line number
+                    HStack(spacing: 4) {
+                        Text(diffLine.oldLineNumber.map { "\($0)" } ?? "")
+                            .frame(width: 40, alignment: .trailing)
+                            .foregroundColor(.secondary)
+
+                        Text(diffLine.newLineNumber.map { "\($0)" } ?? "")
+                            .frame(width: 40, alignment: .trailing)
+                            .foregroundColor(.secondary)
+                    }
+                    .font(.system(.caption, design: .monospaced))
+                    .padding(.horizontal, 8)
+                    .background(Color(nsColor: .controlBackgroundColor))
+
+                    // Add comment button (on hover)
+                    if hoveredLine == diffLine.lineNumber, diffLine.type != .context {
+                        Button {
+                            if let lineNum = diffLine.newLineNumber {
+                                onAddComment(lineNum)
+                            }
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundColor(.blue)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 4)
+                    } else {
+                        Spacer().frame(width: 28)
+                    }
+
+                    // Code content
+                    Text(diffLine.content)
+                        .font(.system(.body, design: .monospaced))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(lineBackground(for: diffLine))
+                }
+                .onHover { isHovered in
+                    hoveredLine = isHovered ? diffLine.lineNumber : nil
+                }
+
+                // Show existing comments
+                if let lineNum = diffLine.newLineNumber {
+                    ForEach(reviewComments.filter { $0.line == lineNum }, id: \.id) { comment in
+                        ReviewCommentRow(comment: comment)
+                    }
+
+                    ForEach(pendingComments.filter { $0.line == lineNum }, id: \.id) { comment in
+                        PendingReviewCommentRow(
+                            comment: comment,
+                            onDelete: { onDeletePendingComment(comment.id) }
+                        )
+                    }
+                }
+            }
+        }
+        .padding()
+    }
+
+    private var parsedDiffLines: [ReviewDiffLine] {
+        ReviewDiffParser.parse(patch)
+    }
+
+    private func lineBackground(for diffLine: ReviewDiffLine) -> Color {
+        switch diffLine.type {
+        case .addition: return .green.opacity(0.1)
+        case .deletion: return .red.opacity(0.1)
+        case .context: return .clear
+        }
+    }
+}
+
+struct ReviewCommentRow: View {
+    let comment: GitHubReviewComment
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            AsyncImage(url: URL(string: comment.user.avatarUrl)) { image in
+                image.resizable()
+            } placeholder: {
+                Image(systemName: "person.circle.fill")
+                    .resizable()
+                    .foregroundColor(.secondary)
+            }
+            .frame(width: 24, height: 24)
+            .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(comment.user.login)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+
+                    Text(formatDate(comment.createdAt))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+
+                Text(comment.body)
+                    .font(.callout)
+            }
+        }
+        .padding()
+        .background(Color.blue.opacity(0.05))
+        .cornerRadius(8)
+        .padding(.leading, 100)
+        .padding(.trailing, 16)
+        .padding(.vertical, 4)
+    }
+
+    private func formatDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        guard let date = formatter.date(from: dateString) else { return dateString }
+
+        let relative = RelativeDateTimeFormatter()
+        relative.unitsStyle = .abbreviated
+        return relative.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+struct PendingReviewCommentRow: View {
+    let comment: PendingReviewComment
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "person.circle.fill")
+                .resizable()
+                .foregroundColor(.secondary)
+                .frame(width: 24, height: 24)
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("You")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+
+                    Text("Pending")
+                        .font(.caption2)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.orange.opacity(0.2))
+                        .foregroundColor(.orange)
+                        .cornerRadius(4)
+
+                    Spacer()
+
+                    Button {
+                        onDelete()
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.red)
+                }
+
+                Text(comment.body)
+                    .font(.callout)
+            }
+        }
+        .padding()
+        .background(Color.orange.opacity(0.05))
+        .cornerRadius(8)
+        .padding(.leading, 100)
+        .padding(.trailing, 16)
+        .padding(.vertical, 4)
+    }
+}
+
+struct AddReviewCommentSheet: View {
+    let filename: String
+    let line: Int
+    @State private var commentText = ""
+    let onAdd: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("Add Review Comment")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+
+                Spacer()
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(filename)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Text("Line \(line)")
+                        .font(.caption)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.blue.opacity(0.2))
+                        .foregroundColor(.blue)
+                        .cornerRadius(4)
+                }
+
+                TextEditor(text: $commentText)
+                    .font(.body)
+                    .frame(minHeight: 120)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                    )
+            }
+
+            HStack {
+                Button("Cancel") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button("Add Comment") {
+                    onAdd(commentText)
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding()
+        .frame(width: 500, height: 300)
+    }
+}
+
+struct AISuggestionsSheet: View {
+    let suggestions: [AISuggestion]
+    let onAccept: (AISuggestion) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Image(systemName: "sparkles")
+                    .font(.title)
+                    .foregroundColor(.purple)
+
+                Text("AI Code Suggestions")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+
+                Spacer()
+            }
+
+            ScrollView {
+                VStack(spacing: 12) {
+                    ForEach(suggestions) { suggestion in
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Line \(suggestion.line)")
+                                    .font(.caption)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.blue.opacity(0.2))
+                                    .foregroundColor(.blue)
+                                    .cornerRadius(4)
+
+                                Text(suggestion.category)
+                                    .font(.caption)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(categoryColor(suggestion.category).opacity(0.2))
+                                    .foregroundColor(categoryColor(suggestion.category))
+                                    .cornerRadius(4)
+
+                                Spacer()
+
+                                Button("Add as Comment") {
+                                    onAccept(suggestion)
+                                    dismiss()
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            }
+
+                            Text(suggestion.comment)
+                                .font(.body)
+                        }
+                        .padding()
+                        .background(Color(nsColor: .controlBackgroundColor))
+                        .cornerRadius(8)
+                    }
+                }
+            }
+
+            HStack {
+                Spacer()
+                Button("Close") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+            }
+        }
+        .padding()
+        .frame(width: 600, height: 500)
+    }
+
+    private func categoryColor(_ category: String) -> Color {
+        switch category.lowercased() {
+        case "performance": return .orange
+        case "security": return .red
+        case "style": return .blue
+        case "bug": return .purple
+        default: return .gray
+        }
+    }
+}
+
+// MARK: - Models
+
+struct PendingReviewComment: Identifiable {
+    let id: UUID
+    let path: String
+    let line: Int
+    let body: String
+}
+
+// MARK: - Diff Parser
+
+struct ReviewDiffLine {
+    let lineNumber: Int
+    let oldLineNumber: Int?
+    let newLineNumber: Int?
+    let type: ReviewDiffLineType
+    let content: String
+}
+
+enum ReviewDiffLineType {
+    case addition
+    case deletion
+    case context
+}
+
+struct ReviewDiffParser {
+    static func parse(_ patch: String) -> [ReviewDiffLine] {
+        var result: [ReviewDiffLine] = []
+        var lineNumber = 0
+        var oldLine = 0
+        var newLine = 0
+
+        let lines = patch.components(separatedBy: .newlines)
+
+        for line in lines {
+            if line.hasPrefix("@@") {
+                // Parse hunk header
+                let components = line.components(separatedBy: " ")
+                if components.count >= 3 {
+                    let oldRange = components[1].dropFirst()
+                    let newRange = components[2]
+
+                    if let oldStart = oldRange.components(separatedBy: ",").first.flatMap({ Int($0) }) {
+                        oldLine = oldStart
+                    }
+
+                    if let newStart = newRange.components(separatedBy: ",").first.flatMap({ Int($0) }) {
+                        newLine = newStart
+                    }
+                }
+                continue
+            }
+
+            lineNumber += 1
+
+            if line.hasPrefix("+") && !line.hasPrefix("+++") {
+                result.append(ReviewDiffLine(
+                    lineNumber: lineNumber,
+                    oldLineNumber: nil,
+                    newLineNumber: newLine,
+                    type: .addition,
+                    content: String(line.dropFirst())
+                ))
+                newLine += 1
+            } else if line.hasPrefix("-") && !line.hasPrefix("---") {
+                result.append(ReviewDiffLine(
+                    lineNumber: lineNumber,
+                    oldLineNumber: oldLine,
+                    newLineNumber: nil,
+                    type: .deletion,
+                    content: String(line.dropFirst())
+                ))
+                oldLine += 1
+            } else if !line.hasPrefix("\\") {
+                result.append(ReviewDiffLine(
+                    lineNumber: lineNumber,
+                    oldLineNumber: oldLine,
+                    newLineNumber: newLine,
+                    type: .context,
+                    content: line.hasPrefix(" ") ? String(line.dropFirst()) : line
+                ))
+                oldLine += 1
+                newLine += 1
+            }
+        }
+
+        return result
+    }
+}

@@ -208,6 +208,8 @@ struct HunkLineRow: View {
 
 struct HunkHeaderRow: View {
     let header: String
+    let hunkIndex: Int
+    var onDiscardHunk: ((Int) -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 8) {
@@ -215,6 +217,29 @@ struct HunkHeaderRow: View {
                 .font(.system(size: 10))
             Text(header)
                 .font(.system(size: 11, design: .monospaced))
+
+            Spacer()
+
+            // Discard hunk button
+            if let onDiscardHunk {
+                Button {
+                    onDiscardHunk(hunkIndex)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 10))
+                        Text("Discard Hunk")
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.red.opacity(0.15))
+                .foregroundColor(.red)
+                .cornerRadius(4)
+                .help("Discard all changes in this hunk")
+            }
         }
         .foregroundColor(AppTheme.accent)
         .padding(.vertical, 6)

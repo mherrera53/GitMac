@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![GitMac Logo](https://via.placeholder.com/150x150/667AFF/FFFFFF?text=GitMac)
+![GitMac Logo](./logo.png)
 
 **A modern, native macOS Git client built with SwiftUI**
 

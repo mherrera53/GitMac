@@ -1,5 +1,48 @@
 import SwiftUI
 
+// MARK: - Graph Display Settings
+@MainActor
+class GraphSettings: ObservableObject {
+    // Column visibility
+    @Published var showBranchColumn = true
+    @Published var showAuthorColumn = false
+    @Published var showDateColumn = false
+    @Published var showSHAColumn = false
+
+    // Column widths
+    @Published var branchColumnWidth: CGFloat = 140
+    @Published var graphColumnWidth: CGFloat = 110
+    @Published var authorColumnWidth: CGFloat = 120
+    @Published var dateColumnWidth: CGFloat = 100
+    @Published var shaColumnWidth: CGFloat = 80
+
+    // Display preferences
+    @Published var showAvatars = true
+    @Published var showInitials = false // When avatars fail to load
+    @Published var compactMode = false
+    @Published var dimMergeCommits = false
+
+    // Filtering
+    @Published var showTags = true
+    @Published var showBranches = true
+    @Published var showStashes = true
+    @Published var filterAuthor: String = ""
+    @Published var searchText: String = ""
+
+    // Computed properties
+    var rowHeight: CGFloat {
+        compactMode ? 32 : 44
+    }
+
+    var nodeRadius: CGFloat {
+        compactMode ? 10 : 14
+    }
+
+    var avatarSize: CGFloat {
+        compactMode ? 18 : 26
+    }
+}
+
 // MARK: - Color Extension for Branch Colors
 private extension Color {
     static func branchColor(_ index: Int) -> Color {
@@ -13,9 +56,12 @@ struct CommitGraphView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var vm = GraphViewModel()
     @StateObject private var tracker = RemoteOperationTracker.shared
+    @StateObject private var settings = GraphSettings()
     @State private var selectedIds: Set<String> = []
     @State private var lastSelectedId: String?
     @State private var hoveredId: String?
+    @State private var hoveredBranch: String?
+    @State private var showSettings = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -24,7 +70,11 @@ struct CommitGraphView: View {
                 remoteStatusBar(operation: operation)
                 Divider()
             }
-            
+
+            // Search and filter toolbar
+            graphToolbar
+            Divider()
+
             graphHeader
             Divider()
             graphContent
@@ -105,23 +155,147 @@ struct CommitGraphView: View {
         )
     }
 
+    // MARK: - Graph Toolbar
+    private var graphToolbar: some View {
+        HStack(spacing: 12) {
+            // Search field
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                    .font(.system(size: 12))
+                TextField("Search commits (message, author, SHA)...", text: $settings.searchText)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12))
+
+                if !settings.searchText.isEmpty {
+                    Button {
+                        settings.searchText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 12))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(AppTheme.backgroundSecondary)
+            .cornerRadius(6)
+            .frame(maxWidth: 400)
+
+            // Filter by author
+            if !settings.filterAuthor.isEmpty {
+                HStack(spacing: 4) {
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 10))
+                    Text(settings.filterAuthor)
+                        .font(.system(size: 11, weight: .medium))
+                    Button {
+                        settings.filterAuthor = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.blue.opacity(0.2))
+                .foregroundColor(.blue)
+                .cornerRadius(12)
+            }
+
+            Spacer()
+
+            // Toggle buttons for visibility
+            HStack(spacing: 4) {
+                Toggle(isOn: $settings.showBranches) {
+                    Image(systemName: "arrow.triangle.branch")
+                        .font(.system(size: 12))
+                }
+                .toggleStyle(.button)
+                .help("Show Branches")
+
+                Toggle(isOn: $settings.showTags) {
+                    Image(systemName: "tag.fill")
+                        .font(.system(size: 12))
+                }
+                .toggleStyle(.button)
+                .help("Show Tags")
+
+                Toggle(isOn: $settings.showStashes) {
+                    Image(systemName: "shippingbox.fill")
+                        .font(.system(size: 12))
+                }
+                .toggleStyle(.button)
+                .help("Show Stashes")
+            }
+            .buttonStyle(.borderless)
+
+            Divider()
+                .frame(height: 16)
+
+            // Display options
+            Menu {
+                Toggle("Show Avatars", isOn: $settings.showAvatars)
+                Toggle("Compact Mode", isOn: $settings.compactMode)
+                Toggle("Dim Merge Commits", isOn: $settings.dimMergeCommits)
+
+                Divider()
+
+                Menu("Columns") {
+                    Toggle("Author", isOn: $settings.showAuthorColumn)
+                    Toggle("Date/Time", isOn: $settings.showDateColumn)
+                    Toggle("SHA", isOn: $settings.showSHAColumn)
+                }
+            } label: {
+                Image(systemName: "slider.horizontal.3")
+            }
+            .help("Display Options")
+            .menuStyle(.borderlessButton)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(AppTheme.backgroundSecondary)
+    }
+
     private var graphHeader: some View {
         HStack(spacing: 0) {
-            Text("BRANCH / TAG")
-                .frame(width: 140, alignment: .leading)
-                .padding(.leading, 12)
+            if settings.showBranchColumn {
+                Text("BRANCH / TAG")
+                    .frame(width: settings.branchColumnWidth, alignment: .leading)
+                    .padding(.leading, 12)
+            }
+
             Text("GRAPH")
-                .frame(width: 110, alignment: .center)
+                .frame(width: settings.graphColumnWidth, alignment: .center)
+
             Text("COMMIT MESSAGE")
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 8)
+
+            if settings.showAuthorColumn {
+                Text("AUTHOR")
+                    .frame(width: settings.authorColumnWidth, alignment: .leading)
+            }
+
+            if settings.showDateColumn {
+                Text("DATE")
+                    .frame(width: settings.dateColumnWidth, alignment: .trailing)
+            }
+
+            if settings.showSHAColumn {
+                Text("SHA")
+                    .frame(width: settings.shaColumnWidth, alignment: .trailing)
+                    .padding(.trailing, 8)
+            }
         }
         .font(.system(size: 10, weight: .semibold))
         .foregroundColor(AppTheme.textMuted)
         .frame(height: 28)
         .background(AppTheme.backgroundSecondary)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Graph Header: Branch, Graph, Commit Message")
+        .accessibilityLabel("Graph Header")
     }
 
     @ViewBuilder
@@ -169,38 +343,47 @@ struct CommitGraphView: View {
 
             switch item {
             case .commit(let node):
-                GraphRow(
-                    node: node,
-                    isSelected: selectedIds.contains(node.commit.sha),
-                    isHovered: hoveredId == node.commit.sha
-                )
-                .onHover { h in hoveredId = h ? node.commit.sha : nil }
-                .onTapGesture {
-                    handleSelection(item: item)
-                }
-                .onAppear {
-                    // Trigger load more when near the end of the list
-                    if isNearEnd && vm.hasMore && !vm.isLoading {
-                        Task { await vm.loadMore() }
+                // Apply search and filter
+                if matchesSearchAndFilter(node) {
+                    GraphRow(
+                        node: node,
+                        isSelected: selectedIds.contains(node.commit.sha),
+                        isHovered: hoveredId == node.commit.sha,
+                        settings: settings,
+                        onHoverBranch: { branch in
+                            hoveredBranch = branch
+                        }
+                    )
+                    .onHover { h in hoveredId = h ? node.commit.sha : nil }
+                    .onTapGesture {
+                        handleSelection(item: item)
                     }
+                    .onAppear {
+                        // Trigger load more when near the end of the list
+                        if isNearEnd && vm.hasMore && !vm.isLoading {
+                            Task { await vm.loadMore() }
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Commit \(node.commit.shortSha) by \(node.commit.author): \(node.commit.summary)")
+                    .accessibilityHint("Double tap to view details, context click for more actions")
                 }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Commit \(node.commit.shortSha) by \(node.commit.author): \(node.commit.summary)")
-                .accessibilityHint("Double tap to view details, context click for more actions")
             case .stash(let stashNode):
-                GraphStashRow(
-                    stash: stashNode,
-                    isSelected: selectedIds.contains(stashNode.id),
-                    isHovered: hoveredId == stashNode.id
-                )
-                .onHover { h in hoveredId = h ? stashNode.id : nil }
-                .onTapGesture {
-                    handleSelection(item: item)
-                }
-                .onAppear {
-                    // Trigger load more when near the end of the list
-                    if isNearEnd && vm.hasMore && !vm.isLoading {
-                        Task { await vm.loadMore() }
+                if settings.showStashes {
+                    GraphStashRow(
+                        stash: stashNode,
+                        isSelected: selectedIds.contains(stashNode.id),
+                        isHovered: hoveredId == stashNode.id
+                    )
+                    .onHover { h in hoveredId = h ? stashNode.id : nil }
+                    .onTapGesture {
+                        handleSelection(item: item)
+                    }
+                    .onAppear {
+                        // Trigger load more when near the end of the list
+                        if isNearEnd && vm.hasMore && !vm.isLoading {
+                            Task { await vm.loadMore() }
+                        }
                     }
                 }
             }
@@ -213,6 +396,43 @@ struct CommitGraphView: View {
             ProgressView().frame(height: 40)
                 .onAppear { Task { await vm.loadMore() } }
         }
+    }
+
+    // MARK: - Search and Filter
+    private func matchesSearchAndFilter(_ node: GraphNode) -> Bool {
+        // Filter by author
+        if !settings.filterAuthor.isEmpty {
+            if !node.commit.author.localizedCaseInsensitiveContains(settings.filterAuthor) {
+                return false
+            }
+        }
+
+        // Search by text
+        if !settings.searchText.isEmpty {
+            let search = settings.searchText.lowercased()
+            let matchesMessage = node.commit.message.lowercased().contains(search)
+            let matchesAuthor = node.commit.author.lowercased().contains(search)
+            let matchesSHA = node.commit.sha.lowercased().contains(search)
+
+            if !matchesMessage && !matchesAuthor && !matchesSHA {
+                return false
+            }
+        }
+
+        // Filter by branch/tag visibility
+        if let label = node.branchLabel {
+            let isTag = label.hasPrefix("v") || label.contains(".")
+            let isBranch = !isTag
+
+            if isTag && !settings.showTags {
+                return false
+            }
+            if isBranch && !settings.showBranches {
+                return false
+            }
+        }
+
+        return true
     }
 
     private func handleSelection(item: TimelineItem) {
@@ -550,28 +770,32 @@ struct GraphRow: View {
     let node: GraphNode
     let isSelected: Bool
     let isHovered: Bool
+    let settings: GraphSettings
+    let onHoverBranch: ((String?) -> Void)?
 
-    private let H: CGFloat = 44      // Mayor altura de fila
-    private let W: CGFloat = 26      // Mayor espaciado entre carriles
-    private let R: CGFloat = 14      // Node radius (bigger for avatar visibility)
-    private let LW: CGFloat = 2      // Line width
+    private var H: CGFloat { settings.rowHeight }
+    private var W: CGFloat { 26 }  // Lane spacing
+    private var R: CGFloat { settings.nodeRadius }
+    private var LW: CGFloat { 2 }  // Line width
 
     var body: some View {
         HStack(spacing: 0) {
             // Branch label with badge
-            HStack {
-                if let label = node.branchLabel {
-                    BranchBadge(
-                        name: label,
-                        color: color(node.lane),
-                        isHead: label == "main" || label == "master",
-                        isTag: label.hasPrefix("v") || label.contains(".")
-                    )
+            if settings.showBranchColumn {
+                HStack {
+                    if let label = node.branchLabel {
+                        BranchBadge(
+                            name: label,
+                            color: color(node.lane),
+                            isHead: label == "main" || label == "master",
+                            isTag: label.hasPrefix("v") || label.contains(".")
+                        )
+                    }
+                    Spacer()
                 }
-                Spacer()
+                .frame(width: settings.branchColumnWidth)
+                .padding(.leading, 8)
             }
-            .frame(width: 140)
-            .padding(.leading, 8)
 
             // Graph - Canvas for lines, overlay for avatar
             ZStack {
@@ -607,52 +831,87 @@ struct GraphRow: View {
                     // Add a white/background stroke to separate node from lines
                     ctx.stroke(Circle().path(in: nodeRect), with: .color(AppTheme.background), lineWidth: 2)
                 }
-                .frame(width: 110, height: H)
+                .frame(width: settings.graphColumnWidth, height: H)
 
-                // Avatar overlay INSIDE the node
-                avatarView
-                    .frame(width: R * 2 - 2, height: R * 2 - 2) // Slightly smaller than node
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(color(node.lane), lineWidth: 2)
-                    )
-                    .background(
-                        Circle()
-                            .fill(AppTheme.background)
-                    )
-                    .offset(x: x(node.lane) - 55) // Center on node position (55 is half of 110 width)
-                    .scaleEffect(isHovered ? 1.15 : 1.0)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHovered)
+                // Avatar overlay INSIDE the node - FIXED positioning and size
+                if settings.showAvatars {
+                    avatarView
+                        .frame(width: settings.avatarSize, height: settings.avatarSize)
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(color(node.lane), lineWidth: 2)
+                        )
+                        .background(
+                            Circle()
+                                .fill(AppTheme.background)
+                        )
+                        .offset(x: x(node.lane) - (settings.graphColumnWidth / 2))
+                        .scaleEffect(isHovered ? 1.15 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHovered)
+                }
             }
 
-            // Commit info
-            HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(node.commit.summary)
-                        .font(.system(size: 12))
-                        .foregroundColor(AppTheme.textPrimary)
-                        .lineLimit(1)
+            // Commit message
+            VStack(alignment: .leading, spacing: 1) {
+                Text(node.commit.summary)
+                    .font(.system(size: settings.compactMode ? 11 : 12))
+                    .foregroundColor(AppTheme.textPrimary)
+                    .lineLimit(1)
+                if !settings.compactMode && !settings.showAuthorColumn {
                     Text(node.commit.author)
                         .font(.system(size: 10))
                         .foregroundColor(AppTheme.textMuted)
                 }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8)
 
-                Spacer()
+            // Author column (optional)
+            if settings.showAuthorColumn {
+                HStack(spacing: 6) {
+                    if settings.showAvatars && !settings.compactMode {
+                        AvatarImageView(
+                            email: node.commit.authorEmail,
+                            size: 20,
+                            fallbackInitial: String(node.commit.author.prefix(1))
+                        )
+                    }
+                    Text(node.commit.author)
+                        .font(.system(size: 11))
+                        .foregroundColor(AppTheme.textPrimary)
+                        .lineLimit(1)
+                }
+                .frame(width: settings.authorColumnWidth, alignment: .leading)
+            }
 
-                Text(node.commit.shortSha)
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(AppTheme.textMuted)
-
+            // Date column (optional)
+            if settings.showDateColumn {
                 Text(node.commit.relativeDate)
                     .font(.system(size: 10))
                     .foregroundColor(AppTheme.textMuted)
-                    .frame(width: 70, alignment: .trailing)
+                    .frame(width: settings.dateColumnWidth, alignment: .trailing)
             }
-            .padding(.horizontal, 8)
+
+            // SHA column (optional)
+            if settings.showSHAColumn {
+                Text(node.commit.shortSha)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(AppTheme.textMuted)
+                    .frame(width: settings.shaColumnWidth, alignment: .trailing)
+                    .padding(.trailing, 8)
+            }
         }
         .frame(height: H)
         .background(isSelected ? AppTheme.selection : (isHovered ? AppTheme.hover : Color.clear))
+        .opacity(settings.dimMergeCommits && node.isMerge ? 0.5 : 1.0)
+        .onHover { hovering in
+            if let label = node.branchLabel, hovering {
+                onHoverBranch?(label)
+            } else if !hovering {
+                onHoverBranch?(nil)
+            }
+        }
         .contextMenu {
             CommitContextMenu(commits: [node.commit])
         }
@@ -662,7 +921,7 @@ struct GraphRow: View {
     private var avatarView: some View {
         AvatarImageView(
             email: node.commit.authorEmail,
-            size: R * 2 - 2,
+            size: settings.avatarSize,
             fallbackInitial: String(node.commit.author.prefix(1))
         )
     }

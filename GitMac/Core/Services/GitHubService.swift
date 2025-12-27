@@ -275,6 +275,177 @@ actor GitHubService {
         return try JSONDecoder().decode(GitHubCheckRuns.self, from: data)
     }
 
+    // MARK: - Collaborators & Labels
+
+    /// Get repository collaborators
+    func getCollaborators(owner: String, repo: String) async throws -> [GitHubUser] {
+        let data = try await request(endpoint: "/repos/\(owner)/\(repo)/collaborators")
+        return try JSONDecoder().decode([GitHubUser].self, from: data)
+    }
+
+    /// Get repository labels
+    func getLabels(owner: String, repo: String) async throws -> [GitHubLabel] {
+        let data = try await request(endpoint: "/repos/\(owner)/\(repo)/labels")
+        return try JSONDecoder().decode([GitHubLabel].self, from: data)
+    }
+
+    /// Request reviewers for a PR
+    func requestReviewers(
+        owner: String,
+        repo: String,
+        number: Int,
+        reviewers: [String]
+    ) async throws {
+        let payload: [String: Any] = ["reviewers": reviewers]
+        _ = try await request(
+            endpoint: "/repos/\(owner)/\(repo)/pulls/\(number)/requested_reviewers",
+            method: "POST",
+            body: payload
+        )
+    }
+
+    /// Add assignees to a PR
+    func addAssignees(
+        owner: String,
+        repo: String,
+        number: Int,
+        assignees: [String]
+    ) async throws {
+        let payload: [String: Any] = ["assignees": assignees]
+        _ = try await request(
+            endpoint: "/repos/\(owner)/\(repo)/issues/\(number)/assignees",
+            method: "POST",
+            body: payload
+        )
+    }
+
+    /// Add labels to a PR
+    func addLabels(
+        owner: String,
+        repo: String,
+        number: Int,
+        labels: [String]
+    ) async throws {
+        let payload: [String: Any] = ["labels": labels]
+        _ = try await request(
+            endpoint: "/repos/\(owner)/\(repo)/issues/\(number)/labels",
+            method: "POST",
+            body: payload
+        )
+    }
+
+    /// Get PR comments
+    func getPullRequestComments(owner: String, repo: String, number: Int) async throws -> [GitHubComment] {
+        let data = try await request(endpoint: "/repos/\(owner)/\(repo)/issues/\(number)/comments")
+        return try JSONDecoder().decode([GitHubComment].self, from: data)
+    }
+
+    /// Add comment to PR
+    func addPullRequestComment(
+        owner: String,
+        repo: String,
+        number: Int,
+        body: String
+    ) async throws -> GitHubComment {
+        let payload: [String: Any] = ["body": body]
+        let data = try await request(
+            endpoint: "/repos/\(owner)/\(repo)/issues/\(number)/comments",
+            method: "POST",
+            body: payload
+        )
+        return try JSONDecoder().decode(GitHubComment.self, from: data)
+    }
+
+    /// Get PR review comments (inline comments)
+    func getPullRequestReviewComments(owner: String, repo: String, number: Int) async throws -> [GitHubReviewComment] {
+        let data = try await request(endpoint: "/repos/\(owner)/\(repo)/pulls/\(number)/comments")
+        return try JSONDecoder().decode([GitHubReviewComment].self, from: data)
+    }
+
+    /// Add inline review comment to specific line
+    func addReviewComment(
+        owner: String,
+        repo: String,
+        number: Int,
+        body: String,
+        commitId: String,
+        path: String,
+        line: Int
+    ) async throws -> GitHubReviewComment {
+        let payload: [String: Any] = [
+            "body": body,
+            "commit_id": commitId,
+            "path": path,
+            "line": line
+        ]
+        let data = try await request(
+            endpoint: "/repos/\(owner)/\(repo)/pulls/\(number)/comments",
+            method: "POST",
+            body: payload
+        )
+        return try JSONDecoder().decode(GitHubReviewComment.self, from: data)
+    }
+
+    /// Create a PR review with comments
+    func createReview(
+        owner: String,
+        repo: String,
+        number: Int,
+        commitId: String,
+        body: String?,
+        event: ReviewEvent,
+        comments: [ReviewCommentInput]? = nil
+    ) async throws -> GitHubReview {
+        var payload: [String: Any] = [
+            "commit_id": commitId,
+            "event": event.rawValue
+        ]
+        if let body = body {
+            payload["body"] = body
+        }
+        if let comments = comments {
+            payload["comments"] = comments.map { comment in
+                return [
+                    "path": comment.path,
+                    "line": comment.line,
+                    "body": comment.body
+                ] as [String: Any]
+            }
+        }
+
+        let data = try await request(
+            endpoint: "/repos/\(owner)/\(repo)/pulls/\(number)/reviews",
+            method: "POST",
+            body: payload
+        )
+        return try JSONDecoder().decode(GitHubReview.self, from: data)
+    }
+
+    // MARK: - Team Activity
+
+    /// Get recent commits from all branches
+    func listBranches(owner: String, repo: String) async throws -> [GitHubBranch] {
+        let data = try await request(endpoint: "/repos/\(owner)/\(repo)/branches")
+        return try JSONDecoder().decode([GitHubBranch].self, from: data)
+    }
+
+    /// Get commits for a specific branch
+    func getCommitsForBranch(owner: String, repo: String, branch: String, since: Date? = nil) async throws -> [GitHubCommit] {
+        var endpoint = "/repos/\(owner)/\(repo)/commits?sha=\(branch)"
+        if let since = since {
+            let formatter = ISO8601DateFormatter()
+            endpoint += "&since=\(formatter.string(from: since))"
+        }
+        let data = try await request(endpoint: endpoint)
+        return try JSONDecoder().decode([GitHubCommit].self, from: data)
+    }
+
+    /// Get files changed in a commit
+    func getCommitFiles(owner: String, repo: String, sha: String) async throws -> GitHubCommitDetail {
+        let data = try await request(endpoint: "/repos/\(owner)/\(repo)/commits/\(sha)")
+        return try JSONDecoder().decode(GitHubCommitDetail.self, from: data)
+    }
+
     // MARK: - Private Helpers
 
     private func request(
@@ -590,6 +761,108 @@ struct GitHubCheckRun: Codable, Identifiable {
     }
 }
 
+struct GitHubComment: Codable, Identifiable {
+    let id: Int
+    let user: GitHubUser
+    let body: String
+    let createdAt: String
+    let updatedAt: String
+    let htmlUrl: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, user, body
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case htmlUrl = "html_url"
+    }
+}
+
+struct GitHubReviewComment: Codable, Identifiable {
+    let id: Int
+    let user: GitHubUser
+    let body: String
+    let path: String
+    let line: Int?
+    let originalLine: Int?
+    let commitId: String
+    let createdAt: String
+    let updatedAt: String
+    let htmlUrl: String
+    let diffHunk: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, user, body, path, line
+        case originalLine = "original_line"
+        case commitId = "commit_id"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case htmlUrl = "html_url"
+        case diffHunk = "diff_hunk"
+    }
+}
+
+struct ReviewCommentInput {
+    let path: String
+    let line: Int
+    let body: String
+}
+
+struct GitHubBranch: Codable, Identifiable {
+    var id: String { name }
+    let name: String
+    let commit: GitHubBranchCommit
+    let protected: Bool
+}
+
+struct GitHubBranchCommit: Codable {
+    let sha: String
+    let url: String
+}
+
+struct GitHubCommit: Codable, Identifiable {
+    var id: String { sha }
+    let sha: String
+    let commit: GitHubCommitInfo
+    let author: GitHubUser?
+    let committer: GitHubUser?
+}
+
+struct GitHubCommitInfo: Codable {
+    let message: String
+    let author: GitHubCommitAuthor
+    let committer: GitHubCommitAuthor
+}
+
+struct GitHubCommitAuthor: Codable {
+    let name: String
+    let email: String
+    let date: String
+}
+
+struct GitHubCommitDetail: Codable {
+    let sha: String
+    let commit: GitHubCommitInfo
+    let author: GitHubUser?
+    let files: [GitHubCommitFile]?
+    let stats: GitHubCommitStats?
+}
+
+struct GitHubCommitFile: Codable, Identifiable {
+    var id: String { filename }
+    let filename: String
+    let status: String
+    let additions: Int
+    let deletions: Int
+    let changes: Int
+    let patch: String?
+}
+
+struct GitHubCommitStats: Codable {
+    let additions: Int
+    let deletions: Int
+    let total: Int
+}
+
 // MARK: - Enums
 
 enum PRState: String {
@@ -608,6 +881,12 @@ enum MergeMethod: String {
     case merge
     case squash
     case rebase
+}
+
+enum ReviewEvent: String {
+    case approve = "APPROVE"
+    case requestChanges = "REQUEST_CHANGES"
+    case comment = "COMMENT"
 }
 
 // MARK: - Errors

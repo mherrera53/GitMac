@@ -222,12 +222,14 @@ struct MainLayout: View {
     @State private var showLinear = false
     @State private var showJira = false
     @State private var showNotion = false
+    @State private var showTeamActivity = false
     @State private var terminalHeight: CGFloat = 200
     @State private var taigaHeight: CGFloat = 250
     @State private var plannerHeight: CGFloat = 250
     @State private var linearHeight: CGFloat = 250
     @State private var jiraHeight: CGFloat = 250
     @State private var notionHeight: CGFloat = 250
+    @State private var teamActivityHeight: CGFloat = 400
     @State private var searchText = ""
 
     var body: some View {
@@ -283,6 +285,11 @@ struct MainLayout: View {
             // Notion Panel (togglable)
             if showNotion {
                 NotionPanel(height: $notionHeight, onClose: { showNotion = false })
+            }
+
+            // Team Activity Panel (togglable)
+            if showTeamActivity {
+                TeamActivityPanel(height: $teamActivityHeight, onClose: { showTeamActivity = false })
             }
         }
         .toolbar {
@@ -382,6 +389,12 @@ struct MainLayout: View {
                     Image(systemName: showNotion ? "doc.text.fill" : "doc.text")
                 }
                 .help(showNotion ? "Hide Notion" : "Show Notion")
+
+                Button(action: { showTeamActivity.toggle() }) {
+                    Image(systemName: showTeamActivity ? "person.3.fill" : "person.3")
+                        .foregroundColor(showTeamActivity ? .blue : nil)
+                }
+                .help(showTeamActivity ? "Hide Team Activity" : "Show Team Activity")
 
                 TextField("Search commits...", text: $searchText)
                     .frame(minWidth: 150, maxWidth: 250)
@@ -4733,4 +4746,585 @@ struct MergeBranchSheet: View {
             }
         }
     }
+}
+
+// MARK: - Team Activity Panel
+
+struct TeamActivityPanel: View {
+    @Binding var height: CGFloat
+    let onClose: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Resizer handle
+            TerminalResizer(height: $height)
+
+            // Team Activity content
+            TeamActivityView()
+                .frame(height: height)
+        }
+        .background(Color(nsColor: .controlBackgroundColor))
+    }
+}
+
+/// Team activity view to prevent merge conflicts
+struct TeamActivityView: View {
+    @EnvironmentObject var appState: AppState
+    @StateObject private var viewModel = TeamActivityViewModel()
+    @State private var selectedMember: TeamMember?
+    @State private var showConflictAlert = false
+
+    var body: some View {
+        HSplitView {
+            // Left: Team members list
+            VStack(spacing: 0) {
+                teamListHeader
+                Divider()
+                teamMembersList
+            }
+            .frame(minWidth: 280, idealWidth: 320)
+
+            // Right: Member activity detail
+            if let member = selectedMember {
+                memberDetailView(member)
+            } else {
+                emptyStateView
+            }
+        }
+        .task {
+            if let repo = appState.currentRepository,
+               let remote = repo.remotes.first(where: { $0.isGitHub }),
+               let ownerRepo = remote.ownerAndRepo {
+                await viewModel.loadTeamActivity(
+                    owner: ownerRepo.owner,
+                    repo: ownerRepo.repo,
+                    localChanges: []
+                )
+                if let firstMember = viewModel.teamMembers.first {
+                    selectedMember = firstMember
+                }
+            }
+        }
+        .alert("Potential Conflicts Detected", isPresented: $showConflictAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.conflictMessage)
+        }
+    }
+
+    // MARK: - Team List Header
+
+    private var teamListHeader: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Team Activity")
+                    .font(.headline)
+
+                Text("\(viewModel.teamMembers.count) active members")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            // Refresh button
+            Button {
+                Task { await refreshActivity() }
+            } label: {
+                Image(systemName: viewModel.isLoading ? "arrow.clockwise" : "arrow.clockwise")
+                    .rotationEffect(.degrees(viewModel.isLoading ? 360 : 0))
+            }
+            .buttonStyle(.borderless)
+            .disabled(viewModel.isLoading)
+
+            // Conflict indicator
+            if viewModel.hasConflicts {
+                Button {
+                    showConflictAlert = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                        Text("\(viewModel.conflictCount)")
+                    }
+                    .foregroundColor(.orange)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding()
+        .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    // MARK: - Team Members List
+
+    private var teamMembersList: some View {
+        ScrollView {
+            LazyVStack(spacing: 8) {
+                ForEach(viewModel.teamMembers) { member in
+                    TeamMemberRow(
+                        member: member,
+                        isSelected: selectedMember?.id == member.id,
+                        onSelect: { selectedMember = member }
+                    )
+                }
+            }
+            .padding()
+        }
+    }
+
+    // MARK: - Member Detail View
+
+    private func memberDetailView(_ member: TeamMember) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // Member header
+                HStack(spacing: 12) {
+                    AsyncImage(url: URL(string: member.user.avatarUrl)) { image in
+                        image.resizable()
+                    } placeholder: {
+                        Image(systemName: "person.circle.fill")
+                            .resizable()
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(width: 48, height: 48)
+                    .clipShape(Circle())
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(member.user.login)
+                            .font(.title2)
+                            .fontWeight(.bold)
+
+                        HStack(spacing: 12) {
+                            Label("\(member.activePRs.count) PRs", systemImage: "arrow.triangle.pull")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+
+                            Label("\(member.filesBeingModified.count) files", systemImage: "doc.text")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Spacer()
+
+                    if let lastActive = member.lastActiveDate {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("Last active")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            Text(formatDate(lastActive))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .padding()
+                .background(Color(nsColor: .controlBackgroundColor))
+                .cornerRadius(8)
+
+                // Active PRs
+                if !member.activePRs.isEmpty {
+                    activePRsSection(member)
+                }
+
+                // Files being modified
+                if !member.filesBeingModified.isEmpty {
+                    filesBeingModifiedSection(member)
+                }
+
+                // Recent commits
+                if !member.recentCommits.isEmpty {
+                    recentCommitsSection(member)
+                }
+            }
+            .padding()
+        }
+    }
+
+    private func activePRsSection(_ member: TeamMember) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Active Pull Requests")
+                .font(.headline)
+
+            ForEach(member.activePRs, id: \.number) { pr in
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.triangle.pull")
+                        .foregroundColor(.green)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("#\(pr.number) \(pr.title)")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .lineLimit(1)
+
+                        HStack(spacing: 8) {
+                            Text(pr.head.ref)
+                                .font(.caption)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.blue.opacity(0.2))
+                                .foregroundColor(.blue)
+                                .cornerRadius(4)
+
+                            Image(systemName: "arrow.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            Text(pr.base.ref)
+                                .font(.caption)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.green.opacity(0.2))
+                                .foregroundColor(.green)
+                                .cornerRadius(4)
+                        }
+                    }
+
+                    Spacer()
+
+                    Button {
+                        if let url = URL(string: pr.htmlUrl) {
+                            NSWorkspace.shared.open(url)
+                        }
+                    } label: {
+                        Image(systemName: "arrow.up.right.square")
+                    }
+                    .buttonStyle(.borderless)
+                }
+                .padding()
+                .background(Color(nsColor: .controlBackgroundColor))
+                .cornerRadius(8)
+            }
+        }
+    }
+
+    private func filesBeingModifiedSection(_ member: TeamMember) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Files Being Modified")
+                .font(.headline)
+
+            ForEach(member.filesBeingModified) { file in
+                HStack(spacing: 8) {
+                    StatusIcon(status: fileStatus(file.status))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(file.filename)
+                            .font(.caption)
+                            .fontWeight(.medium)
+
+                        if let source = file.source {
+                            Text("in \(source)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Spacer()
+
+                    // Conflict warning
+                    if file.hasConflict {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                            Text("Conflict")
+                        }
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.orange.opacity(0.2))
+                        .cornerRadius(4)
+                    }
+
+                    HStack(spacing: 4) {
+                        Text("+\(file.additions)")
+                            .foregroundColor(.green)
+                        Text("-\(file.deletions)")
+                            .foregroundColor(.red)
+                    }
+                    .font(.caption2.monospacedDigit())
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(file.hasConflict ? Color.orange.opacity(0.05) : Color(nsColor: .controlBackgroundColor))
+                .cornerRadius(8)
+            }
+        }
+    }
+
+    private func recentCommitsSection(_ member: TeamMember) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Recent Commits")
+                .font(.headline)
+
+            ForEach(member.recentCommits) { commit in
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "circle.fill")
+                        .font(.system(size: 8))
+                        .foregroundColor(.blue)
+                        .padding(.top, 6)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(commit.commit.message.components(separatedBy: "\n").first ?? commit.commit.message)
+                            .font(.caption)
+                            .lineLimit(2)
+
+                        HStack(spacing: 8) {
+                            Text(commit.sha.prefix(7))
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundColor(.secondary)
+
+                            Text(formatDate(commit.commit.author.date))
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color(nsColor: .controlBackgroundColor))
+                .cornerRadius(8)
+            }
+        }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "person.3.fill")
+                .font(.system(size: 64))
+                .foregroundColor(.secondary)
+
+            Text("No Team Member Selected")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text("Select a team member to view their activity")
+                .font(.callout)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Helpers
+
+    private func fileStatus(_ status: String) -> FileStatusType {
+        switch status {
+        case "added": return .added
+        case "removed": return .deleted
+        case "modified": return .modified
+        case "renamed": return .renamed
+        default: return .modified
+        }
+    }
+
+    private func formatDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        guard let date = formatter.date(from: dateString) else { return dateString }
+
+        let relative = RelativeDateTimeFormatter()
+        relative.unitsStyle = .abbreviated
+        return relative.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        let relative = RelativeDateTimeFormatter()
+        relative.unitsStyle = .abbreviated
+        return relative.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func refreshActivity() async {
+        if let repo = appState.currentRepository,
+           let remote = repo.remotes.first(where: { $0.isGitHub }),
+           let ownerRepo = remote.ownerAndRepo {
+            await viewModel.loadTeamActivity(
+                owner: ownerRepo.owner,
+                repo: ownerRepo.repo,
+                localChanges: []
+            )
+        }
+    }
+}
+
+// MARK: - View Model
+
+@MainActor
+class TeamActivityViewModel: ObservableObject {
+    @Published var teamMembers: [TeamMember] = []
+    @Published var isLoading = false
+    @Published var hasConflicts = false
+    @Published var conflictCount = 0
+    @Published var conflictMessage = ""
+
+    private let githubService = GitHubService()
+
+    func loadTeamActivity(owner: String, repo: String, localChanges: [StagingFile]) async {
+        isLoading = true
+
+        do {
+            // Get all open PRs
+            let openPRs = try await githubService.listPullRequests(
+                owner: owner,
+                repo: repo,
+                state: .open
+            )
+
+            // Group PRs by author
+            var memberDict: [String: TeamMember] = [:]
+            let localFilePaths = Set(localChanges.map { $0.path })
+
+            for pr in openPRs {
+                let userId = pr.user.login
+
+                // Get files for this PR
+                let prFiles = try await githubService.getPullRequestFiles(
+                    owner: owner,
+                    repo: repo,
+                    number: pr.number
+                )
+
+                // Convert to FileBeingModified with conflict detection
+                let filesBeingModified = prFiles.map { file in
+                    FileBeingModified(
+                        filename: file.filename,
+                        status: file.status,
+                        additions: file.additions,
+                        deletions: file.deletions,
+                        source: "PR #\(pr.number)",
+                        hasConflict: localFilePaths.contains(file.filename)
+                    )
+                }
+
+                // Get recent commits for the PR branch
+                let recentCommits = try await githubService.getCommitsForBranch(
+                    owner: owner,
+                    repo: repo,
+                    branch: pr.head.ref,
+                    since: Calendar.current.date(byAdding: .day, value: -7, to: Date())
+                )
+
+                if var member = memberDict[userId] {
+                    member.activePRs.append(pr)
+                    member.filesBeingModified.append(contentsOf: filesBeingModified)
+                    member.recentCommits.append(contentsOf: recentCommits)
+
+                    // Update last active date
+                    if let prUpdated = ISO8601DateFormatter().date(from: pr.updatedAt),
+                       let currentLast = member.lastActiveDate {
+                        member.lastActiveDate = max(currentLast, prUpdated)
+                    } else if let prUpdated = ISO8601DateFormatter().date(from: pr.updatedAt) {
+                        member.lastActiveDate = prUpdated
+                    }
+
+                    memberDict[userId] = member
+                } else {
+                    let lastActiveDate = ISO8601DateFormatter().date(from: pr.updatedAt)
+                    memberDict[userId] = TeamMember(
+                        user: pr.user,
+                        activePRs: [pr],
+                        filesBeingModified: filesBeingModified,
+                        recentCommits: recentCommits,
+                        lastActiveDate: lastActiveDate
+                    )
+                }
+            }
+
+            teamMembers = Array(memberDict.values).sorted { a, b in
+                (a.lastActiveDate ?? .distantPast) > (b.lastActiveDate ?? .distantPast)
+            }
+
+            // Calculate conflicts
+            let allConflicts = teamMembers.flatMap { $0.filesBeingModified }.filter { $0.hasConflict }
+            conflictCount = allConflicts.count
+            hasConflicts = conflictCount > 0
+
+            if hasConflicts {
+                let uniqueFiles = Set(allConflicts.map { $0.filename })
+                conflictMessage = """
+                You have local changes to \(uniqueFiles.count) file(s) that are also being modified by your team:
+
+                \(uniqueFiles.sorted().prefix(5).joined(separator: "\n"))
+                \(uniqueFiles.count > 5 ? "\n...and \(uniqueFiles.count - 5) more" : "")
+                """
+            }
+        } catch {
+            print("Failed to load team activity: \(error)")
+        }
+
+        isLoading = false
+    }
+}
+
+// MARK: - Supporting Views
+
+struct TeamMemberRow: View {
+    let member: TeamMember
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            AsyncImage(url: URL(string: member.user.avatarUrl)) { image in
+                image.resizable()
+            } placeholder: {
+                Image(systemName: "person.circle.fill")
+                    .resizable()
+                    .foregroundColor(.secondary)
+            }
+            .frame(width: 32, height: 32)
+            .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(member.user.login)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+
+                HStack(spacing: 8) {
+                    Label("\(member.activePRs.count)", systemImage: "arrow.triangle.pull")
+                        .font(.caption2)
+                        .foregroundColor(.blue)
+
+                    Label("\(member.filesBeingModified.count)", systemImage: "doc.text")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+
+                    if member.filesBeingModified.contains(where: { $0.hasConflict }) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                    }
+                }
+            }
+
+            Spacer()
+        }
+        .padding(12)
+        .background(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
+        .cornerRadius(8)
+        .onTapGesture { onSelect() }
+    }
+}
+
+// MARK: - Models
+
+struct TeamMember: Identifiable {
+    var id: String { user.login }
+    let user: GitHubUser
+    var activePRs: [GitHubPullRequest]
+    var filesBeingModified: [FileBeingModified]
+    var recentCommits: [GitHubCommit]
+    var lastActiveDate: Date?
+}
+
+struct FileBeingModified: Identifiable {
+    var id: String { filename }
+    let filename: String
+    let status: String
+    let additions: Int
+    let deletions: Int
+    let source: String?
+    let hasConflict: Bool
 }
