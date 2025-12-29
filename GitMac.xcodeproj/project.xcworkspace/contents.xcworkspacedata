@@ -4,49 +4,4 @@
    <FileRef
       location = "self:">
    </FileRef>
-   <FileRef
-      location = "group:DIFF_PERFORMANCE_SUMMARY.md">
-   </FileRef>
-   <FileRef
-      location = "group:DiffIntegrationExamples.swift">
-   </FileRef>
-   <FileRef
-      location = "group:DiffOptions.swift">
-   </FileRef>
-   <FileRef
-      location = "group:DIFF_IMPLEMENTATION_GUIDE.md">
-   </FileRef>
-   <FileRef
-      location = "group:DiffCache.swift">
-   </FileRef>
-   <FileRef
-      location = "group:DiffEngine.swift">
-   </FileRef>
-   <FileRef
-      location = "group:TiledDiffView.swift">
-   </FileRef>
-   <FileRef
-      location = "group:DiffEnginePerformanceTests.swift">
-   </FileRef>
-   <FileRef
-      location = "group:PERFORMANCE_IMPLEMENTATION_GUIDE.md">
-   </FileRef>
-   <FileRef
-      location = "group:release.sh">
-   </FileRef>
-   <FileRef
-      location = "group:RELEASE_GUIDE.md">
-   </FileRef>
-   <FileRef
-      location = "group:IMPLEMENTATION_SUMMARY.md">
-   </FileRef>
-   <FileRef
-      location = "group:verify.sh">
-   </FileRef>
-   <FileRef
-      location = "group:README_PERFORMANCE.md">
-   </FileRef>
-   <FileRef
-      location = "group:setup.sh">
-   </FileRef>
 </Workspace>

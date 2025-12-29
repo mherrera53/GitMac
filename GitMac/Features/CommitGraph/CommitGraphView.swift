@@ -375,7 +375,8 @@ struct CommitGraphView: View {
         .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { notification in
             if let path = notification.object as? String,
                path == appState.currentRepository?.path {
-                Task { await vm.load(at: path) }
+                // Use silent refresh to avoid graph flickering
+                Task { await vm.refreshStatus() }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .remoteOperationCompleted)) { _ in
@@ -657,6 +658,17 @@ struct CommitGraphView: View {
         let isNearEnd = itemIndex >= vm.timelineItems.count - 10
 
         switch item {
+        case .uncommitted(let staged, let unstaged):
+            UncommittedChangesRow(
+                stagedCount: staged,
+                unstagedCount: unstaged,
+                isSelected: selectedIds.contains("uncommitted-changes"),
+                isHovered: hoveredId == "uncommitted-changes"
+            )
+            .onHover { h in hoveredId = h ? "uncommitted-changes" : nil }
+            .onTapGesture {
+                handleSelection(item: item)
+            }
         case .commit(let node):
             if matchesSearchAndFilter(node) {
                 GraphRow(
@@ -797,13 +809,15 @@ struct CommitGraphView: View {
     }
 }
 
-// MARK: - Timeline Item (Commit or Stash)
+// MARK: - Timeline Item (Commit or Stash or Uncommitted Changes)
 enum TimelineItem: Identifiable {
+    case uncommitted(staged: Int, unstaged: Int)
     case commit(GraphNode)
     case stash(StashNode)
 
     var id: String {
         switch self {
+        case .uncommitted: return "uncommitted-changes"
         case .commit(let node): return node.id
         case .stash(let stash): return stash.id
         }
@@ -811,6 +825,7 @@ enum TimelineItem: Identifiable {
 
     var date: Date {
         switch self {
+        case .uncommitted: return Date() // Always most recent
         case .commit(let node): return node.commit.authorDate
         case .stash(let stash): return stash.stash.date
         }
@@ -1502,6 +1517,32 @@ class GraphViewModel: ObservableObject {
         isLoading = false
     }
 
+    /// Silently refresh repository status (staged/unstaged counts) without reloading commits
+    /// This prevents the graph from flickering on every file change
+    func refreshStatus() async {
+        guard let p = path else { return }
+
+        do {
+            // Only update status counts - don't reload commits
+            let status = try await engine.getStatus(at: p)
+            let newStagedCount = status.staged.count
+            let newUnstagedCount = status.unstaged.count + status.untracked.count
+            let newHasChanges = newStagedCount > 0 || newUnstagedCount > 0
+
+            // Only update if counts actually changed
+            if stagedCount != newStagedCount || unstagedCount != newUnstagedCount || hasUncommittedChanges != newHasChanges {
+                stagedCount = newStagedCount
+                unstagedCount = newUnstagedCount
+                hasUncommittedChanges = newHasChanges
+
+                // Rebuild timeline to update WIP row (but don't reload commits)
+                buildTimeline()
+            }
+        } catch {
+            print("Error refreshing status: \(error)")
+        }
+    }
+
     private func buildNodes() async -> [GraphNode] {
         // Run expensive computation off main thread
         let localCommits = commits
@@ -1516,6 +1557,11 @@ class GraphViewModel: ObservableObject {
         // Merge commits and stashes into a single timeline sorted by date (newest first)
         var items: [TimelineItem] = []
 
+        // Add uncommitted changes at the top if present
+        if hasUncommittedChanges {
+            items.append(.uncommitted(staged: stagedCount, unstaged: unstagedCount))
+        }
+
         // Add all commits
         for node in nodes {
             items.append(.commit(node))
@@ -1527,6 +1573,7 @@ class GraphViewModel: ObservableObject {
         }
 
         // Sort by date (newest first)
+        // Note: uncommitted will stay at top since its date is always Date()
         items.sort { $0.date > $1.date }
 
         timelineItems = items
