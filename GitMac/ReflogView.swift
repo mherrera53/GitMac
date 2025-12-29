@@ -15,16 +15,7 @@ struct ReflogView: View {
                 // Toolbar
                 HStack(spacing: 12) {
                     // Search
-                    HStack(spacing: 6) {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(AppTheme.textPrimary)
-                        
-                        TextField("Search reflog...", text: $searchText)
-                            .textFieldStyle(.plain)
-                    }
-                    .padding(6)
-                    .background(Color(nsColor: .controlBackgroundColor))
-                    .cornerRadius(6)
+                    DSSearchField(placeholder: "Search reflog...", text: $searchText)
                     
                     // Filter by ref
                     Menu {

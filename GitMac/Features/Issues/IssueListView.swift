@@ -25,16 +25,11 @@ struct IssueListView: View {
                         Text("Closed").tag(IssueState.closed)
                         Text("All").tag(IssueState.all)
                     }
-                    .pickerStyle(.segmented)
                     .frame(width: 180)
 
-                    Button {
+                    DSIconButton(iconName: "plus", variant: .primary, size: .sm) {
                         showCreateIssueSheet = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .foregroundColor(AppTheme.textPrimary)
                     }
-                    .buttonStyle(.borderless)
                     .help("Create Issue")
                 }
                 .padding()

@@ -25,7 +25,6 @@ struct PRListView: View {
                         Text("Closed").tag(PRState.closed)
                         Text("All").tag(PRState.all)
                     }
-                    .pickerStyle(.segmented)
                     .frame(width: 180)
 
                     Button {
@@ -702,7 +701,6 @@ struct PRDetailView: View {
                             Text("Squash and merge").tag(MergeMethod.squash)
                             Text("Rebase and merge").tag(MergeMethod.rebase)
                         }
-                        .pickerStyle(.segmented)
 
                         Button {
                             showMergeConfirm = true
@@ -1089,20 +1087,17 @@ struct CreatePRSheet: View {
                     // Title
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                         Text("Title").font(.caption).foregroundColor(theme.text)
-                        TextField("Enter PR title", text: $title)
-                            .textFieldStyle(.roundedBorder)
+                        DSTextField(placeholder: "Enter PR title", text: $title)
                     }
 
                     // Description
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                         Text("Description").font(.caption).foregroundColor(theme.text)
-                        TextEditor(text: $prBody)
-                            .font(.system(.body, design: .monospaced))
-                            .frame(minHeight: 150)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.sm)
-                                    .stroke(AppTheme.textSecondary.opacity(0.3), lineWidth: 1)
-                            )
+                        DSTextEditor(
+                            placeholder: "Enter PR description...",
+                            text: $prBody,
+                            minHeight: 150
+                        )
 
                         if prTemplate != nil {
                             Text("Using template")

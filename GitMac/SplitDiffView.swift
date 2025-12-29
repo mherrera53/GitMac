@@ -46,7 +46,6 @@ struct SplitDiffView: View {
             
             // Options
             Toggle("Show Whitespace", isOn: $showWhitespace)
-                .toggleStyle(.checkbox)
             
             Divider().frame(height: 20)
             

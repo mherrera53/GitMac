@@ -92,12 +92,15 @@ class JiraViewModel: ObservableObject, IntegrationViewModel {
     }
 
     func logout() {
-        Task {
+        Task { [weak self] in
             try? await KeychainManager.shared.deleteJiraToken()
             try? await KeychainManager.shared.deleteJiraCloudId()
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.isAuthenticated = false
+                self.projects = []
+                self.issues = []
+            }
         }
-        isAuthenticated = false
-        projects = []
-        issues = []
     }
 }

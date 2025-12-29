@@ -180,13 +180,9 @@ struct BranchListView: View {
                 text: $searchText
             )
 
-            Button {
+            DSIconButton(iconName: "plus", variant: .ghost, size: .sm) {
                 showNewBranchSheet = true
-            } label: {
-                Image(systemName: "plus")
-                    .foregroundColor(AppTheme.textPrimary)
             }
-            .buttonStyle(.borderless)
             .help("New branch")
         }
         .padding(DesignTokens.Spacing.sm)
@@ -420,23 +416,18 @@ struct CreatePRFromDragDropSheet: View {
 
                 Spacer()
 
-                Button {
-                    Task { await generateWithAI() }
+                DSButton(variant: .primary, size: .md, isDisabled: isGenerating) {
+                    await generateWithAI()
                 } label: {
-                    HStack {
-                        if isGenerating {
-                            ProgressView().scaleEffect(0.7)
-                            Text("Generating...")
-                        } else {
+                    if isGenerating {
+                        Text("Generating...")
+                    } else {
+                        HStack {
                             Image(systemName: "sparkles")
-                                .foregroundColor(AppTheme.accent)
                             Text("Generate with AI")
                         }
                     }
-                    .font(DesignTokens.Typography.subheadline)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(isGenerating)
             }
 
             ScrollView {
@@ -926,13 +917,9 @@ struct RemoteBranchRow: View {
             Spacer()
 
             if isHovered {
-                Button {
+                DSIconButton(iconName: "arrow.down.circle", variant: .ghost, size: .sm) {
                     onCheckout()
-                } label: {
-                    Image(systemName: "arrow.down.circle")
-                        .foregroundColor(AppTheme.info)
                 }
-                .buttonStyle(.borderless)
                 .help("Checkout as local branch")
             }
         }
@@ -1166,23 +1153,20 @@ struct CreatePullRequestSheet: View {
             .padding()
 
             HStack {
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
+                DSButton(variant: .secondary, size: .md) {
+                    dismiss()
+                } label: {
+                    Text("Cancel")
+                }
+                .keyboardShortcut(.cancelAction)
 
                 Spacer()
 
-                Button {
-                    Task { await createPR() }
+                DSButton(variant: .primary, size: .md, isDisabled: title.isEmpty || isCreating) {
+                    await createPR()
                 } label: {
-                    if isCreating {
-                        ProgressView()
-                            .scaleEffect(0.7)
-                    } else {
-                        Text("Create Pull Request")
-                    }
+                    Text(isCreating ? "Creating..." : "Create Pull Request")
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(title.isEmpty || isCreating)
                 .keyboardShortcut(.defaultAction)
             }
         }

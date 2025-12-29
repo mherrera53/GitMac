@@ -42,27 +42,14 @@ struct AdvancedSearchView: View {
         VStack(spacing: 12) {
             // Search field
             HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(AppTheme.textPrimary)
-                
-                TextField("Search...", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 16))
-                    .onSubmit {
-                        Task { await performSearch() }
-                    }
-                
-                if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                        viewModel.clearResults()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(AppTheme.textPrimary)
-                    }
-                    .buttonStyle(.plain)
+                DSSearchField(
+                    placeholder: "Search...",
+                    text: $searchText
+                )
+                .onSubmit {
+                    Task { await performSearch() }
                 }
-                
+
                 Button("Search") {
                     Task { await performSearch() }
                 }
@@ -151,11 +138,9 @@ struct AdvancedSearchView: View {
             
             // Regex toggle
             Toggle("Regex", isOn: $viewModel.useRegex)
-                .toggleStyle(.checkbox)
             
             // Case sensitive toggle
             Toggle("Case Sensitive", isOn: $viewModel.caseSensitive)
-                .toggleStyle(.checkbox)
         }
     }
     

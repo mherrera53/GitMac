@@ -166,6 +166,55 @@ struct DSButton<Label: View>: View {
     }
 }
 
+// MARK: - Convenience Initializers
+
+extension DSButton where Label == Text {
+    /// Convenience initializer for text-only buttons with async action
+    init(
+        _ title: String,
+        variant: DSButtonVariant = .primary,
+        size: DSButtonSize = .md,
+        isDisabled: Bool = false,
+        action: @escaping () async -> Void
+    ) {
+        self.init(variant: variant, size: size, isDisabled: isDisabled, action: action) {
+            Text(title)
+        }
+    }
+
+    /// Convenience initializer for text-only buttons with sync action
+    init(
+        _ title: String,
+        variant: DSButtonVariant = .primary,
+        size: DSButtonSize = .md,
+        isDisabled: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.init(variant: variant, size: size, isDisabled: isDisabled, action: {
+            action()
+        }) {
+            Text(title)
+        }
+    }
+}
+
+extension DSButton {
+    /// Convenience initializer for custom label with sync action
+    init(
+        variant: DSButtonVariant = .primary,
+        size: DSButtonSize = .md,
+        isDisabled: Bool = false,
+        action: @escaping () -> Void,
+        @ViewBuilder label: @escaping () -> Label
+    ) {
+        self.variant = variant
+        self.size = size
+        self.isDisabled = isDisabled
+        self.action = { action() }
+        self.label = label
+    }
+}
+
 // MARK: - Previews
 
 #Preview("Button Variants") {

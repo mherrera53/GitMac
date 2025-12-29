@@ -17,20 +17,11 @@ struct CommandPalette: View {
                     .font(DesignTokens.Typography.title3)
                     .foregroundColor(AppTheme.accent)
 
-                TextField("Type a command...", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .font(DesignTokens.Typography.headline)
-                    .focused($isSearchFocused)
-                
-                if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(AppTheme.textPrimary)
-                    }
-                    .buttonStyle(.plain)
-                }
+                DSSearchField(
+                    placeholder: "Type a command...",
+                    text: $searchText
+                )
+                .focused($isSearchFocused)
             }
             .padding()
             .background(Color(nsColor: .controlBackgroundColor))

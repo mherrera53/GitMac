@@ -302,16 +302,13 @@ struct JiraLoginPrompt: View {
                 .multilineTextAlignment(.center)
 
             VStack(spacing: DesignTokens.Spacing.sm) {
-                TextField("Site URL (e.g., yourcompany.atlassian.net)", text: $siteUrl)
-                    .textFieldStyle(.roundedBorder)
+                DSTextField(placeholder: "Site URL (e.g., yourcompany.atlassian.net)", text: $siteUrl)
                     .frame(maxWidth: 350)
 
-                TextField("Email", text: $email)
-                    .textFieldStyle(.roundedBorder)
+                DSTextField(placeholder: "Email", text: $email)
                     .frame(maxWidth: 350)
 
-                SecureField("API Token", text: $apiToken)
-                    .textFieldStyle(.roundedBorder)
+                DSSecureField(placeholder: "API Token", text: $apiToken)
                     .frame(maxWidth: 350)
             }
 

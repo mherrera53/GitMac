@@ -138,12 +138,11 @@ struct ConflictPreventionView: View {
                     .font(DesignTokens.Typography.caption2)
                     .foregroundColor(AppTheme.textPrimary)
 
-                Picker("", selection: $selectedSourceBranch) {
+                DSPicker(selection: $selectedSourceBranch) {
                     ForEach(viewModel.branches, id: \.self) { branch in
                         Text(branch).tag(branch)
                     }
                 }
-                .labelsHidden()
                 .frame(maxWidth: .infinity)
             }
 
@@ -157,12 +156,11 @@ struct ConflictPreventionView: View {
                     .font(DesignTokens.Typography.caption2)
                     .foregroundColor(AppTheme.textPrimary)
 
-                Picker("", selection: $selectedTargetBranch) {
+                DSPicker(selection: $selectedTargetBranch) {
                     ForEach(viewModel.branches, id: \.self) { branch in
                         Text(branch).tag(branch)
                     }
                 }
-                .labelsHidden()
                 .frame(maxWidth: .infinity)
             }
 

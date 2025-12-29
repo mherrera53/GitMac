@@ -252,8 +252,7 @@ struct UpgradePromptView: View {
                 Text("Already have a license?")
                     .font(.headline)
 
-                TextField("Enter license key", text: $licenseKey)
-                    .textFieldStyle(.roundedBorder)
+                DSTextField(placeholder: "Enter license key", text: $licenseKey)
                     .font(.system(.body, design: .monospaced))
 
                 if let error = licenseValidator.errorMessage {

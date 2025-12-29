@@ -8,72 +8,23 @@ struct NotionPanel: View {
     @StateObject private var viewModel = NotionViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Resizer handle
-            UniversalResizer(
-                dimension: $height,
-                minDimension: 150,
-                maxDimension: 500,
-                orientation: .vertical
-            )
-
-            // Header
-            HStack(spacing: DesignTokens.Spacing.md) {
-                DSIcon("doc.text.fill", size: .md, color: AppTheme.textPrimary)
-
-                Text("Notion")
-                    .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
-
-                Spacer()
-
-                // Refresh button
-                DSIconButton(
-                    iconName: "arrow.clockwise",
-                    variant: .ghost,
-                    size: .sm
-                ) {
-                    try? await viewModel.refresh()
-                }
-                .disabled(viewModel.isLoading)
-
-                // Settings button
-                DSIconButton(
-                    iconName: "gear",
-                    variant: .ghost,
-                    size: .sm
-                ) {
-                    viewModel.showSettings = true
-                }
-
-                // Close button
-                DSCloseButton {
-                    onClose()
-                }
-            }
-            .padding(DesignTokens.Spacing.md)
-            .background(AppTheme.backgroundSecondary)
-
-            DSDivider()
-
-            // Content
-            if viewModel.isLoading && !viewModel.isAuthenticated {
-                DSLoadingState(message: "Loading...")
-            } else if let error = viewModel.error {
-                DSErrorState(
-                    message: error,
-                    onRetry: {
-                        try? await viewModel.refresh()
-                    }
-                )
-            } else if !viewModel.isAuthenticated {
-                NotionLoginPrompt(viewModel: viewModel)
-            } else {
+        DSIntegrationBottomPanel(
+            title: "Notion",
+            icon: "doc.text.fill",
+            iconColor: AppTheme.textPrimary,
+            viewModel: viewModel,
+            content: {
                 NotionContentView(viewModel: viewModel)
-            }
-        }
-        .frame(height: height)
-        .background(AppTheme.background)
+            },
+            loginView: {
+                NotionLoginPrompt(viewModel: viewModel)
+            },
+            height: $height,
+            onSettings: {
+                viewModel.showSettings = true
+            },
+            onClose: onClose
+        )
         .sheet(isPresented: $viewModel.showSettings) {
             NotionSettingsSheet(viewModel: viewModel)
         }
@@ -162,13 +113,16 @@ class NotionViewModel: ObservableObject, IntegrationViewModel {
     }
 
     func logout() {
-        Task {
+        Task { [weak self] in
             try? await KeychainManager.shared.deleteNotionToken()
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.isAuthenticated = false
+                self.databases = []
+                self.tasks = []
+                self.selectedDatabaseId = nil
+            }
         }
-        isAuthenticated = false
-        databases = []
-        tasks = []
-        selectedDatabaseId = nil
     }
 }
 
@@ -198,8 +152,7 @@ struct NotionLoginPrompt: View {
                 .foregroundColor(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
 
-            SecureField("Integration Token", text: $integrationToken)
-                .textFieldStyle(.roundedBorder)
+            DSSecureField(placeholder: "Integration Token", text: $integrationToken)
                 .frame(maxWidth: 350)
 
             if let error = error {

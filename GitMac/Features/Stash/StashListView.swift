@@ -25,13 +25,11 @@ struct StashListView: View {
 
                     Spacer()
 
-                    Button {
+                    DSButton(variant: .primary, size: .sm, isDisabled: !viewModel.hasChanges) {
                         showStashSheet = true
                     } label: {
                         Label("Stash", systemImage: "plus")
                     }
-                    .buttonStyle(.borderless)
-                    .disabled(!viewModel.hasChanges)
                     .help("Stash current changes")
                 }
                 .padding()
@@ -45,13 +43,9 @@ struct StashListView: View {
                             .font(DesignTokens.Typography.caption)
                             .foregroundColor(AppTheme.error)
                         Spacer()
-                        Button {
+                        DSIconButton(iconName: "xmark.circle.fill", variant: .ghost, size: .sm) {
                             viewModel.error = nil
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(AppTheme.textPrimary)
                         }
-                        .buttonStyle(.plain)
                     }
                     .padding(DesignTokens.Spacing.sm)
                     .background(AppTheme.error.opacity(0.1))
@@ -384,25 +378,19 @@ struct StashRow: View {
 
                 if isHovered {
                     HStack(spacing: DesignTokens.Spacing.xs) {
-                        Button { onApply() } label: {
-                            Image(systemName: "arrow.uturn.backward")
-                                .foregroundColor(AppTheme.success)
+                        DSIconButton(iconName: "arrow.uturn.backward", variant: .ghost, size: .sm) {
+                            onApply()
                         }
-                        .buttonStyle(.borderless)
                         .help("Apply")
 
-                        Button { onPop() } label: {
-                            Image(systemName: "arrow.uturn.backward.circle")
-                                .foregroundColor(AppTheme.warning)
+                        DSIconButton(iconName: "arrow.uturn.backward.circle", variant: .ghost, size: .sm) {
+                            onPop()
                         }
-                        .buttonStyle(.borderless)
                         .help("Pop")
 
-                        Button { onDrop() } label: {
-                            Image(systemName: "trash")
-                                .foregroundColor(AppTheme.error)
+                        DSIconButton(iconName: "trash", variant: .ghost, size: .sm) {
+                            onDrop()
                         }
-                        .buttonStyle(.borderless)
                         .help("Drop")
                     }
                 }

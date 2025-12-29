@@ -13,13 +13,16 @@ struct TaigaPlugin: IntegrationPlugin {
     let id = "taiga"
     let name = "Taiga"
     let icon = "ticket.fill"
-    nonisolated var iconColor: Color { .green }
+    let iconColor = Color.green
+
+    typealias ViewModel = TaigaTicketsViewModel
+    typealias ContentView = TaigaContentView
 
     @MainActor func makeViewModel() -> TaigaTicketsViewModel {
         TaigaTicketsViewModel()
     }
 
-    func makeContentView(viewModel: TaigaTicketsViewModel) -> some View {
+    func makeContentView(viewModel: TaigaTicketsViewModel) -> TaigaContentView {
         TaigaContentView(viewModel: viewModel)
     }
 }

@@ -307,8 +307,7 @@ struct AddSubmoduleSheet: View {
                     .font(.caption)
                     .foregroundColor(AppTheme.textPrimary)
 
-                TextField("https://github.com/user/repo.git", text: $url)
-                    .textFieldStyle(.roundedBorder)
+                DSTextField(placeholder: "https://github.com/user/repo.git", text: $url)
             }
 
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
@@ -316,8 +315,7 @@ struct AddSubmoduleSheet: View {
                     .font(.caption)
                     .foregroundColor(AppTheme.textPrimary)
 
-                TextField("path/to/submodule", text: $path)
-                    .textFieldStyle(.roundedBorder)
+                DSTextField(placeholder: "path/to/submodule", text: $path)
             }
 
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
@@ -325,8 +323,7 @@ struct AddSubmoduleSheet: View {
                     .font(.caption)
                     .foregroundColor(AppTheme.textPrimary)
 
-                TextField("main", text: $branch)
-                    .textFieldStyle(.roundedBorder)
+                DSTextField(placeholder: "main", text: $branch)
             }
         }
         .padding()

@@ -23,13 +23,11 @@ struct HistoryView: View {
                     get: { selectedFile ?? "" },
                     set: { selectedFile = $0 }
                 ))
-                .textFieldStyle(.roundedBorder)
 
                 Picker("View", selection: $viewMode) {
                     Text("History").tag(HistoryViewMode.history)
                     Text("Blame").tag(HistoryViewMode.blame)
                 }
-                .pickerStyle(.segmented)
                 .frame(width: Layout.viewPickerWidth)
             }
             .padding(DesignTokens.Spacing.md)

@@ -405,8 +405,7 @@ struct BisectStartSheet: View {
                         .fontWeight(.medium)
                         .foregroundColor(AppTheme.textPrimary)
                     HStack {
-                        TextField("HEAD, commit SHA, or tag", text: $badRef)
-                            .textFieldStyle(.roundedBorder)
+                        DSTextField(placeholder: "HEAD, commit SHA, or tag", text: $badRef)
                         Button("HEAD") { badRef = "HEAD" }
                             .buttonStyle(.bordered)
                             .controlSize(.small)
@@ -418,8 +417,7 @@ struct BisectStartSheet: View {
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
                         .foregroundColor(AppTheme.textPrimary)
-                    TextField("Commit SHA, tag, or branch", text: $goodRef)
-                        .textFieldStyle(.roundedBorder)
+                    DSTextField(placeholder: "Commit SHA, tag, or branch", text: $goodRef)
 
                     if !recentCommits.isEmpty {
                         Text("Recent commits:")

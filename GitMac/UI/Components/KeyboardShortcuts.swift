@@ -229,7 +229,6 @@ struct QuickActionsPalette: View {
                     .foregroundColor(AppTheme.textMuted)
 
                 TextField("Search actions...", text: $searchText)
-                    .textFieldStyle(.plain)
                     .font(.system(size: 14))
                     .focused($isSearchFocused)
 

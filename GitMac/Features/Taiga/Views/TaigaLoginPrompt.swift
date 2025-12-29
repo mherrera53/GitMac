@@ -29,15 +29,13 @@ struct TaigaLoginPrompt: View {
                 .multilineTextAlignment(.center)
 
             VStack(spacing: DesignTokens.Spacing.sm) {
-                TextField("Username or Email", text: $username)
-                    .textFieldStyle(.plain)
+                DSTextField(placeholder: "Username or Email", text: $username)
                     .padding(DesignTokens.Spacing.sm)
                     .background(AppTheme.backgroundSecondary)
                     .cornerRadius(DesignTokens.CornerRadius.md)
                     .frame(width: 250)
 
-                SecureField("Password", text: $password)
-                    .textFieldStyle(.plain)
+                DSSecureField(placeholder: "Password", text: $password)
                     .padding(DesignTokens.Spacing.sm)
                     .background(AppTheme.backgroundSecondary)
                     .cornerRadius(DesignTokens.CornerRadius.md)

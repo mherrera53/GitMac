@@ -143,7 +143,6 @@ struct TerminalView: View {
             
             // Input field
             TextField("", text: $commandInput)
-                .textFieldStyle(.plain)
                 .font(.system(.body, design: .monospaced))
                 .foregroundColor(AppTheme.textPrimary)
                 .focused($isInputFocused)

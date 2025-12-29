@@ -22,12 +22,11 @@ struct TagListView: View {
 
                 Spacer()
 
-                Button {
+                DSButton(variant: .primary, size: .sm) {
                     showCreateTagSheet = true
                 } label: {
                     Label("New Tag", systemImage: "plus")
                 }
-                .buttonStyle(.borderless)
             }
             .padding()
             .background(Color(nsColor: .controlBackgroundColor))
@@ -219,18 +218,14 @@ struct TagRow: View {
             // Actions on hover
             if isHovered {
                 HStack(spacing: DesignTokens.Spacing.xs) {
-                    Button { onCheckout() } label: {
-                        Image(systemName: "arrow.right.circle")
-                            .foregroundColor(AppTheme.info)
+                    DSIconButton(iconName: "arrow.right.circle", variant: .ghost, size: .sm) {
+                        onCheckout()
                     }
-                    .buttonStyle(.borderless)
                     .help("Checkout")
 
-                    Button { onPush() } label: {
-                        Image(systemName: "arrow.up.circle")
-                            .foregroundColor(AppTheme.warning)
+                    DSIconButton(iconName: "arrow.up.circle", variant: .ghost, size: .sm) {
+                        onPush()
                     }
-                    .buttonStyle(.borderless)
                     .help("Push to remote")
                 }
             }
@@ -302,8 +297,7 @@ struct CreateTagSheet: View {
                 .fontWeight(.semibold)
 
             Form {
-                TextField("Tag name", text: $tagName)
-                    .textFieldStyle(.roundedBorder)
+                DSTextField(placeholder: "Tag name", text: $tagName)
 
                 Picker("At", selection: $targetRef) {
                     Text("Current HEAD").tag("HEAD")
@@ -332,10 +326,11 @@ struct CreateTagSheet: View {
             if !tagName.isEmpty {
                 HStack {
                     if tagName.first != "v" {
-                        Button("Add 'v' prefix") {
+                        DSButton(variant: .link, size: .sm) {
                             tagName = "v" + tagName
+                        } label: {
+                            Text("Add 'v' prefix")
                         }
-                        .buttonStyle(.borderless)
                     }
 
                     Spacer()
@@ -349,23 +344,25 @@ struct CreateTagSheet: View {
             }
 
             HStack {
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
+                DSButton(variant: .secondary, size: .md) {
+                    dismiss()
+                } label: {
+                    Text("Cancel")
+                }
+                .keyboardShortcut(.cancelAction)
 
                 Spacer()
 
-                Button("Create Tag") {
-                    Task {
-                        await viewModel.createTag(
-                            name: tagName,
-                            message: isAnnotated && !message.isEmpty ? message : nil,
-                            ref: targetRef
-                        )
-                        dismiss()
-                    }
+                DSButton(variant: .primary, size: .md, isDisabled: tagName.isEmpty) {
+                    await viewModel.createTag(
+                        name: tagName,
+                        message: isAnnotated && !message.isEmpty ? message : nil,
+                        ref: targetRef
+                    )
+                    dismiss()
+                } label: {
+                    Text("Create Tag")
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(tagName.isEmpty)
                 .keyboardShortcut(.defaultAction)
             }
         }

@@ -219,8 +219,8 @@ struct GroupBadge: View {
             .font(DesignTokens.Typography.caption2)
             .padding(.horizontal, DesignTokens.Spacing.xs)
             .padding(.vertical, 1)
-            .background((Color(hex: group.color) ?? AppTheme.textMuted).opacity(0.2))
-            .foregroundColor(Color(hex: group.color) ?? AppTheme.textMuted)
+            .background(Color(hex: group.color).opacity(0.2))
+            .foregroundColor(Color(hex: group.color))
             .cornerRadius(DesignTokens.CornerRadius.sm)
     }
 }

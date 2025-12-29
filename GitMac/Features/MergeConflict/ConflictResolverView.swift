@@ -618,13 +618,13 @@ struct MergePanel: View {
                     ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
                         HStack(spacing: 0) {
                             Text("\(index + 1)")
-                                .font(.system(.caption, design: .monospaced))
+                                .font(DesignTokens.Typography.caption.monospaced())
                                 .foregroundColor(AppTheme.textPrimary)
                                 .frame(width: 30, alignment: .trailing)
                                 .padding(.trailing, 8)
 
                             Text(line.isEmpty ? " " : line)
-                                .font(.system(.caption, design: .monospaced))
+                                .font(DesignTokens.Typography.caption.monospaced())
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(.vertical, 1)
@@ -670,8 +670,7 @@ struct OutputPanel: View {
             .background(AppTheme.textSecondary.opacity(0.1))
 
             // Editable content
-            TextEditor(text: $content)
-                .font(.system(.caption, design: .monospaced))
+            DSTextEditor(placeholder: "Edit content...", text: $content)
         }
     }
 }
@@ -868,13 +867,13 @@ struct NormalLineView: View {
     var body: some View {
         HStack(spacing: 0) {
             Text("\(lineNumber)")
-                .font(.system(.caption, design: .monospaced))
+                .font(DesignTokens.Typography.caption.monospaced())
                 .foregroundColor(AppTheme.textPrimary)
                 .frame(width: 40, alignment: .trailing)
                 .padding(.trailing, 8)
 
             Text(line.isEmpty ? " " : line)
-                .font(.system(.caption, design: .monospaced))
+                .font(DesignTokens.Typography.caption.monospaced())
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 1)
@@ -912,7 +911,7 @@ struct ConflictChunkView: View {
 
                 // Show resolved content
                 Text(chunk.resolvedContent)
-                    .font(.system(.caption, design: .monospaced))
+                    .font(DesignTokens.Typography.caption.monospaced())
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding()
                     .background(AppTheme.success.opacity(0.05))
@@ -994,7 +993,7 @@ struct OursSection: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("<<<<<<< Current Change (yours)")
-                    .font(.system(.caption, design: .monospaced))
+                    .font(DesignTokens.Typography.caption.monospaced())
                     .foregroundColor(AppTheme.accent)
                 Spacer()
             }
@@ -1004,7 +1003,7 @@ struct OursSection: View {
 
             ForEach(Array(chunk.oursLines.enumerated()), id: \.offset) { _, line in
                 Text(line.isEmpty ? " " : line)
-                    .font(.system(.caption, design: .monospaced))
+                    .font(DesignTokens.Typography.caption.monospaced())
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 48)
                     .padding(.vertical, 1)
@@ -1022,7 +1021,7 @@ struct SeparatorSection: View {
     var body: some View {
         HStack {
             Text("=======")
-                .font(.system(.caption, design: .monospaced))
+                .font(DesignTokens.Typography.caption.monospaced())
                 .foregroundColor(AppTheme.textPrimary)
         }
         .padding(.horizontal, DesignTokens.Spacing.sm)
@@ -1042,7 +1041,7 @@ struct TheirsSection: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(chunk.theirsLines.enumerated()), id: \.offset) { _, line in
                 Text(line.isEmpty ? " " : line)
-                    .font(.system(.caption, design: .monospaced))
+                    .font(DesignTokens.Typography.caption.monospaced())
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 48)
                     .padding(.vertical, 1)
@@ -1051,7 +1050,7 @@ struct TheirsSection: View {
 
             HStack {
                 Text(">>>>>>> Incoming Change (theirs)")
-                    .font(.system(.caption, design: .monospaced))
+                    .font(DesignTokens.Typography.caption.monospaced())
                     .foregroundColor(AppTheme.success)
                 Spacer()
             }

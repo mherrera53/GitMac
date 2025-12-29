@@ -712,7 +712,6 @@ struct StartBranchSheet: View {
                 .fontWeight(.semibold)
 
             TextField("\(type) name", text: $name, prompt: Text(placeholder))
-                .textFieldStyle(.roundedBorder)
 
             Text("Branch will be created: \(prefix)\(name.isEmpty ? placeholder : name)")
                 .font(.caption)

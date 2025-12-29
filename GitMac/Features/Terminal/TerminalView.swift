@@ -1452,8 +1452,7 @@ struct TerminalAIChatView: View {
 
             // Input
             HStack(spacing: DesignTokens.Spacing.sm) {
-                TextField("Ask about git commands, errors, or code...", text: $inputText)
-                    .textFieldStyle(.plain)
+                DSTextField(placeholder: "Ask about git commands, errors, or code...", text: $inputText)
                     .padding(DesignTokens.Spacing.sm + DesignTokens.Spacing.xxs)
                     .background(AppTheme.backgroundSecondary)
                     .cornerRadius(DesignTokens.CornerRadius.lg)

@@ -179,7 +179,6 @@ struct GitHookRow: View {
                 get: { hook.isEnabled },
                 set: { _ in Task { await onToggle() } }
             ))
-            .toggleStyle(.switch)
             .labelsHidden()
 
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {

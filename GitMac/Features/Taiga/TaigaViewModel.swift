@@ -47,7 +47,8 @@ class TaigaTicketsViewModel: ObservableObject, IntegrationViewModel {
 
     nonisolated init() {
         // Check if token exists in keychain
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             if let token = try? await KeychainManager.shared.getTaigaToken() {
                 await service.setToken(token)
                 // Also restore userId for project filtering
@@ -56,18 +57,18 @@ class TaigaTicketsViewModel: ObservableObject, IntegrationViewModel {
                     await service.setUserId(userIdInt)
                     print("🔐 Taiga: Restored userId \(userId)")
                 }
-                await MainActor.run {
-                    isAuthenticated = true
+                await MainActor.run { [weak self] in
+                    self?.isAuthenticated = true
                 }
-                await loadProjects()
+                await self.loadProjects()
 
                 // Restore selected project
                 let savedProjectId = UserDefaults.standard.integer(forKey: "taiga_selected_project_id")
                 if savedProjectId > 0 {
-                    await MainActor.run {
-                        selectedProjectId = savedProjectId
+                    await MainActor.run { [weak self] in
+                        self?.selectedProjectId = savedProjectId
                     }
-                    await loadProjectData(projectId: savedProjectId)
+                    await self.loadProjectData(projectId: savedProjectId)
                 }
             }
         }
@@ -113,17 +114,20 @@ class TaigaTicketsViewModel: ObservableObject, IntegrationViewModel {
     }
 
     func logout() {
-        Task {
+        Task { [weak self] in
             try? await KeychainManager.shared.deleteTaigaToken()
             try? await KeychainManager.shared.deleteTaigaUserId()
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.isAuthenticated = false
+                self.projects = []
+                self.selectedProjectId = nil
+                self.userStories = []
+                self.tasks = []
+                self.issues = []
+                self.epics = []
+            }
         }
-        isAuthenticated = false
-        projects = []
-        selectedProjectId = nil
-        userStories = []
-        tasks = []
-        issues = []
-        epics = []
     }
 
     func loadProjects() async {

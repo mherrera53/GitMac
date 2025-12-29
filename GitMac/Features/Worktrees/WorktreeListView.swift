@@ -246,8 +246,7 @@ struct AddWorktreeSheet: View {
                         .fontWeight(.medium)
                         .foregroundColor(AppTheme.textSecondary)
                     HStack {
-                        TextField("Path for new worktree", text: $worktreePath)
-                            .textFieldStyle(.plain)
+                        DSTextField(placeholder: "Path for new worktree", text: $worktreePath)
                             .padding(DesignTokens.Spacing.md)
                             .background(AppTheme.textMuted.opacity(0.15))
                             .cornerRadius(DesignTokens.CornerRadius.md)
@@ -271,12 +270,10 @@ struct AddWorktreeSheet: View {
 
                 // Branch options
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-                    Toggle("Create new branch", isOn: $createNewBranch)
-                        .toggleStyle(.checkbox)
+                    DSToggle("Create new branch", isOn: $createNewBranch)
 
                     if createNewBranch {
-                        TextField("New branch name", text: $newBranchName)
-                            .textFieldStyle(.plain)
+                        DSTextField(placeholder: "New branch name", text: $newBranchName)
                             .padding(DesignTokens.Spacing.md)
                             .background(AppTheme.textMuted.opacity(0.15))
                             .cornerRadius(DesignTokens.CornerRadius.md)
@@ -292,8 +289,7 @@ struct AddWorktreeSheet: View {
                         }
                     }
 
-                    Toggle("Detached HEAD", isOn: $isDetached)
-                        .toggleStyle(.checkbox)
+                    DSToggle("Detached HEAD", isOn: $isDetached)
                         .disabled(createNewBranch)
                 }
             }

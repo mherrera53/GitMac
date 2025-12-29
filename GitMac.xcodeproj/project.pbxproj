@@ -14,7 +14,6 @@
 		077C9761271C430390829DC4 /* GitMac/UI/Components/Rows/BaseRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86DF4C8B66944FC4BC3DEADF /* GitMac/UI/Components/Rows/BaseRow.swift */; };
 		0B110979D687480F9568261C /* GitMac/Core/Services/Specialized/TagService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 022A2E75CE334A6F9DD805DC /* GitMac/Core/Services/Specialized/TagService.swift */; };
 		0D3D055176FF4E77AF97C3F9 /* Features/PullRequests/PRListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DB863C48084E76B7AE0888 /* Features/PullRequests/PRListView.swift */; };
-		0D6F81FC202F4A445EB2EEAC /* GitMac/UI/Components/Search/FilterMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2368B43F70049E34A0D255DC /* GitMac/UI/Components/Search/FilterMenu.swift */; };
 		0F1E7E1C27EB47F29936A82C /* Features/Diff/DiffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653680820091489887257EC3 /* Features/Diff/DiffView.swift */; };
 		0F6D0B17E4F94686B4D3581E /* GitMac/Core/Services/Specialized/StagingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30B93C2B6324B20910477EE /* GitMac/Core/Services/Specialized/StagingService.swift */; };
 		10149A8AA816427784F3917E /* GitMac/Core/Services/Specialized/BranchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8569CE512F04DD2934CA67D /* GitMac/Core/Services/Specialized/BranchService.swift */; };
@@ -75,7 +74,6 @@
 		6A93112D00D09D85BC817378 /* GitMac/Features/Jira/JiraPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398BB78A6379748BC49FA09F /* GitMac/Features/Jira/JiraPlugin.swift */; };
 		70D6620C892D488B90479648 /* GitMac/UI/Components/FileTree/GenericFileTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 892060A0F971407B8E86E730 /* GitMac/UI/Components/FileTree/GenericFileTreeView.swift */; };
 		73C8DBE08FC24847B16135A5 /* Core/Utils/ShellExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCE46C5A51584BEAA7157198 /* Core/Utils/ShellExecutor.swift */; };
-		74A3A3F1A4C6475889D05E50 /* GitMac/UI/Components/Search/SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D1161872BBC40C4A645C204 /* GitMac/UI/Components/Search/SearchBar.swift */; };
 		7B78FA5E545C1AA746771F1A /* BottomPanelTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F1027D35B92326DD64B9A97 /* BottomPanelTab.swift */; };
 		7C513261CA64EE5CB89C0DD8 /* UnifiedBottomPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F69E901593785DE0363A8261 /* UnifiedBottomPanel.swift */; };
 		7DDF3B6AB1CD4A298AC023EE /* GitMac/Features/Submodules/SubmoduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52E333B6FDF7446C84D42546 /* GitMac/Features/Submodules/SubmoduleView.swift */; };
@@ -213,7 +211,6 @@
 		JIRAPNL1B526F46E3958E34A /* Features/Jira/JiraPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = JIRAPNL1F526F46E3958E34A /* Features/Jira/JiraPanel.swift */; };
 		JIRASVC1B526F46E3958E34A /* Core/Services/JiraService.swift in Sources */ = {isa = PBXBuildFile; fileRef = JIRASVC1F526F46E3958E34A /* Core/Services/JiraService.swift */; };
 		KBSHRT01B526F46E3958E34A /* UI/Components/KeyboardShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = KBSHRT01F526F46E3958E34A /* UI/Components/KeyboardShortcuts.swift */; };
-		LDBTN001B526F46E3958E34A /* UI/Components/LoadingButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = LDBTN001F526F46E3958E34A /* UI/Components/LoadingButton.swift */; };
 		LNRPNL01B526F46E3958E34A /* Features/Linear/LinearPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = LNRPNL01F526F46E3958E34A /* Features/Linear/LinearPanel.swift */; };
 		LNRSVC01B526F46E3958E34A /* Core/Services/LinearService.swift in Sources */ = {isa = PBXBuildFile; fileRef = LNRSVC01F526F46E3958E34A /* Core/Services/LinearService.swift */; };
 		LWDIFF01B526F46E3958E34A /* GitMac/Features/Diff/LightweightDiffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LWDIFF01F526F46E3958E34A /* GitMac/Features/Diff/LightweightDiffView.swift */; };
@@ -251,7 +248,6 @@
 		206B997E7B2BDA3CFF449B39 /* GitMac/UI/Components/Atoms/Display/DSText.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Atoms/Display/DSText.swift; sourceTree = SOURCE_ROOT; };
 		2296EAF548A94B6680DCE15A /* GitMac/Features/Diff/Renderers/DiffSyntaxHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Diff/Renderers/DiffSyntaxHighlighter.swift; sourceTree = "<group>"; };
 		232C0B51BBB0007A1C5DB910 /* GitMac/UI/Components/Atoms/Inputs/DSPicker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Atoms/Inputs/DSPicker.swift; sourceTree = SOURCE_ROOT; };
-		2368B43F70049E34A0D255DC /* GitMac/UI/Components/Search/FilterMenu.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Search/FilterMenu.swift; sourceTree = "<group>"; };
 		23ACB3A6D01341AA83FE1484 /* GitMac/UI/Components/FileTree/GenericTreeNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/FileTree/GenericTreeNode.swift; sourceTree = "<group>"; };
 		25C758869BDD466A9F25AB89 /* Features/Branches/BranchListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Branches/BranchListView.swift; sourceTree = "<group>"; };
 		267BB01E74AF44C9B3C9596C /* GitMac/UI/Components/Rows/RowProtocols.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Rows/RowProtocols.swift; sourceTree = "<group>"; };
@@ -298,7 +294,6 @@
 		624FBC21EE1949A182255005 /* Core/Services/TaigaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Services/TaigaService.swift; sourceTree = "<group>"; };
 		64ABE56227B24161879D0CF5 /* Core/Utils/KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Utils/KeychainManager.swift; sourceTree = "<group>"; };
 		653680820091489887257EC3 /* Features/Diff/DiffView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Diff/DiffView.swift; sourceTree = "<group>"; };
-		6D1161872BBC40C4A645C204 /* GitMac/UI/Components/Search/SearchBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Search/SearchBar.swift; sourceTree = "<group>"; };
 		6D9AE8B50C11C983BA3F87BC /* GitMac/UI/Components/Molecules/Forms/DSLabeledField.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Molecules/Forms/DSLabeledField.swift; sourceTree = SOURCE_ROOT; };
 		6DA53B9200B4A53D2CB6D1C9 /* GitMac/UI/Components/Atoms/Display/DSDivider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Atoms/Display/DSDivider.swift; sourceTree = SOURCE_ROOT; };
 		785500BECF07420C8BF7154F /* Core/Utils/FileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Utils/FileWatcher.swift; sourceTree = "<group>"; };
@@ -450,7 +445,6 @@
 		JIRAPNL1F526F46E3958E34A /* Features/Jira/JiraPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Jira/JiraPanel.swift; sourceTree = "<group>"; };
 		JIRASVC1F526F46E3958E34A /* Core/Services/JiraService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Services/JiraService.swift; sourceTree = "<group>"; };
 		KBSHRT01F526F46E3958E34A /* UI/Components/KeyboardShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI/Components/KeyboardShortcuts.swift; sourceTree = "<group>"; };
-		LDBTN001F526F46E3958E34A /* UI/Components/LoadingButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI/Components/LoadingButton.swift; sourceTree = "<group>"; };
 		LNRPNL01F526F46E3958E34A /* Features/Linear/LinearPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Linear/LinearPanel.swift; sourceTree = "<group>"; };
 		LNRSVC01F526F46E3958E34A /* Core/Services/LinearService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Services/LinearService.swift; sourceTree = "<group>"; };
 		LWDIFF01F526F46E3958E34A /* GitMac/Features/Diff/LightweightDiffView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Diff/LightweightDiffView.swift; sourceTree = "<group>"; };
@@ -664,10 +658,8 @@
 				841142FB4BB04F52A38F80EB /* GitMac/UI/Components/Rows/FileRow.swift */,
 				2AE3FEB7A3784054971C3AD4 /* GitMac/UI/Components/Rows/ListRow.swift */,
 				267BB01E74AF44C9B3C9596C /* GitMac/UI/Components/Rows/RowProtocols.swift */,
-				6D1161872BBC40C4A645C204 /* GitMac/UI/Components/Search/SearchBar.swift */,
 				C2AFF044956B /* GitMac/Features/Diff/WordLevelDiff.swift */,
 				8F2DFC8AA2A2B7D0B01AC504 /* GitMac/UI/Components/Icons/FileTypeIcon.swift */,
-				2368B43F70049E34A0D255DC /* GitMac/UI/Components/Search/FilterMenu.swift */,
 				UNIFCTX001F526F46E3958E3 /* GitMac/UI/Components/UnifiedFileContextMenu.swift */,
 				147A503D9F474B078C7BEE31 /* GitMac/GitOperationHandler.swift */,
 				CAE1F7D4CBB444D9943B71B4 /* GitMac/UI/Utilities/ModalCoordinator.swift */,
@@ -895,7 +887,6 @@
 				AVTRSVC1F526F46E3958E34A /* Core/Services/AvatarService.swift */,
 				CTXMNU01F526F46E3958E34A /* UI/Components/ContextMenus.swift */,
 				GKTHEME1F526F46E3958E34A /* UI/Components/AppTheme.swift */,
-				LDBTN001F526F46E3958E34A /* UI/Components/LoadingButton.swift */,
 				KBSHRT01F526F46E3958E34A /* UI/Components/KeyboardShortcuts.swift */,
 				RES001 /* Assets.xcassets */,
 				INFO01 /* Info.plist */,
@@ -1086,10 +1077,8 @@
 				B6189D2FE47A4D7EA34D9F06 /* GitMac/UI/Components/Rows/FileRow.swift in Sources */,
 				23F59A5692CE4B529CE47DF8 /* GitMac/UI/Components/Rows/ListRow.swift in Sources */,
 				8C04729C0FB24B649A27A8F3 /* GitMac/UI/Components/Rows/RowProtocols.swift in Sources */,
-				74A3A3F1A4C6475889D05E50 /* GitMac/UI/Components/Search/SearchBar.swift in Sources */,
 				8E589E6FF70C /* GitMac/Features/Diff/WordLevelDiff.swift in Sources */,
 				2F3531A32151515A63679091 /* GitMac/UI/Components/Icons/FileTypeIcon.swift in Sources */,
-				0D6F81FC202F4A445EB2EEAC /* GitMac/UI/Components/Search/FilterMenu.swift in Sources */,
 				AC9431802EE96F9D00A59026 /* PullSheet.swift in Sources */,
 				APP001 /* App/GitMacApp.swift in Sources */,
 				8252E184E6A24337B4EE1242 /* Core/StoreKit/StoreManager.swift in Sources */,
@@ -1180,7 +1169,6 @@
 				CTXMNU01B526F46E3958E34A /* UI/Components/ContextMenus.swift in Sources */,
 				GKTHEME1B526F46E3958E34A /* UI/Components/AppTheme.swift in Sources */,
 				AC9431882EE978E500A59026 /* ReflogView.swift in Sources */,
-				LDBTN001B526F46E3958E34A /* UI/Components/LoadingButton.swift in Sources */,
 				KBSHRT01B526F46E3958E34A /* UI/Components/KeyboardShortcuts.swift in Sources */,
 				UNIFCTX001B526F46E3958E3 /* GitMac/UI/Components/UnifiedFileContextMenu.swift in Sources */,
 				D3881EDC974B4F1B953A71DF /* GitMac/GitOperationHandler.swift in Sources */,

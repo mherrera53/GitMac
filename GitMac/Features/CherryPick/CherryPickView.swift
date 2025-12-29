@@ -67,15 +67,15 @@ struct CherryPickView: View {
                     // Options
                     GroupBox("Options") {
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-                            Toggle("Create commit automatically", isOn: $viewModel.autoCommit)
+                            DSToggle("Create commit automatically", isOn: $viewModel.autoCommit)
 
                             if viewModel.autoCommit {
-                                Toggle("Use original commit message", isOn: $viewModel.useOriginalMessage)
+                                DSToggle("Use original commit message", isOn: $viewModel.useOriginalMessage)
                             }
 
-                            Toggle("Allow empty commits", isOn: $viewModel.allowEmpty)
+                            DSToggle("Allow empty commits", isOn: $viewModel.allowEmpty)
 
-                            Toggle("Record cherry-pick in message", isOn: $viewModel.recordOrigin)
+                            DSToggle("Record cherry-pick in message", isOn: $viewModel.recordOrigin)
                         }
                     }
 
@@ -309,18 +309,16 @@ struct QuickCherryPickSheet: View {
 
             // Target branch picker
             if let repo = appState.currentRepository {
-                Picker("Target Branch", selection: $targetBranch) {
-                    Text("Select branch...").tag(nil as Branch?)
-
-                    ForEach(repo.branches.filter { !$0.isRemote }) { branch in
-                        HStack {
-                            if branch.isCurrent {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(AppTheme.success)
-                            }
-                            Text(branch.name)
+                DSPicker(
+                    items: repo.branches.filter { !$0.isRemote },
+                    selection: $targetBranch
+                ) { branch in
+                    HStack {
+                        if branch.isCurrent {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(AppTheme.success)
                         }
-                        .tag(branch as Branch?)
+                        Text(branch.name)
                     }
                 }
             }
@@ -610,7 +608,7 @@ struct SelectCommitsStep: View {
                 List {
                     ForEach(commits) { commit in
                         HStack {
-                            Toggle("", isOn: Binding(
+                            DSToggle("", isOn: Binding(
                                 get: { selectedCommits.contains(commit.sha) },
                                 set: { isSelected in
                                     if isSelected {
@@ -620,7 +618,6 @@ struct SelectCommitsStep: View {
                                     }
                                 }
                             ))
-                            .labelsHidden()
 
                             VStack(alignment: .leading) {
                                 HStack {

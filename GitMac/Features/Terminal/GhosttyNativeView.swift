@@ -95,7 +95,6 @@ struct GhosttyNativeView: View {
                         .font(DesignTokens.Typography.caption2)
                 }
             }
-            .toggleStyle(.button)
             .buttonStyle(.plain)
             .foregroundColor(aiEnabled ? GhosttyColors.accent : GhosttyColors.textMuted)
             .help("AI Suggestions")

@@ -247,8 +247,7 @@ struct LicenseActivationView: View {
             Text("Activate GitMac Pro")
                 .font(.title)
 
-            TextField("License Key (XXXX-XXXX-XXXX-XXXX)", text: $licenseKey)
-                .textFieldStyle(.roundedBorder)
+            DSTextField(placeholder: "License Key (XXXX-XXXX-XXXX-XXXX)", text: $licenseKey)
                 .frame(width: 300)
 
             if let error = validator.errorMessage {

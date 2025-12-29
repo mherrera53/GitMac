@@ -418,19 +418,16 @@ struct GenerateSSHKeySheet: View {
                 .font(DesignTokens.Typography.title3)
             
             Form {
-                TextField("Key Name", text: $keyName)
-                    .textFieldStyle(.roundedBorder)
+                DSTextField(placeholder: "Key Name", text: $keyName)
                 
                 Picker("Key Type", selection: $keyType) {
                     Text("Ed25519 (Recommended)").tag("ed25519")
                     Text("RSA 4096").tag("rsa")
                 }
                 
-                SecureField("Passphrase (optional)", text: $passphrase)
-                    .textFieldStyle(.roundedBorder)
+                DSSecureField(placeholder: "Passphrase (optional)", text: $passphrase)
                 
-                SecureField("Confirm Passphrase", text: $confirmPassphrase)
-                    .textFieldStyle(.roundedBorder)
+                DSSecureField(placeholder: "Confirm Passphrase", text: $confirmPassphrase)
             }
             
             HStack {
@@ -470,14 +467,11 @@ struct GenerateGPGKeySheet: View {
                 .font(DesignTokens.Typography.title3)
             
             Form {
-                TextField("Full Name", text: $name)
-                    .textFieldStyle(.roundedBorder)
+                DSTextField(placeholder: "Full Name", text: $name)
                 
-                TextField("Email", text: $email)
-                    .textFieldStyle(.roundedBorder)
+                DSTextField(placeholder: "Email", text: $email)
                 
-                SecureField("Passphrase", text: $passphrase)
-                    .textFieldStyle(.roundedBorder)
+                DSSecureField(placeholder: "Passphrase", text: $passphrase)
             }
             
             HStack {

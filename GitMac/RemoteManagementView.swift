@@ -319,11 +319,9 @@ struct AddRemoteMgmtSheet: View {
                 .fontWeight(.bold)
             
             Form {
-                TextField("Name (e.g., origin)", text: $remoteName)
-                    .textFieldStyle(.roundedBorder)
-                
-                TextField("URL", text: $remoteURL)
-                    .textFieldStyle(.roundedBorder)
+                DSTextField(placeholder: "Name (e.g., origin)", text: $remoteName)
+
+                DSTextField(placeholder: "URL", text: $remoteURL)
             }
             .padding()
             
@@ -389,8 +387,7 @@ struct EditRemoteSheet: View {
                 .font(.title2)
                 .fontWeight(.bold)
             
-            TextField("URL", text: $newURL)
-                .textFieldStyle(.roundedBorder)
+            DSTextField(placeholder: "URL", text: $newURL)
                 .padding()
             
             HStack {

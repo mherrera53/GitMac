@@ -17,12 +17,11 @@ struct RemoteListView: View {
 
                 Spacer()
 
-                Button {
+                DSButton(variant: .primary, size: .sm) {
                     showAddRemoteSheet = true
                 } label: {
                     Label("Add Remote", systemImage: "plus")
                 }
-                .buttonStyle(.borderless)
             }
             .padding()
             .background(Color(nsColor: .controlBackgroundColor))
@@ -53,12 +52,11 @@ struct RemoteListView: View {
 
             // Actions
             HStack {
-                Button {
-                    Task { await viewModel.fetchAll() }
+                DSButton(variant: .outline, size: .md) {
+                    await viewModel.fetchAll()
                 } label: {
                     Label("Fetch All", systemImage: "arrow.down.circle")
                 }
-                .buttonStyle(.bordered)
 
                 Spacer()
 
@@ -204,18 +202,14 @@ struct RemoteRow: View {
                 // Actions
                 if isHovered {
                     HStack(spacing: DesignTokens.Spacing.xs) {
-                        Button { onFetch() } label: {
-                            Image(systemName: "arrow.down.circle")
-                                .foregroundColor(AppTheme.info)
+                        DSIconButton(iconName: "arrow.down.circle", variant: .ghost, size: .sm) {
+                            onFetch()
                         }
-                        .buttonStyle(.borderless)
                         .help("Fetch")
 
-                        Button { onPush() } label: {
-                            Image(systemName: "arrow.up.circle")
-                                .foregroundColor(AppTheme.warning)
+                        DSIconButton(iconName: "arrow.up.circle", variant: .ghost, size: .sm) {
+                            onPush()
                         }
-                        .buttonStyle(.borderless)
                         .help("Push")
                     }
                 }
@@ -391,11 +385,9 @@ struct AddRemoteSheet: View {
                 .fontWeight(.semibold)
 
             Form {
-                TextField("Name", text: $name)
-                    .textFieldStyle(.roundedBorder)
+                DSTextField(placeholder: "Name", text: $name)
 
-                TextField("URL", text: $url)
-                    .textFieldStyle(.roundedBorder)
+                DSTextField(placeholder: "URL", text: $url)
 
                 Text("Example: https://github.com/user/repo.git")
                     .font(DesignTokens.Typography.caption)

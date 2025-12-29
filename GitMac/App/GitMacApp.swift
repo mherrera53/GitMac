@@ -21,11 +21,12 @@ struct GitMacApp: App {
     func registerPlugins() {
         let registry = PluginRegistry.shared
 
-        // Register the Planner plugin
+        // Register all integration plugins
+        registry.register(NotionPlugin())
+        registry.register(LinearPlugin())
+        registry.register(JiraPlugin())
+        registry.register(TaigaPlugin())
         registry.register(PlannerPlugin())
-
-        // Note: Other plugins (Notion, Linear, Jira, Taiga) will be registered
-        // once they are migrated to the plugin system by other agents
     }
 
     func configureWindow() {

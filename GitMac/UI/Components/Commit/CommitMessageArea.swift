@@ -87,7 +87,6 @@ struct CommitMessageArea: View {
             // Actions row
             HStack {
                 Toggle("Amend last commit", isOn: $isAmending)
-                    .toggleStyle(.checkbox)
                     .font(style.toggleFont)
 
                 Spacer()

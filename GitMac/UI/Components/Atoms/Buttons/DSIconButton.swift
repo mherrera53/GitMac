@@ -138,6 +138,25 @@ struct DSIconButton: View {
     }
 }
 
+// MARK: - Convenience Initializers
+
+extension DSIconButton {
+    /// Convenience initializer for icon buttons with sync action
+    init(
+        iconName: String,
+        variant: DSButtonVariant = .ghost,
+        size: DSButtonSize = .md,
+        isDisabled: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.iconName = iconName
+        self.variant = variant
+        self.size = size
+        self.isDisabled = isDisabled
+        self.action = { action() }
+    }
+}
+
 // MARK: - Previews
 
 #Preview("Icon Button Variants") {

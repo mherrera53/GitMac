@@ -37,8 +37,7 @@ struct TerminalCommandPaletteView: View {
                         .font(.system(size: 18))
                         .foregroundColor(AppTheme.accent)
 
-                    TextField("Search workflows or type command...", text: $searchText)
-                        .textFieldStyle(.plain)
+                    DSTextField(placeholder: "Search workflows or type command...", text: $searchText)
                         .font(DesignTokens.Typography.body)
                         .onSubmit {
                             executeSelected()

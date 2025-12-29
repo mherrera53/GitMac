@@ -92,13 +92,15 @@ struct GeneralSettingsView: View {
             }
 
             Section("Startup") {
-                DSToggle("Open at login", isOn: $openAtLogin)
-                DSToggle("Show in menu bar", isOn: $showInMenuBar)
+                Toggle("Open at login", isOn: $openAtLogin)
+                Toggle("Show in menu bar", isOn: $showInMenuBar)
             }
 
             Section("Repositories") {
                 HStack {
-                    DSTextField(placeholder: "Default clone path", text: $defaultClonePath)
+                    TextField("Default clone path", text: $defaultClonePath)
+                        .textFieldStyle(.roundedBorder)
+                        .foregroundColor(AppTheme.textPrimary)
 
                     DSButton("Browse...", variant: .secondary, size: .sm) {
                         let panel = NSOpenPanel()
@@ -117,8 +119,8 @@ struct GeneralSettingsView: View {
             }
 
             Section("Confirmations") {
-                DSToggle("Confirm before pushing", isOn: $confirmBeforePush)
-                DSToggle("Confirm before force operations", isOn: $confirmBeforeForce)
+                Toggle("Confirm before pushing", isOn: $confirmBeforePush)
+                Toggle("Confirm before force operations", isOn: $confirmBeforeForce)
             }
         }
         .formStyle(.grouped)
@@ -232,7 +234,9 @@ struct AccountsSettingsView: View {
                                 .fontWeight(.medium)
                                 .foregroundColor(AppTheme.textPrimary)
 
-                            DSSecureField(placeholder: "Personal Access Token", text: $githubToken)
+                            SecureField("Personal Access Token", text: $githubToken)
+                                .textFieldStyle(.roundedBorder)
+                                .foregroundColor(AppTheme.textPrimary)
 
                             HStack {
                                 DSButton("Generate Token", variant: .link, size: .sm) {
@@ -276,7 +280,9 @@ struct AccountsSettingsView: View {
                         }
                     } else {
                         HStack {
-                            DSTextField(placeholder: "OAuth Client ID", text: $oauthClientId)
+                            TextField("OAuth Client ID", text: $oauthClientId)
+                                .textFieldStyle(.roundedBorder)
+                                .foregroundColor(AppTheme.textPrimary)
 
                             DSButton("Save", variant: .primary, size: .sm, isDisabled: oauthClientId.isEmpty) {
                                 await githubOAuth.setClientId(oauthClientId)
@@ -397,7 +403,9 @@ struct GitHubOAuthWaitingView: View {
     @State private var copied = false
 
     var body: some View {
-        VStack(spacing: DesignTokens.Spacing.lg) {
+        let theme = Color.Theme(self.themeManager.colors)
+
+        return VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "link.circle.fill")
                 .font(DesignTokens.Typography.iconXXXXL)
                 .foregroundColor(AppTheme.accent)
@@ -408,7 +416,7 @@ struct GitHubOAuthWaitingView: View {
             // User code - large and copyable
             HStack(spacing: DesignTokens.Spacing.md) {
                 Text(userCode)
-                    .font(DesignTokens.Typography.title1.bold().monospaced())
+                    .font(DesignTokens.Typography.title.bold().monospaced())
                     .tracking(4)
 
                 DSIconButton(iconName: copied ? "checkmark" : "doc.on.doc", variant: .ghost, size: .sm) {
@@ -487,7 +495,9 @@ struct AISettingsView: View {
                         }
 
                         HStack {
-                            DSSecureField(placeholder: "API Key", text: binding(for: provider))
+                            SecureField("API Key", text: binding(for: provider))
+                                .textFieldStyle(.roundedBorder)
+                                .foregroundColor(AppTheme.textPrimary)
 
                             DSButton(configuredProviders.contains(provider) ? "Update" : "Save", variant: .primary, size: .sm, isDisabled: (apiKeys[provider] ?? "").isEmpty) {
                                 saveAPIKey(for: provider)
@@ -668,11 +678,15 @@ struct GitConfigView: View {
     var body: some View {
         Form {
             Section("User") {
-                DSTextField(placeholder: "Name", text: $userName)
+                TextField("Name", text: $userName)
+                    .textFieldStyle(.roundedBorder)
+                    .foregroundColor(AppTheme.textPrimary)
                     .onChange(of: userName) { _, newValue in
                         saveGitConfig(key: "user.name", value: newValue)
                     }
-                DSTextField(placeholder: "Email", text: $userEmail)
+                TextField("Email", text: $userEmail)
+                    .textFieldStyle(.roundedBorder)
+                    .foregroundColor(AppTheme.textPrimary)
                     .onChange(of: userEmail) { _, newValue in
                         saveGitConfig(key: "user.email", value: newValue)
                     }
@@ -689,14 +703,16 @@ struct GitConfigView: View {
             }
 
             Section("Defaults") {
-                DSTextField(placeholder: "Default branch name", text: $defaultBranch)
+                TextField("Default branch name", text: $defaultBranch)
+                    .textFieldStyle(.roundedBorder)
+                    .foregroundColor(AppTheme.textPrimary)
                     .onChange(of: defaultBranch) { _, newValue in
                         saveGitConfig(key: "init.defaultBranch", value: newValue)
                     }
             }
 
             Section("Fetching") {
-                DSToggle("Auto-fetch in background", isOn: $autoFetch)
+                Toggle("Auto-fetch in background", isOn: $autoFetch)
 
                 if autoFetch {
                     Picker("Fetch interval", selection: $autoFetchInterval) {
@@ -708,7 +724,7 @@ struct GitConfigView: View {
                     }
                 }
 
-                DSToggle("Prune remote-tracking branches on fetch", isOn: $pruneOnFetch)
+                Toggle("Prune remote-tracking branches on fetch", isOn: $pruneOnFetch)
             }
 
             Section("Email Aliases") {
@@ -770,7 +786,9 @@ struct EmailAliasesView: View {
                 .foregroundColor(AppTheme.textSecondary)
 
             HStack {
-                DSTextField(placeholder: "Email alias (e.g. work@company.com)", text: $newAlias)
+                TextField("Email alias (e.g. work@company.com)", text: $newAlias)
+                    .textFieldStyle(.roundedBorder)
+                    .foregroundColor(AppTheme.textPrimary)
 
                 DSButton("Add", variant: .primary, size: .sm, isDisabled: newAlias.isEmpty) {
                     settings.addAlias(newAlias)
@@ -1585,11 +1603,17 @@ struct AWSLoginView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-            DSTextField(placeholder: "Access Key ID", text: $accessKeyId)
+            TextField("Access Key ID", text: $accessKeyId)
+                .textFieldStyle(.roundedBorder)
+                .foregroundColor(AppTheme.textPrimary)
 
-            DSSecureField(placeholder: "Secret Access Key", text: $secretAccessKey)
+            SecureField("Secret Access Key", text: $secretAccessKey)
+                .textFieldStyle(.roundedBorder)
+                .foregroundColor(AppTheme.textPrimary)
 
-            DSSecureField(placeholder: "Session Token (MFA/2FA)", text: $sessionToken)
+            SecureField("Session Token (MFA/2FA)", text: $sessionToken)
+                .textFieldStyle(.roundedBorder)
+                .foregroundColor(AppTheme.textPrimary)
 
             Text("Required if using MFA/2FA authentication")
                 .font(DesignTokens.Typography.caption)
@@ -1609,7 +1633,7 @@ struct AWSLoginView: View {
             }
 
             DSButton(variant: .primary, size: .sm, isDisabled: accessKeyId.isEmpty || secretAccessKey.isEmpty || isLoading) {
-                onConnect()
+                await onConnect()
             } label: {
                 if isLoading {
                     ProgressView()
@@ -1674,7 +1698,9 @@ struct LinearLoginSettingsView: View {
     let onLogin: () -> Void
 
     var body: some View {
-        DSSecureField(placeholder: "API Key", text: $apiKey)
+        SecureField("API Key", text: $apiKey)
+            .textFieldStyle(.roundedBorder)
+            .foregroundColor(AppTheme.textPrimary)
 
         if let error = error {
             Text(error)
@@ -1749,11 +1775,17 @@ struct JiraLoginSettingsView: View {
     let onLogin: () -> Void
 
     var body: some View {
-        DSTextField(placeholder: "Site URL (e.g. yourcompany.atlassian.net)", text: $siteUrl)
+        TextField("Site URL (e.g. yourcompany.atlassian.net)", text: $siteUrl)
+            .textFieldStyle(.roundedBorder)
+            .foregroundColor(AppTheme.textPrimary)
 
-        DSTextField(placeholder: "Email", text: $email)
+        TextField("Email", text: $email)
+            .textFieldStyle(.roundedBorder)
+            .foregroundColor(AppTheme.textPrimary)
 
-        DSSecureField(placeholder: "API Token", text: $apiToken)
+        SecureField("API Token", text: $apiToken)
+            .textFieldStyle(.roundedBorder)
+            .foregroundColor(AppTheme.textPrimary)
 
         if let error = error {
             Text(error)
@@ -1827,7 +1859,9 @@ struct NotionLoginSettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-            DSSecureField(placeholder: "Integration Token", text: $token)
+            SecureField("Integration Token", text: $token)
+                .textFieldStyle(.roundedBorder)
+                .foregroundColor(AppTheme.textPrimary)
 
             if let error = error {
                 Text(error)
@@ -1836,9 +1870,7 @@ struct NotionLoginSettingsView: View {
             }
 
             HStack {
-                DSButton(variant: .primary, size: .sm, isDisabled: token.isEmpty || isLoading) {
-                    onLogin()
-                } label: {
+                Button(action: onLogin) {
                     if isLoading {
                         ProgressView()
                             .scaleEffect(0.8)
@@ -1846,6 +1878,7 @@ struct NotionLoginSettingsView: View {
                         Text("Connect")
                     }
                 }
+                .disabled(token.isEmpty || isLoading)
 
                 Link("Create Integration", destination: URL(string: "https://www.notion.so/my-integrations")!)
                     .font(DesignTokens.Typography.caption)
@@ -1882,9 +1915,13 @@ struct TaigaLoginView: View {
                 .font(DesignTokens.Typography.caption)
                 .foregroundColor(AppTheme.textSecondary)
 
-            DSTextField(placeholder: "Username or Email", text: $username)
+            TextField("Username or Email", text: $username)
+                .textFieldStyle(.roundedBorder)
+                .foregroundColor(AppTheme.textPrimary)
 
-            DSSecureField(placeholder: "Password", text: $password)
+            SecureField("Password", text: $password)
+                .textFieldStyle(.roundedBorder)
+                .foregroundColor(AppTheme.textPrimary)
 
             HStack {
                 DSButton("Create Account", variant: .link, size: .sm) {
@@ -1925,9 +1962,10 @@ struct TaigaConnectedView: View {
                     .fontWeight(.medium)
                     .foregroundColor(AppTheme.textPrimary)
                 Spacer()
-                DSButton("Disconnect", variant: .danger, size: .sm) {
+                Button("Disconnect") {
                     onDisconnect()
                 }
+                .foregroundColor(AppTheme.error)
             }
 
             if let repoPath = selectedRepoPath {
@@ -2017,19 +2055,26 @@ struct PlannerLoginView: View {
                         .font(DesignTokens.Typography.caption)
                         .foregroundColor(AppTheme.textSecondary)
 
-                    DSTextField(placeholder: "Application (client) ID", text: $clientId)
+                    TextField("Application (client) ID", text: $clientId)
+                        .textFieldStyle(.roundedBorder)
+                        .foregroundColor(AppTheme.textPrimary)
 
                     HStack {
-                        DSButton("Register App in Azure", variant: .link, size: .sm) {
+                        Button("Register App in Azure") {
                             NSWorkspace.shared.open(URL(string: "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade")!)
                         }
+                        .font(DesignTokens.Typography.caption)
 
                         Spacer()
 
-                        DSButton("Save", variant: .primary, size: .sm, isDisabled: clientId.isEmpty) {
-                            await microsoftOAuth.setClientId(clientId)
-                            hasClientId = true
+                        Button("Save") {
+                            Task {
+                                await microsoftOAuth.setClientId(clientId)
+                                hasClientId = true
+                            }
                         }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(clientId.isEmpty)
                     }
 
                     Text("Required: Enable 'Allow public client flows' in Azure AD")
@@ -2048,21 +2093,26 @@ struct PlannerLoginView: View {
 
                         Spacer()
 
-                        DSButton("Change", variant: .link, size: .sm) {
+                        Button("Change") {
                             hasClientId = false
                             clientId = ""
                         }
+                        .font(.caption)
                     }
 
-                    DSButton(variant: .primary, size: .md, isDisabled: isAuthenticating) {
+                    Button {
                         startOAuth()
                     } label: {
                         HStack {
                             Image(systemName: "arrow.up.forward.app")
+                                .foregroundColor(AppTheme.textSecondary)
                             Text("Sign in with Microsoft")
                         }
                         .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color(hex: "0078D4"))
+                    .disabled(isAuthenticating)
                 }
             }
 
@@ -2124,7 +2174,9 @@ struct MicrosoftOAuthWaitingView: View {
     @State private var copied = false
 
     var body: some View {
-        VStack(spacing: DesignTokens.Spacing.md) {
+        let theme = Color.Theme(self.themeManager.colors)
+
+        return VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: "link.circle.fill")
                 .font(DesignTokens.Typography.iconXXXL)
                 .foregroundColor(Color(hex: "0078D4"))
@@ -2136,14 +2188,18 @@ struct MicrosoftOAuthWaitingView: View {
                 Text(userCode)
                     .font(DesignTokens.Typography.title2.bold().monospaced())
 
-                DSIconButton(iconName: copied ? "checkmark" : "doc.on.doc", variant: .ghost, size: .sm) {
+                Button {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(userCode, forType: .string)
                     copied = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                         copied = false
                     }
+                } label: {
+                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                        .foregroundColor(copied ? theme.accent : theme.textSecondary)
                 }
+                .buttonStyle(.borderless)
             }
             .padding()
             .background(AppTheme.textSecondary.opacity(0.1))
@@ -2163,13 +2219,13 @@ struct MicrosoftOAuthWaitingView: View {
                 .foregroundColor(AppTheme.textSecondary)
 
             HStack {
-                DSButton("Open Microsoft", variant: .primary, size: .sm) {
+                Button("Open Microsoft") {
                     if let url = URL(string: verificationUri) {
                         NSWorkspace.shared.open(url)
                     }
                 }
 
-                DSButton("Cancel", variant: .secondary, size: .sm) {
+                Button("Cancel", role: .cancel) {
                     onCancel()
                 }
             }
@@ -2196,9 +2252,10 @@ struct PlannerConnectedView: View {
                     .fontWeight(.medium)
                     .foregroundColor(AppTheme.textPrimary)
                 Spacer()
-                DSButton("Disconnect", variant: .danger, size: .sm) {
+                Button("Disconnect") {
                     onDisconnect()
                 }
+                .foregroundColor(AppTheme.error)
             }
 
             if let repoPath = selectedRepoPath {
@@ -2258,7 +2315,7 @@ struct SubscriptionSettingsView: View {
                                 .foregroundColor(AppTheme.textSecondary)
                         }
                         Spacer()
-                        DSButton("Manage", variant: .secondary, size: .sm) {
+                        Button("Manage") {
                             if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
                                 NSWorkspace.shared.open(url)
                             }
@@ -2277,9 +2334,10 @@ struct SubscriptionSettingsView: View {
                                 .foregroundColor(AppTheme.textSecondary)
                         }
                         Spacer()
-                        DSButton("Upgrade to Pro", variant: .primary, size: .sm) {
+                        Button("Upgrade to Pro") {
                             showSubscriptionSheet = true
                         }
+                        .buttonStyle(.borderedProminent)
                     }
                 }
             }
@@ -2333,8 +2391,10 @@ struct SubscriptionSettingsView: View {
             }
 
             Section {
-                DSButton("Restore Purchases", variant: .secondary, size: .sm) {
-                    await storeManager.restorePurchases()
+                Button("Restore Purchases") {
+                    Task {
+                        await storeManager.restorePurchases()
+                    }
                 }
 
                 Link("Terms of Service", destination: URL(string: "https://gitmac.app/terms")!)
@@ -2410,7 +2470,9 @@ struct WorkspaceConfigView: View {
                 }
 
                 Section("Main Branch Configuration") {
-                    DSTextField(placeholder: "Main branch name (e.g., main, master, develop)", text: $mainBranchName)
+                    TextField("Main branch name (e.g., main, master, develop)", text: $mainBranchName)
+                        .textFieldStyle(.roundedBorder)
+                        .foregroundColor(AppTheme.textPrimary)
                         .onChange(of: mainBranchName) { _, newValue in
                             guard !newValue.isEmpty else { return }
                             workspaceManager.setMainBranch(for: repoPath, branchName: newValue)

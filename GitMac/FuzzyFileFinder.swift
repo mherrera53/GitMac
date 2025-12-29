@@ -50,8 +50,7 @@ struct FuzzyFileFinder: View {
                 .font(.system(size: 24))
                 .foregroundColor(AppTheme.accent)
             
-            TextField("Search files...", text: $searchText)
-                .textFieldStyle(.plain)
+            DSTextField(placeholder: "Search files...", text: $searchText)
                 .font(.system(size: 16))
                 .focused($isSearchFocused)
             

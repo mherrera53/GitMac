@@ -8,72 +8,23 @@ struct LinearPanel: View {
     @StateObject private var viewModel = LinearViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Resizer handle
-            UniversalResizer(
-                dimension: $height,
-                minDimension: 150,
-                maxDimension: 500,
-                orientation: .vertical
-            )
-
-            // Header
-            HStack(spacing: DesignTokens.Spacing.md) {
-                DSIcon("lineweight", size: .md, color: Color(hex: "5E6AD2"))
-
-                Text("Linear")
-                    .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
-
-                Spacer()
-
-                // Refresh button
-                DSIconButton(
-                    iconName: "arrow.clockwise",
-                    variant: .ghost,
-                    size: .sm
-                ) {
-                    try? await viewModel.refresh()
-                }
-                .disabled(viewModel.isLoading)
-
-                // Settings button
-                DSIconButton(
-                    iconName: "gear",
-                    variant: .ghost,
-                    size: .sm
-                ) {
-                    viewModel.showSettings = true
-                }
-
-                // Close button
-                DSCloseButton {
-                    onClose()
-                }
-            }
-            .padding(DesignTokens.Spacing.md)
-            .background(AppTheme.backgroundSecondary)
-
-            DSDivider()
-
-            // Content
-            if viewModel.isLoading && !viewModel.isAuthenticated {
-                DSLoadingState(message: "Loading...")
-            } else if let error = viewModel.error {
-                DSErrorState(
-                    message: error,
-                    onRetry: {
-                        try? await viewModel.refresh()
-                    }
-                )
-            } else if !viewModel.isAuthenticated {
-                LinearLoginPrompt(viewModel: viewModel)
-            } else {
+        DSIntegrationBottomPanel(
+            title: "Linear",
+            icon: "lineweight",
+            iconColor: Color(hex: "5E6AD2"),
+            viewModel: viewModel,
+            content: {
                 LinearContentView(viewModel: viewModel)
-            }
-        }
-        .frame(height: height)
-        .background(AppTheme.background)
+            },
+            loginView: {
+                LinearLoginPrompt(viewModel: viewModel)
+            },
+            height: $height,
+            onSettings: {
+                viewModel.showSettings = true
+            },
+            onClose: onClose
+        )
         .sheet(isPresented: $viewModel.showSettings) {
             LinearSettingsSheet(viewModel: viewModel)
         }
@@ -164,12 +115,15 @@ class LinearViewModel: ObservableObject, IntegrationViewModel {
     }
 
     func logout() {
-        Task {
+        Task { [weak self] in
             try? await KeychainManager.shared.deleteLinearToken()
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.isAuthenticated = false
+                self.teams = []
+                self.issues = []
+            }
         }
-        isAuthenticated = false
-        teams = []
-        issues = []
     }
 }
 
@@ -196,8 +150,7 @@ struct LinearLoginPrompt: View {
                 .foregroundColor(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
 
-            SecureField("API Key", text: $apiKey)
-                .textFieldStyle(.roundedBorder)
+            DSSecureField(placeholder: "API Key", text: $apiKey)
                 .frame(maxWidth: 300)
 
             if let error = error {

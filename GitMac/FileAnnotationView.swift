@@ -43,7 +43,6 @@ struct FileAnnotationView: View {
             
             // Heatmap toggle
             Toggle("Heatmap", isOn: $showHeatmap)
-                .toggleStyle(.checkbox)
             
             // Color scheme
             if showHeatmap {

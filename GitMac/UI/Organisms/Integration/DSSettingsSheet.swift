@@ -86,7 +86,6 @@ struct DSSettingsSheet<Content: View>: View {
                     .foregroundColor(AppTheme.textPrimary)
 
                 TextField("https://your-domain.atlassian.net", text: .constant(""))
-                    .textFieldStyle(.plain)
                     .padding(DesignTokens.Spacing.sm)
                     .background(AppTheme.backgroundSecondary)
                     .cornerRadius(DesignTokens.CornerRadius.md)
@@ -99,7 +98,6 @@ struct DSSettingsSheet<Content: View>: View {
                     .foregroundColor(AppTheme.textPrimary)
 
                 SecureField("Enter your API token", text: .constant(""))
-                    .textFieldStyle(.plain)
                     .padding(DesignTokens.Spacing.sm)
                     .background(AppTheme.backgroundSecondary)
                     .cornerRadius(DesignTokens.CornerRadius.md)
@@ -112,7 +110,6 @@ struct DSSettingsSheet<Content: View>: View {
                     .foregroundColor(AppTheme.textPrimary)
 
                 TextField("PROJ", text: .constant(""))
-                    .textFieldStyle(.plain)
                     .padding(DesignTokens.Spacing.sm)
                     .background(AppTheme.backgroundSecondary)
                     .cornerRadius(DesignTokens.CornerRadius.md)

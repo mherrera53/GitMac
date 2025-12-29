@@ -2,12 +2,14 @@
 //  JiraLoginPrompt.swift
 //  GitMac
 //
-//  Created on 2025-12-28.
-//  Login prompt for Jira integration
+//  Created on 2025-12-29.
+//  Login prompt view for Jira integration
 //
 
 import SwiftUI
 
+/// Custom login prompt for Jira
+/// Handles Jira-specific authentication with site URL, email, and API token
 struct JiraLoginPrompt: View {
     @ObservedObject var viewModel: JiraViewModel
     @State private var email = ""
@@ -17,37 +19,34 @@ struct JiraLoginPrompt: View {
     @State private var error: String?
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "square.stack.3d.up.fill")
-                .font(.system(size: 40))
+                .font(DesignTokens.Typography.iconXXXL)
                 .foregroundColor(Color(hex: "0052CC"))
 
             Text("Connect to Jira")
-                .font(.system(size: 15, weight: .semibold))
+                .font(DesignTokens.Typography.headline)
                 .foregroundColor(AppTheme.textPrimary)
 
             Text("Enter your Jira Cloud credentials")
-                .font(.system(size: 12))
+                .font(DesignTokens.Typography.callout)
                 .foregroundColor(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
 
-            VStack(spacing: 8) {
-                TextField("Site URL (e.g., yourcompany.atlassian.net)", text: $siteUrl)
-                    .textFieldStyle(.roundedBorder)
+            VStack(spacing: DesignTokens.Spacing.sm) {
+                DSTextField(placeholder: "Site URL (e.g., yourcompany.atlassian.net)", text: $siteUrl)
                     .frame(maxWidth: 350)
 
-                TextField("Email", text: $email)
-                    .textFieldStyle(.roundedBorder)
+                DSTextField(placeholder: "Email", text: $email)
                     .frame(maxWidth: 350)
 
-                SecureField("API Token", text: $apiToken)
-                    .textFieldStyle(.roundedBorder)
+                DSSecureField(placeholder: "API Token", text: $apiToken)
                     .frame(maxWidth: 350)
             }
 
             if let error = error {
                 Text(error)
-                    .font(.system(size: 11))
+                    .font(DesignTokens.Typography.caption)
                     .foregroundColor(AppTheme.error)
             }
 
@@ -66,7 +65,7 @@ struct JiraLoginPrompt: View {
 
             Link("Get API token from Atlassian",
                  destination: URL(string: "https://id.atlassian.com/manage-profile/security/api-tokens")!)
-                .font(.system(size: 11))
+                .font(DesignTokens.Typography.caption)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
@@ -76,8 +75,7 @@ struct JiraLoginPrompt: View {
         isLoading = true
         error = nil
 
-        Task { [weak self, weak viewModel] in
-            guard let self = self, let viewModel = viewModel else { return }
+        Task {
             do {
                 // Create Basic auth token
                 let credentials = "\(email):\(apiToken)"
@@ -107,17 +105,17 @@ struct JiraLoginPrompt: View {
                 // Configure service for direct REST API access
                 await JiraService.shared.setAccessToken(basicToken, cloudId: cloudId, siteUrl: cleanSiteUrl)
 
-                await MainActor.run { [weak viewModel, weak self] in
-                    viewModel?.isAuthenticated = true
-                    self?.isLoading = false
+                await MainActor.run {
+                    viewModel.isAuthenticated = true
+                    isLoading = false
                 }
 
                 await viewModel.loadProjects()
                 try? await viewModel.refresh()
             } catch {
-                await MainActor.run { [weak self] in
-                    self?.self.error = "Failed to connect: \(error.localizedDescription)"
-                    self?.isLoading = false
+                await MainActor.run {
+                    self.error = "Failed to connect: \(error.localizedDescription)"
+                    isLoading = false
                 }
             }
         }

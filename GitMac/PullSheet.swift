@@ -20,7 +20,6 @@ struct PullSheet: View {
             Text("Pull").font(.title2).bold()
 
             Toggle("Rebase en lugar de merge", isOn: $useRebase)
-                .toggleStyle(.switch)
 
             if isRunning {
                 HStack(spacing: 8) {

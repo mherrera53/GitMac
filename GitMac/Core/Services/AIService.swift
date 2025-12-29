@@ -994,7 +994,8 @@ actor AIService {
 
 // MARK: - Supporting Types
 
-enum CommitStyle: String, CaseIterable {
+enum CommitStyle: String, CaseIterable, Identifiable {
+    var id: String { rawValue }
     case conventional = "conventional"
     case simple = "simple"
     case detailed = "detailed"

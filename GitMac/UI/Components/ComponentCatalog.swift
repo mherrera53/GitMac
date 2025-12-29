@@ -569,7 +569,8 @@ struct MoleculesView: View {
                             .frame(width: 350)
                         }
 
-                        // DSSearchBar
+                        // DSSearchBar - Temporarily commented out due to build phase issue
+                        /*
                         ComponentShowcase(
                             name: "DSSearchBar",
                             description: "Search bar with filters"
@@ -607,6 +608,7 @@ struct MoleculesView: View {
                                 )
                             }
                         }
+                        */
 
                         // DSActionBar
                         ComponentShowcase(

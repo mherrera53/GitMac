@@ -317,14 +317,8 @@ struct BranchPickerPopover: View {
     var body: some View {
         VStack(spacing: 0) {
             // Search
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(AppTheme.textPrimary)
-                TextField("Search branches...", text: $searchText)
-                    .textFieldStyle(.plain)
-            }
-            .padding(8)
-            .background(Color(nsColor: .controlBackgroundColor))
+            DSSearchField(placeholder: "Search branches...", text: $searchText)
+                .padding(8)
             
             Divider()
             

@@ -166,8 +166,7 @@ struct LFSManagerView: View {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(AppTheme.textPrimary)
-                TextField("Search files...", text: $searchText)
-                    .textFieldStyle(.plain)
+                DSTextField(placeholder: "Search files...", text: $searchText)
             }
             .padding(DesignTokens.Spacing.sm)
             .background(AppTheme.textMuted.opacity(0.1))
@@ -413,8 +412,7 @@ struct TrackPatternSheet: View {
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
                         .foregroundColor(AppTheme.textPrimary)
-                    TextField("*.psd, assets/**/*.png", text: $pattern)
-                        .textFieldStyle(.roundedBorder)
+                    DSTextField(placeholder: "*.psd, assets/**/*.png", text: $pattern)
                 }
 
                 Text("Common patterns:")

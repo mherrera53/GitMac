@@ -104,15 +104,8 @@ struct DiffSearchBar: View {
 
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.sm) {
-            // Search icon
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(AppTheme.textMuted)
-                .font(DesignTokens.Typography.callout)
-
             // Search field
-            TextField("Search in diff...", text: $searchState.query)
-                .textFieldStyle(.plain)
-                .font(DesignTokens.Typography.callout)
+            DSSearchField(placeholder: "Search in diff...", text: $searchState.query)
                 .focused($isFocused)
                 .onSubmit {
                     searchState.nextMatch()
@@ -162,13 +155,8 @@ struct DiffSearchBar: View {
                 .frame(height: DesignTokens.Size.iconMD)
 
             // Options
-            Toggle(isOn: $searchState.caseSensitive) {
-                Text("Aa")
-                    .font(DesignTokens.Typography.caption2.weight(.bold))
-            }
-            .toggleStyle(.button)
-            .buttonStyle(.plain)
-            .help("Case Sensitive")
+            DSToggle(isOn: $searchState.caseSensitive, label: "Aa", style: .button)
+                .help("Case Sensitive")
 
             // Close button
             Button {
@@ -798,7 +786,7 @@ struct EnhancedDiffViewer: View {
         HStack(spacing: DesignTokens.Spacing.md) {
             // View mode picker (only if not LFM)
             if !isLargeFileMode {
-                Picker("", selection: $viewMode) {
+                DSPicker(selection: $viewMode) {
                     Image(systemName: "text.alignleft")
                         .foregroundColor(AppTheme.textSecondary)
                         .tag(ViewMode.unified)
@@ -806,7 +794,6 @@ struct EnhancedDiffViewer: View {
                         .foregroundColor(AppTheme.textSecondary)
                         .tag(ViewMode.sideBySide)
                 }
-                .pickerStyle(.segmented)
                 .frame(width: 80)
             }
 

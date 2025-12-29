@@ -817,17 +817,14 @@ struct ConflictedFileRow: View {
             Spacer()
 
             // Resolve button
-            Button {
+            DSButton(variant: .primary, size: .sm) {
                 onResolve()
             } label: {
                 HStack(spacing: DesignTokens.Spacing.xs) {
-                    Image(systemName: "wand.and.stars").foregroundColor(AppTheme.accent)
+                    Image(systemName: "wand.and.stars")
                     Text("Resolve")
                 }
-                .font(DesignTokens.Typography.caption)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(AppTheme.warning)
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
@@ -1069,12 +1066,9 @@ struct UntrackedFileRow: View {
             Spacer()
 
             if isHovered, let stage = onStage {
-                Button {
+                DSIconButton(iconName: "plus.circle", variant: .ghost, size: .sm) {
                     stage()
-                } label: {
-                    Image(systemName: "plus.circle").foregroundColor(AppTheme.success)
                 }
-                .buttonStyle(.borderless)
                 .help("Stage")
             }
         }
@@ -1313,7 +1307,7 @@ struct AICommitMessageSheet: View {
     @State private var generatedMessage = ""
     @State private var isGenerating = false
     @State private var error: String?
-    @State private var selectedStyle: CommitStyle = .conventional
+    @State private var selectedStyle: CommitStyle? = .conventional
 
     private let aiService = AIService()
 
@@ -1323,12 +1317,12 @@ struct AICommitMessageSheet: View {
                 .font(DesignTokens.Typography.title2)
                 .fontWeight(.semibold)
 
-            Picker("Style", selection: $selectedStyle) {
-                ForEach(CommitStyle.allCases, id: \.self) { style in
-                    Text(style.description).tag(style)
-                }
+            DSPicker(
+                items: CommitStyle.allCases,
+                selection: $selectedStyle
+            ) { style in
+                Text(style.description)
             }
-            .pickerStyle(.segmented)
 
             if isGenerating {
                 ProgressView("Generating...")
@@ -1338,13 +1332,7 @@ struct AICommitMessageSheet: View {
                     Text("Generated Message:")
                         .font(DesignTokens.Typography.headline)
 
-                    TextEditor(text: $generatedMessage)
-                        .font(.system(.body, design: .monospaced))
-                        .frame(minHeight: 100)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.sm)
-                                .stroke(AppTheme.textSecondary.opacity(0.3), lineWidth: 1)
-                        )
+                    DSTextEditor(placeholder: "Generated commit message", text: $generatedMessage, minHeight: 100)
                 }
             } else if let error = error {
                 VStack {
@@ -1404,10 +1392,10 @@ struct AICommitMessageSheet: View {
         do {
             generatedMessage = try await aiService.generateCommitMessage(
                 diff: diff,
-                style: selectedStyle
+                style: selectedStyle ?? .conventional
             )
         } catch {
-            self.self.error = error.localizedDescription
+            self.error = error.localizedDescription
         }
 
         isGenerating = false
@@ -1630,22 +1618,16 @@ struct TreeNodeView: View {
                 if isHovered {
                     if isStaged {
                         if let unstageFolder = onUnstageFolder {
-                            Button {
+                            DSIconButton(iconName: "minus.circle", variant: .ghost, size: .sm) {
                                 unstageFolder(node.path)
-                            } label: {
-                                Image(systemName: "minus.circle").foregroundColor(theme.error)
                             }
-                            .buttonStyle(.borderless)
                             .help("Unstage Folder")
                         }
                     } else {
                         if let stageFolder = onStageFolder {
-                            Button {
+                            DSIconButton(iconName: "plus.circle", variant: .ghost, size: .sm) {
                                 stageFolder(node.path)
-                            } label: {
-                                Image(systemName: "plus.circle").foregroundColor(theme.success)
                             }
-                            .buttonStyle(.borderless)
                             .help("Stage Folder")
                         }
                     }
@@ -1756,44 +1738,29 @@ struct TreeNodeView: View {
             if isHovered {
                 if isStaged {
                     if let unstage = onUnstage {
-                        Button {
+                        DSIconButton(iconName: "minus.circle", variant: .ghost, size: .sm) {
                             unstage(node.path)
-                        } label: {
-                            Image(systemName: "minus.circle")
-                                .foregroundColor(theme.error)
                         }
-                        .buttonStyle(.borderless)
                         .help("Unstage")
                     }
                     if let discardStaged = onDiscardStaged {
-                        Button {
+                        DSIconButton(iconName: "xmark.circle", variant: .ghost, size: .sm) {
                             discardStaged(node.path)
-                        } label: {
-                            Image(systemName: "xmark.circle")
-                                .foregroundColor(AppTheme.error)
                         }
-                        .buttonStyle(.borderless)
                         .help("Discard staged changes")
                     }
                 } else {
                     if let stage = onStage {
-                        Button {
+                        DSIconButton(iconName: "plus.circle", variant: .ghost, size: .sm) {
                             stage(node.path)
-                        } label: {
-                            Image(systemName: "plus.circle").foregroundColor(theme.success)
                         }
-                        .buttonStyle(.borderless)
                         .help("Stage")
                     }
 
                     if let discard = onDiscard, !node.isUntracked {
-                        Button {
+                        DSIconButton(iconName: "xmark.circle", variant: .ghost, size: .sm) {
                             discard(node.path)
-                        } label: {
-                            Image(systemName: "xmark.circle")
-                                .foregroundColor(AppTheme.error)
                         }
-                        .buttonStyle(.borderless)
                         .help("Discard")
                     }
                 }
@@ -2002,39 +1969,29 @@ struct FilePreviewView: View {
             // Actions
             HStack(spacing: DesignTokens.Spacing.xs) {
                 // Copy button
-                Button {
+                DSButton(variant: .outline, size: .sm, isDisabled: isBinary || content.isEmpty) {
                     copyPreviewContent()
                 } label: {
                     HStack(spacing: DesignTokens.Spacing.xs) {
                         Image(systemName: copyFeedback ? "checkmark" : "doc.on.doc")
-                            .foregroundColor(theme.textSecondary)
                         Text(copyFeedback ? "Copied!" : "Copy")
                     }
-                    .font(DesignTokens.Typography.callout)
                 }
-                .buttonStyle(.bordered)
-                .disabled(isBinary || content.isEmpty)
 
                 // Open in default app
-                Button {
+                DSButton(variant: .outline, size: .sm) {
                     NSWorkspace.shared.open(URL(fileURLWithPath: fullPath))
                 } label: {
                     HStack(spacing: DesignTokens.Spacing.xs) {
-                        Image(systemName: "arrow.up.forward.app").foregroundColor(theme.textSecondary)
+                        Image(systemName: "arrow.up.forward.app")
                         Text("Open")
                     }
-                    .font(DesignTokens.Typography.callout)
                 }
-                .buttonStyle(.bordered)
 
                 // Reveal in Finder
-                Button {
+                DSIconButton(iconName: "folder", variant: .outline, size: .sm) {
                     NSWorkspace.shared.selectFile(fullPath, inFileViewerRootedAtPath: "")
-                } label: {
-                    Image(systemName: "folder").foregroundColor(theme.textSecondary)
-                        .font(DesignTokens.Typography.callout)
                 }
-                .buttonStyle(.bordered)
             }
         }
         .padding(DesignTokens.Spacing.md)

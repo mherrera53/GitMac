@@ -66,7 +66,6 @@ struct RevertView: View {
                             .foregroundColor(AppTheme.textPrimary)
                     }
                 }
-                .toggleStyle(.checkbox)
             }
             
             // Info box

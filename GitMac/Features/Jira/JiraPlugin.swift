@@ -15,11 +15,14 @@ struct JiraPlugin: IntegrationPlugin {
     let icon = "square.stack.3d.up.fill"
     let iconColor = Color(hex: "0052CC")
 
+    typealias ViewModel = JiraViewModel
+    typealias ContentView = JiraContentView
+
     @MainActor func makeViewModel() -> JiraViewModel {
         JiraViewModel()
     }
 
-    func makeContentView(viewModel: JiraViewModel) -> some View {
+    func makeContentView(viewModel: JiraViewModel) -> JiraContentView {
         JiraContentView(viewModel: viewModel)
     }
 }

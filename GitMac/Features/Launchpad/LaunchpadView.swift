@@ -117,8 +117,7 @@ struct LaunchpadView: View {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(AppTheme.textPrimary)
-                TextField("Search...", text: $searchText)
-                    .textFieldStyle(.plain)
+                DSTextField(placeholder: "Search...", text: $searchText)
             }
             .padding(DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
             .background(AppTheme.textMuted.opacity(0.1))

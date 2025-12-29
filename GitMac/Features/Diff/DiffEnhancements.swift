@@ -452,20 +452,20 @@ struct DiffPreferencesView: View {
                     }
                 }
 
-                Toggle("Show Line Numbers", isOn: $manager.preferences.showLineNumbers)
+                DSToggle("Show Line Numbers", isOn: $manager.preferences.showLineNumbers)
 
                 Stepper("Context Lines: \(manager.preferences.contextLines)", value: $manager.preferences.contextLines, in: 1...20)
 
-                Toggle("Word Wrap", isOn: $manager.preferences.wordWrap)
+                DSToggle("Word Wrap", isOn: $manager.preferences.wordWrap)
 
                 Stepper("Tab Width: \(manager.preferences.tabWidth)", value: $manager.preferences.tabWidth, in: 2...8)
             }
 
             // Highlighting Section
             Section("Highlighting") {
-                Toggle("Enable Word-Level Diff", isOn: $manager.preferences.enableWordDiff)
+                DSToggle("Enable Word-Level Diff", isOn: $manager.preferences.enableWordDiff)
 
-                Toggle("Enable Syntax Highlighting", isOn: $manager.preferences.enableSyntaxHighlight)
+                DSToggle("Enable Syntax Highlighting", isOn: $manager.preferences.enableSyntaxHighlight)
 
                 if manager.preferences.enableWordDiff {
                     HStack {
@@ -473,7 +473,6 @@ struct DiffPreferencesView: View {
                         Spacer()
                         TextField("", value: $manager.preferences.wordDiffTimeBudgetMs, format: .number)
                             .frame(width: 60)
-                            .textFieldStyle(.roundedBorder)
                         Text("ms")
                             .foregroundColor(AppTheme.textPrimary)
                     }
@@ -487,7 +486,6 @@ struct DiffPreferencesView: View {
                     Spacer()
                     TextField("", value: $manager.preferences.lfmFileSizeThresholdMB, format: .number)
                         .frame(width: 60)
-                        .textFieldStyle(.roundedBorder)
                     Text("MB")
                         .foregroundColor(AppTheme.textPrimary)
                 }
@@ -497,7 +495,6 @@ struct DiffPreferencesView: View {
                     Spacer()
                     TextField("", value: $manager.preferences.lfmLinesThreshold, format: .number)
                         .frame(width: 80)
-                        .textFieldStyle(.roundedBorder)
                 }
 
                 HStack {
@@ -505,7 +502,6 @@ struct DiffPreferencesView: View {
                     Spacer()
                     TextField("", value: $manager.preferences.lfmMaxLineLengthThreshold, format: .number)
                         .frame(width: 80)
-                        .textFieldStyle(.roundedBorder)
                     Text("chars")
                         .foregroundColor(AppTheme.textPrimary)
                 }
@@ -515,7 +511,6 @@ struct DiffPreferencesView: View {
                     Spacer()
                     TextField("", value: $manager.preferences.lfmHunksThreshold, format: .number)
                         .frame(width: 80)
-                        .textFieldStyle(.roundedBorder)
                 }
             }
 
@@ -541,12 +536,12 @@ struct DiffPreferencesView: View {
                         .foregroundColor(AppTheme.textPrimary)
                 }
 
-                Toggle("High Contrast Colors", isOn: $manager.preferences.useHighContrastColors)
+                DSToggle("High Contrast Colors", isOn: $manager.preferences.useHighContrastColors)
             }
 
             // Performance Section
             Section("Performance") {
-                Toggle("Enable Caching", isOn: $manager.preferences.enableCaching)
+                DSToggle("Enable Caching", isOn: $manager.preferences.enableCaching)
 
                 if manager.preferences.enableCaching {
                     Stepper("Cache Size: \(manager.preferences.maxCacheSizeMB) MB",

@@ -449,8 +449,7 @@ struct MainLayout: View {
                 .buttonStyle(.plain)
                 .help("Team Activity")
 
-                TextField("Search commits...", text: $searchText)
-                    .textFieldStyle(.roundedBorder)
+                DSTextField(placeholder: "Search commits...", text: $searchText)
                     .frame(minWidth: 150, maxWidth: 250)
             }
         }
@@ -600,8 +599,7 @@ struct LeftSidebarPanel: View {
                                 .font(.system(size: 11))
                                 .foregroundColor(AppTheme.textMuted)
 
-                            TextField("Search branches...", text: $branchSearchText)
-                                .textFieldStyle(.plain)
+                            DSTextField(placeholder: "Search branches...", text: $branchSearchText)
                                 .font(.system(size: 11))
 
                             if !branchSearchText.isEmpty {
@@ -1386,7 +1384,7 @@ struct RecentRepositoriesList: View {
                     MiniSidebarSection(
                         title: group.name.uppercased(),
                         icon: "folder.fill",
-                        iconColor: Color(hex: group.color) ?? .blue,
+                        iconColor: Color(hex: group.color),
                         isExpanded: expandedGroups.contains(group.id)
                     ) {
                         expandedGroups.toggle(group.id)
@@ -4552,8 +4550,7 @@ struct CloneRepositorySheet: View {
                     Text("Repository URL")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(AppTheme.textMuted)
-                    TextField("https://github.com/user/repo.git", text: $repoURL)
-                        .textFieldStyle(.plain)
+                    DSTextField(placeholder: "https://github.com/user/repo.git", text: $repoURL)
                         .padding(10)
                         .background(AppTheme.backgroundTertiary)
                         .cornerRadius(6)
@@ -4564,8 +4561,7 @@ struct CloneRepositorySheet: View {
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(AppTheme.textMuted)
                     HStack {
-                        TextField("Select destination folder", text: $destinationPath)
-                            .textFieldStyle(.plain)
+                        DSTextField(placeholder: "Select destination folder", text: $destinationPath)
                             .padding(10)
                             .background(AppTheme.backgroundTertiary)
                             .cornerRadius(6)
@@ -4782,8 +4778,7 @@ struct CreateBranchSheet: View {
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(AppTheme.textSecondary)
 
-                    TextField("feature/my-branch", text: $branchName)
-                        .textFieldStyle(.plain)
+                    DSTextField(placeholder: "feature/my-branch", text: $branchName)
                         .font(.system(size: 13))
                         .padding(8)
                         .background(AppTheme.backgroundSecondary)
@@ -4816,7 +4811,6 @@ struct CreateBranchSheet: View {
                         .font(.system(size: 12))
                         .foregroundColor(AppTheme.textSecondary)
                 }
-                .toggleStyle(.checkbox)
 
                 if let error = errorMessage {
                     Text(error)
@@ -4999,7 +4993,6 @@ struct MergeBranchSheet: View {
                         .font(.system(size: 12))
                         .foregroundColor(AppTheme.textSecondary)
                 }
-                .toggleStyle(.checkbox)
 
                 if let error = errorMessage {
                     Text(error)
@@ -5740,8 +5733,7 @@ struct InitRepositorySheet: View {
                         Text("Repository Name")
                             .font(DesignTokens.Typography.body)
                             .foregroundColor(AppTheme.textSecondary)
-                        TextField("my-project", text: $repositoryName)
-                            .textFieldStyle(.roundedBorder)
+                        DSTextField(placeholder: "my-project", text: $repositoryName)
                             .disabled(isCreating)
                     }
 
@@ -5750,8 +5742,7 @@ struct InitRepositorySheet: View {
                             .font(DesignTokens.Typography.body)
                             .foregroundColor(AppTheme.textSecondary)
                         HStack(spacing: DesignTokens.Spacing.sm) {
-                            TextField("/path/to/parent/directory", text: $localPath)
-                                .textFieldStyle(.roundedBorder)
+                            DSTextField(placeholder: "/path/to/parent/directory", text: $localPath)
                                 .disabled(isCreating)
                             Button("Browse") { selectLocalPath() }
                                 .disabled(isCreating)
@@ -5769,8 +5760,7 @@ struct InitRepositorySheet: View {
                         Text("Initial Branch")
                             .font(DesignTokens.Typography.body)
                             .foregroundColor(AppTheme.textSecondary)
-                        TextField("main", text: $initialBranch)
-                            .textFieldStyle(.roundedBorder)
+                        DSTextField(placeholder: "main", text: $initialBranch)
                             .disabled(isCreating)
                     }
 
@@ -5991,7 +5981,7 @@ struct GroupManagementRow: View {
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.md) {
             Circle()
-                .fill(Color(hex: group.color) ?? .blue)
+                .fill(Color(hex: group.color))
                 .frame(width: 12, height: 12)
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                 Text(group.name)
@@ -6056,8 +6046,7 @@ struct CreateGroupSheet: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Group Name")
                         .font(DesignTokens.Typography.body)
-                    TextField("Work Projects", text: $groupName)
-                        .textFieldStyle(.roundedBorder)
+                    DSTextField(placeholder: "Work Projects", text: $groupName)
                 }
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Color")
@@ -6065,7 +6054,7 @@ struct CreateGroupSheet: View {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: DesignTokens.Spacing.md) {
                         ForEach(availableColors, id: \.1) { _, hex in
                             ColorPickerButton(
-                                color: Color(hex: hex) ?? .blue,
+                                color: Color(hex: hex),
                                 isSelected: selectedColor == hex
                             ) {
                                 selectedColor = hex
@@ -6084,7 +6073,7 @@ struct CreateGroupSheet: View {
                     .keyboardShortcut(.escape)
                 Spacer()
                 Button("Create") {
-                    groupsService.createGroup(name: groupName, color: selectedColor)
+                    _ = groupsService.createGroup(name: groupName, color: selectedColor)
                     dismiss()
                 }
                 .keyboardShortcut(.return)
@@ -6137,8 +6126,7 @@ struct EditGroupSheet: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Group Name")
                         .font(DesignTokens.Typography.body)
-                    TextField("Work Projects", text: $groupName)
-                        .textFieldStyle(.roundedBorder)
+                    DSTextField(placeholder: "Work Projects", text: $groupName)
                 }
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Color")
@@ -6146,7 +6134,7 @@ struct EditGroupSheet: View {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: DesignTokens.Spacing.md) {
                         ForEach(availableColors, id: \.1) { _, hex in
                             ColorPickerButton(
-                                color: Color(hex: hex) ?? .blue,
+                                color: Color(hex: hex),
                                 isSelected: selectedColor == hex
                             ) {
                                 selectedColor = hex
