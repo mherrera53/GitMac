@@ -1,0 +1,37 @@
+# Build
+.build/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+build_artifact/
+build_log*.txt
+
+# Swift Package Manager
+.swiftpm/
+
+# macOS
+.DS_Store
+*.app
+
+# Xcode
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# Frameworks (external)
+Frameworks/
+!Frameworks/.gitkeep
+!Frameworks/README.md
+
+# Backups
+*.backup-*
+
+# Build scripts
+*.sh
+*.py
+
+# Work in progress documentation
+GHOSTTY_*.md
+TERMINAL_INTEGRATION_STEPS.md
+build/
+.claude/settings.local.json

@@ -1,0 +1,70 @@
+//
+//  PlannerPlugin.swift
+//  GitMac
+//
+//  Created on 2025-12-28.
+//  Plugin System - Microsoft Planner Integration Plugin
+//
+
+import SwiftUI
+
+/// Microsoft Planner integration plugin
+struct PlannerPlugin: IntegrationPlugin {
+    let id = "planner"
+    let name = "Planner"
+    let icon = "checklist"
+    let iconColor = Color(hex: "0078D4")
+
+    func makeViewModel() -> PlannerTasksViewModel {
+        PlannerTasksViewModel()
+    }
+
+    func makeContentView(viewModel: PlannerTasksViewModel) -> some View {
+        PlannerContentView(viewModel: viewModel)
+    }
+}
+
+/// Content view for Planner plugin
+struct PlannerContentView: View {
+    @ObservedObject var viewModel: PlannerTasksViewModel
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Plan selector toolbar
+            if !viewModel.plans.isEmpty {
+                HStack(spacing: DesignTokens.Spacing.sm) {
+                    Text("Plan:")
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+
+                    Picker("", selection: $viewModel.selectedPlanId) {
+                        Text("Select plan...").tag(nil as String?)
+                        ForEach(viewModel.plans) { plan in
+                            Text(plan.title).tag(plan.id as String?)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: 250)
+
+                    Spacer()
+                }
+                .padding(DesignTokens.Spacing.md)
+                .background(AppTheme.backgroundSecondary)
+
+                DSDivider()
+            }
+
+            // Content area
+            if viewModel.selectedPlanId != nil {
+                PlannerBoardView(buckets: viewModel.buckets, tasks: viewModel.tasks)
+            } else {
+                PlannerEmptyView(type: "Select a plan to view tasks")
+            }
+        }
+        .onChange(of: viewModel.selectedPlanId) { _, newId in
+            if let id = newId {
+                Task { await viewModel.loadPlanData(planId: id) }
+            }
+        }
+    }
+}

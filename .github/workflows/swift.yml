@@ -1,0 +1,44 @@
+# Build and test GitMac
+name: Build
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Setup GhosttyKit Framework
+        run: |
+          chmod +x scripts/setup-ghostty.sh
+          ./scripts/setup-ghostty.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        run: |
+          xcodebuild -project GitMac.xcodeproj \
+            -scheme GitMac \
+            -destination 'platform=macOS' \
+            -configuration Debug \
+            clean build \
+            | grep -E "error:|warning:|BUILD SUCCEEDED|BUILD FAILED" || true
+
+          # Verificar que el build fue exitoso
+          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo "❌ Build failed"
+            exit 1
+          fi
+          echo "✅ Build succeeded"

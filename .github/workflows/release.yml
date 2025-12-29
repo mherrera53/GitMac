@@ -1,0 +1,149 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+    - name: Show Xcode version
+      run: xcodebuild -version
+
+    - name: Setup GhosttyKit Framework
+      run: |
+        chmod +x scripts/setup-ghostty.sh
+        ./scripts/setup-ghostty.sh
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build Release
+      run: |
+        set -e  # Exit on error
+
+        xcodebuild -project GitMac.xcodeproj \
+          -scheme GitMac \
+          -configuration Release \
+          -destination 'platform=macOS' \
+          clean build \
+          -derivedDataPath build/DerivedData \
+          CODE_SIGN_IDENTITY="-" \
+          CODE_SIGN_STYLE=Manual \
+          DEVELOPMENT_TEAM=""
+
+        echo "✅ Build completed successfully"
+
+        # Verificar que el .app existe
+        if [ ! -d "build/DerivedData/Build/Products/Release/GitMac.app" ]; then
+          echo "❌ GitMac.app not found in expected location"
+          echo "Contents of build/DerivedData/Build/Products/Release/:"
+          ls -la build/DerivedData/Build/Products/Release/ || echo "Directory not found"
+          exit 1
+        fi
+        echo "✅ GitMac.app found"
+
+    - name: Package application
+      run: |
+        set -e  # Exit on error
+
+        # Get version from tag or input
+        if [ "${{ github.event_name }}" == "push" ]; then
+          VERSION=${GITHUB_REF#refs/tags/v}
+        else
+          VERSION="${{ github.event.inputs.version }}"
+        fi
+
+        echo "📦 Packaging version: $VERSION"
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+        # Create release directory
+        mkdir -p build/release
+
+        # Copy app
+        echo "📋 Copying GitMac.app..."
+        cp -R build/DerivedData/Build/Products/Release/GitMac.app build/release/
+
+        # Create ZIP
+        echo "🗜️  Creating ZIP archive..."
+        cd build/release
+        ditto -c -k --keepParent GitMac.app "GitMac-v${VERSION}-macOS.zip"
+
+        # Calculate checksum
+        echo "🔐 Calculating checksum..."
+        shasum -a 256 "GitMac-v${VERSION}-macOS.zip" > "GitMac-v${VERSION}-macOS.zip.sha256"
+
+        # Get file size and show info
+        echo "✅ Package created successfully:"
+        ls -lh "GitMac-v${VERSION}-macOS.zip"
+        echo "Checksum:"
+        cat "GitMac-v${VERSION}-macOS.zip.sha256"
+
+    - name: Create Release Notes
+      run: |
+        cat > build/release/RELEASE_NOTES.md <<EOF
+        # GitMac v${{ env.VERSION }}
+
+        ## Installation
+
+        1. Download \`GitMac-v${{ env.VERSION }}-macOS.zip\`
+        2. Unzip and move GitMac.app to /Applications
+        3. Open GitMac (right-click and "Open" if needed)
+
+        ## Requirements
+
+        - macOS 14.0 or later
+        - Apple Silicon (M1/M2/M3) or Intel Mac
+
+        ## Features
+
+        - ✅ Native Ghostty Terminal with GPU acceleration
+        - ✅ Git operations and management
+        - ✅ Branch, commit, and diff visualization
+        - ✅ GitHub integration
+        - ✅ Tokyo Night theme terminal
+
+        ## Checksums
+
+        \`\`\`
+        $(cat build/release/GitMac-v${{ env.VERSION }}-macOS.zip.sha256)
+        \`\`\`
+        EOF
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: GitMac-${{ env.VERSION }}
+        path: |
+          build/release/GitMac-v${{ env.VERSION }}-macOS.zip
+          build/release/GitMac-v${{ env.VERSION }}-macOS.zip.sha256
+          build/release/RELEASE_NOTES.md
+
+    - name: Create GitHub Release
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          build/release/GitMac-v${{ env.VERSION }}-macOS.zip
+          build/release/GitMac-v${{ env.VERSION }}-macOS.zip.sha256
+        body_path: build/release/RELEASE_NOTES.md
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
