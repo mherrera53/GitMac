@@ -450,10 +450,12 @@ struct MainLayout: View {
                 .help("Team Activity")
 
                 TextField("Search commits...", text: $searchText)
+                    .textFieldStyle(.roundedBorder)
                     .frame(minWidth: 150, maxWidth: 250)
             }
         }
         .toolbarBackground(AppTheme.background, for: .windowToolbar)
+        .toolbarColorScheme(ThemeManager.shared.currentTheme == .light ? .light : .dark, for: .windowToolbar)
         .id(themeRefreshTrigger)
         .onChange(of: appState.activeTabId) { _, _ in
             // Clear diff when switching repositories
@@ -1339,49 +1341,340 @@ struct GitHooksSidebarSection: View {
 struct RecentRepositoriesList: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var recentReposManager: RecentRepositoriesManager
+    @ObservedObject private var groupsService = RepoGroupsService.shared
+
+    @State private var expandedGroups: Set<String> = ["favorites", "recent"]
+    @State private var showCloneSheet = false
+    @State private var showInitSheet = false
+    @State private var showGroupManagement = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            // FAVORITES Section
+            if !groupsService.favorites.isEmpty {
+                MiniSidebarSection(
+                    title: "FAVORITES",
+                    icon: "star.fill",
+                    iconColor: .yellow,
+                    isExpanded: expandedGroups.contains("favorites")
+                ) {
+                    expandedGroups.toggle("favorites")
+                } content: {
+                    ForEach(Array(groupsService.favorites), id: \.self) { repoPath in
+                        if let repo = recentReposManager.recentRepos.first(where: { $0.path == repoPath }) {
+                            SidebarRepoRow(
+                                repoPath: repoPath,
+                                repoName: repo.name,
+                                isActive: appState.currentRepository?.path == repoPath,
+                                isFavorite: true
+                            )
+                        } else {
+                            SidebarRepoRow(
+                                repoPath: repoPath,
+                                repoName: URL(fileURLWithPath: repoPath).lastPathComponent,
+                                isActive: appState.currentRepository?.path == repoPath,
+                                isFavorite: true
+                            )
+                        }
+                    }
+                }
+            }
+
+            // GROUPS Sections
+            ForEach(groupsService.groups.sorted(by: { $0.sortOrder < $1.sortOrder })) { group in
+                if !group.repos.isEmpty {
+                    MiniSidebarSection(
+                        title: group.name.uppercased(),
+                        icon: "folder.fill",
+                        iconColor: Color(hex: group.color) ?? .blue,
+                        isExpanded: expandedGroups.contains(group.id)
+                    ) {
+                        expandedGroups.toggle(group.id)
+                    } content: {
+                        ForEach(group.repos, id: \.self) { repoPath in
+                            if let repo = recentReposManager.recentRepos.first(where: { $0.path == repoPath }) {
+                                SidebarRepoRow(
+                                    repoPath: repoPath,
+                                    repoName: repo.name,
+                                    isActive: appState.currentRepository?.path == repoPath,
+                                    isFavorite: groupsService.isFavorite(repoPath),
+                                    groupBadge: GroupBadge(group: group)
+                                )
+                            } else {
+                                SidebarRepoRow(
+                                    repoPath: repoPath,
+                                    repoName: URL(fileURLWithPath: repoPath).lastPathComponent,
+                                    isActive: appState.currentRepository?.path == repoPath,
+                                    isFavorite: groupsService.isFavorite(repoPath),
+                                    groupBadge: GroupBadge(group: group)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // RECENT Section
+            if !recentReposManager.recentRepos.isEmpty {
+                MiniSidebarSection(
+                    title: "RECENT",
+                    icon: "clock.fill",
+                    iconColor: .secondary,
+                    isExpanded: expandedGroups.contains("recent")
+                ) {
+                    expandedGroups.toggle("recent")
+                } content: {
+                    ForEach(recentReposManager.recentRepos.filter { repo in
+                        // Only show repos not in favorites or groups
+                        !groupsService.favorites.contains(repo.path) &&
+                        groupsService.getGroupsForRepo(repo.path).isEmpty
+                    }) { repo in
+                        SidebarRepoRow(
+                            repoPath: repo.path,
+                            repoName: repo.name,
+                            isActive: appState.currentRepository?.path == repo.path,
+                            isFavorite: false
+                        )
+                    }
+                }
+            }
+
+            // Empty State
+            if recentReposManager.recentRepos.isEmpty && groupsService.favorites.isEmpty && groupsService.groups.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "folder.badge.questionmark")
+                        .font(.system(size: 24))
+                        .foregroundColor(AppTheme.textMuted)
+                    Text("No repositories yet")
+                        .font(.system(size: 10))
+                        .foregroundColor(AppTheme.textMuted)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            }
+
+            Divider()
+                .padding(.vertical, 4)
+
+            // Action Buttons
+            VStack(spacing: 4) {
+                ActionButton(icon: "folder.badge.plus", title: "Open Repository") {
+                    openRepository()
+                }
+
+                ActionButton(icon: "arrow.down.circle", title: "Clone Repository") {
+                    showCloneSheet = true
+                }
+
+                ActionButton(icon: "plus.circle", title: "Init Repository") {
+                    showInitSheet = true
+                }
+
+                ActionButton(icon: "folder.badge.gearshape", title: "Manage Groups") {
+                    showGroupManagement = true
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.bottom, 4)
+        }
+        .sheet(isPresented: $showCloneSheet) {
+            CloneRepositorySheet()
+                .environmentObject(appState)
+        }
+        .sheet(isPresented: $showInitSheet) {
+            InitRepositorySheet()
+                .environmentObject(appState)
+        }
+        .sheet(isPresented: $showGroupManagement) {
+            GroupManagementSheet()
+                .environmentObject(appState)
+        }
+    }
+
+    private func openRepository() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.message = "Select a Git repository folder"
+
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+
+            Task { @MainActor in
+                await appState.openRepository(at: url.path)
+            }
+        }
+    }
+}
+
+// MARK: - Mini Sidebar Section (for repository groups)
+struct MiniSidebarSection<Content: View>: View {
+    let title: String
+    let icon: String
+    let iconColor: Color
+    let isExpanded: Bool
+    let onToggle: () -> Void
+    @ViewBuilder let content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(recentReposManager.recentRepos) { repo in
-                SidebarRecentRepoRow(repo: repo, isActive: appState.currentRepository?.path == repo.path)
-            }
-
-            if recentReposManager.recentRepos.isEmpty {
-                Text("No recent repositories")
-                    .font(.system(size: 10))
-                    .foregroundColor(AppTheme.textMuted)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 4)
-            }
-
-            // Open folder button
-            Button {
-                let panel = NSOpenPanel()
-                panel.canChooseFiles = false
-                panel.canChooseDirectories = true
-                panel.allowsMultipleSelection = false
-                panel.message = "Select a Git repository folder"
-
-                panel.begin { response in
-                    guard response == .OK, let url = panel.url else { return }
-
-                    Task { @MainActor in
-                        await appState.openRepository(at: url.path)
-                    }
-                }
-            } label: {
+            Button(action: onToggle) {
                 HStack(spacing: 4) {
-                    Image(systemName: "folder.badge.plus")
-                        .font(.system(size: 10))
-                    Text("Open Repository")
-                        .font(.system(size: 10))
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(AppTheme.textMuted)
+                        .frame(width: 10)
+                    Image(systemName: icon)
+                        .font(.system(size: 9))
+                        .foregroundColor(iconColor)
+                    Text(title)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(AppTheme.textMuted)
+                    Spacer()
                 }
-                .foregroundColor(AppTheme.textMuted)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+
+            if isExpanded {
+                content
+            }
         }
+    }
+}
+
+// MARK: - Sidebar Repo Row (unified for all repo types)
+struct SidebarRepoRow: View {
+    let repoPath: String
+    let repoName: String
+    let isActive: Bool
+    let isFavorite: Bool
+    var groupBadge: GroupBadge? = nil
+
+    @EnvironmentObject var appState: AppState
+    @ObservedObject private var groupsService = RepoGroupsService.shared
+    @State private var isHovered = false
+    @State private var showGroupPicker = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "folder.fill")
+                .font(.system(size: 10))
+                .foregroundColor(isActive ? AppTheme.accent : AppTheme.info)
+
+            Text(repoName)
+                .font(.system(size: 10))
+                .foregroundColor(isActive ? AppTheme.accent : AppTheme.textSecondary)
+                .lineLimit(1)
+
+            if let badge = groupBadge {
+                badge
+            }
+
+            Spacer()
+
+            if isHovered {
+                Button {
+                    groupsService.toggleFavorite(repoPath)
+                } label: {
+                    Image(systemName: isFavorite ? "star.fill" : "star")
+                        .font(.system(size: 9))
+                        .foregroundColor(isFavorite ? .yellow : AppTheme.textMuted)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if isActive {
+                Circle()
+                    .fill(AppTheme.success)
+                    .frame(width: 5, height: 5)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(isHovered ? AppTheme.hover : (isActive ? AppTheme.hover.opacity(0.5) : Color.clear))
+        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .onHover { isHovered = $0 }
+        .onTapGesture {
+            Task {
+                await appState.openRepository(at: repoPath)
+            }
+        }
+        .contextMenu {
+            Button("Toggle Favorite") {
+                groupsService.toggleFavorite(repoPath)
+            }
+
+            Menu("Add to Group") {
+                ForEach(groupsService.groups) { group in
+                    Button(group.name) {
+                        groupsService.addRepoToGroup(repoPath, groupId: group.id)
+                    }
+                }
+
+                Divider()
+
+                Button("Create New Group...") {
+                    showGroupPicker = true
+                }
+            }
+
+            if !groupsService.getGroupsForRepo(repoPath).isEmpty {
+                Menu("Remove from Group") {
+                    ForEach(groupsService.getGroupsForRepo(repoPath)) { group in
+                        Button(group.name) {
+                            groupsService.removeRepoFromGroup(repoPath, groupId: group.id)
+                        }
+                    }
+                }
+            }
+
+            Divider()
+
+            Button("Open in Finder") {
+                NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: repoPath)
+            }
+
+            Button("Copy Path") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(repoPath, forType: .string)
+            }
+
+            Divider()
+
+            Button("Remove from List", role: .destructive) {
+                RecentRepositoriesManager.shared.removeRecent(path: repoPath)
+            }
+        }
+    }
+}
+
+// MARK: - Action Button
+struct ActionButton: View {
+    let icon: String
+    let title: String
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+                Text(title)
+                    .font(.system(size: 10))
+                Spacer()
+            }
+            .foregroundColor(isHovered ? AppTheme.textPrimary : AppTheme.textMuted)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(isHovered ? AppTheme.hover : Color.clear)
+            .cornerRadius(DesignTokens.CornerRadius.sm)
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
     }
 }
 
@@ -5398,4 +5691,512 @@ struct FileBeingModified: Identifiable {
     let deletions: Int
     let source: String?
     let hasConflict: Bool
+}
+
+// MARK: - Init Repository Sheet
+struct InitRepositorySheet: View {
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var localPath: String = NSHomeDirectory() + "/Documents"
+    @State private var repositoryName: String = ""
+    @State private var initialBranch: String = "main"
+    @State private var createReadme: Bool = true
+    @State private var createGitignore: Bool = true
+    @State private var gitignoreTemplate: String = "macOS"
+    @State private var isCreating: Bool = false
+    @State private var error: String?
+
+    private let gitignoreTemplates = ["None", "macOS", "Swift", "Python", "Node", "Java", "Go"]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Image(systemName: "plus.circle.fill")
+                    .font(DesignTokens.Typography.iconXL)
+                    .foregroundColor(AppTheme.success)
+                Text("Initialize Repository")
+                    .font(DesignTokens.Typography.headline)
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(DesignTokens.Typography.callout)
+                        .foregroundColor(AppTheme.textMuted)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(DesignTokens.Spacing.lg)
+
+            Divider()
+
+            // Content
+            ScrollView {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                        Text("Repository Name")
+                            .font(DesignTokens.Typography.body)
+                            .foregroundColor(AppTheme.textSecondary)
+                        TextField("my-project", text: $repositoryName)
+                            .textFieldStyle(.roundedBorder)
+                            .disabled(isCreating)
+                    }
+
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                        Text("Location")
+                            .font(DesignTokens.Typography.body)
+                            .foregroundColor(AppTheme.textSecondary)
+                        HStack(spacing: DesignTokens.Spacing.sm) {
+                            TextField("/path/to/parent/directory", text: $localPath)
+                                .textFieldStyle(.roundedBorder)
+                                .disabled(isCreating)
+                            Button("Browse") { selectLocalPath() }
+                                .disabled(isCreating)
+                        }
+                        if !repositoryName.isEmpty {
+                            Text("Will create: \(localPath)/\(repositoryName)")
+                                .font(DesignTokens.Typography.caption)
+                                .foregroundColor(AppTheme.textMuted)
+                        }
+                    }
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                        Text("Initial Branch")
+                            .font(DesignTokens.Typography.body)
+                            .foregroundColor(AppTheme.textSecondary)
+                        TextField("main", text: $initialBranch)
+                            .textFieldStyle(.roundedBorder)
+                            .disabled(isCreating)
+                    }
+
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                        Text("Initial Files")
+                            .font(DesignTokens.Typography.body)
+                            .foregroundColor(AppTheme.textSecondary)
+                        Toggle("Create README.md", isOn: $createReadme)
+                            .disabled(isCreating)
+                        Toggle("Create .gitignore", isOn: $createGitignore)
+                            .disabled(isCreating)
+                        if createGitignore {
+                            Picker("Template", selection: $gitignoreTemplate) {
+                                ForEach(gitignoreTemplates, id: \.self) { template in
+                                    Text(template).tag(template)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .disabled(isCreating)
+                        }
+                    }
+
+                    if let error = error {
+                        HStack(spacing: DesignTokens.Spacing.sm) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(AppTheme.error)
+                            Text(error)
+                                .font(DesignTokens.Typography.caption)
+                                .foregroundColor(AppTheme.error)
+                        }
+                        .padding(DesignTokens.Spacing.md)
+                        .background(AppTheme.error.opacity(0.1))
+                        .cornerRadius(DesignTokens.CornerRadius.md)
+                    }
+
+                    if isCreating {
+                        HStack(spacing: DesignTokens.Spacing.sm) {
+                            ProgressView().scaleEffect(0.8)
+                            Text("Creating repository...")
+                                .font(DesignTokens.Typography.caption)
+                                .foregroundColor(AppTheme.textSecondary)
+                        }
+                    }
+                }
+                .padding(DesignTokens.Spacing.lg)
+            }
+
+            Divider()
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.escape)
+                    .disabled(isCreating)
+                Spacer()
+                Button("Initialize") { initRepository() }
+                    .keyboardShortcut(.return)
+                    .disabled(repositoryName.isEmpty || localPath.isEmpty || isCreating)
+                    .buttonStyle(.borderedProminent)
+            }
+            .padding(DesignTokens.Spacing.lg)
+        }
+        .frame(width: 500, height: 550)
+        .background(AppTheme.background)
+    }
+
+    private func selectLocalPath() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.message = "Select parent directory"
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            localPath = url.path
+        }
+    }
+
+    private func initRepository() {
+        guard !repositoryName.isEmpty else { return }
+        isCreating = true
+        error = nil
+        Task {
+            do {
+                let repoPath = "\(localPath)/\(repositoryName)"
+                try FileManager.default.createDirectory(atPath: repoPath, withIntermediateDirectories: true)
+                let initProcess = Process()
+                initProcess.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+                initProcess.arguments = ["init", "-b", initialBranch]
+                initProcess.currentDirectoryURL = URL(fileURLWithPath: repoPath)
+                try initProcess.run()
+                initProcess.waitUntilExit()
+                if createReadme {
+                    try "# \(repositoryName)\n\nA new repository.\n".write(toFile: "\(repoPath)/README.md", atomically: true, encoding: .utf8)
+                }
+                if createGitignore && gitignoreTemplate != "None" {
+                    try getGitignoreContent(for: gitignoreTemplate).write(toFile: "\(repoPath)/.gitignore", atomically: true, encoding: .utf8)
+                }
+                if createReadme || createGitignore {
+                    let addProcess = Process()
+                    addProcess.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+                    addProcess.arguments = ["add", "."]
+                    addProcess.currentDirectoryURL = URL(fileURLWithPath: repoPath)
+                    try addProcess.run()
+                    addProcess.waitUntilExit()
+                    let commitProcess = Process()
+                    commitProcess.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+                    commitProcess.arguments = ["commit", "-m", "Initial commit"]
+                    commitProcess.currentDirectoryURL = URL(fileURLWithPath: repoPath)
+                    try commitProcess.run()
+                    commitProcess.waitUntilExit()
+                }
+                await appState.openRepository(at: repoPath)
+                await MainActor.run { dismiss() }
+            } catch {
+                await MainActor.run {
+                    self.error = error.localizedDescription
+                    isCreating = false
+                }
+            }
+        }
+    }
+
+    private func getGitignoreContent(for template: String) -> String {
+        switch template {
+        case "macOS": return ".DS_Store\n.AppleDouble\n.LSOverride\n._*\n"
+        case "Swift": return ".DS_Store\n*.xcodeproj\nxcuserdata/\nDerivedData/\n.build/\n"
+        case "Python": return "__pycache__/\n*.py[cod]\n.Python\nvenv/\n.env\n"
+        case "Node": return "node_modules/\nnpm-debug.log\n.env\ndist/\n"
+        case "Java": return "*.class\n*.jar\ntarget/\nbuild/\n"
+        case "Go": return "*.exe\n*.test\n*.out\nvendor/\n"
+        default: return ""
+        }
+    }
+}
+
+// MARK: - Group Management Sheet
+struct GroupManagementSheet: View {
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var groupsService = RepoGroupsService.shared
+    @State private var editingGroup: RepoGroupsService.RepoGroup?
+    @State private var showCreateGroup = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Image(systemName: "folder.badge.gearshape")
+                    .font(DesignTokens.Typography.iconXL)
+                    .foregroundColor(AppTheme.accent)
+                Text("Manage Groups")
+                    .font(DesignTokens.Typography.headline)
+                Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(DesignTokens.Typography.callout)
+                        .foregroundColor(AppTheme.textMuted)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(DesignTokens.Spacing.lg)
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                    if groupsService.groups.isEmpty {
+                        VStack(spacing: DesignTokens.Spacing.md) {
+                            Image(systemName: "folder.badge.questionmark")
+                                .font(DesignTokens.Typography.iconXXXL)
+                                .foregroundColor(AppTheme.textMuted)
+                            Text("No groups yet")
+                                .foregroundColor(AppTheme.textMuted)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, DesignTokens.Spacing.xxl)
+                    } else {
+                        ForEach(groupsService.groups.sorted(by: { $0.sortOrder < $1.sortOrder })) { group in
+                            GroupManagementRow(group: group, onEdit: {
+                                editingGroup = group
+                            }, onDelete: {
+                                groupsService.deleteGroup(group.id)
+                            })
+                        }
+                    }
+                }
+                .padding(DesignTokens.Spacing.lg)
+            }
+
+            Divider()
+
+            HStack {
+                Button { dismiss() } label: { Text("Done") }
+                    .keyboardShortcut(.escape)
+                Spacer()
+                Button { showCreateGroup = true } label: {
+                    HStack(spacing: DesignTokens.Spacing.xs) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Create Group")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(DesignTokens.Spacing.lg)
+        }
+        .frame(width: 500, height: 400)
+        .background(AppTheme.background)
+        .sheet(isPresented: $showCreateGroup) { CreateGroupSheet() }
+        .sheet(item: $editingGroup) { group in EditGroupSheet(group: group) }
+    }
+}
+
+struct GroupManagementRow: View {
+    let group: RepoGroupsService.RepoGroup
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: DesignTokens.Spacing.md) {
+            Circle()
+                .fill(Color(hex: group.color) ?? .blue)
+                .frame(width: 12, height: 12)
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
+                Text(group.name)
+                    .font(DesignTokens.Typography.body)
+                Text("\(group.repos.count) repositories")
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundColor(AppTheme.textMuted)
+            }
+            Spacer()
+            if isHovered {
+                HStack(spacing: DesignTokens.Spacing.sm) {
+                    Button { onEdit() } label: {
+                        Image(systemName: "pencil")
+                            .font(DesignTokens.Typography.caption)
+                    }
+                    .buttonStyle(.plain)
+                    Button { onDelete() } label: {
+                        Image(systemName: "trash")
+                            .font(DesignTokens.Typography.caption)
+                            .foregroundColor(AppTheme.error)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(DesignTokens.Spacing.md)
+        .background(isHovered ? AppTheme.hover : Color.clear)
+        .cornerRadius(DesignTokens.CornerRadius.md)
+        .onHover { isHovered = $0 }
+    }
+}
+
+struct CreateGroupSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var groupsService = RepoGroupsService.shared
+    @State private var groupName = ""
+    @State private var selectedColor = "007AFF"
+    private let availableColors = [
+        ("Blue", "007AFF"), ("Purple", "5E5CE6"), ("Pink", "FF2D55"),
+        ("Red", "FF3B30"), ("Orange", "FF9500"), ("Yellow", "FFCC00"),
+        ("Green", "34C759"), ("Teal", "5AC8FA"), ("Indigo", "5856D6")
+    ]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Create Group")
+                    .font(DesignTokens.Typography.headline)
+                Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(AppTheme.textMuted)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(DesignTokens.Spacing.lg)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                    Text("Group Name")
+                        .font(DesignTokens.Typography.body)
+                    TextField("Work Projects", text: $groupName)
+                        .textFieldStyle(.roundedBorder)
+                }
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                    Text("Color")
+                        .font(DesignTokens.Typography.body)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: DesignTokens.Spacing.md) {
+                        ForEach(availableColors, id: \.1) { _, hex in
+                            ColorPickerButton(
+                                color: Color(hex: hex) ?? .blue,
+                                isSelected: selectedColor == hex
+                            ) {
+                                selectedColor = hex
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(DesignTokens.Spacing.lg)
+
+            Spacer()
+            Divider()
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.escape)
+                Spacer()
+                Button("Create") {
+                    groupsService.createGroup(name: groupName, color: selectedColor)
+                    dismiss()
+                }
+                .keyboardShortcut(.return)
+                .disabled(groupName.isEmpty)
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(DesignTokens.Spacing.lg)
+        }
+        .frame(width: 400, height: 300)
+        .background(AppTheme.background)
+    }
+}
+
+struct EditGroupSheet: View {
+    let group: RepoGroupsService.RepoGroup
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var groupsService = RepoGroupsService.shared
+    @State private var groupName: String
+    @State private var selectedColor: String
+    private let availableColors = [
+        ("Blue", "007AFF"), ("Purple", "5E5CE6"), ("Pink", "FF2D55"),
+        ("Red", "FF3B30"), ("Orange", "FF9500"), ("Yellow", "FFCC00"),
+        ("Green", "34C759"), ("Teal", "5AC8FA"), ("Indigo", "5856D6")
+    ]
+
+    init(group: RepoGroupsService.RepoGroup) {
+        self.group = group
+        _groupName = State(initialValue: group.name)
+        _selectedColor = State(initialValue: group.color)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Edit Group")
+                    .font(DesignTokens.Typography.headline)
+                Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(AppTheme.textMuted)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(DesignTokens.Spacing.lg)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                    Text("Group Name")
+                        .font(DesignTokens.Typography.body)
+                    TextField("Work Projects", text: $groupName)
+                        .textFieldStyle(.roundedBorder)
+                }
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                    Text("Color")
+                        .font(DesignTokens.Typography.body)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: DesignTokens.Spacing.md) {
+                        ForEach(availableColors, id: \.1) { _, hex in
+                            ColorPickerButton(
+                                color: Color(hex: hex) ?? .blue,
+                                isSelected: selectedColor == hex
+                            ) {
+                                selectedColor = hex
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(DesignTokens.Spacing.lg)
+
+            Spacer()
+            Divider()
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.escape)
+                Spacer()
+                Button("Save") {
+                    var updatedGroup = group
+                    updatedGroup.name = groupName
+                    updatedGroup.color = selectedColor
+                    groupsService.updateGroup(updatedGroup)
+                    dismiss()
+                }
+                .keyboardShortcut(.return)
+                .disabled(groupName.isEmpty)
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(DesignTokens.Spacing.lg)
+        }
+        .frame(width: 400, height: 300)
+        .background(AppTheme.background)
+    }
+}
+
+struct ColorPickerButton: View {
+    let color: Color
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Circle()
+                .fill(color)
+                .frame(width: 32, height: 32)
+                .overlay(
+                    Circle()
+                        .strokeBorder(Color.white, lineWidth: isSelected ? 3 : 0)
+                )
+                .overlay(
+                    Circle()
+                        .strokeBorder(AppTheme.border, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
 }

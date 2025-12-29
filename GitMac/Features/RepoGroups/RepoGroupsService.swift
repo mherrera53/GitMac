@@ -5,6 +5,7 @@ import SwiftUI
 // MARK: - Repository Groups Service
 
 /// Manages favorite repositories and repository groups
+@MainActor
 class RepoGroupsService: ObservableObject {
     static let shared = RepoGroupsService()
     
@@ -212,33 +213,14 @@ struct FavoriteButton: View {
 
 struct GroupBadge: View {
     let group: RepoGroupsService.RepoGroup
-    
+
     var body: some View {
         Text(group.name)
             .font(DesignTokens.Typography.caption2)
             .padding(.horizontal, DesignTokens.Spacing.xs)
             .padding(.vertical, 1)
-            .background(Color(hex: group.color)?.opacity(0.3) ?? AppTheme.textMuted.opacity(0.2))
+            .background((Color(hex: group.color) ?? AppTheme.textMuted).opacity(0.2))
             .foregroundColor(Color(hex: group.color) ?? AppTheme.textMuted)
             .cornerRadius(DesignTokens.CornerRadius.sm)
-    }
-}
-
-// Color extension for hex
-extension Color {
-    init?(hex: String) {
-        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
-        
-        guard hexSanitized.count == 6,
-              let int = UInt64(hexSanitized, radix: 16) else {
-            return nil
-        }
-        
-        let r = Double((int >> 16) & 0xFF) / 255.0
-        let g = Double((int >> 8) & 0xFF) / 255.0
-        let b = Double(int & 0xFF) / 255.0
-        
-        self.init(red: r, green: g, blue: b)
     }
 }

@@ -228,6 +228,7 @@
 		REPOCTX01B526F46E3958E34 /* Core/Git/RepositoryContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = REPOCTX01F526F46E3958E34 /* Core/Git/RepositoryContext.swift */; };
 		UNIFCTX001B526F46E3958E3 /* GitMac/UI/Components/UnifiedFileContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = UNIFCTX001F526F46E3958E3 /* GitMac/UI/Components/UnifiedFileContextMenu.swift */; };
 		WKFLW001B526F46E3958E34A /* WorkflowsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WKFLW001F526F46E3958E34A /* WorkflowsView.swift */; };
+		11412D2CD2554F6880201DCC /* RepoGroupsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F74C1E00507D408D86CEE731 /* RepoGroupsService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -465,6 +466,7 @@
 		SRC001 /* App/GitMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/GitMacApp.swift; sourceTree = "<group>"; };
 		UNIFCTX001F526F46E3958E3 /* GitMac/UI/Components/UnifiedFileContextMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/UnifiedFileContextMenu.swift; sourceTree = "<group>"; };
 		WKFLW001F526F46E3958E34A /* WorkflowsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowsView.swift; sourceTree = "<group>"; };
+		F74C1E00507D408D86CEE731 /* RepoGroupsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/RepoGroups/RepoGroupsService.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -604,7 +606,8 @@
 				AFE2CBBCBAFF02C17DF4B1F1 /* Notion */,
 				098C8AC6853F8B819F7C1ABB /* Linear */,
 				9F93ECF704A7077E5068E9BE /* Planner */,
-			);
+			
+				3E673DC0846645FCBBE2567D /* RepoGroups */,);
 			name = Features;
 			sourceTree = "<group>";
 		};
@@ -968,6 +971,14 @@
 			);
 			sourceTree = "<group>";
 		};
+		3E673DC0846645FCBBE2567D /* RepoGroups */ = {
+			isa = PBXGroup;
+			children = (
+				F74C1E00507D408D86CEE731 /* RepoGroupsService.swift */,
+			);
+			name = RepoGroups;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -1055,6 +1066,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				11412D2CD2554F6880201DCC /* RepoGroupsService.swift in Sources */,
 				B6FF711E9D904DC5A13E334F /* GitMac/UI/Components/Commit/CommitMessageArea.swift in Sources */,
 				C17B40AC6D74427DAB28B049 /* GitMac/UI/Components/Common/LayoutConstants.swift in Sources */,
 				8AC7D258532342BF841C0A12 /* GitMac/UI/Components/Diff/DiffHunkView.swift in Sources */,
