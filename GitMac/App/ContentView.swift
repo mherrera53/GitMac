@@ -5718,13 +5718,14 @@ struct InitRepositorySheet: View {
                     .foregroundColor(AppTheme.success)
                 Text("Initialize Repository")
                     .font(DesignTokens.Typography.headline)
+                    .foregroundColor(AppTheme.textPrimary)
                 Spacer()
                 Button {
                     dismiss()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -5920,11 +5921,12 @@ struct GroupManagementSheet: View {
                     .foregroundColor(AppTheme.accent)
                 Text("Manage Groups")
                     .font(DesignTokens.Typography.headline)
+                    .foregroundColor(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -5938,9 +5940,9 @@ struct GroupManagementSheet: View {
                         VStack(spacing: DesignTokens.Spacing.md) {
                             Image(systemName: "folder.badge.questionmark")
                                 .font(DesignTokens.Typography.iconXXXL)
-                                .foregroundColor(AppTheme.textMuted)
+                                .foregroundColor(AppTheme.textSecondary)
                             Text("No groups yet")
-                                .foregroundColor(AppTheme.textMuted)
+                                .foregroundColor(AppTheme.textSecondary)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, DesignTokens.Spacing.xxl)
@@ -6038,10 +6040,11 @@ struct CreateGroupSheet: View {
             HStack {
                 Text("Create Group")
                     .font(DesignTokens.Typography.headline)
+                    .foregroundColor(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -6118,10 +6121,11 @@ struct EditGroupSheet: View {
             HStack {
                 Text("Edit Group")
                     .font(DesignTokens.Typography.headline)
+                    .foregroundColor(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
                 .buttonStyle(.plain)
             }

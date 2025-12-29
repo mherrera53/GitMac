@@ -29,6 +29,11 @@ struct SettingsView: View {
                     Label("Git", systemImage: "arrow.triangle.branch")
                 }
 
+            WorkspaceConfigView()
+                .tabItem {
+                    Label("Workspace", systemImage: "folder.badge.gearshape")
+                }
+
             KeyboardShortcutsView()
                 .tabItem {
                     Label("Shortcuts", systemImage: "keyboard")
@@ -40,6 +45,7 @@ struct SettingsView: View {
                 }
         }
         .frame(width: 650, height: 550)
+        .background(AppTheme.background)
     }
 }
 
@@ -77,6 +83,7 @@ struct GeneralSettingsView: View {
                         Image(systemName: "paintbrush.fill")
                             .foregroundColor(AppTheme.accent)
                         Text("Customize Colors...")
+                            .foregroundColor(AppTheme.textPrimary)
                         Spacer()
                         if themeManager.currentTheme == .custom {
                             Image(systemName: "checkmark")
@@ -96,6 +103,7 @@ struct GeneralSettingsView: View {
                 HStack {
                     TextField("Default clone path", text: $defaultClonePath)
                         .textFieldStyle(.roundedBorder)
+                        .foregroundColor(AppTheme.textPrimary)
 
                     Button("Browse...") {
                         let panel = NSOpenPanel()
@@ -120,6 +128,7 @@ struct GeneralSettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
+        .background(AppTheme.background)
     }
 }
 
@@ -163,9 +172,10 @@ struct AccountsSettingsView: View {
                         VStack(alignment: .leading) {
                             Text(user.name ?? user.login)
                                 .fontWeight(.semibold)
+                                .foregroundColor(AppTheme.textPrimary)
                             Text("@\(user.login)")
                                 .font(.caption)
-                                .foregroundColor(theme.text)
+                                .foregroundColor(AppTheme.textSecondary)
                         }
 
                         Spacer()
@@ -195,20 +205,22 @@ struct AccountsSettingsView: View {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
                         Text("Connect to GitHub")
                             .font(DesignTokens.Typography.headline)
+                            .foregroundColor(AppTheme.textPrimary)
 
                         Text("Sign in to enable pull requests, issues, and repository features.")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(theme.text)
+                            .foregroundColor(AppTheme.textSecondary)
 
                         // OAuth Login (recommended)
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                             Text("Sign in with Browser (Recommended)")
                                 .font(DesignTokens.Typography.subheadline)
                                 .fontWeight(.medium)
+                                .foregroundColor(AppTheme.textPrimary)
 
                             Text("Uses GitHub's secure OAuth flow. Supports 2FA.")
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(theme.text)
+                                .foregroundColor(AppTheme.textSecondary)
 
                             Button {
                                 startOAuthFlow()
@@ -231,9 +243,11 @@ struct AccountsSettingsView: View {
                             Text("Or use Personal Access Token")
                                 .font(DesignTokens.Typography.subheadline)
                                 .fontWeight(.medium)
+                                .foregroundColor(AppTheme.textPrimary)
 
                             SecureField("Personal Access Token", text: $githubToken)
                                 .textFieldStyle(.roundedBorder)
+                                .foregroundColor(AppTheme.textPrimary)
 
                             HStack {
                                 Button("Generate Token") {
@@ -262,13 +276,14 @@ struct AccountsSettingsView: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("To use OAuth sign-in, you need a GitHub OAuth App Client ID.")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(theme.text)
+                        .foregroundColor(AppTheme.textSecondary)
 
                     if oauthConfigured {
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(AppTheme.success)
                             Text("Client ID configured")
+                                .foregroundColor(AppTheme.textPrimary)
                             Spacer()
                             Button("Change") {
                                 oauthConfigured = false
@@ -279,6 +294,7 @@ struct AccountsSettingsView: View {
                         HStack {
                             TextField("OAuth Client ID", text: $oauthClientId)
                                 .textFieldStyle(.roundedBorder)
+                                .foregroundColor(AppTheme.textPrimary)
 
                             Button("Save") {
                                 Task {
@@ -310,6 +326,7 @@ struct AccountsSettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
+        .background(AppTheme.background)
         .task {
             await checkGitHubConnection()
             oauthConfigured = await githubOAuth.hasClientId
@@ -490,6 +507,7 @@ struct AISettingsView: View {
                                 .foregroundColor(providerColor(provider))
                             Text(provider.displayName)
                                 .fontWeight(.medium)
+                                .foregroundColor(AppTheme.textPrimary)
 
                             Spacer()
 
@@ -502,6 +520,7 @@ struct AISettingsView: View {
                         HStack {
                             SecureField("API Key", text: binding(for: provider))
                                 .textFieldStyle(.roundedBorder)
+                                .foregroundColor(AppTheme.textPrimary)
 
                             Button(configuredProviders.contains(provider) ? "Update" : "Save") {
                                 saveAPIKey(for: provider)
@@ -516,7 +535,7 @@ struct AISettingsView: View {
             Section("Preferred Provider") {
                 if configuredProviders.isEmpty {
                     Text("Add an API key above to enable AI features")
-                        .foregroundColor(theme.text)
+                        .foregroundColor(AppTheme.textSecondary)
                 } else {
                     Picker("Provider", selection: $selectedProvider) {
                         ForEach(Array(configuredProviders), id: \.self) { provider in
@@ -589,6 +608,7 @@ struct AISettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
+        .background(AppTheme.background)
         .task {
             await loadConfiguredProviders()
         }
@@ -690,18 +710,20 @@ struct GitConfigView: View {
             Section("User") {
                 TextField("Name", text: $userName)
                     .textFieldStyle(.roundedBorder)
+                    .foregroundColor(AppTheme.textPrimary)
                     .onChange(of: userName) { _, newValue in
                         saveGitConfig(key: "user.name", value: newValue)
                     }
                 TextField("Email", text: $userEmail)
                     .textFieldStyle(.roundedBorder)
+                    .foregroundColor(AppTheme.textPrimary)
                     .onChange(of: userEmail) { _, newValue in
                         saveGitConfig(key: "user.email", value: newValue)
                     }
 
                 Text("These values are used for commits in repositories without local config")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(theme.text)
+                    .foregroundColor(AppTheme.textSecondary)
 
                 if let status = saveStatus {
                     Text(status)
@@ -713,6 +735,7 @@ struct GitConfigView: View {
             Section("Defaults") {
                 TextField("Default branch name", text: $defaultBranch)
                     .textFieldStyle(.roundedBorder)
+                    .foregroundColor(AppTheme.textPrimary)
                     .onChange(of: defaultBranch) { _, newValue in
                         saveGitConfig(key: "init.defaultBranch", value: newValue)
                     }
@@ -740,6 +763,7 @@ struct GitConfigView: View {
         }
         .formStyle(.grouped)
         .padding()
+        .background(AppTheme.background)
         .task {
             await loadGitConfig()
         }
@@ -791,11 +815,12 @@ struct EmailAliasesView: View {
         return VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
             Text("Add email aliases to show your avatar on commits with different emails")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(theme.text)
+                .foregroundColor(AppTheme.textSecondary)
 
             HStack {
                 TextField("Email alias (e.g. work@company.com)", text: $newAlias)
                     .textFieldStyle(.roundedBorder)
+                    .foregroundColor(AppTheme.textPrimary)
 
                 Button("Add") {
                     settings.addAlias(newAlias)
@@ -808,9 +833,10 @@ struct EmailAliasesView: View {
                 ForEach(settings.aliases, id: \.self) { alias in
                     HStack {
                         Image(systemName: "envelope")
-                            .foregroundColor(theme.text)
+                            .foregroundColor(AppTheme.textSecondary)
                         Text(alias)
                             .font(.system(.body, design: .monospaced))
+                            .foregroundColor(AppTheme.textPrimary)
                         Spacer()
                         Button {
                             settings.removeAlias(alias)
@@ -859,6 +885,7 @@ struct KeyboardShortcutsView: View {
         }
         .formStyle(.grouped)
         .padding()
+        .background(AppTheme.background)
     }
 }
 
@@ -869,9 +896,11 @@ struct ShortcutRow: View {
     var body: some View {
         HStack {
             Text(action)
+                .foregroundColor(AppTheme.textPrimary)
             Spacer()
             Text(shortcut)
                 .font(.system(.body, design: .monospaced))
+                .foregroundColor(AppTheme.textPrimary)
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.vertical, DesignTokens.Spacing.xxs)
                 .background(AppTheme.textSecondary.opacity(0.2))
@@ -945,7 +974,7 @@ struct IntegrationsSettingsView: View {
             Section("Repository") {
                 if recentReposManager.recentRepos.isEmpty {
                     Text("Open a repository to configure integrations")
-                        .foregroundColor(theme.text)
+                        .foregroundColor(AppTheme.textSecondary)
                 } else {
                     Picker("Configure for", selection: $selectedRepoPath) {
                         ForEach(recentReposManager.recentRepos) { repo in
@@ -1083,10 +1112,11 @@ struct IntegrationsSettingsView: View {
                             .foregroundColor(Color(hex: integration.color))
                             .frame(width: 24)
                         Text(integration.rawValue)
+                            .foregroundColor(AppTheme.textPrimary)
                         Spacer()
                         Text("Coming Soon")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(theme.text)
+                            .foregroundColor(AppTheme.textSecondary)
                             .padding(.horizontal, DesignTokens.Spacing.sm)
                             .padding(.vertical, DesignTokens.Spacing.xxs)
                             .background(AppTheme.textSecondary.opacity(0.2))
@@ -1097,6 +1127,7 @@ struct IntegrationsSettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
+        .background(AppTheme.background)
         .task {
             await loadState()
         }
@@ -1621,16 +1652,19 @@ struct AWSLoginView: View {
         return VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
             TextField("Access Key ID", text: $accessKeyId)
                 .textFieldStyle(.roundedBorder)
+                .foregroundColor(AppTheme.textPrimary)
 
             SecureField("Secret Access Key", text: $secretAccessKey)
                 .textFieldStyle(.roundedBorder)
+                .foregroundColor(AppTheme.textPrimary)
 
             SecureField("Session Token (MFA/2FA)", text: $sessionToken)
                 .textFieldStyle(.roundedBorder)
+                .foregroundColor(AppTheme.textPrimary)
 
             Text("Required if using MFA/2FA authentication")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(theme.text)
+                .foregroundColor(AppTheme.textSecondary)
 
             Picker("Region", selection: $region) {
                 ForEach(regions, id: \.self) { r in
@@ -1660,7 +1694,7 @@ struct AWSLoginView: View {
 
             Text("For MFA: Run `aws sts get-session-token --serial-number arn:aws:iam::ACCOUNT:mfa/USER --token-code CODE` to get session token")
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(theme.text)
+                .foregroundColor(AppTheme.textSecondary)
         }
     }
 }
@@ -1714,6 +1748,7 @@ struct LinearLoginSettingsView: View {
     var body: some View {
         SecureField("API Key", text: $apiKey)
             .textFieldStyle(.roundedBorder)
+            .foregroundColor(AppTheme.textPrimary)
 
         if let error = error {
             Text(error)
@@ -1791,12 +1826,15 @@ struct JiraLoginSettingsView: View {
     var body: some View {
         TextField("Site URL (e.g. yourcompany.atlassian.net)", text: $siteUrl)
             .textFieldStyle(.roundedBorder)
+            .foregroundColor(AppTheme.textPrimary)
 
         TextField("Email", text: $email)
             .textFieldStyle(.roundedBorder)
+            .foregroundColor(AppTheme.textPrimary)
 
         SecureField("API Token", text: $apiToken)
             .textFieldStyle(.roundedBorder)
+            .foregroundColor(AppTheme.textPrimary)
 
         if let error = error {
             Text(error)
@@ -1875,6 +1913,7 @@ struct NotionLoginSettingsView: View {
         return VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
             SecureField("Integration Token", text: $token)
                 .textFieldStyle(.roundedBorder)
+                .foregroundColor(AppTheme.textPrimary)
 
             if let error = error {
                 Text(error)
@@ -1899,7 +1938,7 @@ struct NotionLoginSettingsView: View {
 
             Text("Remember to share your databases with the integration")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(theme.text)
+                .foregroundColor(AppTheme.textSecondary)
         }
     }
 }
@@ -1923,17 +1962,20 @@ struct TaigaLoginView: View {
                     .foregroundColor(Color(hex: "4DC8A8"))
                 Text("Connect to Taiga")
                     .font(DesignTokens.Typography.headline)
+                    .foregroundColor(AppTheme.textPrimary)
             }
 
             Text("Link your Taiga account to sync user stories, tasks, and issues.")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(theme.text)
+                .foregroundColor(AppTheme.textSecondary)
 
             TextField("Username or Email", text: $username)
                 .textFieldStyle(.roundedBorder)
+                .foregroundColor(AppTheme.textPrimary)
 
             SecureField("Password", text: $password)
                 .textFieldStyle(.roundedBorder)
+                .foregroundColor(AppTheme.textPrimary)
 
             HStack {
                 Button("Create Account") {
@@ -1977,6 +2019,7 @@ struct TaigaConnectedView: View {
                     .foregroundColor(AppTheme.success)
                 Text("Connected to Taiga")
                     .fontWeight(.medium)
+                    .foregroundColor(AppTheme.textPrimary)
                 Spacer()
                 Button("Disconnect") {
                     onDisconnect()
@@ -2011,7 +2054,7 @@ struct TaigaConnectedView: View {
                 }
             } else {
                 Text("Select a repository to assign a project")
-                    .foregroundColor(theme.text)
+                    .foregroundColor(AppTheme.textSecondary)
                     .font(DesignTokens.Typography.caption)
             }
         }
@@ -2043,11 +2086,12 @@ struct PlannerLoginView: View {
                     .foregroundColor(Color(hex: "0078D4"))
                 Text("Connect to Microsoft Planner")
                     .font(DesignTokens.Typography.headline)
+                    .foregroundColor(AppTheme.textPrimary)
             }
 
             Text("Link your Microsoft 365 account to sync Planner tasks and boards.")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(theme.text)
+                .foregroundColor(AppTheme.textSecondary)
 
             if let deviceCode = deviceCode {
                 // Waiting for user authorization
@@ -2066,13 +2110,15 @@ struct PlannerLoginView: View {
                     Text("Configure Azure AD App")
                         .font(DesignTokens.Typography.subheadline)
                         .fontWeight(.medium)
+                        .foregroundColor(AppTheme.textPrimary)
 
                     Text("Register an app in Azure AD and enter the Client ID.")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(theme.text)
+                        .foregroundColor(AppTheme.textSecondary)
 
                     TextField("Application (client) ID", text: $clientId)
                         .textFieldStyle(.roundedBorder)
+                        .foregroundColor(AppTheme.textPrimary)
 
                     HStack {
                         Button("Register App in Azure") {
@@ -2094,7 +2140,7 @@ struct PlannerLoginView: View {
 
                     Text("Required: Enable 'Allow public client flows' in Azure AD")
                         .font(.caption2)
-                        .foregroundColor(theme.text)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
             } else {
                 // Ready to authenticate
@@ -2104,6 +2150,7 @@ struct PlannerLoginView: View {
                             .foregroundColor(AppTheme.success)
                         Text("Azure AD configured")
                             .font(.caption)
+                            .foregroundColor(AppTheme.textPrimary)
 
                         Spacer()
 
@@ -2138,7 +2185,7 @@ struct PlannerLoginView: View {
 
             Text("Required scopes: Tasks.ReadWrite, Group.Read.All, User.Read")
                 .font(.caption2)
-                .foregroundColor(theme.text)
+                .foregroundColor(AppTheme.textSecondary)
         }
         .task {
             hasClientId = await microsoftOAuth.hasClientId
@@ -2266,6 +2313,7 @@ struct PlannerConnectedView: View {
                     .foregroundColor(AppTheme.success)
                 Text("Connected to Microsoft Planner")
                     .fontWeight(.medium)
+                    .foregroundColor(AppTheme.textPrimary)
                 Spacer()
                 Button("Disconnect") {
                     onDisconnect()
@@ -2300,7 +2348,7 @@ struct PlannerConnectedView: View {
                 }
             } else {
                 Text("Select a repository to assign a plan")
-                    .foregroundColor(theme.text)
+                    .foregroundColor(AppTheme.textSecondary)
                     .font(DesignTokens.Typography.caption)
             }
         }
@@ -2326,9 +2374,10 @@ struct SubscriptionSettingsView: View {
                         VStack(alignment: .leading) {
                             Text("GitMac Pro")
                                 .fontWeight(.semibold)
+                                .foregroundColor(AppTheme.textPrimary)
                             Text(storeManager.subscriptionStatus.description)
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(theme.text)
+                                .foregroundColor(AppTheme.textSecondary)
                         }
                         Spacer()
                         Button("Manage") {
@@ -2344,9 +2393,10 @@ struct SubscriptionSettingsView: View {
                         VStack(alignment: .leading) {
                             Text("Free Plan")
                                 .fontWeight(.semibold)
+                                .foregroundColor(AppTheme.textPrimary)
                             Text("Limited features")
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(theme.text)
+                                .foregroundColor(AppTheme.textSecondary)
                         }
                         Spacer()
                         Button("Upgrade to Pro") {
@@ -2365,9 +2415,10 @@ struct SubscriptionSettingsView: View {
                             .frame(width: 24)
                         VStack(alignment: .leading) {
                             Text(feature.rawValue)
+                                .foregroundColor(AppTheme.textPrimary)
                             Text(feature.description)
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(theme.text)
+                                .foregroundColor(AppTheme.textSecondary)
                         }
                         Spacer()
                         if storeManager.isProUser {
@@ -2385,21 +2436,23 @@ struct SubscriptionSettingsView: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     HStack {
                         Text("Annual")
+                            .foregroundColor(AppTheme.textPrimary)
                         Spacer()
                         Text(storeManager.formattedAnnualPrice + "/year")
-                            .foregroundColor(theme.text)
+                            .foregroundColor(AppTheme.textSecondary)
                     }
                     HStack {
                         Text("Monthly")
+                            .foregroundColor(AppTheme.textPrimary)
                         Spacer()
                         Text(storeManager.formattedMonthlyPrice + "/month")
-                            .foregroundColor(theme.text)
+                            .foregroundColor(AppTheme.textSecondary)
                     }
                 }
 
                 Text("Subscriptions auto-renew unless cancelled 24 hours before the end of the current period.")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(theme.text)
+                    .foregroundColor(AppTheme.textSecondary)
             }
 
             Section {
@@ -2415,6 +2468,7 @@ struct SubscriptionSettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
+        .background(AppTheme.background)
         .sheet(isPresented: $showSubscriptionSheet) {
             SubscriptionView()
         }
@@ -2458,6 +2512,101 @@ struct ThemeButton: View {
         case .dark: return .indigo
         case .custom: return .purple
         }
+    }
+}
+
+// MARK: - Workspace Configuration View
+
+struct WorkspaceConfigView: View {
+    @StateObject private var themeManager = ThemeManager.shared
+    @StateObject private var workspaceManager = WorkspaceSettingsManager.shared
+    @EnvironmentObject var appState: AppState
+
+    @State private var mainBranchName: String = ""
+    @State private var saveStatus: String?
+
+    var body: some View {
+        let theme = Color.Theme(self.themeManager.colors)
+
+        return Form {
+            if let repoPath = appState.currentRepository?.path {
+                Section("Current Repository") {
+                    Text(repoPath)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(AppTheme.textSecondary)
+                }
+
+                Section("Main Branch Configuration") {
+                    TextField("Main branch name (e.g., main, master, develop)", text: $mainBranchName)
+                        .textFieldStyle(.roundedBorder)
+                        .foregroundColor(AppTheme.textPrimary)
+                        .onChange(of: mainBranchName) { _, newValue in
+                            guard !newValue.isEmpty else { return }
+                            workspaceManager.setMainBranch(for: repoPath, branchName: newValue)
+                            saveStatus = "Saved"
+
+                            // Clear status after 2 seconds
+                            Task {
+                                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                                saveStatus = nil
+                            }
+                        }
+
+                    Text("This sets which branch is considered the 'main' branch for this repository. Used for comparisons, badges, and workflows.")
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+
+                    if let status = saveStatus {
+                        Text(status)
+                            .font(DesignTokens.Typography.caption)
+                            .foregroundColor(AppTheme.success)
+                    }
+                }
+
+                Section("Integration Settings") {
+                    Text("Additional per-repository settings (Taiga, Planner, etc.) will appear here")
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+                }
+            } else {
+                Section {
+                    VStack(spacing: DesignTokens.Spacing.md) {
+                        Image(systemName: "folder.badge.questionmark")
+                            .font(.system(size: 48))
+                            .foregroundColor(AppTheme.textSecondary)
+
+                        Text("No Repository Open")
+                            .font(DesignTokens.Typography.headline)
+                            .foregroundColor(AppTheme.textPrimary)
+
+                        Text("Open a repository to configure workspace settings")
+                            .font(DesignTokens.Typography.body)
+                            .foregroundColor(AppTheme.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .padding()
+        .background(AppTheme.background)
+        .task {
+            loadConfig()
+        }
+        .onChange(of: appState.currentRepository?.path) { _, _ in
+            loadConfig()
+        }
+    }
+
+    private func loadConfig() {
+        guard let repoPath = appState.currentRepository?.path else {
+            mainBranchName = ""
+            return
+        }
+
+        // Load main branch from workspace settings
+        mainBranchName = workspaceManager.getMainBranch(for: repoPath)
     }
 }
 

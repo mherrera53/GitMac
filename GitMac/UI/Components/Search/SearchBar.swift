@@ -23,17 +23,18 @@ struct SearchBar: View {
         HStack(spacing: style.spacing) {
             Image(systemName: "magnifyingglass")
                 .font(style.iconFont)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundColor(AppTheme.textMuted)
 
             ZStack(alignment: .leading) {
                 if text.isEmpty {
                     Text(placeholder)
                         .font(style.textFont)
-                        .foregroundColor(AppTheme.textPrimary.opacity(0.6))
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 TextField("", text: $text)
                     .textFieldStyle(.plain)
                     .font(style.textFont)
+                    .foregroundColor(AppTheme.textPrimary)
                     .focused($isFocused)
                     .onSubmit {
                         onSubmit?()
@@ -47,7 +48,7 @@ struct SearchBar: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(style.iconFont)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }

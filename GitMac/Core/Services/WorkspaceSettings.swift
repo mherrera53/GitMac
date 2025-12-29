@@ -60,11 +60,25 @@ class WorkspaceSettingsManager: ObservableObject {
         config.codeBuildProjectName = projectName
         setConfig(for: repoPath, config: config)
     }
+
+    func setMainBranch(for repoPath: String, branchName: String?) {
+        var config = getConfig(for: repoPath)
+        config.mainBranchName = branchName
+        setConfig(for: repoPath, config: config)
+    }
+
+    func getMainBranch(for repoPath: String) -> String {
+        // Get configured main branch, fallback to "main"
+        getConfig(for: repoPath).mainBranchName ?? "main"
+    }
 }
 
 // MARK: - Workspace Configuration
 
 struct WorkspaceConfig: Codable {
+    // Git Configuration
+    var mainBranchName: String?  // Per-repository main branch (e.g., "main", "master", "develop")
+
     // Taiga Integration
     var taigaProjectId: Int?
     var taigaProjectName: String?

@@ -39,6 +39,12 @@ struct GitMacApp: App {
                 // Apply theme appearance
                 window.appearance = ThemeManager.shared.appearance
             }
+
+            // Ensure the app icon is properly set (shouldn't be necessary, but ensures correct icon is used)
+            // The icon comes from AppIcon in Assets.xcassets as configured in Info.plist
+            if NSApp.applicationIconImage == nil {
+                NSApp.applicationIconImage = NSImage(named: NSImage.applicationIconName)
+            }
         }
     }
 
