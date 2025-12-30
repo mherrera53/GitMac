@@ -483,29 +483,29 @@ struct CommitGraphView: View {
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Button(action: { NotificationCenter.default.post(name: .fetch, object: nil) }) {
                     Label("Fetch", systemImage: "arrow.down.to.line.circle.fill")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 17, weight: .medium))
                         .foregroundColor(AppTheme.info)
                         .symbolRenderingMode(.hierarchical)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
                 .help("Fetch from remote")
 
                 Button(action: { NotificationCenter.default.post(name: .pull, object: nil) }) {
                     Label("Pull", systemImage: "arrow.down.doc.fill")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 17, weight: .medium))
                         .foregroundColor(AppTheme.success)
                         .symbolRenderingMode(.hierarchical)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
                 .help("Pull changes")
 
                 Button(action: { NotificationCenter.default.post(name: .push, object: nil) }) {
                     Label("Push", systemImage: "arrow.up.doc.fill")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 17, weight: .medium))
                         .foregroundColor(AppTheme.accent)
                         .symbolRenderingMode(.hierarchical)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
                 .help("Push commits")
 
                 Divider()
@@ -513,20 +513,20 @@ struct CommitGraphView: View {
 
                 Button(action: { NotificationCenter.default.post(name: .newBranch, object: nil) }) {
                     Image(systemName: "point.3.connected.trianglepath.dotted")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 17, weight: .medium))
                         .foregroundColor(AppTheme.accent)
                         .symbolRenderingMode(.hierarchical)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
                 .help("Create new branch")
 
                 Button(action: { NotificationCenter.default.post(name: .stash, object: nil) }) {
                     Image(systemName: "archivebox.circle.fill")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 17, weight: .medium))
                         .foregroundColor(AppTheme.warning)
                         .symbolRenderingMode(.hierarchical)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
                 .help("Stash changes")
             }
 
@@ -538,34 +538,34 @@ struct CommitGraphView: View {
                     settings.showBranches.toggle()
                 }) {
                     Image(systemName: settings.showBranches ? "point.3.connected.trianglepath.dotted" : "arrow.triangle.branch")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 17, weight: .medium))
                         .foregroundColor(settings.showBranches ? AppTheme.accent : theme.textMuted)
                         .symbolRenderingMode(.hierarchical)
                 }
-                .buttonStyle(.borderless)
-                .help("Show Branches")
+                .buttonStyle(.plain)
+                .help("Toggle branch labels visibility")
 
                 Button(action: {
                     settings.showTags.toggle()
                 }) {
                     Image(systemName: settings.showTags ? "tag.circle.fill" : "tag.circle")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 17, weight: .medium))
                         .foregroundColor(settings.showTags ? AppTheme.warning : theme.textMuted)
                         .symbolRenderingMode(.hierarchical)
                 }
-                .buttonStyle(.borderless)
-                .help("Show Tags")
+                .buttonStyle(.plain)
+                .help("Toggle tag labels visibility")
 
                 Button(action: {
                     settings.showStashes.toggle()
                 }) {
                     Image(systemName: settings.showStashes ? "archivebox.circle.fill" : "archivebox.circle")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 17, weight: .medium))
                         .foregroundColor(settings.showStashes ? AppTheme.warning : theme.textMuted)
                         .symbolRenderingMode(.hierarchical)
                 }
-                .buttonStyle(.borderless)
-                .help("Show Stashes")
+                .buttonStyle(.plain)
+                .help("Toggle stash labels visibility")
             }
 
             Divider()

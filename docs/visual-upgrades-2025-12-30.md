@@ -426,9 +426,40 @@ LinearGradient(
 ✅ **Smooth animations** - Spring physics
 ✅ **Monospaced digits** - Stable layouts
 ✅ **Accessible** - VoiceOver compatible symbols
+✅ **Proper UX** - 17pt icons with tooltips and cursor states
+
+---
+
+## 🎨 UX Improvements (2025-12-30)
+
+### Icon Sizing
+
+**Before:** 12-13pt icons (too small, hard to see)
+**After:** 17pt icons (clear, professional size)
+
+All toolbar icons now use `.font(.system(size: 17, weight: .medium))` for better visibility.
+
+### Cursor Behavior
+
+**Before:** `.buttonStyle(.borderless)` - no pointer cursor
+**After:** `.buttonStyle(.plain)` - proper pointer cursor on hover
+
+### Enhanced Tooltips
+
+All toolbar buttons now have clear, descriptive `.help()` tooltips:
+- "Fetch from remote"
+- "Pull changes"
+- "Push commits"
+- "Create new branch"
+- "Stash changes"
+- "Toggle branch labels visibility"
+- "Toggle tag labels visibility"
+- "Toggle stash labels visibility"
 
 ---
 
 **Date**: 2025-12-30
-**Commit**: `feat(graph): upgrade all icons to premium SF Symbols`
-**Impact**: All commit graph components now use premium visual design
+**Commits**:
+- `feat(graph): upgrade all icons to premium SF Symbols`
+- `fix(graph): increase icon sizes and improve UX with tooltips and cursor states`
+**Impact**: All commit graph components now use premium visual design with professional UX
