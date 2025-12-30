@@ -56,7 +56,7 @@ struct XcodeToolbarButton: View {
         }) {
             if let label = label {
                 // Icon + label variant
-                VStack(spacing: 2) {
+                VStack(spacing: DesignTokens.Spacing.xxs) {
                     Image(systemName: icon)
                         .font(.system(size: DesignTokens.Toolbar.iconSize, weight: .regular))
 
@@ -182,7 +182,7 @@ struct XcodeToolbarButtonAsync: View {
         }) {
             if let label = label {
                 // Icon + label variant
-                VStack(spacing: 2) {
+                VStack(spacing: DesignTokens.Spacing.xxs) {
                     if isLoading {
                         ProgressView()
                             .scaleEffect(0.7)
