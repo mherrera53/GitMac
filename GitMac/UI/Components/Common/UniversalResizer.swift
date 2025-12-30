@@ -228,9 +228,9 @@ private struct ResizerViewRepresentable: NSViewRepresentable {
 
     private func setupCallbacks(for view: UniversalResizerNSView) {
         view.onDragChanged = { [minDimension, maxDimension] delta in
-            // For horizontal: positive delta = move right = increase width
-            // For vertical: positive delta = move up = increase height
-            let adjustedDelta = orientation == .vertical ? delta : -delta
+            // For horizontal: positive delta (move right) = increase left panel width
+            // For vertical: positive delta (move up) = increase height, negative (move down) = decrease height
+            let adjustedDelta = orientation == .vertical ? -delta : delta
 
             DispatchQueue.main.async {
                 let newDimension = dimension + adjustedDelta

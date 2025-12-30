@@ -236,45 +236,46 @@ struct MainLayout: View {
     @State private var searchText = ""
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                // Left Panel - Branches/Remotes/Tags
-                LeftSidebarPanel()
-                    .frame(width: leftPanelWidth)
-                    .background(AppTheme.backgroundSecondary)
+        HStack(spacing: 0) {
+            // Left Panel - Branches/Remotes/Tags
+            LeftSidebarPanel()
+                .frame(width: leftPanelWidth)
+                .background(AppTheme.backgroundSecondary)
 
-                // Resizer
-                UniversalResizer(
-                    dimension: $leftPanelWidth,
-                    minDimension: 240,
-                    maxDimension: 400,
-                    orientation: .horizontal
-                )
+            // Resizer
+            UniversalResizer(
+                dimension: $leftPanelWidth,
+                minDimension: 240,
+                maxDimension: 400,
+                orientation: .horizontal
+            )
 
+            // Center Area - Graph/Diff + Bottom Panel
+            VStack(spacing: 0) {
                 // Center Panel - Graph OR Diff
                 CenterPanel(selectedFileDiff: $selectedFileDiff, isLoadingDiff: $isLoadingDiff)
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(AppTheme.background)
 
-                // Resizer
-                UniversalResizer(
-                    dimension: $rightPanelWidth,
-                    minDimension: 300,
-                    maxDimension: 500,
-                    orientation: .horizontal
-                )
-
-                // Right Panel - Staging/Commit
-                RightStagingPanel(selectedFileDiff: $selectedFileDiff, isLoadingDiff: $isLoadingDiff)
-                    .frame(width: rightPanelWidth)
-                    .background(AppTheme.backgroundSecondary)
+                // Unified Bottom Panel with Tabs (only in center area)
+                if bottomPanelManager.isPanelVisible {
+                    UnifiedBottomPanel(panelManager: bottomPanelManager)
+                        .environmentObject(appState)
+                }
             }
 
-            // Unified Bottom Panel with Tabs
-            if bottomPanelManager.isPanelVisible {
-                UnifiedBottomPanel(panelManager: bottomPanelManager)
-                    .environmentObject(appState)
-            }
+            // Resizer
+            UniversalResizer(
+                dimension: $rightPanelWidth,
+                minDimension: 300,
+                maxDimension: 500,
+                orientation: .horizontal
+            )
+
+            // Right Panel - Staging/Commit
+            RightStagingPanel(selectedFileDiff: $selectedFileDiff, isLoadingDiff: $isLoadingDiff)
+                .frame(width: rightPanelWidth)
+                .background(AppTheme.backgroundSecondary)
         }
         .toolbar {
             ToolbarItem(placement: .navigation) {
