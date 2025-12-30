@@ -725,21 +725,17 @@ struct CommitGraphView: View {
 
     // MARK: - Search and Filter
     private func matchesSearchAndFilter(_ node: GraphNode) -> Bool {
-        // Filter by author
-        if !settings.filterAuthor.isEmpty {
-            if !node.commit.author.localizedCaseInsensitiveContains(settings.filterAuthor) {
+        // Parse advanced search syntax
+        if !settings.searchText.isEmpty {
+            let query = SearchSyntaxParser.parse(settings.searchText)
+            if !query.matches(node.commit, currentUserEmail: vm.currentUserEmail) {
                 return false
             }
         }
 
-        // Search by text
-        if !settings.searchText.isEmpty {
-            let search = settings.searchText.lowercased()
-            let matchesMessage = node.commit.message.lowercased().contains(search)
-            let matchesAuthor = node.commit.author.lowercased().contains(search)
-            let matchesSHA = node.commit.sha.lowercased().contains(search)
-
-            if !matchesMessage && !matchesAuthor && !matchesSHA {
+        // Filter by author (legacy support)
+        if !settings.filterAuthor.isEmpty {
+            if !node.commit.author.localizedCaseInsensitiveContains(settings.filterAuthor) {
                 return false
             }
         }
@@ -1343,6 +1339,9 @@ class GraphViewModel: ObservableObject {
     // Ghost Branches support
     @Published var branches: [Branch] = []
 
+    // Current user email for @me filter
+    @Published var currentUserEmail: String?
+
     private let engine = GitEngine()
     private var path: String?
     private var page = 0
@@ -1364,6 +1363,16 @@ class GraphViewModel: ObservableObject {
                 if branchHeads[branch.targetSHA] == nil {
                     branchHeads[branch.targetSHA] = branch.name
                 }
+            }
+
+            // Load current user email for @me filter
+            let result = await ShellExecutor().execute(
+                "git",
+                arguments: ["config", "user.email"],
+                workingDirectory: p
+            )
+            if result.exitCode == 0 {
+                currentUserEmail = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
             }
 
             // Load commits using V2 (NUL-separated, handles special chars in messages)
