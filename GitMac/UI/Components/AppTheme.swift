@@ -428,3 +428,18 @@ extension AppTheme {
         Color.Theme(ThemeManager.shared.colors).branchCurrent
     }
 }
+
+// MARK: - Graph Lane Colors
+extension AppTheme {
+    /// Theme-aware colors for commit graph lanes
+    static let graphLaneColors: [Color] = [
+        .blue,
+        .green,
+        .orange,
+        Color.purple.opacity(0.8),
+        .red,
+        Color.cyan.opacity(0.8),
+        Color.pink.opacity(0.8),
+        Color.yellow.opacity(0.8)
+    ]
+}

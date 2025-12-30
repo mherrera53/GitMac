@@ -316,8 +316,8 @@ class GraphSettings: ObservableObject {
 
 // MARK: - Color Extension for Branch Colors
 private extension Color {
-    static func branchColor(_ index: Int) -> Color {
-        let colors: [Color] = [.blue, .green, .orange, .purple, .red, .cyan, .pink, .yellow]
+    @MainActor static func branchColor(_ index: Int) -> Color {
+        let colors = AppTheme.graphLaneColors
         return colors[index % colors.count]
     }
 }
