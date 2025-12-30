@@ -29,7 +29,7 @@ struct GitMacApp: App {
         registry.register(PlannerPlugin())
     }
 
-    func configureWindow(title: String = "GitMac") {
+    func configureWindow() {
         DispatchQueue.main.async {
             // Ensure theme is loaded and applied
             ThemeManager.shared.applyTheme()
@@ -37,8 +37,7 @@ struct GitMacApp: App {
             if let window = NSApplication.shared.windows.first {
                 window.titlebarAppearsTransparent = true
                 window.isMovableByWindowBackground = true
-                window.titleVisibility = .visible
-                window.title = title
+                window.titleVisibility = .hidden  // Hide system title, we use custom toolbar title
                 // Apply theme appearance
                 window.appearance = ThemeManager.shared.appearance
             }

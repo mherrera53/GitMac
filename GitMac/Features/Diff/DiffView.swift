@@ -227,11 +227,24 @@ struct DiffView: View {
                         )
                     case .preview:
                         MarkdownView(content: previewContent, fileName: fileDiff.displayPath)
-                    case .kaleidoscopeBlocks, .kaleidoscopeFluid:
-                        // Kaleidoscope split view with connection lines
+                    case .kaleidoscopeBlocks:
+                        // Kaleidoscope Blocks: traditional side-by-side with connection lines
                         KaleidoscopeSplitDiffView(
                             hunks: fileDiff.hunks,
                             showLineNumbers: showLineNumbers,
+                            showConnectionLines: true,
+                            isFluidMode: false,
+                            scrollOffset: $scrollOffset,
+                            viewportHeight: $viewportHeight,
+                            contentHeight: $contentHeight
+                        )
+                    case .kaleidoscopeFluid:
+                        // Kaleidoscope Fluid: compressed view with elegant curved lines
+                        KaleidoscopeSplitDiffView(
+                            hunks: fileDiff.hunks,
+                            showLineNumbers: showLineNumbers,
+                            showConnectionLines: true,
+                            isFluidMode: true,
                             scrollOffset: $scrollOffset,
                             viewportHeight: $viewportHeight,
                             contentHeight: $contentHeight

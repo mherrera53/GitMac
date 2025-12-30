@@ -228,6 +228,12 @@ struct MainLayout: View {
     @State private var isLoadingDiff = false
     @State private var searchText = ""
 
+    // Helper function for group colors
+    private func getGroupColor(for repoPath: String) -> Color? {
+        let groups = RepoGroupsService.shared.getGroupsForRepo(repoPath)
+        return groups.first.map { Color(hex: $0.color) }
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             // Left Panel - Branches/Remotes/Tags
@@ -243,14 +249,8 @@ struct MainLayout: View {
                 orientation: .horizontal
             )
 
-            // Center Area - Tabs + Graph/Diff + Bottom Panel
+            // Center Area - Graph/Diff + Bottom Panel
             VStack(spacing: 0) {
-                // Repository Tab Bar (only in center area)
-                if !appState.openTabs.isEmpty {
-                    RepositoryTabBar()
-                        .environmentObject(appState)
-                }
-
                 // Center Panel - Graph OR Diff
                 CenterPanel(selectedFileDiff: $selectedFileDiff, isLoadingDiff: $isLoadingDiff)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -286,9 +286,112 @@ struct MainLayout: View {
                 }
             }
 
-            // Principal area - keep clean like Xcode
+            // Principal area - Repository selector dropdown
             ToolbarItem(placement: .principal) {
-                Spacer()
+                HStack(spacing: 8) {
+                    if !appState.openTabs.isEmpty {
+                        // Repository dropdown (like Xcode schemes)
+                        Menu {
+                            ForEach(appState.openTabs) { tab in
+                                Button {
+                                    appState.selectTab(tab.id)
+                                } label: {
+                                    HStack {
+                                        if let color = getGroupColor(for: tab.repository.path) {
+                                            Circle()
+                                                .fill(color)
+                                                .frame(width: 8, height: 8)
+                                        }
+                                        Text(tab.repository.name)
+                                        if appState.activeTabId == tab.id {
+                                            Spacer()
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+
+                            Divider()
+
+                            Button {
+                                NotificationCenter.default.post(name: .openRepository, object: nil)
+                            } label: {
+                                Label("Open Repository...", systemImage: "folder")
+                            }
+
+                            Button {
+                                NotificationCenter.default.post(name: .cloneRepository, object: nil)
+                            } label: {
+                                Label("Clone Repository...", systemImage: "arrow.down.circle")
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                if let repo = appState.currentRepository {
+                                    if let color = getGroupColor(for: repo.path) {
+                                        Circle()
+                                            .fill(color)
+                                            .frame(width: 6, height: 6)
+                                    }
+
+                                    Text(repo.name)
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(AppTheme.textPrimary)
+
+                                    if let branch = repo.currentBranch {
+                                        Text("•")
+                                            .foregroundColor(AppTheme.textMuted)
+                                        Text(branch.name)
+                                            .font(.system(size: 11))
+                                            .foregroundColor(AppTheme.textSecondary)
+                                    }
+
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 9, weight: .semibold))
+                                        .foregroundColor(AppTheme.textSecondary)
+                                }
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(AppTheme.backgroundSecondary)
+                            .cornerRadius(6)
+                        }
+                        .menuStyle(.borderlessButton)
+                        .help("Switch Repository")
+
+                        // Close current repo button
+                        if appState.currentRepository != nil {
+                            Button {
+                                if let activeId = appState.activeTabId {
+                                    appState.closeTab(activeId)
+                                }
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundColor(AppTheme.textMuted)
+                                    .frame(width: 22, height: 22)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Close Repository")
+                        }
+                    } else {
+                        Button {
+                            NotificationCenter.default.post(name: .openRepository, object: nil)
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "folder")
+                                    .font(.system(size: 11))
+                                Text("Open Repository")
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .foregroundColor(AppTheme.textPrimary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(AppTheme.backgroundSecondary)
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
 
             // Plugin buttons
@@ -4428,6 +4531,60 @@ struct CloneRepositorySheet: View {
     }
 }
 
+// MARK: - Compact Repo Tab (for toolbar)
+struct CompactRepoTab: View {
+    let tab: RepositoryTab
+    let isActive: Bool
+    let onSelect: () -> Void
+    let onClose: () -> Void
+
+    @State private var isHovered = false
+    @ObservedObject private var groupsService = RepoGroupsService.shared
+
+    var groupColor: Color? {
+        let groups = groupsService.getGroupsForRepo(tab.repository.path)
+        guard let firstGroup = groups.first else { return nil }
+        return Color(hex: firstGroup.color)
+    }
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 4) {
+                // Group color indicator
+                if let color = groupColor {
+                    Circle()
+                        .fill(color)
+                        .frame(width: 6, height: 6)
+                }
+
+                // Repo name
+                Text(tab.repository.name)
+                    .font(.system(size: 11, weight: isActive ? .semibold : .regular))
+                    .foregroundColor(isActive ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    .lineLimit(1)
+
+                // Close button (on hover)
+                if isHovered {
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundColor(AppTheme.textMuted)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isActive ? AppTheme.backgroundSecondary : (isHovered ? AppTheme.hover : Color.clear))
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+    }
+}
+
 // MARK: - Repository Tab Bar (Modern)
 struct RepositoryTabBar: View {
     @EnvironmentObject var appState: AppState
@@ -4444,48 +4601,46 @@ struct RepositoryTabBar: View {
                     }
                 }
             }
-
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             // Repository info (current branch, status)
             if let repo = appState.currentRepository {
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     // Current branch
                     if let branch = repo.currentBranch {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.triangle.branch")
-                                .font(.system(size: 11))
+                                .font(.system(size: 10))
                                 .foregroundColor(AppTheme.accent)
                             Text(branch.name)
-                                .font(.system(size: 11, weight: .medium))
+                                .font(.system(size: 10, weight: .medium))
                                 .foregroundColor(AppTheme.textPrimary)
+                                .lineLimit(1)
                         }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
                         .background(AppTheme.backgroundSecondary)
-                        .cornerRadius(4)
+                        .cornerRadius(3)
                     }
 
                     // Uncommitted changes indicator
                     if !repo.status.staged.isEmpty || !repo.status.unstaged.isEmpty {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 3) {
                             Image(systemName: "circle.fill")
-                                .font(.system(size: 6))
+                                .font(.system(size: 5))
                                 .foregroundColor(AppTheme.warning)
                             Text("\(repo.status.staged.count + repo.status.unstaged.count)")
-                                .font(.system(size: 11, weight: .medium))
+                                .font(.system(size: 10, weight: .medium))
                                 .foregroundColor(AppTheme.textSecondary)
                         }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 3)
                         .background(AppTheme.warning.opacity(0.15))
-                        .cornerRadius(4)
+                        .cornerRadius(3)
                     }
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 8)
             }
-
-            Spacer()
 
             // Add new tab button
             Button {

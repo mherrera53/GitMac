@@ -54,7 +54,15 @@ struct KaleidoscopeUnifiedView: View {
 
     var body: some View {
         ScrollView([.vertical, .horizontal], showsIndicators: true) {
-            LazyVStack(alignment: .leading, spacing: 0) {
+            GeometryReader { scrollGeometry in
+                Color.clear.preference(
+                    key: DiffScrollOffsetKey.self,
+                    value: -scrollGeometry.frame(in: .named("scroll")).minY
+                )
+            }
+            .frame(height: 0)
+
+            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: []) {
                 ForEach(unifiedLines) { line in
                     UnifiedLineRow(
                         line: line,
@@ -71,9 +79,23 @@ struct KaleidoscopeUnifiedView: View {
                 }
             )
         }
+        .coordinateSpace(name: "scroll")
         .onPreferenceChange(UnifiedContentHeightKey.self) { height in
             contentHeight = height
         }
+        .onPreferenceChange(DiffScrollOffsetKey.self) { offset in
+            scrollOffset = offset
+        }
+        .background(
+            GeometryReader { geo in
+                Color.clear.onAppear {
+                    viewportHeight = geo.size.height
+                }
+                .onChange(of: geo.size.height) { newHeight in
+                    viewportHeight = newHeight
+                }
+            }
+        )
     }
 }
 
