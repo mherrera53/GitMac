@@ -680,6 +680,7 @@ private extension Color {
 struct CommitGraphView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var vm = GraphViewModel()
+    @StateObject private var detailVM = CommitDetailViewModel()
     @StateObject private var tracker = RemoteOperationTracker.shared
     @StateObject private var settings = GraphSettings()
     @StateObject private var themeManager = ThemeManager.shared
@@ -692,6 +693,7 @@ struct CommitGraphView: View {
     @State private var showBranchPanel = false
     @State private var showMinimap = false
     @State private var showDetailPanel = false
+    @State private var selectedFileDiff: FileDiff? = nil
 
     private var selectedCommit: Commit? {
         guard let lastId = lastSelectedId else { return nil }
@@ -771,17 +773,20 @@ struct CommitGraphView: View {
                 }
 
                 // Detail Panel (right sidebar)
-                if showDetailPanel {
+                if showDetailPanel, let commit = selectedCommit {
                     Divider()
 
                     CommitDetailPanel(
-                        commit: selectedCommit,
+                        commit: commit,
+                        viewModel: detailVM,
+                        selectedFileDiff: $selectedFileDiff,
                         onClose: {
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 showDetailPanel = false
                             }
                         }
                     )
+                    .environmentObject(appState)
                     .transition(.move(edge: .trailing))
                 }
             }
@@ -942,40 +947,58 @@ struct CommitGraphView: View {
 
             Spacer()
 
-            // Git actions - CENTERED with premium icons
+            // Git actions - GitKraken style toolbar
             HStack(spacing: DesignTokens.Spacing.xs) {
-                Button(action: { NotificationCenter.default.post(name: .fetch, object: nil) }) {
-                    Label("Fetch", systemImage: "arrow.down.to.line.circle.fill")
+                // Undo/Redo (GitKraken style)
+                Button(action: { /* TODO: Implement undo */ }) {
+                    Image(systemName: "arrow.uturn.backward.circle.fill")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .buttonStyle(.plain)
+                .help("Undo")
+                .disabled(true)
+
+                Button(action: { /* TODO: Implement redo */ }) {
+                    Image(systemName: "arrow.uturn.forward.circle.fill")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .buttonStyle(.plain)
+                .help("Redo")
+                .disabled(true)
+
+                Divider()
+                    .frame(height: 16)
+
+                // Pull (GitKraken combines fetch+pull)
+                Button(action: { NotificationCenter.default.post(name: .pull, object: nil) }) {
+                    Image(systemName: "arrow.down.doc.fill")
                         .font(.system(size: 17, weight: .medium))
                         .foregroundColor(AppTheme.info)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
-                .help("Fetch from remote")
+                .help("Pull changes from remote")
 
-                Button(action: { NotificationCenter.default.post(name: .pull, object: nil) }) {
-                    Label("Pull", systemImage: "arrow.down.doc.fill")
+                // Push
+                Button(action: { NotificationCenter.default.post(name: .push, object: nil) }) {
+                    Image(systemName: "arrow.up.doc.fill")
                         .font(.system(size: 17, weight: .medium))
                         .foregroundColor(AppTheme.success)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
-                .help("Pull changes")
-
-                Button(action: { NotificationCenter.default.post(name: .push, object: nil) }) {
-                    Label("Push", systemImage: "arrow.up.doc.fill")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(AppTheme.accent)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.plain)
-                .help("Push commits")
+                .help("Push commits to remote")
 
                 Divider()
                     .frame(height: 16)
 
+                // Branch (GitKraken icon)
                 Button(action: { NotificationCenter.default.post(name: .newBranch, object: nil) }) {
-                    Image(systemName: "point.3.connected.trianglepath.dotted")
+                    Image(systemName: "arrow.triangle.branch")
                         .font(.system(size: 17, weight: .medium))
                         .foregroundColor(AppTheme.accent)
                         .symbolRenderingMode(.hierarchical)
@@ -983,6 +1006,7 @@ struct CommitGraphView: View {
                 .buttonStyle(.plain)
                 .help("Create new branch")
 
+                // Stash (GitKraken icon)
                 Button(action: { NotificationCenter.default.post(name: .stash, object: nil) }) {
                     Image(systemName: "archivebox.circle.fill")
                         .font(.system(size: 17, weight: .medium))
@@ -990,7 +1014,18 @@ struct CommitGraphView: View {
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
-                .help("Stash changes")
+                .help("Stash uncommitted changes")
+
+                // Pop Stash (GitKraken feature)
+                Button(action: { /* TODO: Implement pop stash */ }) {
+                    Image(systemName: "tray.and.arrow.up.fill")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .buttonStyle(.plain)
+                .help("Pop most recent stash")
+                .disabled(true)
             }
 
             Spacer()

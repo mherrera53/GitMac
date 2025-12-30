@@ -24,16 +24,32 @@ struct KaleidoscopeUnifiedView: View {
                 type: .hunkHeader,
                 side: .both,
                 oldLineNumber: nil,
-                newLineNumber: nil
+                newLineNumber: nil,
+                pairedContent: nil
             ))
 
-            for line in hunk.lines {
+            // Pair deletions with additions for character-level highlighting
+            var i = 0
+            let hunkLines = hunk.lines
+            while i < hunkLines.count {
+                let line = hunkLines[i]
                 lineId += 1
+                
                 let side: UnifiedSide
+                var pairedContent: String? = nil
+                
                 if line.type == .deletion {
                     side = .a
+                    // Look ahead for matching addition
+                    if i + 1 < hunkLines.count && hunkLines[i + 1].type == .addition {
+                        pairedContent = hunkLines[i + 1].content
+                    }
                 } else if line.type == .addition {
                     side = .b
+                    // Look back for matching deletion
+                    if i > 0 && hunkLines[i - 1].type == .deletion {
+                        pairedContent = hunkLines[i - 1].content
+                    }
                 } else {
                     side = .both
                 }
@@ -44,8 +60,11 @@ struct KaleidoscopeUnifiedView: View {
                     type: line.type,
                     side: side,
                     oldLineNumber: line.oldLineNumber,
-                    newLineNumber: line.newLineNumber
+                    newLineNumber: line.newLineNumber,
+                    pairedContent: pairedContent
                 ))
+                
+                i += 1
             }
         }
 
@@ -108,6 +127,7 @@ struct UnifiedLine: Identifiable {
     let side: UnifiedSide
     let oldLineNumber: Int?
     let newLineNumber: Int?
+    let pairedContent: String?  // For character-level diff highlighting
 }
 
 enum UnifiedSide {
@@ -123,6 +143,45 @@ struct UnifiedLineRow: View {
     let showLineNumber: Bool
 
     @StateObject private var themeManager = ThemeManager.shared
+
+    // Character-level highlighting (Kaleidoscope-style)
+    private var highlightedContent: AttributedString {
+        guard let paired = line.pairedContent,
+              line.type != .context,
+              line.type != .hunkHeader else {
+            return AttributedString(line.content)
+        }
+
+        let oldContent = line.type == .deletion ? line.content : paired
+        let newContent = line.type == .addition ? line.content : paired
+
+        let diffResult = WordLevelDiff.compare(oldLine: oldContent, newLine: newContent)
+        let segments = line.type == .deletion ? diffResult.oldSegments : diffResult.newSegments
+
+        var result = AttributedString()
+
+        for segment in segments {
+            var segmentAttr = AttributedString(segment.text)
+
+            switch segment.type {
+            case .unchanged:
+                break
+            case .added:
+                segmentAttr.backgroundColor = AppTheme.diffAddition.opacity(0.4)
+                segmentAttr.foregroundColor = AppTheme.diffAddition
+            case .removed:
+                segmentAttr.backgroundColor = AppTheme.diffDeletion.opacity(0.4)
+                segmentAttr.foregroundColor = AppTheme.diffDeletion
+            case .changed:
+                let color = line.type == .addition ? AppTheme.diffAddition : AppTheme.diffDeletion
+                segmentAttr.backgroundColor = color.opacity(0.4)
+            }
+
+            result.append(segmentAttr)
+        }
+
+        return result
+    }
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -155,8 +214,8 @@ struct UnifiedLineRow: View {
                 .foregroundColor(indicatorColor(theme: theme))
                 .frame(width: 20)
 
-            // Content
-            Text(line.content)
+            // Content with character-level highlighting
+            Text(highlightedContent)
                 .font(DesignTokens.Typography.diffLine)
                 .foregroundColor(textColor(theme: theme))
                 .textSelection(.enabled)
