@@ -1,5 +1,46 @@
 import SwiftUI
 
+// MARK: - Placeholder Components (TODO: Import from separate files when added to Xcode project)
+
+/// Temporary stub for BranchPanelView until file is added to project
+struct BranchPanelView: View {
+    @Binding var branches: [Branch]
+    let currentBranch: Branch?
+    let onSelectBranch: (Branch) -> Void
+    let onCheckout: (Branch) -> Void
+
+    var body: some View {
+        VStack {
+            Text("Branch Panel")
+                .font(.caption)
+            Text("TODO: Add BranchPanelView.swift to Xcode project")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .frame(width: 260)
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+}
+
+/// Temporary stub for GraphMinimapView until file is added to project
+struct GraphMinimapView: View {
+    let commits: [Commit]
+    let selectedIds: Set<String>
+    let onSelectCommit: (Commit) -> Void
+
+    var body: some View {
+        VStack {
+            Text("Minimap")
+                .font(.caption)
+            Text("TODO: Add GraphMinimapView.swift to Xcode project")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .frame(width: 60)
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+}
+
 // MARK: - Ghost Branches (integrated from GhostBranchesOverlay.swift)
 
 /// Shows nearby branches when hovering over a commit in the graph
@@ -335,6 +376,8 @@ struct CommitGraphView: View {
     @State private var hoveredBranch: String?
     @State private var showSettings = false
     @State private var themeRefreshTrigger = UUID()
+    @State private var showBranchPanel = false
+    @State private var showMinimap = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -347,8 +390,62 @@ struct CommitGraphView: View {
             graphToolbar
                 .id(themeRefreshTrigger)
 
-            graphHeader
-            graphContent
+            // Main content with optional panels
+            HStack(spacing: 0) {
+                // Branch Panel (left sidebar)
+                if showBranchPanel {
+                    BranchPanelView(
+                        branches: $vm.branches,
+                        currentBranch: appState.currentRepository?.currentBranch,
+                        onSelectBranch: { branch in
+                            // Select branch in graph
+                            if let commit = vm.timelineItems.compactMap({ item -> Commit? in
+                                if case .commit(let node) = item {
+                                    return node.commit
+                                }
+                                return nil
+                            }).first(where: { $0.sha == branch.targetSHA }) {
+                                selectedIds = [commit.sha]
+                                lastSelectedId = commit.sha
+                            }
+                        },
+                        onCheckout: { branch in
+                            Task {
+                                await checkoutBranch(branch)
+                            }
+                        }
+                    )
+                    .transition(.move(edge: .leading))
+
+                    Divider()
+                }
+
+                // Main graph area
+                VStack(spacing: 0) {
+                    graphHeader
+                    graphContent
+                }
+
+                // Minimap (right sidebar)
+                if showMinimap {
+                    Divider()
+
+                    GraphMinimapView(
+                        commits: vm.timelineItems.compactMap { item in
+                            if case .commit(let node) = item {
+                                return node.commit
+                            }
+                            return nil
+                        },
+                        selectedIds: selectedIds,
+                        onSelectCommit: { commit in
+                            selectedIds = [commit.sha]
+                            lastSelectedId = commit.sha
+                        }
+                    )
+                    .transition(.move(edge: .trailing))
+                }
+            }
         }
         .background(AppTheme.background)
         .task {
@@ -423,10 +520,12 @@ struct CommitGraphView: View {
                 }
             } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 16))
+                    .font(.system(size: 18))
                     .foregroundColor(theme.text)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.plain)
             .help("Dismiss")
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
@@ -439,6 +538,31 @@ struct CommitGraphView: View {
                     .foregroundColor(operation.color.opacity(0.4))
             }
         )
+    }
+
+    // MARK: - Branch Operations
+    private func checkoutBranch(_ branch: Branch) async {
+        guard let repoPath = appState.currentRepository?.path else { return }
+
+        let executor = ShellExecutor()
+        let result = await executor.execute(
+            "git",
+            arguments: ["checkout", branch.name],
+            workingDirectory: repoPath
+        )
+
+        if result.exitCode == 0 {
+            NotificationManager.shared.success("Checked out \(branch.name)")
+            // Refresh the graph
+            await vm.load(at: repoPath)
+            // Notify app state to update current branch
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: repoPath)
+        } else {
+            NotificationManager.shared.error(
+                "Failed to checkout \(branch.name)",
+                detail: result.stderr
+            )
+        }
     }
 
     // MARK: - Graph Toolbar
@@ -566,6 +690,38 @@ struct CommitGraphView: View {
                 }
                 .buttonStyle(.plain)
                 .help("Toggle stash labels visibility")
+            }
+
+            Divider()
+                .frame(height: DesignTokens.Spacing.lg)
+
+            // Panel toggles
+            HStack(spacing: DesignTokens.Spacing.xs) {
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showBranchPanel.toggle()
+                    }
+                }) {
+                    Image(systemName: "sidebar.left")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(showBranchPanel ? AppTheme.accent : theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .buttonStyle(.plain)
+                .help("Toggle branch panel")
+
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showMinimap.toggle()
+                    }
+                }) {
+                    Image(systemName: "map")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(showMinimap ? AppTheme.accent : theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .buttonStyle(.plain)
+                .help("Toggle minimap")
             }
 
             Divider()
