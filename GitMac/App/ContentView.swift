@@ -470,7 +470,7 @@ struct DiffViewWithClose: View {
 // MARK: - Left Sidebar Panel (Modern)
 struct LeftSidebarPanel: View {
     @EnvironmentObject var appState: AppState
-    @State private var expandedSections: Set<String> = ["repos", "local", "remote", "submodules", "githooks"]
+    @State private var selectedNavigator: SidebarNavigator = .branches
     @State private var branchSearchText = ""
 
     var body: some View {
@@ -490,171 +490,115 @@ struct LeftSidebarPanel: View {
                 .background(AppTheme.backgroundSecondary)
             }
 
+            // Xcode-style horizontal navigator tabs
+            XcodeSidebarNavigatorBar(selectedNavigator: $selectedNavigator)
+
+            // Navigator content
             ScrollView {
-                VStack(alignment: .leading, spacing: 2) {
-                    // REPOSITORIES Section - Recently opened repos
-                    SidebarSection(title: "REPOSITORIES", isExpanded: expandedSections.contains("repos")) {
-                        expandedSections.toggle("repos")
-                    } content: {
-                        RecentRepositoriesList()
-                    }
-
-                    // Branch search bar
-                    if appState.currentRepository != nil {
-                        HStack(spacing: 8) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 11))
-                                .foregroundColor(AppTheme.textMuted)
-
-                            DSTextField(placeholder: "Search branches...", text: $branchSearchText)
-                                .font(.system(size: 11))
-
-                            if !branchSearchText.isEmpty {
-                                Button(action: { branchSearchText = "" }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 11))
-                                        .foregroundColor(AppTheme.textMuted)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(AppTheme.backgroundSecondary)
-                        .cornerRadius(6)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                    }
-
-                    // LOCAL Section - Show master/main + 3 most recent branches
-                    SidebarSection(title: "LOCAL", isExpanded: expandedSections.contains("local")) {
-                        expandedSections.toggle("local")
-                    } content: {
-                        if let repo = appState.currentRepository {
-                            let allLocal = repo.branches.filter { !$0.isRemote }
-                            let localBranches = branchSearchText.isEmpty ? allLocal : allLocal.filter {
-                                $0.name.localizedCaseInsensitiveContains(branchSearchText)
-                            }
-
-                            // Find master or main branch
-                            let mainBranch = localBranches.first { $0.name == "master" || $0.name == "main" }
-
-                            // Get current branch if it's not master/main
-                            let currentBranch = localBranches.first { $0.isCurrent && $0.name != "master" && $0.name != "main" }
-
-                            // Get other branches (excluding master/main and current)
-                            let otherBranches = localBranches
-                                .filter { !$0.isCurrent && $0.name != "master" && $0.name != "main" }
-                                .prefix(3)
-
-                            // Display in order: main/master first, then current, then recent
-                            if let main = mainBranch {
-                                SidebarBranchRow(branch: main)
-                            }
-
-                            if let current = currentBranch {
-                                SidebarBranchRow(branch: current)
-                            }
-
-                            ForEach(Array(otherBranches)) { branch in
-                                SidebarBranchRow(branch: branch)
-                            }
-
-                            // Show count of hidden branches
-                            let totalLocal = localBranches.count
-                            let shownCount = (mainBranch != nil ? 1 : 0) + (currentBranch != nil ? 1 : 0) + otherBranches.count
-                            if totalLocal > shownCount {
-                                HStack {
-                                    Text("+ \(totalLocal - shownCount) more")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(AppTheme.textMuted)
-                                    Spacer()
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 4)
-                            }
-                        }
-                    }
-
-                    // REMOTE BRANCHES Section
-                    SidebarSection(title: "REMOTE", isExpanded: expandedSections.contains("remote")) {
-                        expandedSections.toggle("remote")
-                    } content: {
-                        if let repo = appState.currentRepository {
-                            let allRemote = repo.remoteBranches
-                            let filteredRemote = branchSearchText.isEmpty ? allRemote : allRemote.filter {
-                                $0.name.localizedCaseInsensitiveContains(branchSearchText)
-                            }
-                            let remoteBranches = filteredRemote.sorted { $0.name < $1.name }
-                            ForEach(remoteBranches.prefix(10)) { branch in
-                                SidebarBranchRow(branch: branch)
-                            }
-
-                            if remoteBranches.count > 10 {
-                                HStack {
-                                    Text("+ \(remoteBranches.count - 10) more")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(AppTheme.textMuted)
-                                    Spacer()
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 4)
-                            }
-                        }
-                    }
-
-                    // STASHES Section
-                    SidebarSection(title: "STASHES", isExpanded: expandedSections.contains("stashes")) {
-                        expandedSections.toggle("stashes")
-                    } content: {
-                        if let repo = appState.currentRepository {
-                            ForEach(repo.stashes) { stash in
-                                StashSidebarRow(stash: stash)
-                            }
-                        }
-                    }
-
-                    // TAGS Section
-                    SidebarSection(title: "TAGS", isExpanded: expandedSections.contains("tags")) {
-                        expandedSections.toggle("tags")
-                    } content: {
-                        if let repo = appState.currentRepository {
-                            ForEach(repo.tags) { tag in
-                                TagSidebarRow(tag: tag)
-                            }
-                        }
-                    }
-
-                    // WORKTREES Section
-                    SidebarSection(title: "WORKTREES", isExpanded: expandedSections.contains("worktrees")) {
-                        expandedSections.toggle("worktrees")
-                    } content: {
-                        WorktreeSidebarSection()
-                    }
-
-                    // SUBMODULES Section
-                    SidebarSection(title: "SUBMODULES", isExpanded: expandedSections.contains("submodules")) {
-                        expandedSections.toggle("submodules")
-                    } content: {
-                        SubmoduleSidebarSection()
-                    }
-
-                    // GIT HOOKS Section
-                    SidebarSection(title: "GIT HOOKS", isExpanded: expandedSections.contains("githooks")) {
-                        expandedSections.toggle("githooks")
-                    } content: {
-                        GitHooksSidebarSection()
-                    }
-
-                    // CI/CD Section
-                    SidebarSection(title: "CI/CD", isExpanded: expandedSections.contains("cicd")) {
-                        expandedSections.toggle("cicd")
-                    } content: {
-                        CICDSidebarSection()
-                    }
+                VStack(alignment: .leading, spacing: 8) {
+                    navigatorContent
                 }
                 .padding(.top, 8)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var navigatorContent: some View {
+        switch selectedNavigator {
+        case .repositories:
+            RecentRepositoriesList()
+
+        case .branches:
+            // Branch search bar
+            if appState.currentRepository != nil {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 11))
+                        .foregroundColor(AppTheme.textMuted)
+
+                    DSTextField(placeholder: "Search branches...", text: $branchSearchText)
+                        .font(.system(size: 11))
+
+                    if !branchSearchText.isEmpty {
+                        Button(action: { branchSearchText = "" }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 11))
+                                .foregroundColor(AppTheme.textMuted)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(AppTheme.backgroundSecondary)
+                .cornerRadius(6)
+                .padding(.horizontal, 8)
+                .padding(.bottom, 8)
+            }
+
+            // Local branches
+            if let repo = appState.currentRepository {
+                let allLocal = repo.branches.filter { !$0.isRemote }
+                let localBranches = branchSearchText.isEmpty ? allLocal : allLocal.filter {
+                    $0.name.localizedCaseInsensitiveContains(branchSearchText)
+                }
+
+                let mainBranch = localBranches.first { $0.name == "master" || $0.name == "main" }
+                let currentBranch = localBranches.first { $0.isCurrent && $0.name != "master" && $0.name != "main" }
+                let otherBranches = localBranches
+                    .filter { !$0.isCurrent && $0.name != "master" && $0.name != "main" }
+
+                if let main = mainBranch {
+                    SidebarBranchRow(branch: main)
+                }
+
+                if let current = currentBranch {
+                    SidebarBranchRow(branch: current)
+                }
+
+                ForEach(Array(otherBranches)) { branch in
+                    SidebarBranchRow(branch: branch)
+                }
+            }
+
+        case .remote:
+            if let repo = appState.currentRepository {
+                let allRemote = repo.remoteBranches
+                let filteredRemote = branchSearchText.isEmpty ? allRemote : allRemote.filter {
+                    $0.name.localizedCaseInsensitiveContains(branchSearchText)
+                }
+                let remoteBranches = filteredRemote.sorted { $0.name < $1.name }
+                ForEach(remoteBranches) { branch in
+                    SidebarBranchRow(branch: branch)
+                }
+            }
+
+        case .stashes:
+            if let repo = appState.currentRepository {
+                ForEach(repo.stashes) { stash in
+                    StashSidebarRow(stash: stash)
+                }
+            }
+
+        case .tags:
+            if let repo = appState.currentRepository {
+                ForEach(repo.tags) { tag in
+                    TagSidebarRow(tag: tag)
+                }
+            }
+
+        case .worktrees:
+            WorktreeSidebarSection()
+
+        case .submodules:
+            SubmoduleSidebarSection()
+
+        case .hooks:
+            GitHooksSidebarSection()
+
+        case .cicd:
+            CICDSidebarSection()
         }
     }
 }
