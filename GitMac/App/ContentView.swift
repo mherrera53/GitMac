@@ -552,12 +552,8 @@ struct DiffViewWithClose: View {
             }
             .background(AppTheme.backgroundSecondary.opacity(0.8))
 
-            // Use Kaleidoscope-style diff viewer
-            if let repo = appState.currentRepository {
-                KaleidoscopeDiffView(files: [fileDiff])
-            } else {
-                DiffView(fileDiff: fileDiff, repoPath: repoPath)
-            }
+            // Use standard diff viewer
+            DiffView(fileDiff: fileDiff, repoPath: repoPath)
         }
     }
 }
