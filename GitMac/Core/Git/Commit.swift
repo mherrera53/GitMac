@@ -27,6 +27,11 @@ struct Commit: Identifiable, Equatable, Hashable {
     var isHead: Bool = false
     var isStash: Bool = false
 
+    // File change statistics (populated from git log --numstat)
+    var additions: Int?
+    var deletions: Int?
+    var filesChanged: Int?
+
     init(
         sha: String,
         message: String,
