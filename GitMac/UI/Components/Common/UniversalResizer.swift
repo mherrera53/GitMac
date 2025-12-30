@@ -17,6 +17,9 @@ class UniversalResizerNSView: NSView {
     var onHoverChanged: ((Bool) -> Void)?
     var onDraggingStateChanged: ((Bool) -> Void)?
 
+    // Configuration
+    var orientation: UniversalResizer.Orientation = .horizontal
+
     // State
     private var isDragging = false {
         didSet {
@@ -27,6 +30,7 @@ class UniversalResizerNSView: NSView {
     }
     private var dragStartLocation: NSPoint = .zero
     private var trackingArea: NSTrackingArea?
+    private var cursorUpdateScheduled = false
 
     // CRITICAL: Prevent window dragging
     override var mouseDownCanMoveWindow: Bool { false }
@@ -49,14 +53,21 @@ class UniversalResizerNSView: NSView {
     override func mouseDown(with event: NSEvent) {
         isDragging = true
         dragStartLocation = event.locationInWindow
-        NSCursor.resizeUpDown.push()
+        pushCursor()
     }
 
     override func mouseDragged(with event: NSEvent) {
         guard isDragging else { return }
 
         let currentLocation = event.locationInWindow
-        let delta = currentLocation.y - dragStartLocation.y
+        let delta: CGFloat
+
+        switch orientation {
+        case .horizontal:
+            delta = currentLocation.x - dragStartLocation.x
+        case .vertical:
+            delta = currentLocation.y - dragStartLocation.y
+        }
 
         onDragChanged?(delta)
         dragStartLocation = currentLocation
@@ -64,7 +75,7 @@ class UniversalResizerNSView: NSView {
 
     override func mouseUp(with event: NSEvent) {
         isDragging = false
-        NSCursor.pop()
+        popCursor()
     }
 
     // MARK: - Tracking Area
@@ -94,16 +105,40 @@ class UniversalResizerNSView: NSView {
 
     override func mouseEntered(with event: NSEvent) {
         if !isDragging {
-            NSCursor.resizeUpDown.push()
+            pushCursor()
         }
         onHoverChanged?(true)
     }
 
     override func mouseExited(with event: NSEvent) {
         if !isDragging {
-            NSCursor.pop()
+            popCursor()
         }
         onHoverChanged?(false)
+    }
+
+    // MARK: - Cursor Management
+
+    private func pushCursor() {
+        guard !cursorUpdateScheduled else { return }
+        cursorUpdateScheduled = true
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            switch self.orientation {
+            case .horizontal:
+                NSCursor.resizeLeftRight.push()
+            case .vertical:
+                NSCursor.resizeUpDown.push()
+            }
+            self.cursorUpdateScheduled = false
+        }
+    }
+
+    private func popCursor() {
+        DispatchQueue.main.async {
+            NSCursor.pop()
+        }
     }
 }
 
@@ -178,38 +213,46 @@ private struct ResizerViewRepresentable: NSViewRepresentable {
 
     func makeNSView(context: Context) -> UniversalResizerNSView {
         let view = UniversalResizerNSView()
+        view.orientation = orientation
 
-        view.onDragChanged = { delta in
-            let adjustedDelta = orientation == .vertical ? delta : -delta
-            let newDimension = dimension + adjustedDelta
-            dimension = max(minDimension, min(maxDimension, newDimension))
-        }
-
-        view.onHoverChanged = { hovering in
-            isHovering = hovering
-        }
-
-        view.onDraggingStateChanged = { dragging in
-            isDragging = dragging
-        }
-
+        setupCallbacks(for: view)
         return view
     }
 
     func updateNSView(_ nsView: UniversalResizerNSView, context: Context) {
-        // Re-bind callbacks in case bindings changed
-        nsView.onDragChanged = { delta in
+        // Only update orientation if changed
+        if nsView.orientation != orientation {
+            nsView.orientation = orientation
+        }
+    }
+
+    private func setupCallbacks(for view: UniversalResizerNSView) {
+        view.onDragChanged = { [minDimension, maxDimension] delta in
+            // For horizontal: positive delta = move right = increase width
+            // For vertical: positive delta = move up = increase height
             let adjustedDelta = orientation == .vertical ? delta : -delta
-            let newDimension = dimension + adjustedDelta
-            dimension = max(minDimension, min(maxDimension, newDimension))
+
+            DispatchQueue.main.async {
+                let newDimension = dimension + adjustedDelta
+                let clampedDimension = max(minDimension, min(maxDimension, newDimension))
+
+                // Only update if value actually changed to avoid unnecessary redraws
+                if abs(dimension - clampedDimension) > 0.1 {
+                    dimension = clampedDimension
+                }
+            }
         }
 
-        nsView.onHoverChanged = { hovering in
-            isHovering = hovering
+        view.onHoverChanged = { hovering in
+            DispatchQueue.main.async {
+                isHovering = hovering
+            }
         }
 
-        nsView.onDraggingStateChanged = { dragging in
-            isDragging = dragging
+        view.onDraggingStateChanged = { dragging in
+            DispatchQueue.main.async {
+                isDragging = dragging
+            }
         }
     }
 }
