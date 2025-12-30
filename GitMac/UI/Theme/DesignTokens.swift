@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 /// Design Tokens - Sistema centralizado de valores de diseño
 /// Estos tokens son la base del Atomic Design System
@@ -188,6 +189,108 @@ enum DesignTokens {
         static let modal: Double = 400
         static let popover: Double = 500
         static let tooltip: Double = 600
+    }
+
+    // MARK: - Toolbar (Xcode-style)
+
+    /// Tokens específicos para toolbar estilo Xcode
+    enum Toolbar {
+        /// Altura del toolbar (macOS standard)
+        static let height: CGFloat = 52
+
+        /// Ancho del borde inferior
+        static let borderWidth: CGFloat = 0.5
+
+        /// Tamaño de botones icon-only (28x28)
+        static let iconOnlyButtonSize = CGSize(width: 28, height: 28)
+
+        /// Tamaño de botones icon+label (44x36)
+        static let iconLabelButtonSize = CGSize(width: 44, height: 36)
+
+        /// Tamaño del icono dentro del botón
+        static let iconSize: CGFloat = 16
+
+        /// Tamaño del label en botones icon+label
+        static let labelSize: CGFloat = 9
+
+        /// Espaciado entre grupos de botones (usa Spacing.lg = 16)
+        static let groupSpacing: CGFloat = Spacing.lg
+
+        /// Altura del divider entre grupos
+        static let dividerHeight: CGFloat = 20
+
+        /// Ancho del divider
+        static let dividerWidth: CGFloat = 1
+    }
+
+    // MARK: - Bottom Bar (Xcode-style)
+
+    /// Tokens específicos para bottom bar estilo Xcode
+    enum BottomBar {
+        /// Altura del tab bar
+        static let height: CGFloat = 28
+
+        /// Ancho del borde superior
+        static let borderWidth: CGFloat = 0.5
+
+        /// Tamaño de iconos en tabs
+        static let tabIconSize: CGFloat = 11
+
+        /// Tamaño de fuente en tabs
+        static let tabFontSize: CGFloat = 11
+
+        /// Padding horizontal en tabs (usa Spacing.xs + 2 = 6)
+        static let tabHorizontalPadding: CGFloat = 6
+
+        /// Padding vertical en tabs (usa Spacing.xs = 4)
+        static let tabVerticalPadding: CGFloat = Spacing.xs
+
+        /// Espaciado entre tabs (usa Spacing.xxs = 2)
+        static let tabSpacing: CGFloat = Spacing.xxs
+
+        /// Tamaño del botón de cerrar tab
+        static let closeButtonSize: CGFloat = 12
+
+        /// Tamaño del icono de cerrar (8px)
+        static let closeIconSize: CGFloat = 8
+
+        /// Altura del indicador activo
+        static let activeIndicatorHeight: CGFloat = 2
+
+        /// Tamaño de botones de control (plus, close panel)
+        static let controlButtonSize: CGFloat = 28
+
+        /// Tamaño de iconos en botones de control
+        static let controlIconSize: CGFloat = 11
+    }
+
+    // MARK: - Materials (NSVisualEffectView)
+
+    /// Materiales para NSVisualEffectView estilo Xcode
+    enum Materials {
+        /// Material para toolbar (.headerView)
+        static let toolbar: NSVisualEffectView.Material = .headerView
+
+        /// Material para bottom bar (.titlebar)
+        static let bottomBar: NSVisualEffectView.Material = .titlebar
+
+        /// Material para sidebar (.sidebar)
+        static let sidebar: NSVisualEffectView.Material = .sidebar
+
+        /// Material para contenido de paneles
+        static let content: NSVisualEffectView.Material = .contentBackground
+
+        /// Blending mode para toolbar
+        static let toolbarBlending: NSVisualEffectView.BlendingMode = .withinWindow
+
+        /// Blending mode para bottom bar
+        static let bottomBarBlending: NSVisualEffectView.BlendingMode = .behindWindow
+
+        /// Blending mode para sidebar
+        static let sidebarBlending: NSVisualEffectView.BlendingMode = .behindWindow
+
+        /// Estado del efecto visual
+        static let state: NSVisualEffectView.State = .active
     }
 }
 
