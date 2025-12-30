@@ -176,18 +176,18 @@ struct UniversalResizer: View {
                 invertDirection: invertDirection
             )
 
-            // Visual indicator (non-interactive)
+            // Visual indicator (non-interactive) - subtle like Xcode
             Rectangle()
                 .fill(visualColor)
                 .frame(
-                    width: orientation == .horizontal ? 4 : nil,
-                    height: orientation == .vertical ? 4 : nil
+                    width: orientation == .horizontal ? 1 : nil,
+                    height: orientation == .vertical ? 1 : nil
                 )
                 .allowsHitTesting(false)
         }
         .frame(
-            width: orientation == .horizontal ? 12 : nil,
-            height: orientation == .vertical ? 12 : nil
+            width: orientation == .horizontal ? 5 : nil,
+            height: orientation == .vertical ? 5 : nil
         )
     }
 
@@ -195,9 +195,9 @@ struct UniversalResizer: View {
         if isDragging {
             return AppTheme.accent
         } else if isHovering {
-            return AppTheme.border
+            return Color.gray.opacity(0.6)
         } else {
-            return AppTheme.border.opacity(0.5)
+            return Color.gray.opacity(0.3)
         }
     }
 }

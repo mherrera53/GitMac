@@ -16,10 +16,10 @@ import Splash
 struct DiffView: View {
     let fileDiff: FileDiff
     var repoPath: String? = nil
-    @State private var viewMode: DiffViewMode = .split
-    @State private var showLineNumbers = true
-    @State private var wordWrap = false
-    @State private var showMinimap = true
+    @AppStorage("diffViewMode") private var viewMode: DiffViewMode = .split
+    @AppStorage("diffShowLineNumbers") private var showLineNumbers = true
+    @AppStorage("diffWordWrap") private var wordWrap = false
+    @AppStorage("diffShowMinimap") private var showMinimap = true
     @State private var scrollOffset: CGFloat = 0
     @State private var viewportHeight: CGFloat = 400
     @State private var contentHeight: CGFloat = 1000
@@ -227,9 +227,24 @@ struct DiffView: View {
                         )
                     case .preview:
                         MarkdownView(content: previewContent, fileName: fileDiff.displayPath)
-                    case .kaleidoscopeBlocks, .kaleidoscopeFluid, .kaleidoscopeUnified:
-                        // Kaleidoscope view - professional diff viewing
-                        KaleidoscopeDiffView(files: [fileDiff])
+                    case .kaleidoscopeBlocks, .kaleidoscopeFluid:
+                        // Kaleidoscope split view with connection lines
+                        KaleidoscopeSplitDiffView(
+                            hunks: fileDiff.hunks,
+                            showLineNumbers: showLineNumbers,
+                            scrollOffset: $scrollOffset,
+                            viewportHeight: $viewportHeight,
+                            contentHeight: $contentHeight
+                        )
+                    case .kaleidoscopeUnified:
+                        // Kaleidoscope unified view with A/B labels
+                        KaleidoscopeUnifiedView(
+                            hunks: fileDiff.hunks,
+                            showLineNumbers: showLineNumbers,
+                            scrollOffset: $scrollOffset,
+                            viewportHeight: $viewportHeight,
+                            contentHeight: $contentHeight
+                        )
                     }
                 }
 

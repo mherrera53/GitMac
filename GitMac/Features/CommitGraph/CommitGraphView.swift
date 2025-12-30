@@ -341,16 +341,13 @@ struct CommitGraphView: View {
             // Remote operation status bar (if exists)
             if let operation = lastOperationForCurrentBranch {
                 remoteStatusBar(operation: operation)
-                Divider()
             }
 
             // Search and filter toolbar
             graphToolbar
                 .id(themeRefreshTrigger)
-            Divider()
 
             graphHeader
-            Divider()
             graphContent
         }
         .background(AppTheme.background)
@@ -426,6 +423,7 @@ struct CommitGraphView: View {
                 }
             } label: {
                 Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 16))
                     .foregroundColor(theme.text)
             }
             .buttonStyle(.borderless)
@@ -433,12 +431,13 @@ struct CommitGraphView: View {
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.sm)
-        .background(operation.color.opacity(0.08))
-        .overlay(
-            Rectangle()
-                .frame(height: DesignTokens.Spacing.xxs)
-                .foregroundColor(operation.color.opacity(0.4)),
-            alignment: .bottom
+        .background(
+            ZStack(alignment: .bottom) {
+                operation.color.opacity(0.08)
+                Rectangle()
+                    .frame(height: DesignTokens.Spacing.xxs)
+                    .foregroundColor(operation.color.opacity(0.4))
+            }
         )
     }
 
@@ -480,14 +479,68 @@ struct CommitGraphView: View {
 
             Spacer()
 
+            // Git actions - CENTERED with premium icons
+            HStack(spacing: DesignTokens.Spacing.xs) {
+                Button(action: { NotificationCenter.default.post(name: .fetch, object: nil) }) {
+                    Label("Fetch", systemImage: "arrow.down.to.line.circle.fill")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(AppTheme.info)
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .buttonStyle(.borderless)
+                .help("Fetch from remote")
+
+                Button(action: { NotificationCenter.default.post(name: .pull, object: nil) }) {
+                    Label("Pull", systemImage: "arrow.down.doc.fill")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(AppTheme.success)
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .buttonStyle(.borderless)
+                .help("Pull changes")
+
+                Button(action: { NotificationCenter.default.post(name: .push, object: nil) }) {
+                    Label("Push", systemImage: "arrow.up.doc.fill")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(AppTheme.accent)
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .buttonStyle(.borderless)
+                .help("Push commits")
+
+                Divider()
+                    .frame(height: 16)
+
+                Button(action: { NotificationCenter.default.post(name: .newBranch, object: nil) }) {
+                    Image(systemName: "point.3.connected.trianglepath.dotted")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(AppTheme.accent)
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .buttonStyle(.borderless)
+                .help("Create new branch")
+
+                Button(action: { NotificationCenter.default.post(name: .stash, object: nil) }) {
+                    Image(systemName: "archivebox.circle.fill")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(AppTheme.warning)
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .buttonStyle(.borderless)
+                .help("Stash changes")
+            }
+
+            Spacer()
+
             // Toggle buttons for visibility using DS
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Button(action: {
                     settings.showBranches.toggle()
                 }) {
-                    Image(systemName: "arrow.triangle.branch")
-                        .font(DesignTokens.Typography.callout)
-                        .foregroundColor(settings.showBranches ? AppTheme.accent : theme.text)
+                    Image(systemName: settings.showBranches ? "point.3.connected.trianglepath.dotted" : "arrow.triangle.branch")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(settings.showBranches ? AppTheme.accent : theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.borderless)
                 .help("Show Branches")
@@ -495,9 +548,10 @@ struct CommitGraphView: View {
                 Button(action: {
                     settings.showTags.toggle()
                 }) {
-                    Image(systemName: "tag.fill")
-                        .font(DesignTokens.Typography.callout)
-                        .foregroundColor(settings.showTags ? AppTheme.accent : theme.text)
+                    Image(systemName: settings.showTags ? "tag.circle.fill" : "tag.circle")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(settings.showTags ? AppTheme.warning : theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.borderless)
                 .help("Show Tags")
@@ -505,9 +559,10 @@ struct CommitGraphView: View {
                 Button(action: {
                     settings.showStashes.toggle()
                 }) {
-                    Image(systemName: "shippingbox.fill")
-                        .font(DesignTokens.Typography.callout)
-                        .foregroundColor(settings.showStashes ? AppTheme.accent : theme.text)
+                    Image(systemName: settings.showStashes ? "archivebox.circle.fill" : "archivebox.circle")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(settings.showStashes ? AppTheme.warning : theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.borderless)
                 .help("Show Stashes")
@@ -584,8 +639,8 @@ struct CommitGraphView: View {
             .help("Display Options")
             .menuStyle(.borderlessButton)
         }
-        .padding(.horizontal, DesignTokens.Spacing.md)
-        .padding(.vertical, DesignTokens.Spacing.sm)
+        .padding(.horizontal, DesignTokens.Spacing.sm)
+        .padding(.vertical, DesignTokens.Spacing.xs)
         .background(theme.backgroundSecondary)
     }
 
@@ -637,9 +692,11 @@ struct CommitGraphView: View {
     @ViewBuilder
     private var graphContent: some View {
         if vm.isLoading && vm.nodes.isEmpty {
-            Spacer()
-            ProgressView()
-            Spacer()
+            VStack {
+                Spacer()
+                ProgressView()
+                Spacer()
+            }
         } else {
             graphScrollView
         }
@@ -794,6 +851,10 @@ struct CommitGraphView: View {
                       case .stash(let stashNode) = stashItem {
                 appState.selectedCommit = nil
                 appState.selectedStash = stashNode.stash
+            } else if firstId == "uncommitted-changes" {
+                // WIP selected - clear commit/stash to show staging area
+                appState.selectedCommit = nil
+                appState.selectedStash = nil
             }
         }
     }
@@ -1082,84 +1143,26 @@ struct BranchBadge: View {
     }
 
     var body: some View {
-        let theme = Color.Theme(themeManager.colors)
-
-        // Enhanced visual hierarchy with better SF Symbols
-        return HStack(spacing: DesignTokens.Spacing.xs) {
-            // Premium icon with gradient background
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [color.opacity(0.3), color.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 16, height: 16)
-
-                Image(systemName: iconName)
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(color)
-                    .symbolRenderingMode(symbolMode)
-            }
+        // Simple, clean design like Xcode
+        HStack(spacing: DesignTokens.Spacing.xxs) {
+            Image(systemName: iconName)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(color)
 
             Text(name)
                 .font(DesignTokens.Typography.caption2)
-                .fontWeight(isHead ? .bold : .semibold)
+                .fontWeight(isHead ? .semibold : .regular)
                 .lineLimit(1)
         }
-        .padding(.horizontal, DesignTokens.Spacing.sm)
-        .padding(.vertical, DesignTokens.Spacing.xs)
-        // Glassmorphic background
-        .background(
-            ZStack {
-                // Base layer with blur effect
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(color.opacity(isHovered ? 0.25 : 0.15))
-
-                // Subtle inner shadow
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.1),
-                                Color.clear
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-            }
-        )
-        .foregroundColor(isHead ? color : color.opacity(0.9))
-        // Enhanced border with glow effect
+        .padding(.horizontal, DesignTokens.Spacing.xs + 2)
+        .padding(.vertical, DesignTokens.Spacing.xxs + 1)
+        .background(color.opacity(0.15))
+        .foregroundColor(color)
+        .cornerRadius(4)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            color.opacity(isHovered ? 0.7 : 0.5),
-                            color.opacity(isHovered ? 0.4 : 0.2)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: isHead ? 1.5 : 1
-                )
+            RoundedRectangle(cornerRadius: 4)
+                .strokeBorder(color.opacity(0.3), lineWidth: 0.5)
         )
-        // Subtle glow for HEAD branches
-        .shadow(
-            color: isHead ? color.opacity(0.3) : .clear,
-            radius: 4,
-            x: 0,
-            y: 0
-        )
-        .scaleEffect(isHovered ? 1.05 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
-        .onHover { hovering in
-            isHovered = hovering
-        }
     }
 
     private var iconName: String {

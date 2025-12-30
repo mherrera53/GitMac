@@ -100,41 +100,27 @@ struct KaleidoscopeSplitDiffView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            ZStack {
-                // Background
-                AppTheme.background
-                    .edgesIgnoringSafeArea(.all)
-
-                // Split view with connection lines
+            // Single synchronized ScrollView for both sides
+            ScrollView([.vertical, .horizontal], showsIndicators: true) {
                 HStack(spacing: 0) {
                     // Left pane (old)
-                    ScrollView([.vertical, .horizontal], showsIndicators: true) {
-                        VStack(spacing: 0) {
-                            ForEach(pairedLines) { pair in
-                                if let header = pair.hunkHeader {
-                                    KaleidoscopeHunkHeader(header: header)
-                                } else if let line = pair.left {
-                                    KaleidoscopeDiffLine(
-                                        line: line,
-                                        side: .left,
-                                        showLineNumber: showLineNumbers,
-                                        pairedLine: pair.right
-                                    )
-                                } else {
-                                    EmptyDiffLine(showLineNumber: showLineNumbers)
-                                }
+                    VStack(spacing: 0) {
+                        ForEach(pairedLines) { pair in
+                            if let header = pair.hunkHeader {
+                                KaleidoscopeHunkHeader(header: header)
+                            } else if let line = pair.left {
+                                KaleidoscopeDiffLine(
+                                    line: line,
+                                    side: .left,
+                                    showLineNumber: showLineNumbers,
+                                    pairedLine: pair.right
+                                )
+                            } else {
+                                EmptyDiffLine(showLineNumber: showLineNumbers)
                             }
                         }
-                        .background(
-                            GeometryReader { contentGeometry in
-                                Color.clear.preference(
-                                    key: ContentHeightKey.self,
-                                    value: contentGeometry.size.height
-                                )
-                            }
-                        )
                     }
-                    .frame(width: geometry.size.width / 2)
+                    .frame(width: (geometry.size.width - 62) / 2)
 
                     // Center divider with connection lines
                     ZStack {
@@ -154,29 +140,37 @@ struct KaleidoscopeSplitDiffView: View {
                         }
                         .frame(width: 60)
                     }
+                    .frame(height: CGFloat(pairedLines.count) * 22)
 
                     // Right pane (new)
-                    ScrollView([.vertical, .horizontal], showsIndicators: true) {
-                        VStack(spacing: 0) {
-                            ForEach(pairedLines) { pair in
-                                if let header = pair.hunkHeader {
-                                    KaleidoscopeHunkHeader(header: header)
-                                } else if let line = pair.right {
-                                    KaleidoscopeDiffLine(
-                                        line: line,
-                                        side: .right,
-                                        showLineNumber: showLineNumbers,
-                                        pairedLine: pair.left
-                                    )
-                                } else {
-                                    EmptyDiffLine(showLineNumber: showLineNumbers)
-                                }
+                    VStack(spacing: 0) {
+                        ForEach(pairedLines) { pair in
+                            if let header = pair.hunkHeader {
+                                KaleidoscopeHunkHeader(header: header)
+                            } else if let line = pair.right {
+                                KaleidoscopeDiffLine(
+                                    line: line,
+                                    side: .right,
+                                    showLineNumber: showLineNumbers,
+                                    pairedLine: pair.left
+                                )
+                            } else {
+                                EmptyDiffLine(showLineNumber: showLineNumbers)
                             }
                         }
                     }
-                    .frame(width: geometry.size.width / 2 - 30)
+                    .frame(width: (geometry.size.width - 62) / 2)
                 }
+                .background(
+                    GeometryReader { contentGeometry in
+                        Color.clear.preference(
+                            key: ContentHeightKey.self,
+                            value: contentGeometry.size.height
+                        )
+                    }
+                )
             }
+            .background(AppTheme.background)
             .onPreferenceChange(ContentHeightKey.self) { height in
                 contentHeight = height
             }

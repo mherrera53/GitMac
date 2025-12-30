@@ -29,7 +29,7 @@ struct GitMacApp: App {
         registry.register(PlannerPlugin())
     }
 
-    func configureWindow() {
+    func configureWindow(title: String = "GitMac") {
         DispatchQueue.main.async {
             // Ensure theme is loaded and applied
             ThemeManager.shared.applyTheme()
@@ -37,12 +37,13 @@ struct GitMacApp: App {
             if let window = NSApplication.shared.windows.first {
                 window.titlebarAppearsTransparent = true
                 window.isMovableByWindowBackground = true
+                window.titleVisibility = .visible
+                window.title = title
                 // Apply theme appearance
                 window.appearance = ThemeManager.shared.appearance
             }
 
-            // Ensure the app icon is properly set (shouldn't be necessary, but ensures correct icon is used)
-            // The icon comes from AppIcon in Assets.xcassets as configured in Info.plist
+            // Ensure the app icon is properly set
             if NSApp.applicationIconImage == nil {
                 NSApp.applicationIconImage = NSImage(named: NSImage.applicationIconName)
             }

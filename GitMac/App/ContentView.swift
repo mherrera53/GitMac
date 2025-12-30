@@ -285,39 +285,13 @@ struct MainLayout: View {
                         .help("Redo")
                 }
             }
-            
-            ToolbarItemGroup(placement: .principal) {
-                XcodeToolbarButton(icon: "arrow.down.circle", label: "Fetch", color: AppTheme.info) {
-                    NotificationCenter.default.post(name: .fetch, object: nil)
-                }
-                .help("Fetch")
 
-                XcodeToolbarButton(icon: "arrow.down.circle.fill", label: "Pull", color: AppTheme.success) {
-                    NotificationCenter.default.post(name: .pull, object: nil)
-                }
-                .help("Pull")
-
-                XcodeToolbarButton(icon: "arrow.up.circle.fill", label: "Push", color: AppTheme.accent) {
-                    NotificationCenter.default.post(name: .push, object: nil)
-                }
-                .help("Push")
-
-                XcodeToolbarButton(icon: "arrow.triangle.branch", label: "Branch", color: AppTheme.accent) {
-                    NotificationCenter.default.post(name: .newBranch, object: nil)
-                }
-                .help("Branch")
-
-                XcodeToolbarButton(icon: "archivebox", label: "Stash", color: AppTheme.warning) {
-                    NotificationCenter.default.post(name: .stash, object: nil)
-                }
-                .help("Stash")
-
-                XcodeToolbarButton(icon: "archivebox.fill", label: "Pop", color: AppTheme.warning) {
-                    NotificationCenter.default.post(name: .popStash, object: nil)
-                }
-                .help("Pop")
+            // Principal area - keep clean like Xcode
+            ToolbarItem(placement: .principal) {
+                Spacer()
             }
-            
+
+            // Plugin buttons
             ToolbarItemGroup(placement: .automatic) {
                 XcodeToolbarButton(icon: "terminal.fill") {
                     bottomPanelManager.openTab(type: .terminal)
@@ -353,9 +327,6 @@ struct MainLayout: View {
                     bottomPanelManager.openTab(type: .teamActivity)
                 }
                 .help("Team Activity")
-
-                DSTextField(placeholder: "Search commits...", text: $searchText)
-                    .frame(minWidth: 150, maxWidth: 250)
             }
         }
         .toolbarBackground(.clear, for: .windowToolbar)
@@ -2640,11 +2611,13 @@ struct CommitDetailPanel: View {
                         .foregroundColor(AppTheme.textMuted)
                     Spacer()
                     Button(action: onClose) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 10, weight: .bold))
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16))
                             .foregroundColor(AppTheme.textMuted)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.borderless)
+                    .frame(width: 24, height: 24)
+                    .help("Close")
                 }
 
                 // Commit message
@@ -4236,15 +4209,25 @@ struct WelcomeView: View {
             VStack(spacing: 24) {
                 Spacer()
 
-                Image(systemName: "arrow.triangle.branch")
-                    .font(.system(size: 80))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [AppTheme.accent, AppTheme.info],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                // App Icon
+                if let appIcon = NSImage(named: NSImage.applicationIconName) {
+                    Image(nsImage: appIcon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 120, height: 120)
+                        .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
+                } else {
+                    // Fallback to SF Symbol if app icon not found
+                    Image(systemName: "arrow.triangle.branch")
+                        .font(.system(size: 80))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [AppTheme.accent, AppTheme.info],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
+                }
 
                 Text("GitMac")
                     .font(.system(size: 36, weight: .bold))
@@ -4460,6 +4443,46 @@ struct RepositoryTabBar: View {
                         RepoTab(tab: tab)
                     }
                 }
+            }
+
+            Spacer()
+
+            // Repository info (current branch, status)
+            if let repo = appState.currentRepository {
+                HStack(spacing: 12) {
+                    // Current branch
+                    if let branch = repo.currentBranch {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.triangle.branch")
+                                .font(.system(size: 11))
+                                .foregroundColor(AppTheme.accent)
+                            Text(branch.name)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(AppTheme.textPrimary)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(AppTheme.backgroundSecondary)
+                        .cornerRadius(4)
+                    }
+
+                    // Uncommitted changes indicator
+                    if !repo.status.staged.isEmpty || !repo.status.unstaged.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "circle.fill")
+                                .font(.system(size: 6))
+                                .foregroundColor(AppTheme.warning)
+                            Text("\(repo.status.staged.count + repo.status.unstaged.count)")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(AppTheme.textSecondary)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(AppTheme.warning.opacity(0.15))
+                        .cornerRadius(4)
+                    }
+                }
+                .padding(.horizontal, 12)
             }
 
             Spacer()
