@@ -19,12 +19,16 @@ struct BranchSelectorButton: View {
                         onCheckout(branch)
                     } label: {
                         HStack {
-                            Image(systemName: "arrow.triangle.branch")
+                            Image(systemName: branch.isCurrent ? "star.circle.fill" : "arrow.triangle.branch")
+                                .foregroundColor(branch.isCurrent ? AppTheme.warning : .primary)
+                                .symbolRenderingMode(.hierarchical)
                             Text(branch.name)
+                                .fontWeight(branch.isCurrent ? .bold : .regular)
                             Spacer()
                             if branch.isCurrent {
-                                Image(systemName: "checkmark")
+                                Image(systemName: "checkmark.seal.fill")
                                     .foregroundColor(AppTheme.success)
+                                    .symbolRenderingMode(.multicolor)
                             }
                         }
                     }
@@ -40,7 +44,8 @@ struct BranchSelectorButton: View {
                             onCheckout(branch)
                         } label: {
                             HStack {
-                                Image(systemName: "arrow.triangle.branch")
+                                Image(systemName: "cloud.fill")
+                                    .symbolRenderingMode(.hierarchical)
                                 Text(branch.name)
                             }
                         }
@@ -54,22 +59,26 @@ struct BranchSelectorButton: View {
                 // Create new branch
                 NotificationCenter.default.post(name: .showCreateBranchSheet, object: nil)
             } label: {
-                Label("Create New Branch...", systemImage: "plus.circle")
+                Label("Create New Branch...", systemImage: "plus.app.fill")
+                    .symbolRenderingMode(.hierarchical)
             }
         } label: {
             HStack(spacing: DesignTokens.Spacing.xs) {
-                Image(systemName: "arrow.triangle.branch")
+                Image(systemName: currentBranch != nil ? "point.3.connected.trianglepath.dotted" : "arrow.triangle.branch")
                     .font(DesignTokens.Typography.callout)
                     .foregroundColor(AppTheme.accent)
+                    .symbolRenderingMode(.hierarchical)
 
                 Text(currentBranch?.name ?? "No Branch")
                     .font(DesignTokens.Typography.callout)
+                    .fontWeight(currentBranch != nil ? .semibold : .regular)
                     .foregroundColor(theme.text)
                     .lineLimit(1)
 
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
+                Image(systemName: "chevron.down.circle.fill")
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(theme.textMuted)
+                    .symbolRenderingMode(.hierarchical)
             }
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .padding(.vertical, DesignTokens.Spacing.xs)

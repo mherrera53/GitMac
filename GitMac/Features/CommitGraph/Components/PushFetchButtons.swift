@@ -14,26 +14,38 @@ struct PushFetchButtons: View {
         let theme = Color.Theme(themeManager.colors)
 
         return HStack(spacing: DesignTokens.Spacing.xs) {
-            // Push button
+            // Push button with enhanced icons
             Button(action: onPush) {
                 HStack(spacing: DesignTokens.Spacing.xs) {
-                    Image(systemName: "arrow.up.circle.fill")
+                    Image(systemName: aheadCount > 0 ? "arrow.up.square.fill" : "arrow.up.circle")
                         .font(DesignTokens.Typography.callout)
                         .foregroundColor(aheadCount > 0 ? AppTheme.success : theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
 
                     Text("Push")
                         .font(DesignTokens.Typography.callout)
+                        .fontWeight(aheadCount > 0 ? .semibold : .regular)
                         .foregroundColor(theme.text)
 
                     if aheadCount > 0 {
-                        Text("\(aheadCount)")
-                            .font(DesignTokens.Typography.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(AppTheme.textPrimary)
-                            .padding(.horizontal, DesignTokens.Spacing.xs)
-                            .padding(.vertical, 2)
-                            .background(AppTheme.success)
-                            .clipShape(Capsule())
+                        ZStack {
+                            Capsule()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [AppTheme.success, AppTheme.success.opacity(0.8)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .shadow(color: AppTheme.success.opacity(0.3), radius: 2, x: 0, y: 1)
+
+                            Text("\(aheadCount)")
+                                .font(DesignTokens.Typography.caption2.monospacedDigit())
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                        }
+                        .frame(height: 18)
+                        .padding(.horizontal, DesignTokens.Spacing.xs)
                     }
                 }
                 .padding(.horizontal, DesignTokens.Spacing.sm)
@@ -45,20 +57,22 @@ struct PushFetchButtons: View {
             .disabled(aheadCount == 0 || currentBranch == nil)
             .help(aheadCount > 0 ? "Push \(aheadCount) commits" : "Nothing to push")
 
-            // Fetch button
+            // Fetch button with enhanced icons
             Button(action: onFetch) {
                 HStack(spacing: DesignTokens.Spacing.xs) {
-                    Image(systemName: "arrow.down.circle.fill")
+                    Image(systemName: behindCount > 0 ? "arrow.down.square.fill" : "arrow.down.circle")
                         .font(DesignTokens.Typography.callout)
                         .foregroundColor(behindCount > 0 ? AppTheme.warning : theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
 
                     Text("Fetch")
                         .font(DesignTokens.Typography.callout)
+                        .fontWeight(behindCount > 0 ? .semibold : .regular)
                         .foregroundColor(theme.text)
 
                     if let lastFetch = lastFetchDate {
                         Text("(\(relativeTime(from: lastFetch)))")
-                            .font(DesignTokens.Typography.caption2)
+                            .font(DesignTokens.Typography.caption2.monospacedDigit())
                             .foregroundColor(theme.textMuted)
                     }
                 }

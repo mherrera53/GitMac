@@ -26,9 +26,10 @@ struct BranchPanelView: View {
                 Button(action: {
                     NotificationCenter.default.post(name: .showCreateBranchSheet, object: nil)
                 }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(theme.textSecondary)
+                    Image(systemName: "plus.app.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(AppTheme.accent)
+                        .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
                 .help("Create branch")
@@ -146,31 +147,49 @@ struct BranchSection: View {
 
         return Button(action: onToggle) {
             HStack(spacing: DesignTokens.Spacing.xs) {
-                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
+                Image(systemName: isExpanded ? "chevron.down.circle.fill" : "chevron.right.circle.fill")
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundColor(theme.textMuted)
-                    .frame(width: 12)
+                    .symbolRenderingMode(.hierarchical)
+                    .frame(width: 14)
 
-                Image(systemName: icon)
-                    .font(.system(size: 12))
-                    .foregroundColor(theme.textMuted)
+                Image(systemName: enhancedIcon)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppTheme.accent)
+                    .symbolRenderingMode(.hierarchical)
 
                 Text(title)
                     .font(DesignTokens.Typography.caption)
-                    .fontWeight(.medium)
+                    .fontWeight(.semibold)
                     .foregroundColor(theme.text)
 
                 Spacer()
 
                 Text("\(count)")
-                    .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(theme.textMuted)
+                    .font(DesignTokens.Typography.caption2.monospacedDigit())
+                    .fontWeight(.bold)
+                    .foregroundColor(theme.textSecondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(theme.backgroundSecondary)
+                    .clipShape(Capsule())
             }
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .padding(.vertical, DesignTokens.Spacing.xs)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private var enhancedIcon: String {
+        switch icon {
+        case "laptopcomputer":
+            return "desktopcomputer"
+        case "cloud":
+            return "cloud.fill"
+        default:
+            return icon
+        }
     }
 }
 
@@ -188,45 +207,63 @@ struct BranchRow: View {
         let theme = Color.Theme(themeManager.colors)
 
         return HStack(spacing: DesignTokens.Spacing.xs) {
-            // Current indicator
+            // Current indicator with enhanced visuals
             if isCurrent {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(AppTheme.success)
+                Image(systemName: "star.circle.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(AppTheme.warning)
+                    .symbolRenderingMode(.multicolor)
             } else {
-                Circle()
-                    .fill(Color.branchColor(0))
-                    .frame(width: 8, height: 8)
-                    .opacity(isHovered ? 1.0 : 0.5)
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.branchColor(0).opacity(0.3), Color.branchColor(0).opacity(0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 10, height: 10)
+
+                    Circle()
+                        .strokeBorder(Color.branchColor(0), lineWidth: 1.5)
+                        .frame(width: 10, height: 10)
+                }
+                .opacity(isHovered ? 1.0 : 0.6)
             }
 
             // Branch name
             Text(branch.displayName)
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(isCurrent ? AppTheme.success : theme.text)
+                .fontWeight(isCurrent ? .bold : .medium)
+                .foregroundColor(isCurrent ? AppTheme.warning : theme.text)
                 .lineLimit(1)
 
             Spacer()
 
-            // Ahead/Behind indicators
+            // Ahead/Behind indicators with enhanced icons
             if branch.ahead > 0 || branch.behind > 0 {
-                HStack(spacing: DesignTokens.Spacing.xxs) {
+                HStack(spacing: 2) {
                     if branch.ahead > 0 {
                         HStack(spacing: 2) {
-                            Image(systemName: "arrow.up")
-                                .font(.system(size: 8))
+                            Image(systemName: "arrow.up.circle.fill")
+                                .font(.system(size: 9))
+                                .symbolRenderingMode(.hierarchical)
                             Text("\(branch.ahead)")
-                                .font(DesignTokens.Typography.caption2)
+                                .font(DesignTokens.Typography.caption2.monospacedDigit())
+                                .fontWeight(.semibold)
                         }
                         .foregroundColor(AppTheme.success)
                     }
 
                     if branch.behind > 0 {
                         HStack(spacing: 2) {
-                            Image(systemName: "arrow.down")
-                                .font(.system(size: 8))
+                            Image(systemName: "arrow.down.circle.fill")
+                                .font(.system(size: 9))
+                                .symbolRenderingMode(.hierarchical)
                             Text("\(branch.behind)")
-                                .font(DesignTokens.Typography.caption2)
+                                .font(DesignTokens.Typography.caption2.monospacedDigit())
+                                .fontWeight(.semibold)
                         }
                         .foregroundColor(AppTheme.warning)
                     }
@@ -247,7 +284,8 @@ struct BranchRow: View {
             Button {
                 onCheckout()
             } label: {
-                Label("Checkout", systemImage: "arrow.uturn.backward")
+                Label("Checkout", systemImage: "arrow.uturn.backward.circle.fill")
+                    .symbolRenderingMode(.hierarchical)
             }
 
             if !isCurrent {
@@ -256,7 +294,8 @@ struct BranchRow: View {
                 Button(role: .destructive) {
                     // Delete branch action
                 } label: {
-                    Label("Delete Branch...", systemImage: "trash")
+                    Label("Delete Branch...", systemImage: "trash.circle.fill")
+                        .symbolRenderingMode(.multicolor)
                 }
             }
         }

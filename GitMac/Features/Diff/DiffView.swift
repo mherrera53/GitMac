@@ -228,14 +228,8 @@ struct DiffView: View {
                     case .preview:
                         MarkdownView(content: previewContent, fileName: fileDiff.displayPath)
                     case .kaleidoscopeBlocks, .kaleidoscopeFluid, .kaleidoscopeUnified:
-                        // Placeholder - will be integrated in next phase
-                        OptimizedSplitDiffView(
-                            hunks: fileDiff.hunks,
-                            showLineNumbers: showLineNumbers,
-                            scrollOffset: $scrollOffset,
-                            viewportHeight: $viewportHeight,
-                            contentHeight: $contentHeight
-                        )
+                        // Kaleidoscope view - professional diff viewing
+                        KaleidoscopeDiffView(files: [fileDiff])
                     }
                 }
 

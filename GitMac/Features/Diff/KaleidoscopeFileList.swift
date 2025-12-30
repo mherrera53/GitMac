@@ -210,6 +210,10 @@ struct FileListRow: View {
         case .deleted: return "minus.circle.fill"
         case .renamed: return "arrow.right.circle.fill"
         case .copied: return "doc.on.doc.fill"
+        case .untracked: return "questionmark.circle.fill"
+        case .ignored: return "eye.slash.fill"
+        case .typeChanged: return "arrow.triangle.2.circlepath"
+        case .unmerged: return "exclamationmark.triangle.fill"
         }
     }
 
@@ -219,6 +223,10 @@ struct FileListRow: View {
         case .modified: return AppTheme.info
         case .deleted: return AppTheme.diffDeletion
         case .renamed, .copied: return AppTheme.warning
+        case .untracked: return AppTheme.textMuted
+        case .ignored: return AppTheme.textMuted
+        case .typeChanged: return AppTheme.warning
+        case .unmerged: return AppTheme.error
         }
     }
 

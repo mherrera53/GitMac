@@ -170,6 +170,7 @@
 		ec9b7c8e44624131b81f5568 /* GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9c9fdedb7dc04c73bd87a8f7 /* GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift */; };
 		E9332D8207AA4396BE97A94028738F7A /* GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04CA4782601B409EAEA2EB99D6366C89 /* GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift */; };
 		C8D7CCA951A440BC93A41FABA50A74ED /* GitMac/UI/Components/Xcode/XcodeSidebarNavigator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D39C3A3BAFB4D4EBE25D4F768276DDB /* GitMac/UI/Components/Xcode/XcodeSidebarNavigator.swift */; };
+		027F3FAE7E334E4F8EE74157ADED315E /* GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63456279A1024DB6B5BDCEF024F61BB3 /* GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift */; };
 		C1432F5677FB440BBBCE1D37 /* Core/Utils/FileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 785500BECF07420C8BF7154F /* Core/Utils/FileWatcher.swift */; };
 		C17B40AC6D74427DAB28B049 /* GitMac/UI/Components/Common/LayoutConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C58CC8B384497E977827CA /* GitMac/UI/Components/Common/LayoutConstants.swift */; };
 		C2B7667B558CE8196CE0A378 /* GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF4F843954F997AD46CDBAE8 /* GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift */; };
@@ -231,13 +232,6 @@
 		REPOCTX01B526F46E3958E34 /* Core/Git/RepositoryContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = REPOCTX01F526F46E3958E34 /* Core/Git/RepositoryContext.swift */; };
 		UNIFCTX001B526F46E3958E3 /* GitMac/UI/Components/UnifiedFileContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = UNIFCTX001F526F46E3958E3 /* GitMac/UI/Components/UnifiedFileContextMenu.swift */; };
 		WKFLW001B526F46E3958E34A /* WorkflowsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WKFLW001F526F46E3958E34A /* WorkflowsView.swift */; };
-		7E0B06280A7145238E342804 /* GitMac/Features/Diff/KaleidoscopeDiffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76034C7AC2144C72AD82AF4A /* GitMac/Features/Diff/KaleidoscopeDiffView.swift */; };
-		52B96A98A4774CF1B4305198 /* GitMac/Features/Diff/KaleidoscopeFileList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D5805E4A5C34724959F9BBC /* GitMac/Features/Diff/KaleidoscopeFileList.swift */; };
-		CE58E0BE294D46AE98171FA5 /* GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F066BEBE576B4EA78A322777 /* GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift */; };
-		563EB5C2FC094403A5EA6CB4 /* GitMac/Features/Diff/KaleidoscopeUnifiedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 057BA1D915714D2386CA044F /* GitMac/Features/Diff/KaleidoscopeUnifiedView.swift */; };
-		6408B3CA48F246D79704639D /* GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F470016394DE44D790EE9842 /* GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift */; };
-		B9212A45505E499B844CAD8F /* GitMac/Features/CommitGraph/Search/SearchSyntaxParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A55ECDFC44E34405A28A0A3F /* GitMac/Features/CommitGraph/Search/SearchSyntaxParser.swift */; };
-				A16268CFE22F400E80FF62FD /* GitMac/Features/CommitGraph/Search/SearchQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C43A77BAE1445FA8B282CC8 /* SearchQuery.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -427,6 +421,7 @@
 		9c9fdedb7dc04c73bd87a8f7 /* GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift; sourceTree = "<group>"; };
 		04CA4782601B409EAEA2EB99D6366C89 /* GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift; sourceTree = "<group>"; };
 		7D39C3A3BAFB4D4EBE25D4F768276DDB /* GitMac/UI/Components/Xcode/XcodeSidebarNavigator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Xcode/XcodeSidebarNavigator.swift; sourceTree = "<group>"; };
+		63456279A1024DB6B5BDCEF024F61BB3 /* GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift; sourceTree = "<group>"; };
 		CDC2D84E539F3E4F59585DB1 /* GitMac/UI/Components/Atoms/Display/DSIcon.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Atoms/Display/DSIcon.swift; sourceTree = SOURCE_ROOT; };
 		CF4F843954F997AD46CDBAE8 /* GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift; sourceTree = SOURCE_ROOT; };
 		CTXMNU01F526F46E3958E34A /* UI/Components/ContextMenus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI/Components/ContextMenus.swift; sourceTree = "<group>"; };
@@ -478,13 +473,6 @@
 		SRC001 /* App/GitMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/GitMacApp.swift; sourceTree = "<group>"; };
 		UNIFCTX001F526F46E3958E3 /* GitMac/UI/Components/UnifiedFileContextMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/UnifiedFileContextMenu.swift; sourceTree = "<group>"; };
 		WKFLW001F526F46E3958E34A /* WorkflowsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowsView.swift; sourceTree = "<group>"; };
-		76034C7AC2144C72AD82AF4A /* GitMac/Features/Diff/KaleidoscopeDiffView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Diff/KaleidoscopeDiffView.swift; sourceTree = "<group>"; };
-		6D5805E4A5C34724959F9BBC /* GitMac/Features/Diff/KaleidoscopeFileList.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Diff/KaleidoscopeFileList.swift; sourceTree = "<group>"; };
-		F066BEBE576B4EA78A322777 /* GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift; sourceTree = "<group>"; };
-		057BA1D915714D2386CA044F /* GitMac/Features/Diff/KaleidoscopeUnifiedView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Diff/KaleidoscopeUnifiedView.swift; sourceTree = "<group>"; };
-		F470016394DE44D790EE9842 /* GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift; sourceTree = "<group>"; };
-		A55ECDFC44E34405A28A0A3F /* GitMac/Features/CommitGraph/Search/SearchSyntaxParser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitMac/Features/CommitGraph/Search/SearchSyntaxParser.swift; sourceTree = "<group>"; };
-				2C43A77BAE1445FA8B282CC8 /* GitMac/Features/CommitGraph/Search/SearchQuery.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitMac/Features/CommitGraph/Search/SearchQuery.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1081,13 +1069,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A16268CFE22F400E80FF62FD /* GitMac/Features/CommitGraph/Search/SearchQuery.swift in Sources */,
-				7E0B06280A7145238E342804 /* GitMac/Features/Diff/KaleidoscopeDiffView.swift in Sources */,
-				52B96A98A4774CF1B4305198 /* GitMac/Features/Diff/KaleidoscopeFileList.swift in Sources */,
-				CE58E0BE294D46AE98171FA5 /* GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift in Sources */,
-				563EB5C2FC094403A5EA6CB4 /* GitMac/Features/Diff/KaleidoscopeUnifiedView.swift in Sources */,
-				6408B3CA48F246D79704639D /* GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift in Sources */,
-				B9212A45505E499B844CAD8F /* GitMac/Features/CommitGraph/Search/SearchSyntaxParser.swift in Sources */,
 				11412D2CD2554F6880201DCC /* Features/RepoGroups/RepoGroupsService.swift in Sources */,
 				B6FF711E9D904DC5A13E334F /* GitMac/UI/Components/Commit/CommitMessageArea.swift in Sources */,
 				C17B40AC6D74427DAB28B049 /* GitMac/UI/Components/Common/LayoutConstants.swift in Sources */,
@@ -1209,6 +1190,7 @@
 				ec9b7c8e44624131b81f5568 /* GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift in Sources */,
 				E9332D8207AA4396BE97A94028738F7A /* GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift in Sources */,
 				C8D7CCA951A440BC93A41FABA50A74ED /* GitMac/UI/Components/Xcode/XcodeSidebarNavigator.swift in Sources */,
+				027F3FAE7E334E4F8EE74157ADED315E /* GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift in Sources */,
 				33E17B57FA9D4CA1B3B708A3 /* GitMac/Core/Models/GitHook.swift in Sources */,
 				608D9FA09DC9438CB9AEC4F8 /* GitMac/Core/Services/GitHooksService.swift in Sources */,
 				DCA2305BB8A842369E2DFDE0 /* GitMac/Features/GitHooks/GitHooksView.swift in Sources */,

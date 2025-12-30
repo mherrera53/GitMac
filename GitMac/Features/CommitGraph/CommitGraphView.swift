@@ -1072,6 +1072,7 @@ struct BranchBadge: View {
     let isHead: Bool
     let isTag: Bool
     @StateObject private var themeManager = ThemeManager.shared
+    @State private var isHovered = false
 
     init(name: String, color: Color, isHead: Bool = false, isTag: Bool = false) {
         self.name = name
@@ -1083,28 +1084,99 @@ struct BranchBadge: View {
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
 
+        // Enhanced visual hierarchy with better SF Symbols
         return HStack(spacing: DesignTokens.Spacing.xs) {
-            Image(systemName: iconName)
-                .font(DesignTokens.Typography.caption2)
-                .fontWeight(.semibold)
-                .foregroundColor(theme.textSecondary)
+            // Premium icon with gradient background
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [color.opacity(0.3), color.opacity(0.1)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 16, height: 16)
+
+                Image(systemName: iconName)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(color)
+                    .symbolRenderingMode(symbolMode)
+            }
+
             Text(name)
                 .font(DesignTokens.Typography.caption2)
-                .fontWeight(.medium)
+                .fontWeight(isHead ? .bold : .semibold)
                 .lineLimit(1)
         }
         .padding(.horizontal, DesignTokens.Spacing.sm)
         .padding(.vertical, DesignTokens.Spacing.xs)
-        .background(color.opacity(0.2))
-        .foregroundColor(color)
-        .clipShape(Capsule())
-        .overlay(Capsule().stroke(color.opacity(0.4), lineWidth: 1))
+        // Glassmorphic background
+        .background(
+            ZStack {
+                // Base layer with blur effect
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(color.opacity(isHovered ? 0.25 : 0.15))
+
+                // Subtle inner shadow
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.1),
+                                Color.clear
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+            }
+        )
+        .foregroundColor(isHead ? color : color.opacity(0.9))
+        // Enhanced border with glow effect
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            color.opacity(isHovered ? 0.7 : 0.5),
+                            color.opacity(isHovered ? 0.4 : 0.2)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: isHead ? 1.5 : 1
+                )
+        )
+        // Subtle glow for HEAD branches
+        .shadow(
+            color: isHead ? color.opacity(0.3) : .clear,
+            radius: 4,
+            x: 0,
+            y: 0
+        )
+        .scaleEffect(isHovered ? 1.05 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 
     private var iconName: String {
-        if isTag { return "tag.fill" }
-        if isHead { return "checkmark.circle.fill" }
+        if isTag {
+            return "tag.circle.fill"  // Better tag icon
+        }
+        if isHead {
+            return "star.circle.fill"  // Star for HEAD branches
+        }
         return "arrow.triangle.branch"
+    }
+
+    private var symbolMode: SymbolRenderingMode {
+        if isHead || isTag {
+            return .hierarchical
+        }
+        return .monochrome
     }
 }
 
@@ -1971,15 +2043,17 @@ struct FileChangesIndicator: View {
         let theme = Color.Theme(themeManager.colors)
 
         return HStack(spacing: DesignTokens.Spacing.xs) {
-            // File count icon
+            // File count icon with enhanced visuals
             HStack(spacing: DesignTokens.Spacing.xxs) {
-                Image(systemName: "doc.fill")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(theme.textMuted)
+                Image(systemName: filesChanged > 1 ? "doc.on.doc.fill" : "doc.text.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(filesChanged > 0 ? AppTheme.accent : theme.textMuted)
+                    .symbolRenderingMode(.hierarchical)
 
                 if filesChanged > 0 {
                     Text("\(filesChanged)")
-                        .font(DesignTokens.Typography.caption2)
+                        .font(DesignTokens.Typography.caption2.monospacedDigit())
+                        .fontWeight(.semibold)
                         .foregroundColor(theme.text)
                 }
             }

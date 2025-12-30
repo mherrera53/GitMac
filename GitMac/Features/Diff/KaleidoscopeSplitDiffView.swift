@@ -391,7 +391,7 @@ struct KaleidoscopeDiffLine: View {
         switch line.type {
         case .addition: return AppTheme.diffAddition
         case .deletion: return AppTheme.diffDeletion
-        case .context, .hunkHeader: return theme.textPrimary
+        case .context, .hunkHeader: return theme.text
         }
     }
 }
@@ -403,8 +403,6 @@ struct KaleidoscopeHunkHeader: View {
     @StateObject private var themeManager = ThemeManager.shared
 
     var body: some View {
-        let theme = Color.Theme(themeManager.colors)
-
         HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: "text.alignleft")
                 .font(DesignTokens.Typography.caption2)
@@ -450,7 +448,7 @@ struct EmptyDiffLine: View {
 // MARK: - Content Height Preference Key
 
 struct ContentHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
+    nonisolated(unsafe) static var defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = max(value, nextValue())
     }

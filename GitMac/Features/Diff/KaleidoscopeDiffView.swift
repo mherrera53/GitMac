@@ -255,53 +255,58 @@ struct KaleidoscopeDiffView: View {
         }
     }
 
+    @ViewBuilder
     private var changesOnlyView: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
-                ForEach(fileDiff.hunks) { hunk in
-                    VStack(alignment: .leading, spacing: 0) {
-                        // Hunk header
-                        Text(hunk.header)
-                            .font(DesignTokens.Typography.caption.monospaced())
-                            .foregroundColor(AppTheme.accent)
-                            .padding(DesignTokens.Spacing.sm)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(AppTheme.accent.opacity(0.08))
-
-                        // Only show changed lines
-                        ForEach(hunk.lines.filter { $0.type != .context }) { line in
-                            HStack(spacing: DesignTokens.Spacing.xs) {
-                                Image(systemName: line.type == .addition ? "plus" : "minus")
-                                    .font(DesignTokens.Typography.caption2)
-                                    .foregroundColor(line.type == .addition ? AppTheme.diffAddition : AppTheme.diffDeletion)
-
-                                Text(line.content)
-                                    .font(DesignTokens.Typography.diffLine)
-                                    .foregroundColor(AppTheme.textPrimary)
-                            }
-                            .padding(.horizontal, DesignTokens.Spacing.sm)
-                            .padding(.vertical, 4)
-                            .background(line.type == .addition ? AppTheme.diffAdditionBg : AppTheme.diffDeletionBg)
-                        }
+            if let file = selectedFile {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                    ForEach(file.hunks) { hunk in
+                        changesHunkView(hunk: hunk)
                     }
-                    .background(AppTheme.backgroundSecondary)
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
                 }
+                .padding()
             }
-            .padding()
         }
+    }
+
+    @ViewBuilder
+    private func changesHunkView(hunk: DiffHunk) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Hunk header
+            Text(hunk.header)
+                .font(DesignTokens.Typography.caption.monospaced())
+                .foregroundColor(AppTheme.accent)
+                .padding(DesignTokens.Spacing.sm)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppTheme.accent.opacity(0.08))
+
+            // Only show changed lines
+            ForEach(hunk.lines.filter { $0.type != .context }) { line in
+                changesLineView(line: line)
+            }
+        }
+        .background(AppTheme.backgroundSecondary)
+        .cornerRadius(DesignTokens.CornerRadius.lg)
+    }
+
+    @ViewBuilder
+    private func changesLineView(line: DiffLine) -> some View {
+        HStack(spacing: DesignTokens.Spacing.xs) {
+            Image(systemName: line.type == .addition ? "plus" : "minus")
+                .font(DesignTokens.Typography.caption2)
+                .foregroundColor(line.type == .addition ? AppTheme.diffAddition : AppTheme.diffDeletion)
+
+            Text(line.content)
+                .font(DesignTokens.Typography.diffLine)
+                .foregroundColor(AppTheme.textPrimary)
+        }
+        .padding(.horizontal, DesignTokens.Spacing.sm)
+        .padding(.vertical, 4)
+        .background(line.type == .addition ? AppTheme.diffAdditionBg : AppTheme.diffDeletionBg)
     }
 
     // MARK: - Helpers
-
-    private func updateVersionSelection() {
-        if let commitA = selectedCommitA {
-            selectedVersionA = commitA.sha
-        }
-        if let commitB = selectedCommitB {
-            selectedVersionB = commitB.sha
-        }
-    }
+    // Version selection helpers removed - not needed for current implementation
 }
 
 // MARK: - Kaleidoscope View Mode (Exact names from Kaleidoscope)
@@ -379,102 +384,7 @@ struct ToolbarToggle: View {
     }
 }
 
-// MARK: - Toolbar Button
-
-struct ToolbarButton: View {
-    let icon: String
-    let tooltip: String
-    let action: () -> Void
-
-    @State private var isHovered = false
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textSecondary)
-                .frame(width: 32, height: 32)
-                .background(
-                    RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.sm)
-                        .fill(isHovered ? AppTheme.hover : Color.clear)
-                )
-        }
-        .buttonStyle(.plain)
-        .help(tooltip)
-        .onHover { isHovered = $0 }
-    }
-}
+// MARK: - Toolbar Button (defined in DiffToolbar.swift - removed duplicate)
 
 // MARK: - Preview
 
-#if DEBUG
-struct KaleidoscopeDiffView_Previews: PreviewProvider {
-    static var sampleCommits: [Commit] {
-        [
-            Commit(
-                id: UUID(),
-                sha: "380fe8c2a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
-                shortSHA: "380fe8c2",
-                message: "Add new feature for user authentication\n\nThis commit adds OAuth2 support and improves security.",
-                summary: "Add new feature for user authentication",
-                body: "This commit adds OAuth2 support and improves security.",
-                author: "Luke Sandberg",
-                authorEmail: "luke@example.com",
-                authorDate: Date().addingTimeInterval(-3600),
-                committer: "Luke Sandberg",
-                committerEmail: "luke@example.com",
-                committerDate: Date().addingTimeInterval(-3600),
-                parentSHAs: []
-            ),
-            Commit(
-                id: UUID(),
-                sha: "1300acfeb2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1",
-                shortSHA: "1300acfe",
-                message: "Fix authentication bug in login flow",
-                summary: "Fix authentication bug in login flow",
-                body: nil,
-                author: "Niklas Mischkulnig",
-                authorEmail: "niklas@example.com",
-                authorDate: Date().addingTimeInterval(-7200),
-                committer: "Niklas Mischkulnig",
-                committerEmail: "niklas@example.com",
-                committerDate: Date().addingTimeInterval(-7200),
-                parentSHAs: []
-            ),
-        ]
-    }
-
-    static var sampleDiff: FileDiff {
-        FileDiff(
-            oldPath: "turbopack/crates/turbopack-core/src/resolve/mod.rs",
-            newPath: "turbopack/crates/turbopack-core/src/resolve/mod.rs",
-            status: .modified,
-            hunks: [
-                DiffHunk(
-                    header: "@@ -16,8 +16,9 @@ use turbo_tasks::{",
-                    oldStart: 16,
-                    oldLines: 8,
-                    newStart: 16,
-                    newLines: 9,
-                    lines: [
-                        DiffLine(type: .context, content: "use turbo_tasks::{", oldLineNumber: 16, newLineNumber: 16),
-                        DiffLine(type: .deletion, content: "    TryJoinIterExt, Value, Vc, trace::TraceRawVcs,", oldLineNumber: 17, newLineNumber: nil),
-                        DiffLine(type: .addition, content: "    trace::TraceRawVcs, TryJoinIterExt, Value, Vc,", oldLineNumber: nil, newLineNumber: 17),
-                        DiffLine(type: .context, content: "};", oldLineNumber: 18, newLineNumber: 18),
-                    ]
-                ),
-            ],
-            additions: 39,
-            deletions: 15
-        )
-    }
-
-    static var previews: some View {
-        KaleidoscopeDiffView(
-            fileDiff: sampleDiff,
-            commits: sampleCommits
-        )
-        .frame(width: 1400, height: 800)
-    }
-}
-#endif

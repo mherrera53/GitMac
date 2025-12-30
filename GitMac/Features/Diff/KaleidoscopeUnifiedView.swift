@@ -54,7 +54,7 @@ struct KaleidoscopeUnifiedView: View {
 
     var body: some View {
         ScrollView([.vertical, .horizontal], showsIndicators: true) {
-            LazyVStack(spacing: 0, alignment: .leading) {
+            LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(unifiedLines) { line in
                     UnifiedLineRow(
                         line: line,
@@ -149,8 +149,6 @@ struct UnifiedLineRow: View {
 
     @ViewBuilder
     private var sideLabel: some View {
-        let theme = Color.Theme(themeManager.colors)
-
         switch line.side {
         case .a:
             Text("A")
@@ -214,7 +212,7 @@ struct UnifiedLineRow: View {
         case .addition: return AppTheme.diffAddition
         case .deletion: return AppTheme.diffDeletion
         case .hunkHeader: return AppTheme.accent
-        case .context: return theme.textPrimary
+        case .context: return theme.text
         }
     }
 }
@@ -222,7 +220,7 @@ struct UnifiedLineRow: View {
 // MARK: - Content Height Preference Key
 
 struct UnifiedContentHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
+    nonisolated(unsafe) static var defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = max(value, nextValue())
     }

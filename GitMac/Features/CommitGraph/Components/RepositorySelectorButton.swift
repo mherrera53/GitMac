@@ -20,11 +20,14 @@ struct RepositorySelectorButton: View {
                             }
                         } label: {
                             HStack {
-                                Image(systemName: "folder.fill")
+                                Image(systemName: "folder.fill.badge.gearshape")
+                                    .symbolRenderingMode(.hierarchical)
                                 Text(repo.name)
                                 Spacer()
                                 if repo.path == currentRepo?.path {
-                                    Image(systemName: "checkmark")
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(AppTheme.success)
+                                        .symbolRenderingMode(.multicolor)
                                 }
                             }
                         }
@@ -37,22 +40,25 @@ struct RepositorySelectorButton: View {
             Button {
                 showPicker = true
             } label: {
-                Label("Open Repository...", systemImage: "folder.badge.plus")
+                Label("Open Repository...", systemImage: "plus.rectangle.on.folder.fill")
+                    .symbolRenderingMode(.hierarchical)
             }
         } label: {
             HStack(spacing: DesignTokens.Spacing.xs) {
-                Image(systemName: "folder.fill")
+                Image(systemName: currentRepo != nil ? "folder.fill.badge.gearshape" : "folder.badge.questionmark")
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(theme.text)
+                    .foregroundColor(currentRepo != nil ? AppTheme.accent : theme.textMuted)
+                    .symbolRenderingMode(.hierarchical)
 
                 Text(currentRepo?.name ?? "No Repository")
                     .font(DesignTokens.Typography.callout)
                     .foregroundColor(theme.text)
                     .lineLimit(1)
 
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
+                Image(systemName: "chevron.down.circle.fill")
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(theme.textMuted)
+                    .symbolRenderingMode(.hierarchical)
             }
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .padding(.vertical, DesignTokens.Spacing.xs)

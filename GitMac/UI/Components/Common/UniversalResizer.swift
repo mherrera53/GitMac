@@ -152,6 +152,7 @@ struct UniversalResizer: View {
     let minDimension: CGFloat
     let maxDimension: CGFloat
     let orientation: Orientation
+    var invertDirection: Bool = false  // For right-side panels
 
     // State
     @State private var isHovering = false
@@ -171,7 +172,8 @@ struct UniversalResizer: View {
                 isDragging: $isDragging,
                 minDimension: minDimension,
                 maxDimension: maxDimension,
-                orientation: orientation
+                orientation: orientation,
+                invertDirection: invertDirection
             )
 
             // Visual indicator (non-interactive)
@@ -210,6 +212,7 @@ private struct ResizerViewRepresentable: NSViewRepresentable {
     let minDimension: CGFloat
     let maxDimension: CGFloat
     let orientation: UniversalResizer.Orientation
+    let invertDirection: Bool
 
     func makeNSView(context: Context) -> UniversalResizerNSView {
         let view = UniversalResizerNSView()
@@ -228,9 +231,15 @@ private struct ResizerViewRepresentable: NSViewRepresentable {
 
     private func setupCallbacks(for view: UniversalResizerNSView) {
         view.onDragChanged = { [minDimension, maxDimension] delta in
-            // For horizontal: positive delta (move right) = increase left panel width
-            // For vertical: positive delta (move up) = increase height, negative (move down) = decrease height
-            let adjustedDelta = orientation == .vertical ? -delta : delta
+            // For left panel: drag right (+) = increase width
+            // For right panel: drag left (-) = increase width (invert)
+            // For vertical: drag up (+) = decrease height (invert)
+            var adjustedDelta = delta
+            if orientation == .vertical {
+                adjustedDelta = -delta
+            } else if invertDirection {
+                adjustedDelta = -delta
+            }
 
             DispatchQueue.main.async {
                 let newDimension = dimension + adjustedDelta

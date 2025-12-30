@@ -93,26 +93,19 @@ struct ContentView: View {
 
     @ViewBuilder
     private var mainLayout: some View {
-        VStack(spacing: 0) {
-            // Tab Bar (only show if there are open repos)
-            if !appState.openTabs.isEmpty {
-                RepositoryTabBar()
-            }
-
-            // Main content
-            if appState.currentRepository != nil {
-                MainLayout(
-                    leftPanelWidth: $leftPanelWidth,
-                    rightPanelWidth: $rightPanelWidth,
-                    themeRefreshTrigger: themeRefreshTrigger,
-                    bottomPanelManager: bottomPanelManager
-                )
-            } else {
-                WelcomeView(
-                    onOpen: { showOpenPanel = true },
-                    onClone: { showCloneSheet = true }
-                )
-            }
+        // Main content
+        if appState.currentRepository != nil {
+            MainLayout(
+                leftPanelWidth: $leftPanelWidth,
+                rightPanelWidth: $rightPanelWidth,
+                themeRefreshTrigger: themeRefreshTrigger,
+                bottomPanelManager: bottomPanelManager
+            )
+        } else {
+            WelcomeView(
+                onOpen: { showOpenPanel = true },
+                onClone: { showCloneSheet = true }
+            )
         }
     }
     
@@ -250,18 +243,22 @@ struct MainLayout: View {
                 orientation: .horizontal
             )
 
-            // Center Area - Graph/Diff + Bottom Panel
+            // Center Area - Tabs + Graph/Diff + Bottom Panel
             VStack(spacing: 0) {
+                // Repository Tab Bar (only in center area)
+                if !appState.openTabs.isEmpty {
+                    RepositoryTabBar()
+                        .environmentObject(appState)
+                }
+
                 // Center Panel - Graph OR Diff
                 CenterPanel(selectedFileDiff: $selectedFileDiff, isLoadingDiff: $isLoadingDiff)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(AppTheme.background)
 
-                // Unified Bottom Panel with Tabs (only in center area)
-                if bottomPanelManager.isPanelVisible {
-                    UnifiedBottomPanel(panelManager: bottomPanelManager)
-                        .environmentObject(appState)
-                }
+                // Unified Bottom Panel with Tabs (always visible, collapses to thin bar)
+                UnifiedBottomPanel(panelManager: bottomPanelManager)
+                    .environmentObject(appState)
             }
 
             // Resizer
@@ -269,7 +266,8 @@ struct MainLayout: View {
                 dimension: $rightPanelWidth,
                 minDimension: 300,
                 maxDimension: 500,
-                orientation: .horizontal
+                orientation: .horizontal,
+                invertDirection: true  // Right panel: drag left to increase width
             )
 
             // Right Panel - Staging/Commit
@@ -476,21 +474,6 @@ struct LeftSidebarPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Repository Header
-            if let repo = appState.currentRepository {
-                HStack(spacing: 8) {
-                    Image(systemName: "folder.fill")
-                        .foregroundColor(AppTheme.accent)
-                    Text(repo.name)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(AppTheme.textPrimary)
-                    Spacer()
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(AppTheme.backgroundSecondary)
-            }
-
             // Xcode-style horizontal navigator tabs
             XcodeSidebarNavigatorBar(selectedNavigator: $selectedNavigator)
 
@@ -508,7 +491,7 @@ struct LeftSidebarPanel: View {
     private var navigatorContent: some View {
         switch selectedNavigator {
         case .repositories:
-            RecentRepositoriesList()
+            RepositoryHierarchicalNavigator()
 
         case .branches:
             // Branch search bar
@@ -4494,7 +4477,7 @@ struct RepositoryTabBar: View {
             .padding(.horizontal, 8)
             .help("Open Repository")
         }
-        .frame(height: 38)
+        .frame(height: 32)
         .background(AppTheme.background)
         .overlay(
             Rectangle()
@@ -4528,46 +4511,57 @@ struct RepoTab: View {
     let tab: RepositoryTab
     @EnvironmentObject var appState: AppState
     @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var groupsService = RepoGroupsService.shared
     @State private var isHovered = false
 
     var isActive: Bool {
         appState.activeTabId == tab.id
     }
 
+    var groupColor: Color? {
+        let groups = groupsService.getGroupsForRepo(tab.repository.path)
+        guard let firstGroup = groups.first else { return nil }
+        return Color(hex: firstGroup.color)
+    }
+
     var body: some View {
-        HStack(spacing: 8) {
-            // Branch indicator dot - más grande y visible
-            Circle()
-                .fill(isActive ? AppTheme.success : AppTheme.success.opacity(0.6))
-                .frame(width: 10, height: 10)
-
-            // Repo name - más visible
-            Text(tab.repository.name)
-                .font(.system(size: 13, weight: isActive ? .semibold : .medium))
-                .foregroundColor(isActive ? AppTheme.textPrimary : AppTheme.textPrimary)
-                .lineLimit(1)
-
-            // Close button (show on hover or if active)
-            if isHovered || isActive {
-                Button {
-                    appState.closeTab(tab.id)
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(isActive ? AppTheme.textPrimary.opacity(0.8) : AppTheme.textSecondary)
-                }
-                .buttonStyle(.plain)
+        HStack(spacing: 6) {
+            // Group color indicator (left side)
+            if let color = groupColor {
+                Rectangle()
+                    .fill(color)
+                    .frame(width: 2)
             }
+
+            HStack(spacing: 6) {
+                // Repo name - compact
+                Text(tab.repository.name)
+                    .font(.system(size: 11, weight: isActive ? .medium : .regular))
+                    .foregroundColor(isActive ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    .lineLimit(1)
+
+                // Close button (show on hover or if active)
+                if isHovered || isActive {
+                    Button {
+                        appState.closeTab(tab.id)
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(AppTheme.textMuted)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(isActive ? AppTheme.accent : (isHovered ? AppTheme.backgroundSecondary : Color.clear))
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .fill(isActive ? AppTheme.backgroundSecondary : (isHovered ? AppTheme.hover : Color.clear))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .stroke(isActive ? Color.clear : AppTheme.border, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .stroke(isActive ? AppTheme.border : Color.clear, lineWidth: 0.5)
         )
         .onHover { isHovered = $0 }
         .onTapGesture {

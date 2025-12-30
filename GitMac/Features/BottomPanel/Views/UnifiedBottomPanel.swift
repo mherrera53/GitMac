@@ -13,15 +13,17 @@ struct UnifiedBottomPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Resizer handle at the top
-            UniversalResizer(
-                dimension: $panelManager.panelHeight,
-                minDimension: 100,
-                maxDimension: 600,
-                orientation: .vertical
-            )
+            // Resizer handle at the top (only when expanded)
+            if panelManager.isPanelVisible {
+                UniversalResizer(
+                    dimension: $panelManager.panelHeight,
+                    minDimension: 100,
+                    maxDimension: 600,
+                    orientation: .vertical
+                )
+            }
 
-            // Tab bar
+            // Tab bar (always visible)
             BottomPanelTabBar(
                 tabs: panelManager.openTabs,
                 activeTabId: panelManager.activeTabId,
@@ -36,16 +38,18 @@ struct UnifiedBottomPanel: View {
                 onTogglePanel: { panelManager.togglePanel() }
             )
 
-            // Content area
-            if let activeTab = panelManager.openTabs.first(where: { $0.id == panelManager.activeTabId }) {
-                BottomPanelContent(tab: activeTab)
-                    .environmentObject(appState)
-                    .id(activeTab.id) // Force re-render when switching tabs
-            } else {
-                EmptyPanelView()
+            // Content area (only when expanded)
+            if panelManager.isPanelVisible {
+                if let activeTab = panelManager.openTabs.first(where: { $0.id == panelManager.activeTabId }) {
+                    BottomPanelContent(tab: activeTab)
+                        .environmentObject(appState)
+                        .id(activeTab.id) // Force re-render when switching tabs
+                } else {
+                    EmptyPanelView()
+                }
             }
         }
-        .frame(height: panelManager.panelHeight)
+        .frame(height: panelManager.isPanelVisible ? panelManager.panelHeight : 28)
         .background(AppTheme.panel)
         .onChange(of: panelManager.panelHeight) { _, newHeight in
             // Auto-save height changes

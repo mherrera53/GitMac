@@ -92,9 +92,10 @@ struct CommitDetailPanel: View {
                 Spacer()
 
                 Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .semibold))
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
                 .help("Close")
@@ -107,16 +108,17 @@ struct CommitDetailPanel: View {
                 .foregroundColor(theme.text)
                 .lineLimit(2)
 
-            // Metadata
+            // Metadata with enhanced icons
             HStack(spacing: DesignTokens.Spacing.sm) {
                 Label {
                     Text(commit.author)
                         .font(DesignTokens.Typography.caption)
                         .foregroundColor(theme.textSecondary)
                 } icon: {
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(theme.textMuted)
+                    Image(systemName: "person.crop.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(AppTheme.accent)
+                        .symbolRenderingMode(.hierarchical)
                 }
 
                 Label {
@@ -124,9 +126,10 @@ struct CommitDetailPanel: View {
                         .font(DesignTokens.Typography.caption.monospaced())
                         .foregroundColor(theme.textSecondary)
                 } icon: {
-                    Image(systemName: "number")
-                        .font(.system(size: 10))
+                    Image(systemName: "number.circle.fill")
+                        .font(.system(size: 11))
                         .foregroundColor(theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
                 }
             }
         }
