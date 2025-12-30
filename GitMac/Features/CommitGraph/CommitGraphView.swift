@@ -691,6 +691,17 @@ struct CommitGraphView: View {
     @State private var themeRefreshTrigger = UUID()
     @State private var showBranchPanel = false
     @State private var showMinimap = false
+    @State private var showDetailPanel = false
+
+    private var selectedCommit: Commit? {
+        guard let lastId = lastSelectedId else { return nil }
+        return vm.timelineItems.compactMap { item -> Commit? in
+            if case .commit(let node) = item {
+                return node.commit
+            }
+            return nil
+        }.first(where: { $0.sha == lastId })
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -754,6 +765,21 @@ struct CommitGraphView: View {
                         onSelectCommit: { commit in
                             selectedIds = [commit.sha]
                             lastSelectedId = commit.sha
+                        }
+                    )
+                    .transition(.move(edge: .trailing))
+                }
+
+                // Detail Panel (right sidebar)
+                if showDetailPanel {
+                    Divider()
+
+                    CommitDetailPanel(
+                        commit: selectedCommit,
+                        onClose: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showDetailPanel = false
+                            }
                         }
                     )
                     .transition(.move(edge: .trailing))
@@ -1035,6 +1061,19 @@ struct CommitGraphView: View {
                 }
                 .buttonStyle(.plain)
                 .help("Toggle minimap")
+
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showDetailPanel.toggle()
+                    }
+                }) {
+                    Image(systemName: "sidebar.right")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(showDetailPanel ? AppTheme.accent : theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .buttonStyle(.plain)
+                .help("Toggle detail panel")
             }
 
             Divider()
