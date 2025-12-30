@@ -89,9 +89,9 @@ extension Color {
         }
 
         // MARK: - Diff Colors (Kaleidoscope-style)
-        var diffAddition: Color { success }
-        var diffDeletion: Color { error }
-        var diffChange: Color { warning }
+        var diffAddition: Color { colors.diffAddition.color }
+        var diffDeletion: Color { colors.diffDeletion.color }
+        var diffChange: Color { colors.diffChange.color }
         var diffAdditionBg: Color { diffAddition.opacity(0.08) }
         var diffDeletionBg: Color { diffDeletion.opacity(0.08) }
         var diffChangeBg: Color { diffChange.opacity(0.08) }
@@ -205,15 +205,15 @@ enum AppTheme {
     }
 
     // MARK: - Kaleidoscope-style Diff Colors
-    /// Professional diff colors inspired by Kaleidoscope
+    /// Professional diff colors - now using theme system for proper theme adaptation
     static var diffAddition: Color {
-        Color(red: 0.2, green: 0.78, blue: 0.35) // #34C759 - macOS green
+        Color.Theme(ThemeManager.shared.colors).diffAddition
     }
     static var diffDeletion: Color {
-        Color(red: 1.0, green: 0.23, blue: 0.19) // #FF3B30 - macOS red
+        Color.Theme(ThemeManager.shared.colors).diffDeletion
     }
     static var diffChange: Color {
-        Color(red: 0.0, green: 0.48, blue: 1.0) // #007AFF - macOS blue
+        Color.Theme(ThemeManager.shared.colors).diffChange
     }
     static var diffAdditionBg: Color {
         diffAddition.opacity(0.08)

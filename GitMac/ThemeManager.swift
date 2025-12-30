@@ -330,7 +330,12 @@ struct ColorScheme: Codable {
     let warning: CodableColor
     let error: CodableColor
     let info: CodableColor
-    
+
+    // Diff Colors (for all diff views including Kaleidoscope)
+    let diffAddition: CodableColor
+    let diffDeletion: CodableColor
+    let diffChange: CodableColor
+
     static func `default`(for theme: Theme) -> ColorScheme {
         switch theme {
         case .light:
@@ -381,6 +386,14 @@ struct ColorScheme: Codable {
         self.warning = custom.warning
         self.error = custom.error
         self.info = custom.info
+
+        // Use theme-appropriate diff colors or fallback to semantic colors
+        self.diffAddition = isLightTheme ?
+            CodableColor(hex: "#34C759") : CodableColor(hex: "#34C759")  // macOS green
+        self.diffDeletion = isLightTheme ?
+            CodableColor(hex: "#FF3B30") : CodableColor(hex: "#FF3B30")  // macOS red
+        self.diffChange = isLightTheme ?
+            CodableColor(hex: "#007AFF") : CodableColor(hex: "#007AFF")  // macOS blue
     }
 
     init(background: CodableColor, backgroundSecondary: CodableColor, backgroundTertiary: CodableColor,
@@ -391,7 +404,8 @@ struct ColorScheme: Codable {
          branchLocal: CodableColor, branchRemote: CodableColor, branchCurrent: CodableColor,
          graphLine1: CodableColor, graphLine2: CodableColor, graphLine3: CodableColor,
          graphLine4: CodableColor, graphLine5: CodableColor,
-         success: CodableColor, warning: CodableColor, error: CodableColor, info: CodableColor) {
+         success: CodableColor, warning: CodableColor, error: CodableColor, info: CodableColor,
+         diffAddition: CodableColor, diffDeletion: CodableColor, diffChange: CodableColor) {
         self.background = background
         self.backgroundSecondary = backgroundSecondary
         self.backgroundTertiary = backgroundTertiary
@@ -418,8 +432,11 @@ struct ColorScheme: Codable {
         self.warning = warning
         self.error = error
         self.info = info
+        self.diffAddition = diffAddition
+        self.diffDeletion = diffDeletion
+        self.diffChange = diffChange
     }
-    
+
     // Light Theme
     static let light = ColorScheme(
         background: CodableColor(hex: "#FFFFFF"),
@@ -447,9 +464,12 @@ struct ColorScheme: Codable {
         success: CodableColor(hex: "#28A745"),
         warning: CodableColor(hex: "#FF9800"),
         error: CodableColor(hex: "#DC3545"),
-        info: CodableColor(hex: "#2196F3")
+        info: CodableColor(hex: "#2196F3"),
+        diffAddition: CodableColor(hex: "#34C759"),  // macOS green
+        diffDeletion: CodableColor(hex: "#FF3B30"),  // macOS red
+        diffChange: CodableColor(hex: "#007AFF")     // macOS blue
     )
-    
+
     // Dark Theme
     static let dark = ColorScheme(
         background: CodableColor(hex: "#1E1E1E"),
@@ -477,9 +497,12 @@ struct ColorScheme: Codable {
         success: CodableColor(hex: "#4EC9B0"),
         warning: CodableColor(hex: "#CE9178"),
         error: CodableColor(hex: "#F48771"),
-        info: CodableColor(hex: "#569CD6")
+        info: CodableColor(hex: "#569CD6"),
+        diffAddition: CodableColor(hex: "#34C759"),  // macOS green
+        diffDeletion: CodableColor(hex: "#FF3B30"),  // macOS red
+        diffChange: CodableColor(hex: "#007AFF")     // macOS blue
     )
-    
+
     // System (adaptive)
     static let system = ColorScheme(
         background: CodableColor(hex: "#FFFFFF"),
@@ -507,7 +530,10 @@ struct ColorScheme: Codable {
         success: CodableColor(hex: "#28A745"),
         warning: CodableColor(hex: "#FF9800"),
         error: CodableColor(hex: "#DC3545"),
-        info: CodableColor(hex: "#2196F3")
+        info: CodableColor(hex: "#2196F3"),
+        diffAddition: CodableColor(hex: "#34C759"),  // macOS green
+        diffDeletion: CodableColor(hex: "#FF3B30"),  // macOS red
+        diffChange: CodableColor(hex: "#007AFF")     // macOS blue
     )
 }
 
