@@ -9,32 +9,20 @@ struct StatusIcon: View {
     var style: IconStyle = .badge
 
     enum IconSize {
-        case small
-        case medium
-        case large
-
+        case small      // 11pt - List items
+        case medium     // 12pt - Panel headers  
+        case large      // 14pt - Prominent indicators
+        
         var dimension: CGFloat {
             switch self {
-            case .small: return 12
-            case .medium: return 16
-            case .large: return 20
+            case .small: return 11
+            case .medium: return 12
+            case .large: return 14
             }
         }
-
-        var fontSize: CGFloat {
-            switch self {
-            case .small: return 8
-            case .medium: return 10
-            case .large: return 12
-            }
-        }
-
-        var cornerRadius: CGFloat {
-            switch self {
-            case .small: return 2
-            case .medium: return 3
-            case .large: return 4
-            }
+        
+        var fontWeight: Font.Weight {
+            .medium  // Consistent GitKraken weight
         }
     }
 
@@ -62,18 +50,16 @@ struct StatusIcon: View {
 
     private var badgeView: some View {
         Image(systemName: statusIcon)
-            .font(.system(size: size.dimension, weight: .semibold))
+            .font(.system(size: size.dimension, weight: size.fontWeight))
             .foregroundColor(statusColor)
             .symbolRenderingMode(status == .unmerged ? .multicolor : .hierarchical)
-            .frame(width: size.dimension, height: size.dimension)
     }
 
     private var inlineView: some View {
         Image(systemName: statusIcon)
-            .font(.system(size: size.dimension, weight: .medium))
+            .font(.system(size: size.dimension, weight: size.fontWeight))
             .foregroundColor(statusColor)
-            .symbolRenderingMode(status == .unmerged ? .multicolor : .monochrome)
-            .frame(width: size.dimension, height: size.dimension)
+            .symbolRenderingMode(status == .unmerged ? .multicolor : .hierarchical)
     }
 
     private var minimalView: some View {
@@ -84,10 +70,9 @@ struct StatusIcon: View {
 
     private var circleView: some View {
         Image(systemName: statusIcon)
-            .font(.system(size: size.dimension, weight: .semibold))
+            .font(.system(size: size.dimension, weight: size.fontWeight))
             .foregroundColor(statusColor)
             .symbolRenderingMode(status == .unmerged ? .multicolor : .hierarchical)
-            .frame(width: size.dimension, height: size.dimension)
     }
 
     // MARK: - Icon Mapping (GitKraken style)

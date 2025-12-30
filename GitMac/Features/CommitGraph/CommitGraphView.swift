@@ -934,14 +934,14 @@ struct CommitGraphView: View {
                         settings.filterAuthor = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(theme.error)
+                            .foregroundColor(AppTheme.error)
                     }
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.vertical, DesignTokens.Spacing.xs)
-                .background(theme.info.opacity(0.2))
-                .foregroundColor(theme.info)
+                .background(AppTheme.info.opacity(0.2))
+                .foregroundColor(AppTheme.info)
                 .cornerRadius(DesignTokens.CornerRadius.xl)
             }
 
@@ -1671,8 +1671,8 @@ struct StashBadge: View {
 
         return HStack(spacing: DesignTokens.Spacing.xxs + 1) {
             Image(systemName: "shippingbox.fill")
-                .font(.system(size: 8, weight: .bold)) // Graph badge font - intentionally small
-                .foregroundColor(theme.warning)
+                .font(.system(size: 9, weight: .medium)) // Inline indicator standard
+                .foregroundColor(AppTheme.warning)
             Text(name)
                 .font(DesignTokens.Typography.caption2)
                 .fontWeight(.semibold)
