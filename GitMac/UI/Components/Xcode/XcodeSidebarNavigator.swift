@@ -79,11 +79,11 @@ struct XcodeSidebarNavigatorButton: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 2) {
+            VStack(spacing: 0) {
                 Image(systemName: navigator.icon)
-                    .font(.system(size: 16, weight: isSelected ? .semibold : .regular))
+                    .font(.system(size: 13, weight: isSelected ? .medium : .regular))
                     .foregroundColor(iconColor)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 24, height: 22)
 
                 if isSelected {
                     Rectangle()
@@ -91,6 +91,8 @@ struct XcodeSidebarNavigatorButton: View {
                         .frame(height: 2)
                 }
             }
+            .frame(width: 26, height: 28)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help(navigator.tooltip)
@@ -117,22 +119,23 @@ struct XcodeSidebarNavigatorBar: View {
     @Binding var selectedNavigator: SidebarNavigator
 
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(SidebarNavigator.allCases) { navigator in
-                XcodeSidebarNavigatorButton(
-                    navigator: navigator,
-                    isSelected: selectedNavigator == navigator,
-                    action: {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            selectedNavigator = navigator
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 2) {
+                ForEach(SidebarNavigator.allCases) { navigator in
+                    XcodeSidebarNavigatorButton(
+                        navigator: navigator,
+                        isSelected: selectedNavigator == navigator,
+                        action: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedNavigator = navigator
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
-
-            Spacer()
+            .padding(.horizontal, 2)
         }
-        .frame(height: 40)
+        .frame(height: 28)
         .background(AppTheme.backgroundSecondary)
         .overlay(alignment: .bottom) {
             Rectangle()

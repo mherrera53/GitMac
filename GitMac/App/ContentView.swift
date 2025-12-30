@@ -11,7 +11,7 @@ struct ContentView: View {
     @State private var showOpenPanel = false
     @State private var showNewBranchSheet = false
     @State private var showMergeSheet = false
-    @State private var leftPanelWidth: CGFloat = 220
+    @State private var leftPanelWidth: CGFloat = 260
     @State private var rightPanelWidth: CGFloat = 380
     @State private var showRevertSheet = false
     @State private var revertCommits: [Commit] = []
@@ -246,8 +246,8 @@ struct MainLayout: View {
                 // Resizer
                 UniversalResizer(
                     dimension: $leftPanelWidth,
-                    minDimension: 180,
-                    maxDimension: 350,
+                    minDimension: 240,
+                    maxDimension: 400,
                     orientation: .horizontal
                 )
 
