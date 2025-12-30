@@ -109,25 +109,25 @@ struct InlineDiffLineRow: View {
 
     var indicatorColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return AppTheme.success
-        case .deletion: return AppTheme.error
+        case .addition: return AppTheme.diffAddition
+        case .deletion: return AppTheme.diffDeletion
         case .context: return AppTheme.textSecondary
-        case .hunkHeader: return AppTheme.info
+        case .hunkHeader: return AppTheme.accent
         }
     }
 
     var backgroundColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return AppTheme.success.opacity(0.15)
-        case .deletion: return AppTheme.error.opacity(0.15)
+        case .addition: return AppTheme.diffAdditionBg
+        case .deletion: return AppTheme.diffDeletionBg
         case .context, .hunkHeader: return SwiftUI.Color.clear
         }
     }
 
     var textColor: SwiftUI.Color {
         switch line.type {
-        case .addition: return AppTheme.success
-        case .deletion: return AppTheme.error
+        case .addition: return AppTheme.diffAddition
+        case .deletion: return AppTheme.diffDeletion
         case .context, .hunkHeader: return AppTheme.textPrimary
         }
     }

@@ -37,15 +37,22 @@ struct DSSearchField: View {
                 .frame(width: 20)
 
             // Text field
-            TextField(placeholder, text: $text)
-                .textFieldStyle(.plain)
-                .font(DesignTokens.Typography.body)
-                .foregroundColor(foregroundColor)
-                .disabled(disabled)
-                .focused($isFocused)
-                .onSubmit {
-                    onSubmit?()
+            ZStack(alignment: .leading) {
+                if text.isEmpty {
+                    Text(placeholder)
+                        .font(DesignTokens.Typography.body)
+                        .foregroundColor(placeholderColor)
                 }
+                TextField("", text: $text)
+                    .textFieldStyle(.plain)
+                    .font(DesignTokens.Typography.body)
+                    .foregroundColor(foregroundColor)
+                    .disabled(disabled)
+                    .focused($isFocused)
+                    .onSubmit {
+                        onSubmit?()
+                    }
+            }
 
             // Clear button (only visible when there's text)
             if !text.isEmpty {
@@ -74,6 +81,10 @@ struct DSSearchField: View {
 
     private var foregroundColor: Color {
         disabled ? AppTheme.textMuted : AppTheme.textPrimary
+    }
+
+    private var placeholderColor: Color {
+        disabled ? AppTheme.textMuted.opacity(0.5) : AppTheme.textMuted
     }
 
     private var backgroundColor: Color {

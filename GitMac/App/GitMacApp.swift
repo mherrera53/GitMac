@@ -286,7 +286,7 @@ class AppState: ObservableObject {
 }
 
 // MARK: - Data Models (Codable for UserDefaults)
-struct RecentRepository: Codable, Identifiable {
+struct RecentRepository: Codable, Identifiable, Hashable {
     var id: String { path }
     var path: String
     var name: String
@@ -296,6 +296,14 @@ struct RecentRepository: Codable, Identifiable {
         self.path = path
         self.name = name
         self.lastOpened = lastOpened
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(path)
+    }
+
+    static func == (lhs: RecentRepository, rhs: RecentRepository) -> Bool {
+        lhs.path == rhs.path
     }
 }
 

@@ -552,8 +552,12 @@ struct DiffViewWithClose: View {
             }
             .background(AppTheme.backgroundSecondary.opacity(0.8))
 
-            // Use the new DiffView component with split/inline/hunk modes
-            DiffView(fileDiff: fileDiff, repoPath: repoPath)
+            // Use Kaleidoscope-style diff viewer
+            if let repo = appState.currentRepository {
+                KaleidoscopeDiffView(files: [fileDiff])
+            } else {
+                DiffView(fileDiff: fileDiff, repoPath: repoPath)
+            }
         }
     }
 }
@@ -1205,6 +1209,7 @@ struct SubmoduleSidebarSection: View {
                     HStack {
                         Image(systemName: "cube.transparent")
                             .font(.system(size: 11))
+                            .foregroundColor(AppTheme.textMuted)
                         Text("No submodules")
                             .font(.system(size: 10))
                             .foregroundColor(AppTheme.textMuted)
@@ -1305,6 +1310,7 @@ struct GitHooksSidebarSection: View {
                     HStack {
                         Image(systemName: "chevron.left.forwardslash.chevron.right")
                             .font(.system(size: 11))
+                            .foregroundColor(AppTheme.textSecondary)
                         Text("\(viewModel.enabledCount) of \(viewModel.hooks.count) enabled")
                             .font(.system(size: 10))
                             .foregroundColor(AppTheme.textSecondary)
@@ -5952,8 +5958,9 @@ struct GroupManagementSheet: View {
             Divider()
 
             HStack {
-                Button { dismiss() } label: { Text("Done") }
-                    .keyboardShortcut(.escape)
+                DSButton("Done", variant: .secondary, size: .sm) {
+                    dismiss()
+                }
                 Spacer()
                 Button { showCreateGroup = true } label: {
                     HStack(spacing: DesignTokens.Spacing.xs) {
@@ -5986,6 +5993,7 @@ struct GroupManagementRow: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                 Text(group.name)
                     .font(DesignTokens.Typography.body)
+                    .foregroundColor(AppTheme.textPrimary)
                 Text("\(group.repos.count) repositories")
                     .font(DesignTokens.Typography.caption)
                     .foregroundColor(AppTheme.textMuted)
@@ -5996,6 +6004,7 @@ struct GroupManagementRow: View {
                     Button { onEdit() } label: {
                         Image(systemName: "pencil")
                             .font(DesignTokens.Typography.caption)
+                            .foregroundColor(AppTheme.textSecondary)
                     }
                     .buttonStyle(.plain)
                     Button { onDelete() } label: {
@@ -6046,11 +6055,13 @@ struct CreateGroupSheet: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Group Name")
                         .font(DesignTokens.Typography.body)
+                        .foregroundColor(AppTheme.textPrimary)
                     DSTextField(placeholder: "Work Projects", text: $groupName)
                 }
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Color")
                         .font(DesignTokens.Typography.body)
+                        .foregroundColor(AppTheme.textPrimary)
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: DesignTokens.Spacing.md) {
                         ForEach(availableColors, id: \.1) { _, hex in
                             ColorPickerButton(
@@ -6069,8 +6080,9 @@ struct CreateGroupSheet: View {
             Divider()
 
             HStack {
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.escape)
+                DSButton("Cancel", variant: .secondary, size: .sm) {
+                    dismiss()
+                }
                 Spacer()
                 Button("Create") {
                     _ = groupsService.createGroup(name: groupName, color: selectedColor)
@@ -6126,11 +6138,13 @@ struct EditGroupSheet: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Group Name")
                         .font(DesignTokens.Typography.body)
+                        .foregroundColor(AppTheme.textPrimary)
                     DSTextField(placeholder: "Work Projects", text: $groupName)
                 }
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Color")
                         .font(DesignTokens.Typography.body)
+                        .foregroundColor(AppTheme.textPrimary)
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: DesignTokens.Spacing.md) {
                         ForEach(availableColors, id: \.1) { _, hex in
                             ColorPickerButton(
@@ -6149,8 +6163,9 @@ struct EditGroupSheet: View {
             Divider()
 
             HStack {
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.escape)
+                DSButton("Cancel", variant: .secondary, size: .sm) {
+                    dismiss()
+                }
                 Spacer()
                 Button("Save") {
                     var updatedGroup = group

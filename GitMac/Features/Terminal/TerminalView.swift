@@ -1408,9 +1408,11 @@ struct TerminalAIChatView: View {
                     .foregroundColor(AppTheme.accent)
                 Text("AI Terminal Assistant")
                     .font(.headline)
+                    .foregroundColor(AppTheme.textPrimary)
                 Spacer()
                 Button("Done") { dismiss() }
                     .buttonStyle(.plain)
+                    .foregroundColor(AppTheme.accent)
             }
             .padding()
             .background(AppTheme.backgroundSecondary)
@@ -1439,6 +1441,7 @@ struct TerminalAIChatView: View {
                     }
                     .padding()
                 }
+                .background(AppTheme.background)
                 .onChange(of: messages.count) { _, _ in
                     if let last = messages.last {
                         withAnimation {
@@ -1548,6 +1551,7 @@ struct TerminalAIChatBubble: View {
             Text(message.content)
                 .textSelection(.enabled)
                 .font(DesignTokens.Typography.body)
+                .foregroundColor(AppTheme.textPrimary)
                 .padding(DesignTokens.Spacing.sm + DesignTokens.Spacing.xxs)
                 .background(message.role == .user ? AppTheme.info.opacity(0.15) : AppTheme.backgroundSecondary)
                 .cornerRadius(DesignTokens.CornerRadius.xl)

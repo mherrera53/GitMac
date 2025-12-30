@@ -84,30 +84,35 @@ struct DSPicker<Item: Hashable & Identifiable, Label: View>: View {
                 }
             }
         } label: {
-            HStack {
-                if let selected = selection {
-                    label(selected)
-                        .foregroundColor(AppTheme.textPrimary)
-                } else {
-                    Text("Select...")
-                        .foregroundColor(AppTheme.textMuted)
+            ZStack {
+                HStack {
+                    if let selected = selection {
+                        label(selected)
+                    } else {
+                        Text("Select...")
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: DesignTokens.Sizing.Icon.sm))
                 }
-
-                Spacer()
-
-                Image(systemName: "chevron.down")
-                    .font(.system(size: DesignTokens.Sizing.Icon.sm))
-                    .foregroundColor(AppTheme.textMuted)
+                .font(DesignTokens.Typography.body)
+                .padding(DesignTokens.Spacing.sm)
+                .background(AppTheme.backgroundSecondary)
+                .cornerRadius(DesignTokens.CornerRadius.md)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
+                        .stroke(AppTheme.backgroundTertiary, lineWidth: 1)
+                )
             }
-            .font(DesignTokens.Typography.body)
-            .padding(DesignTokens.Spacing.sm)
-            .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
-            .overlay(
-                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
-                    .stroke(AppTheme.backgroundTertiary, lineWidth: 1)
-            )
+            .foregroundColor(AppTheme.textPrimary)
         }
+        .foregroundColor(AppTheme.textPrimary)
+        .accentColor(AppTheme.textPrimary)
+        .tint(AppTheme.textPrimary)
+        .menuStyle(.borderlessButton)
+        .buttonStyle(.plain)
         .opacity(disabled ? DesignTokens.Opacity.disabled : 1.0)
     }
 

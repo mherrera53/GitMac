@@ -32,18 +32,25 @@ struct DSSecureField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             HStack(spacing: 0) {
-                Group {
-                    if isPasswordVisible {
-                        TextField(placeholder, text: $text)
-                    } else {
-                        SecureField(placeholder, text: $text)
+                ZStack(alignment: .leading) {
+                    if text.isEmpty {
+                        Text(placeholder)
+                            .font(DesignTokens.Typography.body)
+                            .foregroundColor(placeholderColor)
                     }
+                    Group {
+                        if isPasswordVisible {
+                            TextField("", text: $text)
+                        } else {
+                            SecureField("", text: $text)
+                        }
+                    }
+                    .textFieldStyle(.plain)
+                    .font(DesignTokens.Typography.body)
+                    .foregroundColor(foregroundColor)
+                    .disabled(state == .disabled)
+                    .focused($isFocused)
                 }
-                .textFieldStyle(.plain)
-                .font(DesignTokens.Typography.body)
-                .foregroundColor(foregroundColor)
-                .disabled(state == .disabled)
-                .focused($isFocused)
 
                 Button(action: {
                     isPasswordVisible.toggle()
@@ -76,6 +83,10 @@ struct DSSecureField: View {
 
     private var foregroundColor: Color {
         state == .disabled ? AppTheme.textMuted : AppTheme.textPrimary
+    }
+
+    private var placeholderColor: Color {
+        state == .disabled ? AppTheme.textMuted.opacity(0.5) : AppTheme.textSecondary
     }
 
     private var backgroundColor: Color {

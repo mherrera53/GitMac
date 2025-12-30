@@ -34,19 +34,27 @@ struct DSTextField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-            TextField(placeholder, text: $text)
-                .textFieldStyle(.plain)
-                .font(DesignTokens.Typography.body)
-                .foregroundColor(foregroundColor)
-                .padding(DesignTokens.Spacing.sm)
-                .background(backgroundColor)
-                .cornerRadius(DesignTokens.CornerRadius.md)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
-                        .stroke(borderColor, lineWidth: 1)
-                )
-                .disabled(state == .disabled)
-                .focused($isFocused)
+            ZStack(alignment: .leading) {
+                if text.isEmpty {
+                    Text(placeholder)
+                        .font(DesignTokens.Typography.body)
+                        .foregroundColor(placeholderColor)
+                        .padding(.leading, DesignTokens.Spacing.sm)
+                }
+                TextField("", text: $text)
+                    .textFieldStyle(.plain)
+                    .font(DesignTokens.Typography.body)
+                    .foregroundColor(foregroundColor)
+                    .padding(DesignTokens.Spacing.sm)
+            }
+            .background(backgroundColor)
+            .cornerRadius(DesignTokens.CornerRadius.md)
+            .overlay(
+                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
+                    .stroke(borderColor, lineWidth: 1)
+            )
+            .disabled(state == .disabled)
+            .focused($isFocused)
 
             if let error = errorMessage, state == .error {
                 Text(error)
@@ -58,6 +66,10 @@ struct DSTextField: View {
 
     private var foregroundColor: Color {
         state == .disabled ? AppTheme.textMuted : AppTheme.textPrimary
+    }
+
+    private var placeholderColor: Color {
+        state == .disabled ? AppTheme.textMuted.opacity(0.5) : AppTheme.textMuted
     }
 
     private var backgroundColor: Color {

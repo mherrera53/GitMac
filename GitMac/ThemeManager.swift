@@ -1116,16 +1116,17 @@ struct CustomThemeEditor: View {
         VStack(spacing: 0) {
             // Main content
             HStack(spacing: 0) {
-                // Left Panel - Palettes (250px wider for full text)
+                // Left Panel - Palettes
                 VStack(spacing: 0) {
                     Text("Presets")
-                        .font(.headline)
-                        .padding(.vertical, 12)
+                        .font(DesignTokens.Typography.headline)
+                        .foregroundColor(AppTheme.textPrimary)
+                        .padding(.vertical, DesignTokens.Spacing.md)
 
                     Divider()
 
                     ScrollView {
-                        VStack(spacing: 10) {
+                        VStack(spacing: DesignTokens.Spacing.sm) {
                             ForEach(ThemePalette.allPalettes) { palette in
                                 PaletteCard(
                                     palette: palette,
@@ -1135,14 +1136,14 @@ struct CustomThemeEditor: View {
                                         customColors = palette.colors
                                     }
                                 )
-                                .padding(.horizontal, 12)
+                                .padding(.horizontal, DesignTokens.Spacing.md)
                             }
                         }
-                        .padding(.vertical, 12)
+                        .padding(.vertical, DesignTokens.Spacing.md)
                     }
                 }
-                .frame(width: 250)
-                .background(Color(NSColor.controlBackgroundColor))
+                .frame(width: DesignTokens.Spacing.xxl * 8)
+                .background(AppTheme.backgroundSecondary)
 
                 Divider()
 
@@ -1151,8 +1152,9 @@ struct CustomThemeEditor: View {
                     // Header
                     HStack {
                         Text("Customize Theme")
-                            .font(.title3)
+                            .font(DesignTokens.Typography.title3)
                             .fontWeight(.semibold)
+                            .foregroundColor(AppTheme.textPrimary)
                         Spacer()
                         Button("Reset to Default") {
                             customColors = .default
@@ -1160,12 +1162,12 @@ struct CustomThemeEditor: View {
                         }
                         .buttonStyle(.bordered)
                     }
-                    .padding()
+                    .padding(DesignTokens.Spacing.lg)
 
                     Divider()
 
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 20) {
+                        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xl) {
                             ColorSection(title: "Background") {
                                 CompactColorPicker(label: "Primary", color: $customColors.background)
                                 CompactColorPicker(label: "Secondary", color: $customColors.backgroundSecondary)
@@ -1206,40 +1208,36 @@ struct CustomThemeEditor: View {
                                 CompactColorPicker(label: "Line 5", color: $customColors.graphLine5)
                             }
                         }
-                        .padding(20)
+                        .padding(DesignTokens.Spacing.xl)
                     }
                     .frame(maxWidth: .infinity)
+                    .background(AppTheme.background)
 
                     // Footer buttons
                     Divider()
                     HStack {
                         // Left side - Import/Export
-                        Button("Import Theme...") {
+                        DSButton("Import Theme...", variant: .secondary, size: .sm) {
                             themeManager.importThemeFromFile()
                         }
-                        .buttonStyle(.bordered)
 
-                        Button("Export Theme...") {
+                        DSButton("Export Theme...", variant: .secondary, size: .sm) {
                             themeManager.exportThemeToFile()
                         }
-                        .buttonStyle(.bordered)
 
                         Spacer()
 
-                        Button("Cancel") {
+                        DSButton("Cancel", variant: .secondary, size: .sm) {
                             ThemeEditorWindowController.shared.closeWindow()
                         }
-                        .keyboardShortcut(.cancelAction)
 
-                        Button("Apply Theme") {
+                        DSButton("Apply Theme", variant: .primary, size: .sm) {
                             themeManager.setCustomColors(customColors)
                             ThemeEditorWindowController.shared.closeWindow()
                         }
-                        .keyboardShortcut(.defaultAction)
-                        .buttonStyle(.borderedProminent)
                     }
-                    .padding()
-                    .background(Color(NSColor.windowBackgroundColor))
+                    .padding(DesignTokens.Spacing.lg)
+                    .background(AppTheme.backgroundSecondary)
                 }
             }
         }
@@ -1256,16 +1254,16 @@ struct PaletteCard: View {
 
     var body: some View {
         Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                 // Title
                 Text(palette.name)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(DesignTokens.Typography.headline)
                     .foregroundColor(AppTheme.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
 
                 // Color preview strip
-                HStack(spacing: 2) {
+                HStack(spacing: DesignTokens.Spacing.xxs) {
                     Rectangle()
                         .fill(palette.colors.background.color)
                     Rectangle()
@@ -1277,26 +1275,26 @@ struct PaletteCard: View {
                     Rectangle()
                         .fill(palette.colors.gitDeleted.color)
                 }
-                .frame(height: 24)
-                .cornerRadius(4)
+                .frame(height: DesignTokens.Size.buttonHeightSM)
+                .cornerRadius(DesignTokens.CornerRadius.sm)
 
                 // Description
                 Text(palette.description)
-                    .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundColor(AppTheme.textSecondary)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(12)
+            .padding(DesignTokens.Spacing.md)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? AppTheme.accent.opacity(0.15) : Color(NSColor.windowBackgroundColor))
+                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+                    .fill(isSelected ? AppTheme.accent.opacity(0.15) : AppTheme.background)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                     .stroke(isSelected ? AppTheme.accent : AppTheme.border, lineWidth: isSelected ? 2 : 1)
             )
         }
@@ -1309,14 +1307,18 @@ struct ColorSection<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
             Text(title)
-                .font(.subheadline)
+                .font(DesignTokens.Typography.subheadline)
                 .fontWeight(.semibold)
+                .foregroundColor(AppTheme.textPrimary)
 
-            VStack(spacing: 6) {
+            VStack(spacing: DesignTokens.Spacing.xs) {
                 content()
             }
+            .padding(DesignTokens.Spacing.md)
+            .background(AppTheme.backgroundSecondary)
+            .cornerRadius(DesignTokens.CornerRadius.lg)
         }
     }
 }
@@ -1325,24 +1327,62 @@ struct CompactColorPicker: View {
     let label: String
     @Binding var color: CodableColor
 
+    @State private var showingPopover = false
+
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: DesignTokens.Spacing.md) {
+            // Label
             Text(label)
-                .frame(width: 100, alignment: .leading)
+                .font(DesignTokens.Typography.body)
                 .foregroundColor(AppTheme.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            ColorPicker("", selection: Binding(
-                get: { color.color },
-                set: { color = CodableColor($0) }
-            ))
-            .labelsHidden()
+            // Color preview button
+            Button(action: { showingPopover = true }) {
+                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
+                    .fill(color.color)
+                    .frame(height: DesignTokens.Size.buttonHeightMD)
+                    .aspectRatio(3, contentMode: .fit)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
+                            .strokeBorder(AppTheme.border, lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+            .popover(isPresented: $showingPopover, arrowEdge: .trailing) {
+                VStack(spacing: DesignTokens.Spacing.md) {
+                    ColorPicker("Select Color", selection: Binding(
+                        get: { color.color },
+                        set: { color = CodableColor($0) }
+                    ))
+                    .labelsHidden()
 
+                    DSTextField(
+                        placeholder: "Hex Color",
+                        text: Binding(
+                            get: { color.hexString },
+                            set: { hex in
+                                color = CodableColor(Color(hex: hex))
+                            }
+                        )
+                    )
+
+                    DSButton(variant: .primary, size: .sm) {
+                        showingPopover = false
+                    } label: {
+                        Text("Done")
+                    }
+                }
+                .padding(DesignTokens.Spacing.lg)
+                .frame(minWidth: DesignTokens.Spacing.xxl * 8)
+            }
+
+            // Hex value (read-only display)
             Text(color.hexString)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundColor(AppTheme.textPrimary)
-                .frame(width: 80, alignment: .trailing)
+                .font(DesignTokens.Typography.caption)
+                .foregroundColor(AppTheme.textSecondary)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, DesignTokens.Spacing.xs)
     }
 }
 

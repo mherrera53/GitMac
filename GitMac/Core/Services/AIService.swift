@@ -60,7 +60,7 @@ actor AIService {
         }
     }
 
-    struct AIModel: Identifiable, Equatable {
+    struct AIModel: Identifiable, Equatable, Hashable {
         let id: String
         let name: String
         let provider: AIProvider
