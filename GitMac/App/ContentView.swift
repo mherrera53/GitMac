@@ -278,182 +278,89 @@ struct MainLayout: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigation) {
-                HStack(spacing: 4) {
-                    Button(action: {}) {
-                        Image(systemName: "arrow.uturn.backward")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(AppTheme.textPrimary.opacity(0.8))
-                            .frame(width: 28, height: 28)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Undo")
+                HStack(spacing: DesignTokens.Spacing.sm) {
+                    XcodeToolbarButton(icon: "arrow.uturn.backward") { }
+                        .help("Undo")
 
-                    Button(action: {}) {
-                        Image(systemName: "arrow.uturn.forward")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(AppTheme.textPrimary.opacity(0.8))
-                            .frame(width: 28, height: 28)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Redo")
+                    XcodeToolbarButton(icon: "arrow.uturn.forward") { }
+                        .help("Redo")
                 }
             }
             
             ToolbarItemGroup(placement: .principal) {
-                Button(action: { NotificationCenter.default.post(name: .fetch, object: nil) }) {
-                    VStack(spacing: 2) {
-                        Image(systemName: "arrow.down.circle")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(AppTheme.info)
-                        Text("Fetch")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(AppTheme.info)
-                    }
-                    .frame(width: 50)
+                XcodeToolbarButton(icon: "arrow.down.circle", label: "Fetch", color: AppTheme.info) {
+                    NotificationCenter.default.post(name: .fetch, object: nil)
                 }
-                .buttonStyle(.plain)
                 .help("Fetch")
 
-                Button(action: { NotificationCenter.default.post(name: .pull, object: nil) }) {
-                    VStack(spacing: 2) {
-                        Image(systemName: "arrow.down.circle.fill")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(AppTheme.success)
-                        Text("Pull")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(AppTheme.success)
-                    }
-                    .frame(width: 50)
+                XcodeToolbarButton(icon: "arrow.down.circle.fill", label: "Pull", color: AppTheme.success) {
+                    NotificationCenter.default.post(name: .pull, object: nil)
                 }
-                .buttonStyle(.plain)
                 .help("Pull")
 
-                Button(action: { NotificationCenter.default.post(name: .push, object: nil) }) {
-                    VStack(spacing: 2) {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(AppTheme.accent)
-                        Text("Push")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(AppTheme.accent)
-                    }
-                    .frame(width: 50)
+                XcodeToolbarButton(icon: "arrow.up.circle.fill", label: "Push", color: AppTheme.accent) {
+                    NotificationCenter.default.post(name: .push, object: nil)
                 }
-                .buttonStyle(.plain)
                 .help("Push")
 
-                Button(action: { NotificationCenter.default.post(name: .newBranch, object: nil) }) {
-                    VStack(spacing: 2) {
-                        Image(systemName: "arrow.triangle.branch")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(AppTheme.accent)
-                        Text("Branch")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(AppTheme.accent)
-                    }
-                    .frame(width: 50)
+                XcodeToolbarButton(icon: "arrow.triangle.branch", label: "Branch", color: AppTheme.accent) {
+                    NotificationCenter.default.post(name: .newBranch, object: nil)
                 }
-                .buttonStyle(.plain)
                 .help("Branch")
 
-                Button(action: { NotificationCenter.default.post(name: .stash, object: nil) }) {
-                    VStack(spacing: 2) {
-                        Image(systemName: "archivebox")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(AppTheme.warning)
-                        Text("Stash")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(AppTheme.warning)
-                    }
-                    .frame(width: 50)
+                XcodeToolbarButton(icon: "archivebox", label: "Stash", color: AppTheme.warning) {
+                    NotificationCenter.default.post(name: .stash, object: nil)
                 }
-                .buttonStyle(.plain)
                 .help("Stash")
 
-                Button(action: { NotificationCenter.default.post(name: .popStash, object: nil) }) {
-                    VStack(spacing: 2) {
-                        Image(systemName: "archivebox.fill")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(AppTheme.warning)
-                        Text("Pop")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(AppTheme.warning)
-                    }
-                    .frame(width: 50)
+                XcodeToolbarButton(icon: "archivebox.fill", label: "Pop", color: AppTheme.warning) {
+                    NotificationCenter.default.post(name: .popStash, object: nil)
                 }
-                .buttonStyle(.plain)
                 .help("Pop")
             }
             
             ToolbarItemGroup(placement: .automatic) {
-                Button(action: { bottomPanelManager.openTab(type: .terminal) }) {
-                    Image(systemName: "terminal.fill")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(AppTheme.textPrimary)
-                        .frame(width: 32, height: 28)
+                XcodeToolbarButton(icon: "terminal.fill") {
+                    bottomPanelManager.openTab(type: .terminal)
                 }
-                .buttonStyle(.plain)
                 .help("Terminal")
 
-                Button(action: { bottomPanelManager.openTab(type: .taiga) }) {
-                    Image(systemName: "tag.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(AppTheme.success)
-                        .frame(width: 32, height: 28)
+                XcodeToolbarButton(icon: "tag.fill", color: AppTheme.success) {
+                    bottomPanelManager.openTab(type: .taiga)
                 }
-                .buttonStyle(.plain)
                 .help("Taiga")
 
-                Button(action: { bottomPanelManager.openTab(type: .planner) }) {
-                    Image(systemName: "checklist")
-                        .font(.system(size: 16))
-                        .foregroundColor(AppTheme.warning)
-                        .frame(width: 32, height: 28)
+                XcodeToolbarButton(icon: "checklist", color: AppTheme.warning) {
+                    bottomPanelManager.openTab(type: .planner)
                 }
-                .buttonStyle(.plain)
                 .help("Planner")
 
-                Button(action: { bottomPanelManager.openTab(type: .linear) }) {
-                    Image(systemName: "lineweight")
-                        .font(.system(size: 16))
-                        .foregroundColor(AppTheme.accent)
-                        .frame(width: 32, height: 28)
+                XcodeToolbarButton(icon: "lineweight", color: AppTheme.accent) {
+                    bottomPanelManager.openTab(type: .linear)
                 }
-                .buttonStyle(.plain)
                 .help("Linear")
 
-                Button(action: { bottomPanelManager.openTab(type: .jira) }) {
-                    Image(systemName: "square.stack.3d.up")
-                        .font(.system(size: 16))
-                        .foregroundColor(AppTheme.accent)
-                        .frame(width: 32, height: 28)
+                XcodeToolbarButton(icon: "square.stack.3d.up", color: AppTheme.accent) {
+                    bottomPanelManager.openTab(type: .jira)
                 }
-                .buttonStyle(.plain)
                 .help("Jira")
 
-                Button(action: { bottomPanelManager.openTab(type: .notion) }) {
-                    Image(systemName: "doc.text.fill")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(AppTheme.textPrimary)
-                        .frame(width: 32, height: 28)
+                XcodeToolbarButton(icon: "doc.text.fill") {
+                    bottomPanelManager.openTab(type: .notion)
                 }
-                .buttonStyle(.plain)
                 .help("Notion")
 
-                Button(action: { bottomPanelManager.openTab(type: .teamActivity) }) {
-                    Image(systemName: "person.3")
-                        .font(.system(size: 16))
-                        .foregroundColor(AppTheme.accent)
-                        .frame(width: 32, height: 28)
+                XcodeToolbarButton(icon: "person.3", color: AppTheme.accent) {
+                    bottomPanelManager.openTab(type: .teamActivity)
                 }
-                .buttonStyle(.plain)
                 .help("Team Activity")
 
                 DSTextField(placeholder: "Search commits...", text: $searchText)
                     .frame(minWidth: 150, maxWidth: 250)
             }
         }
-        .toolbarBackground(AppTheme.background, for: .windowToolbar)
+        .toolbarBackground(.clear, for: .windowToolbar)
+        .background(VisualEffectBlur.toolbar.ignoresSafeArea(edges: .top))
         .toolbarColorScheme(ThemeManager.shared.currentTheme == .light ? .light : .dark, for: .windowToolbar)
         .id(themeRefreshTrigger)
         .onChange(of: appState.activeTabId) { _, _ in
