@@ -18,11 +18,33 @@ actor GitEngine {
 
     /// Check if a directory is a Git repository
     func isRepository(at path: String) async -> Bool {
+        // First check if path exists
+        guard FileManager.default.fileExists(atPath: path) else {
+            print("⚠️ Path does not exist: \(path)")
+            return false
+        }
+
+        // Check if .git directory exists
+        let gitPath = (path as NSString).appendingPathComponent(".git")
+        let gitExists = FileManager.default.fileExists(atPath: gitPath)
+
+        if !gitExists {
+            print("⚠️ .git directory not found at: \(path)")
+        }
+
         let result = await shellExecutor.execute(
             "git",
             arguments: ["rev-parse", "--git-dir"],
             workingDirectory: path
         )
+
+        if result.exitCode != 0 {
+            print("⚠️ git rev-parse failed at: \(path)")
+            print("   stdout: \(result.stdout)")
+            print("   stderr: \(result.stderr)")
+            print("   exitCode: \(result.exitCode)")
+        }
+
         return result.exitCode == 0
     }
 
