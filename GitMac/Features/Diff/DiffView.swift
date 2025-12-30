@@ -219,7 +219,7 @@ struct DiffView: View {
                         )
                     case .hunk:
                         HunkDiffView(
-                            hunks: fileDiff.hunks, 
+                            hunks: fileDiff.hunks,
                             showLineNumbers: showLineNumbers,
                             scrollOffset: $scrollOffset,
                             viewportHeight: $viewportHeight,
@@ -227,6 +227,15 @@ struct DiffView: View {
                         )
                     case .preview:
                         MarkdownView(content: previewContent, fileName: fileDiff.displayPath)
+                    case .kaleidoscopeBlocks, .kaleidoscopeFluid, .kaleidoscopeUnified:
+                        // Placeholder - will be integrated in next phase
+                        OptimizedSplitDiffView(
+                            hunks: fileDiff.hunks,
+                            showLineNumbers: showLineNumbers,
+                            scrollOffset: $scrollOffset,
+                            viewportHeight: $viewportHeight,
+                            contentHeight: $contentHeight
+                        )
                     }
                 }
 

@@ -7,6 +7,9 @@ enum DiffViewMode: String, CaseIterable {
     case inline = "Inline"
     case hunk = "Hunk"
     case preview = "Preview"
+    case kaleidoscopeBlocks = "Blocks"     // Kaleidoscope split with connection lines
+    case kaleidoscopeFluid = "Fluid"       // Kaleidoscope split (cleaner)
+    case kaleidoscopeUnified = "Unified"   // Kaleidoscope unified with A/B labels
 
     var icon: String {
         switch self {
@@ -14,6 +17,9 @@ enum DiffViewMode: String, CaseIterable {
         case .inline: return "rectangle.stack"
         case .hunk: return "text.alignleft"
         case .preview: return "eye"
+        case .kaleidoscopeBlocks: return "square.split.2x1.fill"
+        case .kaleidoscopeFluid: return "square.split.2x1"
+        case .kaleidoscopeUnified: return "rectangle.stack.fill"
         }
     }
 
@@ -25,6 +31,26 @@ enum DiffViewMode: String, CaseIterable {
     /// Modes available for markdown files (includes preview)
     static var markdownModes: [DiffViewMode] {
         [.split, .inline, .hunk, .preview]
+    }
+
+    /// Kaleidoscope-style modes (professional diff viewing)
+    static var kaleidoscopeModes: [DiffViewMode] {
+        [.kaleidoscopeBlocks, .kaleidoscopeFluid, .kaleidoscopeUnified]
+    }
+
+    /// All modes including Kaleidoscope
+    static var allModes: [DiffViewMode] {
+        standardModes + kaleidoscopeModes
+    }
+
+    /// Check if this is a Kaleidoscope mode
+    var isKaleidoscopeMode: Bool {
+        switch self {
+        case .kaleidoscopeBlocks, .kaleidoscopeFluid, .kaleidoscopeUnified:
+            return true
+        default:
+            return false
+        }
     }
 }
 
