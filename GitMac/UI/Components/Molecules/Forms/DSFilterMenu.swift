@@ -215,9 +215,9 @@ struct DSFilterMenu: View {
                 selectedFilter: .constant("modified"),
                 options: [
                     DSFilterOption(label: "All Files", icon: "doc", value: "all"),
-                    DSFilterOption(label: "Modified", icon: "pencil", value: "modified"),
-                    DSFilterOption(label: "Added", icon: "plus.circle", value: "added"),
-                    DSFilterOption(label: "Deleted", icon: "trash", value: "deleted"),
+                    DSFilterOption(label: "Modified", icon: "pencil.circle.fill", value: "modified"),
+                    DSFilterOption(label: "Added", icon: "plus.circle.fill", value: "added"),
+                    DSFilterOption(label: "Deleted", icon: "minus.circle.fill", value: "deleted"),
                     DSFilterOption(label: "Untracked", icon: "questionmark.circle", value: "untracked")
                 ]
             )

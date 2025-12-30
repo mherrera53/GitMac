@@ -1192,13 +1192,25 @@ struct CommitGraphView: View {
 
         return HStack(spacing: 0) {
             if settings.showBranchColumn {
-                Text("BRANCH / TAG")
-                    .frame(width: settings.branchColumnWidth, alignment: .leading)
-                    .padding(.leading, 12)
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.triangle.branch")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(theme.textMuted)
+                        .symbolRenderingMode(.monochrome)
+                    Text("BRANCH / TAG")
+                }
+                .frame(width: settings.branchColumnWidth, alignment: .leading)
+                .padding(.leading, 12)
             }
 
-            Text("GRAPH")
-                .frame(width: settings.graphColumnWidth, alignment: .center)
+            HStack(spacing: 4) {
+                Image(systemName: "point.3.connected.trianglepath.dotted")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(theme.textMuted)
+                    .symbolRenderingMode(.monochrome)
+                Text("GRAPH")
+            }
+            .frame(width: settings.graphColumnWidth, alignment: .center)
 
             Text("COMMIT MESSAGE")
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1208,19 +1220,37 @@ struct CommitGraphView: View {
                 .frame(width: 140, alignment: .leading)
 
             if settings.showAuthorColumn {
-                Text("AUTHOR")
-                    .frame(width: settings.authorColumnWidth, alignment: .leading)
+                HStack(spacing: 4) {
+                    Image(systemName: "person.circle.fill")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
+                    Text("AUTHOR")
+                }
+                .frame(width: settings.authorColumnWidth, alignment: .leading)
             }
 
             if settings.showDateColumn {
-                Text("DATE")
-                    .frame(width: settings.dateColumnWidth, alignment: .trailing)
+                HStack(spacing: 4) {
+                    Image(systemName: "clock.fill")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
+                    Text("DATE")
+                }
+                .frame(width: settings.dateColumnWidth, alignment: .trailing)
             }
 
             if settings.showSHAColumn {
-                Text("SHA")
-                    .frame(width: settings.shaColumnWidth, alignment: .trailing)
-                    .padding(.trailing, DesignTokens.Spacing.sm)
+                HStack(spacing: 4) {
+                    Image(systemName: "number.circle.fill")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(theme.textMuted)
+                        .symbolRenderingMode(.hierarchical)
+                    Text("SHA")
+                }
+                .frame(width: settings.shaColumnWidth, alignment: .trailing)
+                .padding(.trailing, DesignTokens.Spacing.sm)
             }
         }
         .font(DesignTokens.Typography.caption2)

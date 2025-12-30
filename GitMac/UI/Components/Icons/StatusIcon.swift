@@ -61,18 +61,18 @@ struct StatusIcon: View {
     // MARK: - Style Variants
 
     private var badgeView: some View {
-        Text(status.rawValue)
-            .font(.system(size: size.fontSize, weight: .bold, design: .monospaced))
+        Image(systemName: statusIcon)
+            .font(.system(size: size.dimension, weight: .semibold))
             .foregroundColor(statusColor)
+            .symbolRenderingMode(status == .unmerged ? .multicolor : .hierarchical)
             .frame(width: size.dimension, height: size.dimension)
-            .background(statusColor.opacity(0.2))
-            .cornerRadius(size.cornerRadius)
     }
 
     private var inlineView: some View {
-        Text(status.rawValue)
-            .font(.system(size: size.fontSize, weight: .bold, design: .monospaced))
+        Image(systemName: statusIcon)
+            .font(.system(size: size.dimension, weight: .medium))
             .foregroundColor(statusColor)
+            .symbolRenderingMode(status == .unmerged ? .multicolor : .monochrome)
             .frame(width: size.dimension, height: size.dimension)
     }
 
@@ -83,15 +83,36 @@ struct StatusIcon: View {
     }
 
     private var circleView: some View {
-        ZStack {
-            Circle()
-                .fill(statusColor)
+        Image(systemName: statusIcon)
+            .font(.system(size: size.dimension, weight: .semibold))
+            .foregroundColor(statusColor)
+            .symbolRenderingMode(status == .unmerged ? .multicolor : .hierarchical)
+            .frame(width: size.dimension, height: size.dimension)
+    }
 
-            Text(status.rawValue)
-                .font(.system(size: size.fontSize, weight: .bold, design: .monospaced))
-                .foregroundColor(AppTheme.background)
+    // MARK: - Icon Mapping (GitKraken style)
+
+    private var statusIcon: String {
+        switch status {
+        case .added:
+            return "plus.circle.fill"
+        case .modified:
+            return "pencil.circle.fill"
+        case .deleted:
+            return "minus.circle.fill"
+        case .renamed:
+            return "arrow.left.arrow.right.circle.fill"
+        case .copied:
+            return "doc.on.doc.fill"
+        case .untracked:
+            return "questionmark.circle"
+        case .ignored:
+            return "eye.slash.circle"
+        case .typeChanged:
+            return "arrow.triangle.2.circlepath.circle"
+        case .unmerged:
+            return "exclamationmark.triangle.fill"
         }
-        .frame(width: size.dimension, height: size.dimension)
     }
 
     // MARK: - Color Mapping
