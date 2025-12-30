@@ -21,24 +21,23 @@ struct BottomPanelTabBar: View {
     var body: some View {
         HStack(spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DesignTokens.Spacing.xs) {
+                HStack(spacing: DesignTokens.BottomBar.tabSpacing) {
                     ForEach(tabs) { tab in
-                        DSTabButton(
+                        XcodeBottomBarTab(
+                            icon: tab.type.icon,
                             title: tab.displayTitle,
-                            iconName: tab.type.icon,
+                            color: tab.type.accentColor,
                             isSelected: tab.id == activeTabId,
-                            size: .sm,
+                            onTap: {
+                                onSelectTab(tab.id)
+                            },
                             onClose: {
                                 onCloseTab(tab.id)
-                            },
-                            action: {
-                                onSelectTab(tab.id)
                             }
                         )
                     }
                 }
                 .padding(.horizontal, DesignTokens.Spacing.sm)
-                .padding(.vertical, DesignTokens.Spacing.sm - 2)
             }
 
             Spacer()
@@ -46,9 +45,12 @@ struct BottomPanelTabBar: View {
             // Add button with menu
             Button(action: { showAddMenu.toggle() }) {
                 Image(systemName: "plus")
-                    .font(DesignTokens.Typography.caption)
+                    .font(.system(size: DesignTokens.BottomBar.controlIconSize))
                     .foregroundColor(AppTheme.textSecondary)
-                    .frame(width: DesignTokens.Size.buttonHeightSM, height: DesignTokens.Size.buttonHeightSM)
+                    .frame(
+                        width: DesignTokens.BottomBar.controlButtonSize,
+                        height: DesignTokens.BottomBar.controlButtonSize
+                    )
             }
             .buttonStyle(.plain)
             .padding(.horizontal, DesignTokens.Spacing.xs)
@@ -66,21 +68,19 @@ struct BottomPanelTabBar: View {
             // Close panel button
             Button(action: onTogglePanel) {
                 Image(systemName: "chevron.down")
-                    .font(DesignTokens.Typography.caption)
+                    .font(.system(size: DesignTokens.BottomBar.controlIconSize))
                     .foregroundColor(AppTheme.textSecondary)
-                    .frame(width: DesignTokens.Size.buttonHeightSM, height: DesignTokens.Size.buttonHeightSM)
+                    .frame(
+                        width: DesignTokens.BottomBar.controlButtonSize,
+                        height: DesignTokens.BottomBar.controlButtonSize
+                    )
             }
             .buttonStyle(.plain)
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .help("Close Panel")
         }
-        .frame(height: 36)
-        .background(AppTheme.toolbar)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(AppTheme.border)
-                .frame(height: 1)
-        }
+        .frame(height: DesignTokens.BottomBar.height)
+        .background(VisualEffectBlur.bottomBar)
     }
 }
 

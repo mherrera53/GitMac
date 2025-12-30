@@ -18,7 +18,6 @@
 		0F6D0B17E4F94686B4D3581E /* GitMac/Core/Services/Specialized/StagingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30B93C2B6324B20910477EE /* GitMac/Core/Services/Specialized/StagingService.swift */; };
 		10149A8AA816427784F3917E /* GitMac/Core/Services/Specialized/BranchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8569CE512F04DD2934CA67D /* GitMac/Core/Services/Specialized/BranchService.swift */; };
 		10722C36120E452A954A5C34 /* GitMac/UI/Components/Layout/SectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7982AA1A45504968BF479382 /* GitMac/UI/Components/Layout/SectionHeader.swift */; };
-		11412D2CD2554F6880201DCC /* Features/RepoGroups/RepoGroupsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F74C1E00507D408D86CEE731 /* Features/RepoGroups/RepoGroupsService.swift */; };
 		128A13B3887B4109A5059EF4 /* GitMac/Features/Diff/Renderers/DiffParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = D560DF79B4C54BEF9A68C140 /* GitMac/Features/Diff/Renderers/DiffParser.swift */; };
 		13B6C91AEA8E670BB2357C82 /* GitMac/UI/Components/Molecules/Display/DSErrorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D19D7A85D4110AB3954044F9 /* GitMac/UI/Components/Molecules/Display/DSErrorState.swift */; };
 		14251E68A10431607FD81BED /* BottomPanelResizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13EAD6CBFC2CB67F3FCA053 /* BottomPanelResizer.swift */; };
@@ -165,13 +164,8 @@
 		BD7718FD3031E989055C841C /* GitMac/Features/Notion/NotionPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B478D68ED8A95275ECAA2AD4 /* GitMac/Features/Notion/NotionPlugin.swift */; };
 		BF29CA1FCD714F51A1F45AB0 /* Features/GitFlow/GitFlowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2DB7601C3F04EEBB40EBBEA /* Features/GitFlow/GitFlowManager.swift */; };
 		C0FCA2D59D0B4674801C30B7 /* GitMac/UI/Utilities/ModalCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAE1F7D4CBB444D9943B71B4 /* GitMac/UI/Utilities/ModalCoordinator.swift */; };
-		68acff3ec69f4554a1d072e3 /* GitMac/UI/Utilities/VisualEffectBlur.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ad238319f6d4b4694ac427b /* GitMac/UI/Utilities/VisualEffectBlur.swift */; };
-		79dd909d24f6498c944a3718 /* GitMac/UI/Components/Xcode/XcodeToolbarButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = be2644539cb2443087e333db /* GitMac/UI/Components/Xcode/XcodeToolbarButton.swift */; };
-		ec9b7c8e44624131b81f5568 /* GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9c9fdedb7dc04c73bd87a8f7 /* GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift */; };
-		E9332D8207AA4396BE97A94028738F7A /* GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04CA4782601B409EAEA2EB99D6366C89 /* GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift */; };
 		C1432F5677FB440BBBCE1D37 /* Core/Utils/FileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 785500BECF07420C8BF7154F /* Core/Utils/FileWatcher.swift */; };
 		C17B40AC6D74427DAB28B049 /* GitMac/UI/Components/Common/LayoutConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C58CC8B384497E977827CA /* GitMac/UI/Components/Common/LayoutConstants.swift */; };
-		C2B7667B558CE8196CE0A378 /* GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF4F843954F997AD46CDBAE8 /* GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift */; };
 		C3D6450D4DF146A0A1893725 /* Features/MergeConflict/ConflictResolverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9085FF6654004A1785CF1AFE /* Features/MergeConflict/ConflictResolverView.swift */; };
 		C539555536ED4764ACF01929 /* Features/Settings/SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EB0E4C83554CEF90309925 /* Features/Settings/SubscriptionView.swift */; };
 		C539F53A651A0250BCAA9015 /* GitMac/UI/Components/Cards/CardStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1319443A5D6F0D217BF7BEDA /* GitMac/UI/Components/Cards/CardStyle.swift */; };
@@ -208,7 +202,6 @@
 		F81A394FC5284A539A11879C /* GitMac/Core/Services/Specialized/MergeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9130B8C1A5864342B76DC646 /* GitMac/Core/Services/Specialized/MergeService.swift */; };
 		F915E96872D140E997144CF7 /* Core/Services/GitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E8E5E6A6DC644C3BE12AC71 /* Core/Services/GitService.swift */; };
 		F94BB1BCB04F4885BF46F509 /* GitMac/UI/Components/FileTree/GenericTreeNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23ACB3A6D01341AA83FE1484 /* GitMac/UI/Components/FileTree/GenericTreeNode.swift */; };
-		FCE7733F5EE79F6938CF6652 /* GitMac/UI/Components/Molecules/Forms/DSSearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 309335EA370B8E36FD9B9860 /* GitMac/UI/Components/Molecules/Forms/DSSearchBar.swift */; };
 		FF97BDC528EB4762A9D35B04 /* GitMac/Features/Diff/Renderers/BinaryFileRenderers.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6C996AAE11C461687B8AE4B /* GitMac/Features/Diff/Renderers/BinaryFileRenderers.swift */; };
 		FFBD69F7105D47AFB9832131 /* GitMac/UI/Components/Diff/DiffStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FBEB0B20054436A94B8EA19 /* GitMac/UI/Components/Diff/DiffStatsView.swift */; };
 		FLVIEW01B526F46E3958E34A /* GitMac/Features/FileViewer/FileContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FLVIEW01F526F46E3958E34A /* GitMac/Features/FileViewer/FileContentView.swift */; };
@@ -230,6 +223,17 @@
 		REPOCTX01B526F46E3958E34 /* Core/Git/RepositoryContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = REPOCTX01F526F46E3958E34 /* Core/Git/RepositoryContext.swift */; };
 		UNIFCTX001B526F46E3958E3 /* GitMac/UI/Components/UnifiedFileContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = UNIFCTX001F526F46E3958E3 /* GitMac/UI/Components/UnifiedFileContextMenu.swift */; };
 		WKFLW001B526F46E3958E34A /* WorkflowsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WKFLW001F526F46E3958E34A /* WorkflowsView.swift */; };
+		11412D2CD2554F6880201DCC /* RepoGroupsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F74C1E00507D408D86CEE731 /* RepoGroupsService.swift */; };
+		33CA842A6DDA4AA58FD66460 /* ComponentCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 748878172E9B4D15B1366993 /* ComponentCatalog.swift */; };
+		9E864EB499F54029820F722D /* GitMac/Features/Jira/JiraContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BAB5AFE9928439D8EE9A26F /* GitMac/Features/Jira/JiraContentView.swift */; };
+		051044BE277D49BF9A932FF2 /* GitMac/Features/Jira/JiraIssuesList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B693AD0A2D24357974C51C0 /* GitMac/Features/Jira/JiraIssuesList.swift */; };
+		F3790BD2B0FD4D4CB36658CC /* GitMac/Features/Jira/JiraLoginPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82DFFB2CBBE44482A5C7C387 /* GitMac/Features/Jira/JiraLoginPrompt.swift */; };
+		B707301E0C13408BBB3CD17A /* GitMac/Features/Jira/JiraSettingsContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C339C9E70FF42748E5B8904 /* GitMac/Features/Jira/JiraSettingsContent.swift */; };
+		2E7F77965FAF4325A9AFCEC0 /* GitMac/Features/Linear/LinearContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8F2776E2AA14A848E1224C9 /* GitMac/Features/Linear/LinearContentView.swift */; };
+		F8FF74927C564D5BAB210C98 /* GitMac/Features/Notion/NotionContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C6AD2BA34E741D6A64F41ED /* GitMac/Features/Notion/NotionContentView.swift */; };
+		448A954BF47C4C9097A4C3AC /* GitMac/Features/Taiga/TaigaContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65ED7ADF00814187AFA86B50 /* GitMac/Features/Taiga/TaigaContentView.swift */; };
+		AA11BB22CC3344DD55EE66FF /* GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AA22BB33CC44DD55EE66FF /* GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift */; };
+		AA22BB33CC4455DD66EE77FF /* GitMac/UI/Components/Molecules/Forms/DSSearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22AA33BB44CC55DD66EE77FF /* GitMac/UI/Components/Molecules/Forms/DSSearchBar.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -263,7 +267,6 @@
 		2D368F6EA7904E0FA0B0F13E /* GitMac/Core/Models/GitSubmodule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/Core/Models/GitSubmodule.swift; sourceTree = "<group>"; };
 		2E8949FE6151BCFC66C2361C /* BottomPanelTabBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BottomPanelTabBar.swift; path = Features/BottomPanel/Views/BottomPanelTabBar.swift; sourceTree = "<group>"; };
 		2FBEB0B20054436A94B8EA19 /* GitMac/UI/Components/Diff/DiffStatsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Diff/DiffStatsView.swift; sourceTree = "<group>"; };
-		309335EA370B8E36FD9B9860 /* GitMac/UI/Components/Molecules/Forms/DSSearchBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Molecules/Forms/DSSearchBar.swift; sourceTree = SOURCE_ROOT; };
 		30D7B28A4BC77B8C9638775F /* GitMac/Core/PluginSystem/IntegrationViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Core/PluginSystem/IntegrationViewModel.swift; sourceTree = SOURCE_ROOT; };
 		3163AE41EEA248F3AB7DED92 /* Core/Git/Tag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Git/Tag.swift; sourceTree = "<group>"; };
 		316D8CADD85D4FD180845A12 /* GitMac/Core/Services/Specialized/RemoteService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/Core/Services/Specialized/RemoteService.swift; sourceTree = "<group>"; };
@@ -414,12 +417,7 @@
 		CAB380172C6E42F1929A7713 /* GitMac/Features/Diff/Renderers/DiffMinimap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Diff/Renderers/DiffMinimap.swift; sourceTree = "<group>"; };
 		CACHETTL1F526F46E3958E34A /* GitMac/Core/Utils/CacheWithTTL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/Core/Utils/CacheWithTTL.swift; sourceTree = "<group>"; };
 		CAE1F7D4CBB444D9943B71B4 /* GitMac/UI/Utilities/ModalCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Utilities/ModalCoordinator.swift; sourceTree = "<group>"; };
-		1ad238319f6d4b4694ac427b /* GitMac/UI/Utilities/VisualEffectBlur.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Utilities/VisualEffectBlur.swift; sourceTree = "<group>"; };
-		be2644539cb2443087e333db /* GitMac/UI/Components/Xcode/XcodeToolbarButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Xcode/XcodeToolbarButton.swift; sourceTree = "<group>"; };
-		9c9fdedb7dc04c73bd87a8f7 /* GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift; sourceTree = "<group>"; };
-		04CA4782601B409EAEA2EB99D6366C89 /* GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift; sourceTree = "<group>"; };
 		CDC2D84E539F3E4F59585DB1 /* GitMac/UI/Components/Atoms/Display/DSIcon.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Atoms/Display/DSIcon.swift; sourceTree = SOURCE_ROOT; };
-		CF4F843954F997AD46CDBAE8 /* GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift; sourceTree = SOURCE_ROOT; };
 		CTXMNU01F526F46E3958E34A /* UI/Components/ContextMenus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI/Components/ContextMenus.swift; sourceTree = "<group>"; };
 		D00A28D6E71845779A4C0742 /* GitMac/Features/Diff/Renderers/LargeFileDiffRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Diff/Renderers/LargeFileDiffRenderer.swift; sourceTree = "<group>"; };
 		D0993E603E925AF5F885A2FB /* GitMac/UI/Components/Atoms/Display/DSBadge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Atoms/Display/DSBadge.swift; sourceTree = SOURCE_ROOT; };
@@ -442,7 +440,6 @@
 		F2A481FE12E9105E7C44162B /* TaigaTasksView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TaigaTasksView.swift; path = Features/Taiga/Views/TaigaTasksView.swift; sourceTree = "<group>"; };
 		F3F8B015C29B4A6CA6826C60 /* Core/StoreKit/StoreManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/StoreKit/StoreManager.swift; sourceTree = "<group>"; };
 		F69E901593785DE0363A8261 /* UnifiedBottomPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = UnifiedBottomPanel.swift; path = Features/BottomPanel/Views/UnifiedBottomPanel.swift; sourceTree = "<group>"; };
-		F74C1E00507D408D86CEE731 /* Features/RepoGroups/RepoGroupsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/RepoGroups/RepoGroupsService.swift; sourceTree = "<group>"; };
 		F7F03F2B6A4D4CA1B7A62F19 /* App/ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ContentView.swift; sourceTree = "<group>"; };
 		F99F327755C543D2BAF776D0 /* GitMac/UI/Components/Icons/StatusIcon.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Icons/StatusIcon.swift; sourceTree = "<group>"; };
 		FCD7E4FE60FC4D2AA634276B /* Core/Git/Stash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Git/Stash.swift; sourceTree = "<group>"; };
@@ -469,6 +466,17 @@
 		SRC001 /* App/GitMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/GitMacApp.swift; sourceTree = "<group>"; };
 		UNIFCTX001F526F46E3958E3 /* GitMac/UI/Components/UnifiedFileContextMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/UnifiedFileContextMenu.swift; sourceTree = "<group>"; };
 		WKFLW001F526F46E3958E34A /* WorkflowsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkflowsView.swift; sourceTree = "<group>"; };
+		F74C1E00507D408D86CEE731 /* RepoGroupsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Features/RepoGroups/RepoGroupsService.swift"; sourceTree = "<group>"; };
+		748878172E9B4D15B1366993 /* ComponentCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComponentCatalog.swift; sourceTree = "<group>"; };
+		2BAB5AFE9928439D8EE9A26F /* GitMac/Features/Jira/JiraContentView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JiraContentView.swift; sourceTree = "<group>"; };
+		9B693AD0A2D24357974C51C0 /* GitMac/Features/Jira/JiraIssuesList.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JiraIssuesList.swift; sourceTree = "<group>"; };
+		82DFFB2CBBE44482A5C7C387 /* GitMac/Features/Jira/JiraLoginPrompt.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JiraLoginPrompt.swift; sourceTree = "<group>"; };
+		3C339C9E70FF42748E5B8904 /* GitMac/Features/Jira/JiraSettingsContent.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JiraSettingsContent.swift; sourceTree = "<group>"; };
+		E8F2776E2AA14A848E1224C9 /* GitMac/Features/Linear/LinearContentView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LinearContentView.swift; sourceTree = "<group>"; };
+		9C6AD2BA34E741D6A64F41ED /* GitMac/Features/Notion/NotionContentView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotionContentView.swift; sourceTree = "<group>"; };
+		65ED7ADF00814187AFA86B50 /* GitMac/Features/Taiga/TaigaContentView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TaigaContentView.swift; sourceTree = "<group>"; };
+		11AA22BB33CC44DD55EE66FF /* GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DSFilterMenu.swift; sourceTree = "<group>"; };
+		22AA33BB44CC55DD66EE77FF /* GitMac/UI/Components/Molecules/Forms/DSSearchBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DSSearchBar.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -487,6 +495,8 @@
 		061615B533CC32DE604E5D24 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				748878172E9B4D15B1366993 /* ComponentCatalog.swift */,
+
 				194DEFF63E9D4C27B198FF5B /* Components */,
 				6A2E226D937FB98A3FE278A0 /* Theme */,
 			);
@@ -579,14 +589,6 @@
 			name = Lists;
 			sourceTree = "<group>";
 		};
-		3E673DC0846645FCBBE2567D /* RepoGroups */ = {
-			isa = PBXGroup;
-			children = (
-				F74C1E00507D408D86CEE731 /* Features/RepoGroups/RepoGroupsService.swift */,
-			);
-			name = RepoGroups;
-			sourceTree = "<group>";
-		};
 		3E6FCD5575134DBFEC63FB50 /* Atoms */ = {
 			isa = PBXGroup;
 			children = (
@@ -616,8 +618,8 @@
 				AFE2CBBCBAFF02C17DF4B1F1 /* Notion */,
 				098C8AC6853F8B819F7C1ABB /* Linear */,
 				9F93ECF704A7077E5068E9BE /* Planner */,
-				3E673DC0846645FCBBE2567D /* RepoGroups */,
-			);
+			
+				3E673DC0846645FCBBE2567D /* RepoGroups */,);
 			name = Features;
 			sourceTree = "<group>";
 		};
@@ -780,9 +782,7 @@
 		C734952412915F42A24F7E96 /* Forms */ = {
 			isa = PBXGroup;
 			children = (
-				CF4F843954F997AD46CDBAE8 /* GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift */,
 				6D9AE8B50C11C983BA3F87BC /* GitMac/UI/Components/Molecules/Forms/DSLabeledField.swift */,
-				309335EA370B8E36FD9B9860 /* GitMac/UI/Components/Molecules/Forms/DSSearchBar.swift */,
 				5E99A07FBA1E2DA4CDF2D8F3 /* GitMac/UI/Components/Molecules/Forms/DSActionBar.swift */,
 			);
 			name = Forms;
@@ -903,6 +903,7 @@
 				AVTRSVC1F526F46E3958E34A /* Core/Services/AvatarService.swift */,
 				CTXMNU01F526F46E3958E34A /* UI/Components/ContextMenus.swift */,
 				GKTHEME1F526F46E3958E34A /* UI/Components/AppTheme.swift */,
+				LDBTN001F526F46E3958E34A /* UI/Components/LoadingButton.swift */,
 				KBSHRT01F526F46E3958E34A /* UI/Components/KeyboardShortcuts.swift */,
 				RES001 /* Assets.xcassets */,
 				INFO01 /* Info.plist */,
@@ -978,6 +979,14 @@
 			);
 			sourceTree = "<group>";
 		};
+		3E673DC0846645FCBBE2567D /* RepoGroups */ = {
+			isa = PBXGroup;
+			children = (
+				F74C1E00507D408D86CEE731 /* RepoGroupsService.swift */,
+			);
+			name = RepoGroups;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -1010,7 +1019,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 2620;
+				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					TGT001 = {
 						CreatedOnToolsVersion = 15.0;
@@ -1044,6 +1053,15 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA11BB22CC3344DD55EE66FF /* GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift in Sources */,
+				AA22BB33CC4455DD66EE77FF /* GitMac/UI/Components/Molecules/Forms/DSSearchBar.swift in Sources */,
+				9E864EB499F54029820F722D /* GitMac/Features/Jira/JiraContentView.swift in Sources */,
+				051044BE277D49BF9A932FF2 /* GitMac/Features/Jira/JiraIssuesList.swift in Sources */,
+				F3790BD2B0FD4D4CB36658CC /* GitMac/Features/Jira/JiraLoginPrompt.swift in Sources */,
+				B707301E0C13408BBB3CD17A /* GitMac/Features/Jira/JiraSettingsContent.swift in Sources */,
+				2E7F77965FAF4325A9AFCEC0 /* GitMac/Features/Linear/LinearContentView.swift in Sources */,
+				F8FF74927C564D5BAB210C98 /* GitMac/Features/Notion/NotionContentView.swift in Sources */,
+				448A954BF47C4C9097A4C3AC /* GitMac/Features/Taiga/TaigaContentView.swift in Sources */,
 				APP002 /* Assets.xcassets in Resources */,
 				AC9431A42EE97D6000A59026 /* BUILD_FIX.md in Resources */,
 				AC9431AA2EE97DE700A59026 /* FASE3_PROGRESS.md in Resources */,
@@ -1065,7 +1083,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				11412D2CD2554F6880201DCC /* Features/RepoGroups/RepoGroupsService.swift in Sources */,
+				11412D2CD2554F6880201DCC /* RepoGroupsService.swift in Sources */,
 				B6FF711E9D904DC5A13E334F /* GitMac/UI/Components/Commit/CommitMessageArea.swift in Sources */,
 				C17B40AC6D74427DAB28B049 /* GitMac/UI/Components/Common/LayoutConstants.swift in Sources */,
 				8AC7D258532342BF841C0A12 /* GitMac/UI/Components/Diff/DiffHunkView.swift in Sources */,
@@ -1177,14 +1195,11 @@
 				CTXMNU01B526F46E3958E34A /* UI/Components/ContextMenus.swift in Sources */,
 				GKTHEME1B526F46E3958E34A /* UI/Components/AppTheme.swift in Sources */,
 				AC9431882EE978E500A59026 /* ReflogView.swift in Sources */,
+				LDBTN001B526F46E3958E34A /* UI/Components/LoadingButton.swift in Sources */,
 				KBSHRT01B526F46E3958E34A /* UI/Components/KeyboardShortcuts.swift in Sources */,
 				UNIFCTX001B526F46E3958E3 /* GitMac/UI/Components/UnifiedFileContextMenu.swift in Sources */,
 				D3881EDC974B4F1B953A71DF /* GitMac/GitOperationHandler.swift in Sources */,
 				C0FCA2D59D0B4674801C30B7 /* GitMac/UI/Utilities/ModalCoordinator.swift in Sources */,
-				68acff3ec69f4554a1d072e3 /* GitMac/UI/Utilities/VisualEffectBlur.swift in Sources */,
-				79dd909d24f6498c944a3718 /* GitMac/UI/Components/Xcode/XcodeToolbarButton.swift in Sources */,
-				ec9b7c8e44624131b81f5568 /* GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift in Sources */,
-				E9332D8207AA4396BE97A94028738F7A /* GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift in Sources */,
 				33E17B57FA9D4CA1B3B708A3 /* GitMac/Core/Models/GitHook.swift in Sources */,
 				608D9FA09DC9438CB9AEC4F8 /* GitMac/Core/Services/GitHooksService.swift in Sources */,
 				DCA2305BB8A842369E2DFDE0 /* GitMac/Features/GitHooks/GitHooksView.swift in Sources */,
@@ -1244,9 +1259,7 @@
 				1E8CDFA5E335FBCBEAA61B45 /* GitMac/UI/Components/Atoms/Display/DSIcon.swift in Sources */,
 				C539F53A651A0250BCAA9015 /* GitMac/UI/Components/Cards/CardStyle.swift in Sources */,
 				E03E61A15F828ADE3955FC07 /* GitMac/UI/Components/Atoms/Display/DSSpacer.swift in Sources */,
-				C2B7667B558CE8196CE0A378 /* GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift in Sources */,
 				A6F51E6777487026188DD38D /* GitMac/UI/Components/Molecules/Forms/DSLabeledField.swift in Sources */,
-				FCE7733F5EE79F6938CF6652 /* GitMac/UI/Components/Molecules/Forms/DSSearchBar.swift in Sources */,
 				411EE8E24820B19E458C98EA /* GitMac/UI/Components/Molecules/Forms/DSActionBar.swift in Sources */,
 				44D2EEB68993CA4714674E6A /* GitMac/UI/Components/Molecules/Lists/DSDraggableItem.swift in Sources */,
 				05BD9B5EFCE2EF13BE0D8785 /* GitMac/UI/Components/Molecules/Lists/DSExpandableItem.swift in Sources */,
@@ -1339,7 +1352,6 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG GHOSTTY_AVAILABLE $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -1356,10 +1368,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				ENABLE_APP_SANDBOX = NO;
-				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readwrite;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/Frameworks",
@@ -1456,7 +1465,6 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "GHOSTTY_AVAILABLE $(inherited)";
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
@@ -1473,10 +1481,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				ENABLE_APP_SANDBOX = NO;
-				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readwrite;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/Frameworks",

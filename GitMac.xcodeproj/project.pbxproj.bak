@@ -165,10 +165,6 @@
 		BD7718FD3031E989055C841C /* GitMac/Features/Notion/NotionPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B478D68ED8A95275ECAA2AD4 /* GitMac/Features/Notion/NotionPlugin.swift */; };
 		BF29CA1FCD714F51A1F45AB0 /* Features/GitFlow/GitFlowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2DB7601C3F04EEBB40EBBEA /* Features/GitFlow/GitFlowManager.swift */; };
 		C0FCA2D59D0B4674801C30B7 /* GitMac/UI/Utilities/ModalCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAE1F7D4CBB444D9943B71B4 /* GitMac/UI/Utilities/ModalCoordinator.swift */; };
-		68acff3ec69f4554a1d072e3 /* GitMac/UI/Utilities/VisualEffectBlur.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ad238319f6d4b4694ac427b /* GitMac/UI/Utilities/VisualEffectBlur.swift */; };
-		79dd909d24f6498c944a3718 /* GitMac/UI/Components/Xcode/XcodeToolbarButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = be2644539cb2443087e333db /* GitMac/UI/Components/Xcode/XcodeToolbarButton.swift */; };
-		ec9b7c8e44624131b81f5568 /* GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9c9fdedb7dc04c73bd87a8f7 /* GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift */; };
-		E9332D8207AA4396BE97A94028738F7A /* GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04CA4782601B409EAEA2EB99D6366C89 /* GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift */; };
 		C1432F5677FB440BBBCE1D37 /* Core/Utils/FileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 785500BECF07420C8BF7154F /* Core/Utils/FileWatcher.swift */; };
 		C17B40AC6D74427DAB28B049 /* GitMac/UI/Components/Common/LayoutConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C58CC8B384497E977827CA /* GitMac/UI/Components/Common/LayoutConstants.swift */; };
 		C2B7667B558CE8196CE0A378 /* GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF4F843954F997AD46CDBAE8 /* GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift */; };
@@ -414,10 +410,6 @@
 		CAB380172C6E42F1929A7713 /* GitMac/Features/Diff/Renderers/DiffMinimap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Diff/Renderers/DiffMinimap.swift; sourceTree = "<group>"; };
 		CACHETTL1F526F46E3958E34A /* GitMac/Core/Utils/CacheWithTTL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/Core/Utils/CacheWithTTL.swift; sourceTree = "<group>"; };
 		CAE1F7D4CBB444D9943B71B4 /* GitMac/UI/Utilities/ModalCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Utilities/ModalCoordinator.swift; sourceTree = "<group>"; };
-		1ad238319f6d4b4694ac427b /* GitMac/UI/Utilities/VisualEffectBlur.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Utilities/VisualEffectBlur.swift; sourceTree = "<group>"; };
-		be2644539cb2443087e333db /* GitMac/UI/Components/Xcode/XcodeToolbarButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Xcode/XcodeToolbarButton.swift; sourceTree = "<group>"; };
-		9c9fdedb7dc04c73bd87a8f7 /* GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift; sourceTree = "<group>"; };
-		04CA4782601B409EAEA2EB99D6366C89 /* GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift; sourceTree = "<group>"; };
 		CDC2D84E539F3E4F59585DB1 /* GitMac/UI/Components/Atoms/Display/DSIcon.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Atoms/Display/DSIcon.swift; sourceTree = SOURCE_ROOT; };
 		CF4F843954F997AD46CDBAE8 /* GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift; sourceTree = SOURCE_ROOT; };
 		CTXMNU01F526F46E3958E34A /* UI/Components/ContextMenus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI/Components/ContextMenus.swift; sourceTree = "<group>"; };
@@ -1181,10 +1173,6 @@
 				UNIFCTX001B526F46E3958E3 /* GitMac/UI/Components/UnifiedFileContextMenu.swift in Sources */,
 				D3881EDC974B4F1B953A71DF /* GitMac/GitOperationHandler.swift in Sources */,
 				C0FCA2D59D0B4674801C30B7 /* GitMac/UI/Utilities/ModalCoordinator.swift in Sources */,
-				68acff3ec69f4554a1d072e3 /* GitMac/UI/Utilities/VisualEffectBlur.swift in Sources */,
-				79dd909d24f6498c944a3718 /* GitMac/UI/Components/Xcode/XcodeToolbarButton.swift in Sources */,
-				ec9b7c8e44624131b81f5568 /* GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift in Sources */,
-				E9332D8207AA4396BE97A94028738F7A /* GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift in Sources */,
 				33E17B57FA9D4CA1B3B708A3 /* GitMac/Core/Models/GitHook.swift in Sources */,
 				608D9FA09DC9438CB9AEC4F8 /* GitMac/Core/Services/GitHooksService.swift in Sources */,
 				DCA2305BB8A842369E2DFDE0 /* GitMac/Features/GitHooks/GitHooksView.swift in Sources */,
@@ -1356,7 +1344,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				ENABLE_APP_SANDBOX = NO;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
@@ -1473,7 +1461,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				ENABLE_APP_SANDBOX = NO;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
