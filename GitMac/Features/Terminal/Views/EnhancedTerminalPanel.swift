@@ -6,123 +6,164 @@ enum TerminalViewMode: String, CaseIterable {
     case workflows = "Workflows"
 }
 
+// MARK: - Terminal Tab Model
+
+struct EnhancedTerminalTab: Identifiable, Equatable {
+    let id = UUID()
+    var name: String
+    var workingDirectory: String
+
+    static func == (lhs: EnhancedTerminalTab, rhs: EnhancedTerminalTab) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+// MARK: - Enhanced Terminal Tab Manager
+
+@MainActor
+class EnhancedTerminalTabManager: ObservableObject {
+    @Published var tabs: [EnhancedTerminalTab] = []
+    @Published var selectedTabId: UUID?
+    @Published var viewModels: [UUID: GhosttyViewModel] = [:]
+    @Published var enhancedViewModels: [UUID: GhosttyEnhancedViewModel] = [:]
+
+    var currentViewModel: GhosttyViewModel? {
+        guard let id = selectedTabId else { return nil }
+        return viewModels[id]
+    }
+
+    var currentEnhancedViewModel: GhosttyEnhancedViewModel? {
+        guard let id = selectedTabId else { return nil }
+        return enhancedViewModels[id]
+    }
+
+    func addTab(workingDirectory: String) {
+        let dirName = (workingDirectory as NSString).lastPathComponent
+        let tab = EnhancedTerminalTab(name: dirName, workingDirectory: workingDirectory)
+        tabs.append(tab)
+
+        let viewModel = GhosttyViewModel()
+        viewModel.setWorkingDirectory(workingDirectory)
+        viewModels[tab.id] = viewModel
+
+        let enhancedViewModel = GhosttyEnhancedViewModel()
+        enhancedViewModel.updateContext(repoPath: workingDirectory)
+        enhancedViewModels[tab.id] = enhancedViewModel
+
+        selectedTabId = tab.id
+    }
+
+    func closeTab(_ id: UUID) {
+        guard tabs.count > 1 else { return } // Keep at least one tab
+
+        if let index = tabs.firstIndex(where: { $0.id == id }) {
+            tabs.remove(at: index)
+            viewModels.removeValue(forKey: id)
+            enhancedViewModels.removeValue(forKey: id)
+
+            // Select adjacent tab
+            if selectedTabId == id {
+                let newIndex = min(index, tabs.count - 1)
+                selectedTabId = tabs[newIndex].id
+            }
+        }
+    }
+
+    func selectTab(_ id: UUID) {
+        selectedTabId = id
+    }
+}
+
 struct EnhancedTerminalPanel: View {
     @EnvironmentObject var appState: AppState
-    @StateObject private var viewModel = GhosttyViewModel()
-    @StateObject private var enhancedViewModel = GhosttyEnhancedViewModel()
-    @State private var inputHeight: CGFloat = 40
+    @StateObject private var tabManager = EnhancedTerminalTabManager()
     @State private var viewMode: TerminalViewMode = .terminal
     @State private var showSessionSheet = false
 
     var body: some View {
         VStack(spacing: 0) {
-            // Toolbar with view mode switcher
-            terminalToolbar
+            // Tab bar with terminal tabs
+            EnhancedTerminalTabBar(
+                tabs: $tabManager.tabs,
+                selectedTab: $tabManager.selectedTabId,
+                viewMode: $viewMode,
+                onAddTab: { tabManager.addTab(workingDirectory: appState.currentRepository?.path ?? NSHomeDirectory()) },
+                onCloseTab: { tabManager.closeTab($0) },
+                onShareSession: { showSessionSheet = true }
+            )
 
             // Main content based on view mode
-            GeometryReader { geometry in
-                ZStack(alignment: .topLeading) {
-                    contentView
+            if let viewModel = tabManager.currentViewModel,
+               let enhancedViewModel = tabManager.currentEnhancedViewModel {
+                GeometryReader { geometry in
+                    ZStack(alignment: .topLeading) {
+                        contentView(viewModel: viewModel, enhancedViewModel: enhancedViewModel)
 
-                    // AI suggestions overlay (only in terminal mode)
-                    if viewMode == .terminal {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Spacer()
-                                .frame(height: 60) // Space from top
+                        // AI suggestions overlay (only in terminal mode)
+                        if viewMode == .terminal {
+                            VStack(alignment: .leading, spacing: 0) {
+                                Spacer()
+                                    .frame(height: 60) // Space from top
 
-                            if !enhancedViewModel.aiSuggestions.isEmpty && !enhancedViewModel.currentInput.isEmpty {
-                                suggestionsOverlay
-                            } else if enhancedViewModel.isLoadingAI && !enhancedViewModel.currentInput.isEmpty {
-                                loadingIndicator
+                                if !enhancedViewModel.aiSuggestions.isEmpty && !enhancedViewModel.currentInput.isEmpty {
+                                    suggestionsOverlay(enhancedViewModel: enhancedViewModel)
+                                } else if enhancedViewModel.isLoadingAI && !enhancedViewModel.currentInput.isEmpty {
+                                    loadingIndicator
+                                }
+
+                                Spacer()
                             }
-
-                            Spacer()
                         }
                     }
                 }
+                .background(AppTheme.background)
             }
         }
         .background(AppTheme.background)
         .sheet(isPresented: $showSessionSheet) {
-            if let currentSession = createCurrentSession() {
+            if let enhancedViewModel = tabManager.currentEnhancedViewModel,
+               let currentSession = createCurrentSession(from: enhancedViewModel) {
                 SessionSharingSheet(session: currentSession)
             }
         }
         .onAppear {
-             if let repoPath = appState.currentRepository?.path {
-                 viewModel.setWorkingDirectory(repoPath)
-                 enhancedViewModel.updateContext(repoPath: repoPath)
-             }
+            if tabManager.tabs.isEmpty {
+                tabManager.addTab(workingDirectory: appState.currentRepository?.path ?? NSHomeDirectory())
+            }
         }
         .onChange(of: appState.currentRepository?.path) { _, newPath in
-             if let path = newPath {
+            if let path = newPath, let viewModel = tabManager.currentViewModel, let enhancedViewModel = tabManager.currentEnhancedViewModel {
                  viewModel.setWorkingDirectory(path)
                  enhancedViewModel.updateContext(repoPath: path)
              }
         }
     }
 
-    // MARK: - Toolbar
-
-    private var terminalToolbar: some View {
-        HStack(spacing: 12) {
-            // View mode picker
-            Picker("View Mode", selection: $viewMode) {
-                ForEach(TerminalViewMode.allCases, id: \.self) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 300)
-
-            Spacer()
-
-            // Session sharing button
-            Button {
-                showSessionSheet = true
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "square.and.arrow.up")
-                    Text("Share Session")
-                }
-                .font(.system(size: 12, weight: .medium))
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(AppTheme.backgroundSecondary)
-            .cornerRadius(6)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(AppTheme.backgroundSecondary.opacity(0.5))
-    }
-
     // MARK: - Content Views
 
     @ViewBuilder
-    private var contentView: some View {
+    private func contentView(viewModel: GhosttyViewModel, enhancedViewModel: GhosttyEnhancedViewModel) -> some View {
         switch viewMode {
         case .terminal:
-            terminalView
+            terminalView(viewModel: viewModel, enhancedViewModel: enhancedViewModel)
         case .blocks:
-            blocksView
+            blocksView(enhancedViewModel: enhancedViewModel)
         case .workflows:
-            workflowsView
+            workflowsView(enhancedViewModel: enhancedViewModel)
         }
     }
 
-    private var blocksView: some View {
+    private func blocksView(enhancedViewModel: GhosttyEnhancedViewModel) -> some View {
         TerminalBlocksView(viewModel: enhancedViewModel)
     }
 
-    private var workflowsView: some View {
+    private func workflowsView(enhancedViewModel: GhosttyEnhancedViewModel) -> some View {
         TerminalWorkflowsView(viewModel: enhancedViewModel)
     }
 
     // MARK: - Subviews
 
-    private var terminalView: some View {
+    private func terminalView(viewModel: GhosttyViewModel, enhancedViewModel: GhosttyEnhancedViewModel) -> some View {
         GhosttyEnhancedTerminalView(
             viewModel: viewModel,
             enhancedViewModel: enhancedViewModel,
@@ -133,10 +174,10 @@ struct EnhancedTerminalPanel: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var suggestionsOverlay: some View {
+    private func suggestionsOverlay(enhancedViewModel: GhosttyEnhancedViewModel) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(enhancedViewModel.aiSuggestions.prefix(5).enumerated()), id: \.offset) { index, suggestion in
-                suggestionRow(suggestion: suggestion, index: index)
+                suggestionRow(suggestion: suggestion, index: index, enhancedViewModel: enhancedViewModel)
 
                 if index < enhancedViewModel.aiSuggestions.count - 1 && index < 4 {
                     Divider()
@@ -188,13 +229,15 @@ struct EnhancedTerminalPanel: View {
             .shadow(color: Color.black.opacity(0.2), radius: 12, x: 0, y: 4)
     }
 
-    private func suggestionRow(suggestion: AICommandSuggestion, index: Int) -> some View {
+    private func suggestionRow(suggestion: AICommandSuggestion, index: Int, enhancedViewModel: GhosttyEnhancedViewModel) -> some View {
         Button {
-            applySuggestion(suggestion)
+            if let viewModel = tabManager.currentViewModel {
+                applySuggestion(suggestion, to: viewModel, enhancedViewModel: enhancedViewModel)
+            }
         } label: {
             HStack(spacing: 12) {
-                suggestionIcon(index: index, isFromAI: suggestion.isFromAI)
-                suggestionContent(suggestion: suggestion, index: index)
+                suggestionIcon(index: index, isFromAI: suggestion.isFromAI, enhancedViewModel: enhancedViewModel)
+                suggestionContent(suggestion: suggestion, index: index, enhancedViewModel: enhancedViewModel)
                 Spacer()
                 if index == enhancedViewModel.selectedSuggestionIndex {
                     shortcutHint
@@ -207,7 +250,7 @@ struct EnhancedTerminalPanel: View {
         .buttonStyle(.plain)
     }
 
-    private func suggestionIcon(index: Int, isFromAI: Bool) -> some View {
+    private func suggestionIcon(index: Int, isFromAI: Bool, enhancedViewModel: GhosttyEnhancedViewModel) -> some View {
         ZStack {
             Circle()
                 .fill(index == enhancedViewModel.selectedSuggestionIndex ? AppTheme.accent.opacity(0.15) : Color.clear)
@@ -219,7 +262,7 @@ struct EnhancedTerminalPanel: View {
         }
     }
 
-    private func suggestionContent(suggestion: AICommandSuggestion, index: Int) -> some View {
+    private func suggestionContent(suggestion: AICommandSuggestion, index: Int, enhancedViewModel: GhosttyEnhancedViewModel) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(suggestion.command)
                 .font(.system(size: 13, weight: .medium, design: .monospaced))
@@ -248,7 +291,7 @@ struct EnhancedTerminalPanel: View {
         .cornerRadius(4)
     }
 
-    private func applySuggestion(_ suggestion: AICommandSuggestion) {
+    private func applySuggestion(_ suggestion: AICommandSuggestion, to viewModel: GhosttyViewModel, enhancedViewModel: GhosttyEnhancedViewModel) {
         // Clear current buffer
         enhancedViewModel.currentInput = ""
         enhancedViewModel.aiSuggestions.removeAll()
@@ -262,7 +305,7 @@ struct EnhancedTerminalPanel: View {
 
     // MARK: - Session Management
 
-    private func createCurrentSession() -> TerminalSession? {
+    private func createCurrentSession(from enhancedViewModel: GhosttyEnhancedViewModel) -> TerminalSession? {
         guard !enhancedViewModel.trackedCommands.isEmpty else { return nil }
 
         let dateFormatter = DateFormatter()
@@ -274,5 +317,123 @@ struct EnhancedTerminalPanel: View {
             name: sessionName,
             commands: enhancedViewModel.trackedCommands
         )
+    }
+}
+
+// MARK: - Enhanced Terminal Tab Bar
+
+struct EnhancedTerminalTabBar: View {
+    @Binding var tabs: [EnhancedTerminalTab]
+    @Binding var selectedTab: UUID?
+    @Binding var viewMode: TerminalViewMode
+    let onAddTab: () -> Void
+    let onCloseTab: (UUID) -> Void
+    let onShareSession: () -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            // Terminal tabs
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 1) {
+                    ForEach(tabs) { tab in
+                        EnhancedTerminalTabButton(
+                            tab: tab,
+                            isSelected: tab.id == selectedTab,
+                            onSelect: { selectedTab = tab.id },
+                            onClose: { onCloseTab(tab.id) },
+                            canClose: tabs.count > 1
+                        )
+                    }
+
+                    // Add tab button
+                    Button(action: onAddTab) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(AppTheme.textMuted)
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(.plain)
+                    .help("New tab")
+                }
+                .padding(.horizontal, 8)
+            }
+
+            Divider()
+                .frame(height: 20)
+                .padding(.horizontal, 8)
+
+            // View mode picker (compact)
+            Picker("", selection: $viewMode) {
+                ForEach(TerminalViewMode.allCases, id: \.self) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 220)
+
+            Spacer()
+
+            // Share session button
+            Button(action: onShareSession) {
+                HStack(spacing: 4) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 11, weight: .medium))
+                    Text("Share")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundColor(AppTheme.textSecondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(AppTheme.backgroundTertiary)
+                .cornerRadius(5)
+            }
+            .buttonStyle(.plain)
+            .help("Share terminal session")
+            .padding(.trailing, 12)
+        }
+        .frame(height: 38)
+        .background(AppTheme.backgroundSecondary)
+    }
+}
+
+// MARK: - Enhanced Terminal Tab Button
+
+struct EnhancedTerminalTabButton: View {
+    let tab: EnhancedTerminalTab
+    let isSelected: Bool
+    let onSelect: () -> Void
+    let onClose: () -> Void
+    let canClose: Bool
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 6) {
+                Image(systemName: "terminal")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(isSelected ? AppTheme.accent : AppTheme.textMuted)
+
+                Text(tab.name)
+                    .font(.system(size: 11, weight: .medium))
+                    .lineLimit(1)
+
+                if isHovered && canClose {
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(AppTheme.textMuted)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .foregroundColor(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(isSelected ? AppTheme.background : (isHovered ? AppTheme.background.opacity(0.5) : Color.clear))
+            .cornerRadius(5)
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
     }
 }
