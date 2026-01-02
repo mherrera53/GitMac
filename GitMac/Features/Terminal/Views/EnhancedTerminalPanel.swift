@@ -113,11 +113,7 @@ struct EnhancedTerminalPanel: View {
     }
 
     private var blocksView: some View {
-        TerminalBlocksView(
-            blocks: enhancedViewModel.trackedCommands.map { cmd in
-                TerminalBlock(command: cmd)
-            }
-        )
+        TerminalBlocksView(viewModel: enhancedViewModel)
     }
 
     private var workflowsView: some View {
