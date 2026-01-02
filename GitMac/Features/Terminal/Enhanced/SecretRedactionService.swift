@@ -50,7 +50,6 @@ struct RedactedSecret: Identifiable {
 
 // MARK: - Secret Redaction Service
 
-@MainActor
 class SecretRedactionService {
     static let shared = SecretRedactionService()
 
