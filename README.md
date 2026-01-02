@@ -90,6 +90,9 @@ GitMac is a powerful, native macOS Git client designed to provide an exceptional
 git clone https://github.com/mherrera53/GitMac.git
 cd GitMac
 
+# Setup external frameworks
+./scripts/setup-ghostty.sh
+
 # Open in Xcode
 open GitMac.xcodeproj
 
@@ -437,6 +440,15 @@ Configure the integrated terminal in Settings:
 
 ### Building
 
+First-time setup (required for external frameworks):
+
+```bash
+# Setup external frameworks (creates stub framework for Ghostty)
+./scripts/setup-ghostty.sh
+```
+
+Then build the project:
+
 ```bash
 # Debug build
 xcodebuild -scheme GitMac -configuration Debug
@@ -447,6 +459,8 @@ xcodebuild -scheme GitMac -configuration Release
 # Run tests
 xcodebuild -scheme GitMac test
 ```
+
+**Note**: The Ghostty terminal framework is optional. The setup script creates a minimal stub that allows compilation. For full Ghostty terminal functionality, see `Frameworks/README.md`.
 
 ### Code Style
 
