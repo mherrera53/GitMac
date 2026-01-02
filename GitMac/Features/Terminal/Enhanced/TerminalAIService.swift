@@ -179,6 +179,13 @@ class TerminalAIService {
     ) async throws -> [AICommandSuggestion] {
         print("🔮 TerminalAIService: suggestTerminalCommands called with input: '\(input)'")
 
+        // PRIORITY: Check for directory/file path suggestions first
+        let directorySuggestions = getDirectorySuggestions(for: input, repoPath: repoPath)
+        if !directorySuggestions.isEmpty {
+            print("📁 Returning \(directorySuggestions.count) directory suggestions")
+            return directorySuggestions
+        }
+
         // Build context
         let recentContext = recentCommands.isEmpty ? "" : "\nRecent commands: \(recentCommands.suffix(3).joined(separator: ", "))"
         let repoContext = repoPath != nil ? "\nWorking in Git repository: \(repoPath!)" : ""
@@ -532,5 +539,122 @@ class TerminalAIService {
             print("❌ OpenAI also failed: \(error.localizedDescription)")
             return "Unable to get AI explanation. Error: \(error.localizedDescription)\n\nTry checking the command syntax and ensure you have the necessary permissions."
         }
+    }
+
+    // MARK: - Directory & File Path Suggestions
+
+    private func getDirectorySuggestions(for input: String, repoPath: String?) -> [AICommandSuggestion] {
+        // Commands that take file/directory paths
+        let pathCommands = ["cd", "ls", "cat", "vim", "nano", "open", "code", "rm", "mv", "cp", "mkdir", "touch", "grep", "find"]
+
+        // Parse input to detect command and partial path
+        let components = input.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+        guard components.count >= 1 else { return [] }
+
+        let command = String(components[0])
+        guard pathCommands.contains(command) else { return [] }
+
+        // Get the partial path (or empty if just the command)
+        let partialPath = components.count > 1 ? String(components[1]) : ""
+
+        // Determine the working directory
+        let workingDir = repoPath ?? FileManager.default.currentDirectoryPath
+
+        // Parse the partial path
+        let (searchDir, searchPrefix) = parsePartialPath(partialPath, workingDir: workingDir)
+
+        // Get matching files/directories
+        let matches = getMatchingPaths(in: searchDir, prefix: searchPrefix, forCommand: command)
+
+        // Create suggestions
+        var suggestions: [AICommandSuggestion] = []
+        for (path, isDir) in matches.prefix(8) { // Limit to 8 suggestions
+            let fullCommand = "\(command) \(path)"
+            let icon = isDir ? "📁" : "📄"
+            let type = isDir ? "directory" : "file"
+            suggestions.append(AICommandSuggestion(
+                command: fullCommand,
+                description: "\(icon) \(type)",
+                confidence: 0.95,
+                isFromAI: false,
+                category: "Path"
+            ))
+        }
+
+        return suggestions
+    }
+
+    private func parsePartialPath(_ partial: String, workingDir: String) -> (searchDir: String, prefix: String) {
+        if partial.isEmpty {
+            // No path entered yet, show current directory contents
+            return (workingDir, "")
+        }
+
+        if partial.hasPrefix("/") {
+            // Absolute path
+            let url = URL(fileURLWithPath: partial)
+            let dir = url.deletingLastPathComponent().path
+            let prefix = url.lastPathComponent
+            return (dir, prefix)
+        } else if partial.hasPrefix("~/") {
+            // Home directory
+            let expandedPath = NSString(string: partial).expandingTildeInPath
+            let url = URL(fileURLWithPath: expandedPath)
+            let dir = url.deletingLastPathComponent().path
+            let prefix = url.lastPathComponent
+            return (dir, prefix)
+        } else {
+            // Relative path
+            let url = URL(fileURLWithPath: workingDir).appendingPathComponent(partial)
+            let dir = url.deletingLastPathComponent().path
+            let prefix = url.lastPathComponent
+            return (dir, prefix)
+        }
+    }
+
+    private func getMatchingPaths(in directory: String, prefix: String, forCommand command: String) -> [(path: String, isDir: Bool)] {
+        let fileManager = FileManager.default
+        var results: [(path: String, isDir: Bool)] = []
+
+        guard fileManager.fileExists(atPath: directory) else { return [] }
+
+        do {
+            let contents = try fileManager.contentsOfDirectory(atPath: directory)
+            let filtered = prefix.isEmpty ? contents : contents.filter { $0.hasPrefix(prefix) }
+
+            for item in filtered {
+                let fullPath = URL(fileURLWithPath: directory).appendingPathComponent(item).path
+                var isDirectory: ObjCBool = false
+
+                if fileManager.fileExists(atPath: fullPath, isDirectory: &isDirectory) {
+                    // For 'cd', only show directories
+                    if command == "cd" && !isDirectory.boolValue {
+                        continue
+                    }
+
+                    // Skip hidden files unless prefix starts with dot
+                    if item.hasPrefix(".") && !prefix.hasPrefix(".") {
+                        continue
+                    }
+
+                    // Create relative or clean path for display
+                    let displayPath = item.contains(" ") ? "\"\(item)\"" : item
+                    results.append((displayPath, isDirectory.boolValue))
+                }
+            }
+
+            // Sort: directories first, then alphabetically
+            results.sort { (a, b) in
+                if a.isDir != b.isDir {
+                    return a.isDir
+                }
+                return a.path.localizedCaseInsensitiveCompare(b.path) == .orderedAscending
+            }
+
+        } catch {
+            print("❌ Error reading directory \(directory): \(error)")
+        }
+
+        return results
     }
 }

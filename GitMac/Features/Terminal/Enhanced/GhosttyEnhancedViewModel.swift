@@ -186,6 +186,24 @@ class GhosttyEnhancedViewModel: ObservableObject {
         currentInput = ""
     }
 
+    // MARK: - Suggestion Navigation
+
+    func selectNextSuggestion() {
+        guard !aiSuggestions.isEmpty else { return }
+        selectedSuggestionIndex = min(selectedSuggestionIndex + 1, aiSuggestions.count - 1)
+    }
+
+    func selectPreviousSuggestion() {
+        guard !aiSuggestions.isEmpty else { return }
+        selectedSuggestionIndex = max(selectedSuggestionIndex - 1, 0)
+    }
+
+    func applySelectedSuggestion(to viewModel: GhosttyViewModel) {
+        guard selectedSuggestionIndex < aiSuggestions.count else { return }
+        let suggestion = aiSuggestions[selectedSuggestionIndex]
+        applySuggestion(suggestion, to: viewModel)
+    }
+
     // MARK: - Active AI (Warp-style error suggestions)
 
     private func suggestErrorFix(for command: TrackedCommand) {

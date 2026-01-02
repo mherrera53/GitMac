@@ -58,6 +58,7 @@ struct GhosttyEnhancedTerminalView: NSViewRepresentable {
 
         // Create container with enhanced tracking
         let container = EnhancedGhosttyContainerView(frame: NSMakeRect(0, 0, 800, 600))
+        container.viewModel = viewModel
         container.enhancedViewModel = enhancedViewModel
         container.aiEnabled = aiEnabled
         container.repoPath = repoPath
@@ -161,6 +162,7 @@ struct GhosttyEnhancedTerminalView: NSViewRepresentable {
 // MARK: - Enhanced Container View
 
 class EnhancedGhosttyContainerView: NSView {
+    weak var viewModel: GhosttyViewModel?
     var enhancedViewModel: GhosttyEnhancedViewModel?
     var aiEnabled: Bool = true
     var repoPath: String?
@@ -182,6 +184,28 @@ class EnhancedGhosttyContainerView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
+        // Intercept arrow keys and Enter when AI suggestions are visible
+        if let enhanced = enhancedViewModel, !enhanced.aiSuggestions.isEmpty {
+            // Arrow Up (126) - Navigate suggestions up
+            if event.keyCode == 126 {
+                enhanced.selectPreviousSuggestion()
+                return
+            }
+            // Arrow Down (125) - Navigate suggestions down
+            if event.keyCode == 125 {
+                enhanced.selectNextSuggestion()
+                return
+            }
+            // Enter (36 or 76) - Apply selected suggestion
+            if event.keyCode == 36 || event.keyCode == 76 {
+                if let vm = viewModel {
+                    enhanced.applySelectedSuggestion(to: vm)
+                    currentInputBuffer = ""
+                }
+                return
+            }
+        }
+
         // Track input for AI suggestions
         if let characters = event.characters {
             handleInputTracking(characters, event: event)

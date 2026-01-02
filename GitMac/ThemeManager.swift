@@ -342,8 +342,13 @@ struct ColorScheme: Codable {
             return .light
         case .dark:
             return .dark
-        default:
-            return .system
+        case .system, .custom:
+            // Detect system appearance and return appropriate color scheme
+            if NSAppearance.currentDrawing().bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
+                return .dark
+            } else {
+                return .light
+            }
         }
     }
     
@@ -1447,6 +1452,11 @@ class ThemeEditorWindowController {
         window.center()
         window.isReleasedWhenClosed = false
         window.level = .floating
+        
+        // Apply theme appearance to window
+        window.appearance = ThemeManager.shared.appearance ?? NSAppearance(named: .darkAqua)
+        window.backgroundColor = NSColor(AppTheme.background)
+        
         window.makeKeyAndOrderFront(nil)
 
         // Activar la app

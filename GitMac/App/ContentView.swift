@@ -270,57 +270,61 @@ struct MainLayout: View {
             ToolbarItem(placement: .navigation) {
                 HStack(spacing: 0) {
                     // Navigation History
-                    XcodeToolbarButton(icon: "chevron.left") { }
+                    XcodeToolbarButton(icon: "chevron.left", color: AppTheme.textSecondary) { }
                         .help("Go Back")
-                    
-                    XcodeToolbarButton(icon: "chevron.right") { }
+
+                    XcodeToolbarButton(icon: "chevron.right", color: AppTheme.textSecondary) { }
                         .help("Go Forward")
                 }
             }
 
-            // Principal area - Repository Tabs (Pills)
+            // Principal area - Repository Tabs or App Title
             ToolbarItem(placement: .principal) {
-                RepositoryTabsView()
-                    .frame(minWidth: 200, maxWidth: 600)
+                if appState.openTabs.isEmpty {
+                    // Show app title when no repositories open
+                    Text("GitMac")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(AppTheme.textPrimary)
+                } else {
+                    // Show repository tabs when repos are open
+                    RepositoryTabsView()
+                        .frame(minWidth: 200, maxWidth: 600)
+                }
             }
 
             // Plugin buttons
             ToolbarItemGroup(placement: .automatic) {
-                XcodeToolbarButton(icon: "terminal.fill") {
+                XcodeToolbarButton(icon: "terminal.fill", color: AppTheme.textSecondary) {
                     bottomPanelManager.openTab(type: .terminal)
                 }
                 .help("Terminal")
 
                 // Integrations
-                XcodeToolbarButton(icon: "tag.fill", color: AppTheme.success) { // Taiga
+                XcodeToolbarButton(icon: "tag.fill", color: AppTheme.success) {
                     bottomPanelManager.openTab(type: .taiga)
                 }
                 .help("Taiga")
 
-                XcodeToolbarButton(icon: "square.stack.3d.up", color: AppTheme.info) { // Jira
+                XcodeToolbarButton(icon: "square.stack.3d.up", color: AppTheme.info) {
                      bottomPanelManager.openTab(type: .jira)
                 }
                 .help("Jira")
-                
-                XcodeToolbarButton(icon: "arrow.triangle.branch", color: AppTheme.textPrimary) { // GitHub (Mapped to existing github view or generic panel)
-                     // Assuming .github or similar exists, but BottomPanelType has .linear, .planner, .notion. 
-                     // Wait, BottomPanelType didn't have .github? 
-                     // I checked BottomPanelType.swift and it has: .terminal, .taiga, .planner, .linear, .jira, .notion, .teamActivity.
-                     // No .github? CICD section has GitHub.
-                     // The user asked for "las demás integraciones". 
-                     // I will add Jira, Planner, Linear, Notion buttons.
-                     // GitHub is usually separate or part of CICD.
-                     // Use .linear as placeholder for now if needed.
-                }
-                // Actually let's just add Jira and Linear for now as requested "the others".
-                
-                XcodeToolbarButton(icon: "lineweight", color: AppTheme.accent) { // Linear
+
+                XcodeToolbarButton(icon: "lineweight", color: AppTheme.accent) {
                      bottomPanelManager.openTab(type: .linear)
                 }
                 .help("Linear")
-                
+
+                XcodeToolbarDivider()
+
+                // Settings Button
+                XcodeToolbarButton(icon: "gearshape.fill", color: AppTheme.textSecondary) {
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                }
+                .help("Settings")
+
                 // Inspector Toggle
-                Button(action: {
+                XcodeToolbarButton(icon: "sidebar.trailing", color: AppTheme.textSecondary) {
                     withAnimation {
                         if columnVisibility == .all {
                             columnVisibility = .doubleColumn
@@ -328,8 +332,6 @@ struct MainLayout: View {
                             columnVisibility = .all
                         }
                     }
-                }) {
-                    Image(systemName: "sidebar.trailing")
                 }
                 .help("Toggle Inspector")
             }
@@ -5047,7 +5049,7 @@ struct TeamActivityPanel: View {
             TeamActivityView()
                 .frame(height: height)
         }
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(AppTheme.backgroundSecondary)
     }
 }
 
@@ -5103,10 +5105,11 @@ struct TeamActivityView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Team Activity")
                     .font(.headline)
+                    .foregroundColor(AppTheme.textPrimary)
 
                 Text("\(viewModel.teamMembers.count) active members")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundColor(AppTheme.textMuted)
             }
 
             Spacer()
@@ -5117,6 +5120,7 @@ struct TeamActivityView: View {
             } label: {
                 Image(systemName: viewModel.isLoading ? "arrow.clockwise" : "arrow.clockwise")
                     .rotationEffect(.degrees(viewModel.isLoading ? 360 : 0))
+                    .foregroundColor(AppTheme.textSecondary)
             }
             .buttonStyle(.borderless)
             .disabled(viewModel.isLoading)
@@ -5136,7 +5140,7 @@ struct TeamActivityView: View {
             }
         }
         .padding()
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(AppTheme.backgroundSecondary)
     }
 
     // MARK: - Team Members List
@@ -5203,7 +5207,7 @@ struct TeamActivityView: View {
                     }
                 }
                 .padding()
-                .background(Color(nsColor: .controlBackgroundColor))
+                .background(AppTheme.backgroundSecondary)
                 .cornerRadius(8)
 
                 // Active PRs
@@ -5276,7 +5280,7 @@ struct TeamActivityView: View {
                     .buttonStyle(.borderless)
                 }
                 .padding()
-                .background(Color(nsColor: .controlBackgroundColor))
+                .background(AppTheme.backgroundSecondary)
                 .cornerRadius(8)
             }
         }
@@ -5286,6 +5290,7 @@ struct TeamActivityView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Files Being Modified")
                 .font(.headline)
+                .foregroundColor(AppTheme.textPrimary)
 
             ForEach(member.filesBeingModified) { file in
                 HStack(spacing: 8) {
@@ -5295,6 +5300,7 @@ struct TeamActivityView: View {
                         Text(file.filename)
                             .font(.caption)
                             .fontWeight(.medium)
+                            .foregroundColor(AppTheme.textPrimary)
 
                         if let source = file.source {
                             Text("in \(source)")
@@ -5329,7 +5335,7 @@ struct TeamActivityView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(file.hasConflict ? Color.orange.opacity(0.05) : Color(nsColor: .controlBackgroundColor))
+                .background(file.hasConflict ? Color.orange.opacity(0.05) : AppTheme.backgroundSecondary)
                 .cornerRadius(8)
             }
         }
@@ -5339,6 +5345,7 @@ struct TeamActivityView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Recent Commits")
                 .font(.headline)
+                .foregroundColor(AppTheme.textPrimary)
 
             ForEach(member.recentCommits) { commit in
                 HStack(alignment: .top, spacing: 12) {
@@ -5351,6 +5358,7 @@ struct TeamActivityView: View {
                         Text(commit.commit.message.components(separatedBy: "\n").first ?? commit.commit.message)
                             .font(.caption)
                             .lineLimit(2)
+                            .foregroundColor(AppTheme.textPrimary)
 
                         HStack(spacing: 8) {
                             Text(commit.sha.prefix(7))
@@ -5368,7 +5376,7 @@ struct TeamActivityView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(Color(nsColor: .controlBackgroundColor))
+                .background(AppTheme.backgroundSecondary)
                 .cornerRadius(8)
             }
         }
@@ -5385,6 +5393,7 @@ struct TeamActivityView: View {
             Text("No Team Member Selected")
                 .font(.title2)
                 .fontWeight(.semibold)
+                .foregroundColor(AppTheme.textPrimary)
 
             Text("Select a team member to view their activity")
                 .font(.callout)
@@ -5565,6 +5574,7 @@ struct TeamMemberRow: View {
                 Text(member.user.login)
                     .font(.subheadline)
                     .fontWeight(.medium)
+                    .foregroundColor(AppTheme.textPrimary)
 
                 HStack(spacing: 8) {
                     Label("\(member.activePRs.count)", systemImage: "arrow.triangle.pull")
