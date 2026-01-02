@@ -440,11 +440,11 @@ struct ColorScheme: Codable {
     // Light Theme
     static let light = ColorScheme(
         background: CodableColor(hex: "#FFFFFF"),
-        backgroundSecondary: CodableColor(hex: "#F5F5F5"),
-        backgroundTertiary: CodableColor(hex: "#EEEEEE"),
-        text: CodableColor(hex: "#000000"),
-        textSecondary: CodableColor(hex: "#666666"),
-        textMuted: CodableColor(hex: "#999999"),
+        backgroundSecondary: CodableColor(hex: "#FBFBFB"), // Even lighter for airy feel
+        backgroundTertiary: CodableColor(hex: "#F5F5F7"),  // Apple-style light gray
+        text: CodableColor(hex: "#1D1D1F"),           // Apple dark gray instead of pure black
+        textSecondary: CodableColor(hex: "#86868B"),
+        textMuted: CodableColor(hex: "#AEAEB2"),
         accent: CodableColor(hex: "#007AFF"),
         accentHover: CodableColor(hex: "#0051D5"),
         gitAdded: CodableColor(hex: "#28A745"),

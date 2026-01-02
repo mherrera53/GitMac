@@ -176,6 +176,32 @@ class AppState: ObservableObject {
 
     /// Restore previous session
     func restoreSession() async {
+        // Check if running in demo mode (UI tests pass this as launch argument)
+        // Launch arguments format: ["-demo-mode", "true"] -> check if array contains "-demo-mode"
+        let args = CommandLine.arguments
+        let isDemoMode = args.contains("-demo-mode")
+
+        if isDemoMode {
+            // Open demo repository instead of restoring session
+            let demoRepoPath = "/Users/mario/gitmac-demo-repo"
+            if FileManager.default.fileExists(atPath: demoRepoPath) {
+                do {
+                    let repo = try await gitService.openRepository(at: demoRepoPath)
+                    let newTab = RepositoryTab(repository: repo)
+                    openTabs.append(newTab)
+                    activeTabId = newTab.id
+                    // Force write to file since NSLog might not show up
+                    try? "Demo mode activated".write(toFile: "/tmp/gitmac-demo-mode.txt", atomically: true, encoding: .utf8)
+                    return
+                } catch {
+                    try? "Demo mode failed: \(error)".write(toFile: "/tmp/gitmac-demo-mode.txt", atomically: true, encoding: .utf8)
+                }
+            } else {
+                try? "Demo repo not found".write(toFile: "/tmp/gitmac-demo-mode.txt", atomically: true, encoding: .utf8)
+            }
+        }
+
+        // Normal session restore
         guard let paths = UserDefaults.standard.stringArray(forKey: openReposKey), !paths.isEmpty else {
             return
         }

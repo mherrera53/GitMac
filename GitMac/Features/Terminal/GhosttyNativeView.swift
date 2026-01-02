@@ -362,26 +362,28 @@ struct GhosttyNativeView: View {
 
 #endif
 
-// MARK: - Ghostty Color Scheme (Shared)
+// MARK: - Ghostty Color Scheme (Now using dynamic AppTheme)
 
+@MainActor
 enum GhosttyColors {
-    static let background = Color(hex: "1a1b26")
-    static let backgroundSecondary = Color(hex: "16161e")
-    static let textPrimary = Color(hex: "c0caf5")
-    static let textMuted = Color(hex: "565f89")
-    static let accent = Color(hex: "7aa2f7")
-    static let cursor = Color(hex: "c0caf5")
-    static let selection = Color(hex: "283457")
+    static var background: Color { AppTheme.background }
+    static var backgroundSecondary: Color { AppTheme.backgroundSecondary }
+    static var textPrimary: Color { AppTheme.textPrimary }
+    static var textSecondary: Color { AppTheme.textSecondary }
+    static var textMuted: Color { AppTheme.textMuted }
+    static var accent: Color { AppTheme.accent }
+    static var cursor: Color { AppTheme.textPrimary }
+    static var selection: Color { AppTheme.selection }
 
-    // ANSI Colors (Tokyo Night theme)
-    static let black = Color(hex: "15161e")
-    static let red = Color(hex: "f7768e")
-    static let green = Color(hex: "9ece6a")
-    static let yellow = Color(hex: "e0af68")
-    static let blue = Color(hex: "7aa2f7")
-    static let magenta = Color(hex: "bb9af7")
-    static let cyan = Color(hex: "7dcfff")
-    static let white = Color(hex: "a9b1d6")
+    // ANSI Colors (Using AppTheme semantic colors)
+    static var black: Color { AppTheme.background }
+    static var red: Color { AppTheme.error }
+    static var green: Color { AppTheme.success }
+    static var yellow: Color { AppTheme.warning }
+    static var blue: Color { AppTheme.accent }
+    static var magenta: Color { AppTheme.accentPurple }
+    static var cyan: Color { AppTheme.accentCyan }
+    static var white: Color { AppTheme.textPrimary }
 }
 
 // MARK: - AI Command Suggestion Model

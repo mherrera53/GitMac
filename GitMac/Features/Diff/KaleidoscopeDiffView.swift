@@ -6,11 +6,19 @@ import SwiftUI
 /// Features: file list sidebar (LEFT), Blocks/Fluid/Unified views, Swap A/B button
 struct KaleidoscopeDiffView: View {
     let files: [FileDiff]
+    // Optional commits for history view
+    let commits: [Commit]
+    @Binding var selectedCommitA: Commit?
+    @Binding var selectedCommitB: Commit?
+    
     @State private var selectedFile: FileDiff?
     @State private var viewMode: KaleidoscopeViewMode = .blocks
     @State private var showLineNumbers = true
     @State private var showWhitespace = false
     @State private var showFileList = true
+    @State private var showConnectionLines = true
+    @State private var showHistory = false
+    @State private var showMinimap = true
     @State private var swappedAB = false // For Swap A/B functionality
     @State private var scrollOffset: CGFloat = 0
     @State private var viewportHeight: CGFloat = 400
@@ -19,8 +27,16 @@ struct KaleidoscopeDiffView: View {
     @StateObject private var themeManager = ThemeManager.shared
 
     // Select first file by default
-    init(files: [FileDiff]) {
+    init(
+        files: [FileDiff],
+        commits: [Commit] = [],
+        selectedCommitA: Binding<Commit?> = .constant(nil),
+        selectedCommitB: Binding<Commit?> = .constant(nil)
+    ) {
         self.files = files
+        self.commits = commits
+        self._selectedCommitA = selectedCommitA
+        self._selectedCommitB = selectedCommitB
         self._selectedFile = State(initialValue: files.first)
     }
 
@@ -50,15 +66,104 @@ struct KaleidoscopeDiffView: View {
                 }
 
                 // Diff view (main area)
-                if let file = selectedFile {
-                    diffContentView(for: file)
-                        .frame(maxWidth: .infinity)
-                } else {
-                    emptyStateView
+                // Diff view (main area) with Minimap Overlay
+                ZStack(alignment: .trailing) {
+                    if let file = selectedFile {
+                        let currentHunks = swappedAB ? swapHunks(file.hunks) : file.hunks
+                        
+                        if viewMode == .unified {
+                            let unifiedLines = KaleidoscopePairingEngine.calculateUnifiedLines(from: currentHunks)
+                            diffContentView(for: file, pairedLines: [], unifiedLines: unifiedLines)
+                                .frame(maxWidth: .infinity)
+                            
+                            if showMinimap {
+                                OptimizedMinimapView(
+                                    rows: minimapRows(from: unifiedLines),
+                                    scrollPosition: calculateScrollRatio(),
+                                    viewportRatio: calculateViewportRatio()
+                                ) { ratio in
+                                   let maxScroll = max(0, contentHeight - viewportHeight)
+                                   scrollOffset = ratio * maxScroll
+                                }
+                                .frame(width: 80)
+                                .padding(.trailing, 4)
+                                .padding(.vertical, 4)
+                            }
+                        } else {
+                            let pairedLines = KaleidoscopePairingEngine.calculatePairs(from: currentHunks)
+                            diffContentView(for: file, pairedLines: pairedLines, unifiedLines: [])
+                                .frame(maxWidth: .infinity)
+                            
+                            if showMinimap {
+                                OptimizedMinimapView(
+                                    rows: minimapRows(from: pairedLines),
+                                    scrollPosition: calculateScrollRatio(),
+                                    viewportRatio: calculateViewportRatio()
+                                ) { ratio in
+                                   let maxScroll = max(0, contentHeight - viewportHeight)
+                                   scrollOffset = ratio * maxScroll
+                                }
+                                .frame(width: 80)
+                                .padding(.trailing, 4)
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    } else {
+                        emptyStateView
+                    }
+                }
+                
+                Rectangle()
+                    .fill(theme.border)
+                    .frame(width: 1)
+                
+                // History Sidebar (RIGHT side)
+                if showHistory && !commits.isEmpty {
+                    CommitHistorySidebar(
+                        commits: commits,
+                        selectedCommitA: $selectedCommitA,
+                        selectedCommitB: $selectedCommitB
+                    )
+                    .transition(.move(edge: .trailing))
                 }
             }
         }
         .background(theme.background)
+        .onAppear {
+            // Initialize content height based on first file
+            recalculateContentHeight()
+        }
+        .onChange(of: viewMode) { _ in
+            // Force recalculation when switching between Blocks/Fluid/Unified
+            recalculateContentHeight()
+            scrollOffset = 0 // Reset scroll position
+        }
+        .onChange(of: selectedFile?.id) { _ in
+            // Recalculate when file selection changes
+            recalculateContentHeight()
+            scrollOffset = 0
+        }
+        .onChange(of: showMinimap) { newValue in
+            // Force recalculation when minimap is toggled
+            if newValue {
+                recalculateContentHeight()
+            }
+        }
+    }
+    
+    /// Recalculates content height based on current view mode and selected file
+    private func recalculateContentHeight() {
+        guard let file = selectedFile else { return }
+        let hunks = swappedAB ? swapHunks(file.hunks) : file.hunks
+        
+        let lineCount: Int
+        if viewMode == .unified {
+            lineCount = KaleidoscopePairingEngine.calculateUnifiedLines(from: hunks).count
+        } else {
+            lineCount = KaleidoscopePairingEngine.calculatePairs(from: hunks).count
+        }
+        
+        contentHeight = CGFloat(lineCount) * 24
     }
 
     // MARK: - Components
@@ -75,6 +180,29 @@ struct KaleidoscopeDiffView: View {
                     showFileList.toggle()
                 }
             }
+            
+            // History toggle (RIGHT) - Only if commits are available
+            if !commits.isEmpty {
+                 ToolbarToggle(
+                    icon: "clock.arrow.circlepath",
+                    isActive: showHistory,
+                    tooltip: "History"
+                ) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showHistory.toggle()
+                    }
+                }
+                 // Connection lines toggle
+                 ToolbarToggle(
+                     icon: "link",
+                     isActive: showConnectionLines,
+                     tooltip: "Connection Lines"
+                 ) {
+                     withAnimation(.easeInOut(duration: 0.2)) {
+                         showConnectionLines.toggle()
+                     }
+                 }
+             }
 
             Rectangle()
                 .fill(AppTheme.border)
@@ -126,6 +254,16 @@ struct KaleidoscopeDiffView: View {
                 ) {
                     showWhitespace.toggle()
                 }
+                
+                ToolbarToggle(
+                    icon: "map",
+                    isActive: showMinimap,
+                    tooltip: "Minimap"
+                ) {
+                     withAnimation {
+                        showMinimap.toggle()
+                    }
+                }
             }
 
             Spacer()
@@ -168,29 +306,33 @@ struct KaleidoscopeDiffView: View {
     }
 
     @ViewBuilder
-    private func diffContentView(for file: FileDiff) -> some View {
+    private func diffContentView(for file: FileDiff, pairedLines: [DiffPairWithConnection], unifiedLines: [UnifiedLine]) -> some View {
         let hunks = swappedAB ? swapHunks(file.hunks) : file.hunks
 
         switch viewMode {
-        case .blocks:
-            // Traditional side-by-side (like Split)
-            KaleidoscopeSplitDiffView(
-                hunks: hunks,
-                showLineNumbers: showLineNumbers,
-                scrollOffset: $scrollOffset,
-                viewportHeight: $viewportHeight,
-                contentHeight: $contentHeight
-            )
+            case .blocks:
+                // Traditional side-by-side (like Split)
+                KaleidoscopeSplitDiffView(
+                    hunks: hunks,
+                    showLineNumbers: showLineNumbers,
+                    showConnectionLines: showConnectionLines,
+                    isFluidMode: false,
+                    scrollOffset: $scrollOffset,
+                    viewportHeight: $viewportHeight,
+                    contentHeight: $contentHeight
+                )
 
-        case .fluid:
-            // Fluid view with connection lines (enhanced version)
-            KaleidoscopeSplitDiffView(
-                hunks: hunks,
-                showLineNumbers: showLineNumbers,
-                scrollOffset: $scrollOffset,
-                viewportHeight: $viewportHeight,
-                contentHeight: $contentHeight
-            )
+            case .fluid:
+                // Fluid view with connection lines (enhanced version)
+                KaleidoscopeSplitDiffView(
+                    hunks: hunks,
+                    showLineNumbers: showLineNumbers,
+                    showConnectionLines: showConnectionLines,
+                    isFluidMode: true,
+                    scrollOffset: $scrollOffset,
+                    viewportHeight: $viewportHeight,
+                    contentHeight: $contentHeight
+                )
 
         case .unified:
             // True Unified view with A/B labels in margin
@@ -201,6 +343,35 @@ struct KaleidoscopeDiffView: View {
                 viewportHeight: $viewportHeight,
                 contentHeight: $contentHeight
             )
+        }
+    }
+
+    private func minimapRows(from pairedLines: [DiffPairWithConnection]) -> [MinimapRow] {
+        pairedLines.map { pair in
+            let color: Color = switch pair.connectionType {
+            case .addition: AppTheme.diffAddition
+            case .deletion: AppTheme.diffDeletion
+            case .change: AppTheme.diffChange
+            case .none: 
+                if pair.hunkHeader != nil {
+                    AppTheme.accent.opacity(0.4)
+                } else {
+                    Color.clear
+                }
+            }
+            return MinimapRow(id: pair.id, color: color, isHeader: pair.hunkHeader != nil)
+        }
+    }
+
+    private func minimapRows(from unifiedLines: [UnifiedLine]) -> [MinimapRow] {
+        unifiedLines.map { line in
+            let color: Color = switch line.type {
+            case .addition: AppTheme.diffAddition
+            case .deletion: AppTheme.diffDeletion
+            case .hunkHeader: AppTheme.accent.opacity(0.4)
+            case .context: Color.clear
+            }
+            return MinimapRow(id: line.id, color: color, isHeader: line.type == .hunkHeader)
         }
     }
 
@@ -254,6 +425,19 @@ struct KaleidoscopeDiffView: View {
             )
         }
     }
+    
+    // Calculate normalized scroll ratio (0-1) for minimap
+    private func calculateScrollRatio() -> CGFloat {
+        guard contentHeight > viewportHeight else { return 0 }
+        let maxScroll = contentHeight - viewportHeight
+        return max(0, min(1, scrollOffset / maxScroll))
+    }
+    
+    // Calculate viewport ratio (0-1) for minimap lens
+    private func calculateViewportRatio() -> CGFloat {
+        guard contentHeight > 0 else { return 1 }
+        return min(1, viewportHeight / contentHeight)
+    }
 
     @ViewBuilder
     private var changesOnlyView: some View {
@@ -304,10 +488,374 @@ struct KaleidoscopeDiffView: View {
         .padding(.vertical, 4)
         .background(line.type == .addition ? AppTheme.diffAdditionBg : AppTheme.diffDeletionBg)
     }
-
-    // MARK: - Helpers
-    // Version selection helpers removed - not needed for current implementation
 }
+
+// MARK: - Kaleidoscope Diff Models (Consolidated for compilation)
+
+enum ConnectionType {
+    case none
+    case change
+    case deletion
+    case addition
+}
+
+struct DiffPairWithConnection: Identifiable {
+    let id: Int
+    let left: DiffLine?
+    let right: DiffLine?
+    let hunkHeader: String?
+    let connectionType: ConnectionType
+    
+    init(id: Int, left: DiffLine?, right: DiffLine?, hunkHeader: String?, connectionType: ConnectionType) {
+        self.id = id
+        self.left = left
+        self.right = right
+        self.hunkHeader = hunkHeader
+        self.connectionType = connectionType
+    }
+}
+
+// MARK: - Pairing Logic
+
+enum KaleidoscopePairingEngine {
+    static func calculatePairs(from hunks: [DiffHunk]) -> [DiffPairWithConnection] {
+        var pairs: [DiffPairWithConnection] = []
+        var pairId = 0
+
+        for hunk in hunks {
+            pairId += 1
+            pairs.append(DiffPairWithConnection(
+                id: pairId,
+                left: nil,
+                right: nil,
+                hunkHeader: hunk.header,
+                connectionType: .none
+            ))
+
+            var i = 0
+            let lines = hunk.lines
+
+            while i < lines.count {
+                let line = lines[i]
+
+                if line.type == .context {
+                    pairId += 1
+                    pairs.append(DiffPairWithConnection(
+                        id: pairId,
+                        left: line,
+                        right: line,
+                        hunkHeader: nil,
+                        connectionType: .none
+                    ))
+                    i += 1
+                } else {
+                    var deletions: [DiffLine] = []
+                    var additions: [DiffLine] = []
+
+                    var j = i
+                    while j < lines.count && lines[j].type == .deletion {
+                        deletions.append(lines[j])
+                        j += 1
+                    }
+
+                    var k = j
+                    while k < lines.count && lines[k].type == .addition {
+                        additions.append(lines[k])
+                        k += 1
+                    }
+
+                    let maxCount = max(deletions.count, additions.count)
+
+                    if maxCount > 0 {
+                        for idx in 0..<maxCount {
+                            pairId += 1
+                            let left = idx < deletions.count ? deletions[idx] : nil
+                            let right = idx < additions.count ? additions[idx] : nil
+
+                            let connectionType: ConnectionType
+                            if left != nil && right != nil {
+                                connectionType = .change
+                            } else if left != nil {
+                                connectionType = .deletion
+                            } else {
+                                connectionType = .addition
+                            }
+
+                            pairs.append(DiffPairWithConnection(
+                                id: pairId,
+                                left: left,
+                                right: right,
+                                hunkHeader: nil,
+                                connectionType: connectionType
+                            ))
+                        }
+
+                        i = k
+                    } else {
+                        i += 1
+                    }
+                }
+            }
+        }
+        return pairs
+    }
+}
+
+enum UnifiedSide {
+    case a
+    case b
+    case both
+}
+
+struct UnifiedLine: Identifiable {
+    let id: Int
+    let content: String
+    let type: DiffLineType
+    let side: UnifiedSide
+    let oldLineNumber: Int?
+    let newLineNumber: Int?
+    let pairedContent: String?
+    
+    init(id: Int, content: String, type: DiffLineType, side: UnifiedSide, oldLineNumber: Int?, newLineNumber: Int?, pairedContent: String?) {
+        self.id = id
+        self.content = content
+        self.type = type
+        self.side = side
+        self.oldLineNumber = oldLineNumber
+        self.newLineNumber = newLineNumber
+        self.pairedContent = pairedContent
+    }
+}
+
+extension KaleidoscopePairingEngine {
+    static func calculateUnifiedLines(from hunks: [DiffHunk]) -> [UnifiedLine] {
+        var lines: [UnifiedLine] = []
+        var lineId = 0
+
+        for hunk in hunks {
+            lineId += 1
+            lines.append(UnifiedLine(
+                id: lineId,
+                content: hunk.header,
+                type: .hunkHeader,
+                side: .both,
+                oldLineNumber: nil,
+                newLineNumber: nil,
+                pairedContent: nil
+            ))
+
+            var i = 0
+            let hunkLines = hunk.lines
+            while i < hunkLines.count {
+                let line = hunkLines[i]
+                lineId += 1
+                
+                let side: UnifiedSide
+                var pairedContent: String? = nil
+                
+                if line.type == .deletion {
+                    side = .a
+                    if i + 1 < hunkLines.count && hunkLines[i + 1].type == .addition {
+                        pairedContent = hunkLines[i + 1].content
+                    }
+                } else if line.type == .addition {
+                    side = .b
+                    if i > 0 && hunkLines[i - 1].type == .deletion {
+                        pairedContent = hunkLines[i - 1].content
+                    }
+                } else {
+                    side = .both
+                }
+
+                lines.append(UnifiedLine(
+                    id: lineId,
+                    content: line.content,
+                    type: line.type,
+                    side: side,
+                    oldLineNumber: line.oldLineNumber,
+                    newLineNumber: line.newLineNumber,
+                    pairedContent: pairedContent
+                ))
+                
+                i += 1
+            }
+        }
+        return lines
+    }
+}
+
+// MARK: - Commit History Sidebar (Consolidated for compilation)
+
+struct CommitHistorySidebar: View {
+    let commits: [Commit]
+    @Binding var selectedCommitA: Commit?
+    @Binding var selectedCommitB: Commit?
+    @State private var filterText: String = ""
+    @State private var currentChangeIndex: Int = 0
+    @StateObject private var themeManager = ThemeManager.shared
+
+    private var filteredCommits: [Commit] {
+        if filterText.isEmpty {
+            return commits
+        }
+        return commits.filter { commit in
+            commit.message.localizedCaseInsensitiveContains(filterText) ||
+            commit.author.localizedCaseInsensitiveContains(filterText) ||
+            commit.shortSHA.localizedCaseInsensitiveContains(filterText)
+        }
+    }
+
+    private var totalChanges: Int {
+        commits.count
+    }
+
+    var body: some View {
+        let theme = Color.Theme(themeManager.colors)
+
+        VStack(spacing: 0) {
+            headerView
+            Divider()
+            searchBarView
+            Divider()
+            ScrollView {
+                LazyVStack(spacing: DesignTokens.Spacing.xs) {
+                    ForEach(filteredCommits) { commit in
+                        CommitHistoryRow(
+                            commit: commit,
+                            isSelectedA: selectedCommitA?.id == commit.id,
+                            isSelectedB: selectedCommitB?.id == commit.id,
+                            onSelectA: { selectedCommitA = commit },
+                            onSelectB: { selectedCommitB = commit }
+                        )
+                    }
+                }
+                .padding(DesignTokens.Spacing.sm)
+            }
+            .background(theme.background)
+            Divider()
+            changeNavigationFooter
+        }
+        .frame(width: 320)
+        .background(theme.backgroundSecondary)
+    }
+
+    private var headerView: some View {
+        HStack(spacing: DesignTokens.Spacing.sm) {
+            Image(systemName: "clock.arrow.circlepath")
+                .foregroundColor(AppTheme.accent)
+            Text("History")
+                .font(DesignTokens.Typography.headline.weight(.semibold))
+                .foregroundColor(AppTheme.textPrimary)
+            Spacer()
+            Text("\(totalChanges)")
+                .font(DesignTokens.Typography.caption.monospaced())
+                .foregroundColor(AppTheme.textMuted)
+                .padding(.horizontal, DesignTokens.Spacing.xs)
+                .background(AppTheme.backgroundTertiary)
+                .cornerRadius(DesignTokens.CornerRadius.sm)
+        }
+        .padding(DesignTokens.Spacing.md)
+    }
+
+    private var searchBarView: some View {
+        HStack(spacing: DesignTokens.Spacing.xs) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(AppTheme.textMuted)
+            TextField("Filter Commits", text: $filterText)
+                .textFieldStyle(.plain)
+            if !filterText.isEmpty {
+                Button { filterText = "" } label: { Image(systemName: "xmark.circle.fill") }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(DesignTokens.Spacing.sm)
+        .background(AppTheme.backgroundTertiary)
+        .cornerRadius(DesignTokens.CornerRadius.md)
+        .padding(.horizontal, DesignTokens.Spacing.md)
+        .padding(.vertical, DesignTokens.Spacing.sm)
+    }
+
+    private var changeNavigationFooter: some View {
+        HStack(spacing: DesignTokens.Spacing.md) {
+            Button {
+                if currentChangeIndex > 0 {
+                    currentChangeIndex -= 1
+                    selectCommitAtIndex(currentChangeIndex)
+                }
+            } label: { Image(systemName: "chevron.up") }
+            .buttonStyle(.plain)
+            .disabled(currentChangeIndex <= 0)
+
+            Text("Change \(currentChangeIndex + 1) of \(totalChanges)")
+                .font(DesignTokens.Typography.caption.monospaced())
+
+            Button {
+                if currentChangeIndex < totalChanges - 1 {
+                    currentChangeIndex += 1
+                    selectCommitAtIndex(currentChangeIndex)
+                }
+            } label: { Image(systemName: "chevron.down") }
+            .buttonStyle(.plain)
+            .disabled(currentChangeIndex >= totalChanges - 1)
+        }
+        .padding(DesignTokens.Spacing.sm)
+        .background(AppTheme.backgroundTertiary)
+    }
+
+    private func selectCommitAtIndex(_ index: Int) {
+        guard index >= 0, index < commits.count else { return }
+        let commit = commits[index]
+        if selectedCommitA == nil { selectedCommitA = commit } else { selectedCommitB = commit }
+    }
+}
+
+struct CommitHistoryRow: View {
+    let commit: Commit
+    let isSelectedA: Bool
+    let isSelectedB: Bool
+    let onSelectA: () -> Void
+    let onSelectB: () -> Void
+
+    @State private var isHovered = false
+    @StateObject private var themeManager = ThemeManager.shared
+
+    private var initials: String {
+        let components = commit.author.components(separatedBy: " ")
+        if components.count >= 2 {
+            return String(components[0].prefix(1)) + String(components[1].prefix(1))
+        }
+        return String(commit.author.prefix(2))
+    }
+
+    var body: some View {
+        HStack(spacing: DesignTokens.Spacing.sm) {
+            VStack(spacing: 4) {
+                Button { onSelectA() } label: {
+                    Text("A").font(.caption2.bold()).frame(width: 20, height: 20)
+                        .background(isSelectedA ? AppTheme.accent : AppTheme.backgroundTertiary)
+                        .foregroundColor(isSelectedA ? .white : AppTheme.textMuted).cornerRadius(4)
+                }.buttonStyle(.plain)
+                Button { onSelectB() } label: {
+                    Text("B").font(.caption2.bold()).frame(width: 20, height: 20)
+                        .background(isSelectedB ? AppTheme.info : AppTheme.backgroundTertiary)
+                        .foregroundColor(isSelectedB ? .white : AppTheme.textMuted).cornerRadius(4)
+                }.buttonStyle(.plain)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(commit.author).font(.caption.weight(.medium)).foregroundColor(AppTheme.textPrimary)
+                Text(commit.summary).font(.caption).foregroundColor(AppTheme.textSecondary).lineLimit(1)
+                Text(commit.shortSHA).font(.caption2.monospaced()).foregroundColor(AppTheme.textMuted)
+            }
+        }
+        .padding(DesignTokens.Spacing.sm)
+        .background(isHovered ? AppTheme.hover : Color.clear)
+        .cornerRadius(DesignTokens.CornerRadius.md)
+        .onHover { isHovered = $0 }
+    }
+}
+
+
 
 // MARK: - Kaleidoscope View Mode (Exact names from Kaleidoscope)
 

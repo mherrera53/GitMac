@@ -226,10 +226,29 @@ class TerminalAIService {
         // Fallback to OpenAI if Ollama failed or unavailable
         if aiResponse == nil && usedProvider == .openai {
             do {
-                aiResponse = try await callOpenAI(prompt: prompt)
-                print("✅ Got response from OpenAI")
+                // Use the shared AIService to get structured suggestions directly
+                let aiService = AIService.shared
+                let aiSuggestions = try await aiService.suggestTerminalCommands(
+                    input: input,
+                    repoPath: repoPath,
+                    recentCommands: recentCommands
+                )
+                
+                // Map to local model
+                let mappedSuggestions = aiSuggestions.map { suggestion in
+                    AICommandSuggestion(
+                        command: suggestion.command,
+                        description: suggestion.description,
+                        confidence: suggestion.confidence,
+                        isFromAI: true,
+                        category: "AI"
+                    )
+                }
+                
+                print("💡 TerminalAIService: Returning \(mappedSuggestions.count) AI suggestions from cloud provider")
+                return mappedSuggestions
             } catch {
-                print("❌ OpenAI also failed: \(error.localizedDescription)")
+                print("❌ Cloud AI provider failed: \(error.localizedDescription)")
                 return getStaticSuggestions(for: input)
             }
         }
@@ -281,11 +300,53 @@ class TerminalAIService {
     // MARK: - Static Fallback Suggestions
 
     private func getStaticSuggestions(for input: String) -> [AICommandSuggestion] {
-        let lowercasedInput = input.lowercased()
+        let lowercasedInput = input.lowercased().trimmingCharacters(in: .whitespaces)
         var suggestions: [AICommandSuggestion] = []
 
         // Git command suggestions
-        if lowercasedInput.starts(with: "g") || lowercasedInput.contains("git") {
+        // Check if input is "git" or starts with "git "
+        if lowercasedInput == "git" || lowercasedInput.hasPrefix("git ") || lowercasedInput.starts(with: "g") {
+            
+            // Default suggestions if just "git" or "g"
+            if lowercasedInput == "git" || lowercasedInput == "g" {
+                suggestions.append(AICommandSuggestion(
+                    command: "git status",
+                    description: "Show the working tree status",
+                    confidence: 0.95,
+                    isFromAI: false,
+                    category: "Git"
+                ))
+                suggestions.append(AICommandSuggestion(
+                    command: "git add .",
+                    description: "Stage all changes",
+                    confidence: 0.90,
+                    isFromAI: false,
+                    category: "Git"
+                ))
+                suggestions.append(AICommandSuggestion(
+                    command: "git commit -m \"\"",
+                    description: "Commit changes",
+                    confidence: 0.85,
+                    isFromAI: false,
+                    category: "Git"
+                ))
+                suggestions.append(AICommandSuggestion(
+                    command: "git push",
+                    description: "Push to remote",
+                    confidence: 0.80,
+                    isFromAI: false,
+                    category: "Git"
+                ))
+                suggestions.append(AICommandSuggestion(
+                    command: "git pull",
+                    description: "Pull from remote",
+                    confidence: 0.80,
+                    isFromAI: false,
+                    category: "Git"
+                ))
+            }
+            
+            // Specific sub-commands
             if lowercasedInput.contains("s") || lowercasedInput.contains("stat") {
                 suggestions.append(AICommandSuggestion(
                     command: "git status",
@@ -316,10 +377,20 @@ class TerminalAIService {
                 ))
             }
 
-            if lowercasedInput.contains("p") || lowercasedInput.contains("push") {
+            if lowercasedInput.contains("pu") || lowercasedInput.contains("push") {
                 suggestions.append(AICommandSuggestion(
                     command: "git push",
                     description: "Push commits to remote",
+                    confidence: 0.75,
+                    isFromAI: false,
+                    category: "Git"
+                ))
+            }
+            
+            if lowercasedInput.contains("pl") || lowercasedInput.contains("pull") {
+                suggestions.append(AICommandSuggestion(
+                    command: "git pull",
+                    description: "Pull changes from remote",
                     confidence: 0.75,
                     isFromAI: false,
                     category: "Git"
@@ -338,14 +409,34 @@ class TerminalAIService {
         }
 
         // Docker suggestions
-        if lowercasedInput.contains("docker") {
-            suggestions.append(AICommandSuggestion(
-                command: "docker ps",
-                description: "List running containers",
-                confidence: 0.70,
-                isFromAI: false,
-                category: "Docker"
-            ))
+        if lowercasedInput.contains("docker") || lowercasedInput.starts(with: "d") {
+            // Default docker suggestions
+            if lowercasedInput == "docker" || lowercasedInput == "d" {
+                suggestions.append(AICommandSuggestion(
+                    command: "docker ps",
+                    description: "List containers",
+                    confidence: 0.90,
+                    isFromAI: false,
+                    category: "Docker"
+                ))
+                suggestions.append(AICommandSuggestion(
+                    command: "docker-compose up -d",
+                    description: "Start services",
+                    confidence: 0.85,
+                    isFromAI: false,
+                    category: "Docker"
+                ))
+            }
+            
+            if lowercasedInput.contains("ps") {
+                suggestions.append(AICommandSuggestion(
+                    command: "docker ps",
+                    description: "List running containers",
+                    confidence: 0.70,
+                    isFromAI: false,
+                    category: "Docker"
+                ))
+            }
 
             if lowercasedInput.contains("compose") {
                 suggestions.append(AICommandSuggestion(
@@ -377,8 +468,19 @@ class TerminalAIService {
             ))
         }
 
-        print("💡 TerminalAIService: Returning \(suggestions.count) static suggestions")
-        return suggestions
+        // Deduplicate suggestions by command
+        var uniqueSuggestions: [AICommandSuggestion] = []
+        var seenCommands = Set<String>()
+        
+        for suggestion in suggestions {
+            if !seenCommands.contains(suggestion.command) {
+                seenCommands.insert(suggestion.command)
+                uniqueSuggestions.append(suggestion)
+            }
+        }
+
+        print("💡 TerminalAIService: Returning \(uniqueSuggestions.count) static suggestions")
+        return uniqueSuggestions
     }
 
     // MARK: - Error Explanation

@@ -13,62 +13,7 @@ struct KaleidoscopeUnifiedView: View {
     @StateObject private var themeManager = ThemeManager.shared
 
     private var unifiedLines: [UnifiedLine] {
-        var lines: [UnifiedLine] = []
-        var lineId = 0
-
-        for hunk in hunks {
-            lineId += 1
-            lines.append(UnifiedLine(
-                id: lineId,
-                content: hunk.header,
-                type: .hunkHeader,
-                side: .both,
-                oldLineNumber: nil,
-                newLineNumber: nil,
-                pairedContent: nil
-            ))
-
-            // Pair deletions with additions for character-level highlighting
-            var i = 0
-            let hunkLines = hunk.lines
-            while i < hunkLines.count {
-                let line = hunkLines[i]
-                lineId += 1
-                
-                let side: UnifiedSide
-                var pairedContent: String? = nil
-                
-                if line.type == .deletion {
-                    side = .a
-                    // Look ahead for matching addition
-                    if i + 1 < hunkLines.count && hunkLines[i + 1].type == .addition {
-                        pairedContent = hunkLines[i + 1].content
-                    }
-                } else if line.type == .addition {
-                    side = .b
-                    // Look back for matching deletion
-                    if i > 0 && hunkLines[i - 1].type == .deletion {
-                        pairedContent = hunkLines[i - 1].content
-                    }
-                } else {
-                    side = .both
-                }
-
-                lines.append(UnifiedLine(
-                    id: lineId,
-                    content: line.content,
-                    type: line.type,
-                    side: side,
-                    oldLineNumber: line.oldLineNumber,
-                    newLineNumber: line.newLineNumber,
-                    pairedContent: pairedContent
-                ))
-                
-                i += 1
-            }
-        }
-
-        return lines
+        KaleidoscopePairingEngine.calculateUnifiedLines(from: hunks)
     }
 
     var body: some View {
@@ -81,7 +26,7 @@ struct KaleidoscopeUnifiedView: View {
             }
             .frame(height: 0)
 
-            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: []) {
+            LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(unifiedLines) { line in
                     UnifiedLineRow(
                         line: line,
@@ -89,52 +34,38 @@ struct KaleidoscopeUnifiedView: View {
                     )
                 }
             }
-            .background(
-                GeometryReader { geometry in
-                    Color.clear.preference(
-                        key: UnifiedContentHeightKey.self,
-                        value: geometry.size.height
-                    )
-                }
-            )
         }
+        .scrollIndicators(.hidden)
         .coordinateSpace(name: "scroll")
-        .onPreferenceChange(UnifiedContentHeightKey.self) { height in
-            contentHeight = height
-        }
         .onPreferenceChange(DiffScrollOffsetKey.self) { offset in
             scrollOffset = offset
         }
         .background(
             GeometryReader { geo in
-                Color.clear.onAppear {
-                    viewportHeight = geo.size.height
-                }
-                .onChange(of: geo.size.height) { newHeight in
-                    viewportHeight = newHeight
-                }
+                Color.clear
+                    .onAppear {
+                        viewportHeight = geo.size.height
+                        updateContentHeight()
+                    }
+                    .onChange(of: geo.size.height) { newHeight in
+                        viewportHeight = newHeight
+                    }
+                    .onChange(of: hunks) { _ in
+                        updateContentHeight()
+                    }
             }
         )
     }
+
+    private func updateContentHeight() {
+        let height = CGFloat(unifiedLines.count) * 24
+        if contentHeight != height {
+            contentHeight = height
+        }
+    }
 }
 
-// MARK: - Unified Line Model
 
-struct UnifiedLine: Identifiable {
-    let id: Int
-    let content: String
-    let type: DiffLineType
-    let side: UnifiedSide
-    let oldLineNumber: Int?
-    let newLineNumber: Int?
-    let pairedContent: String?  // For character-level diff highlighting
-}
-
-enum UnifiedSide {
-    case a      // Left side (deletions)
-    case b      // Right side (additions)
-    case both   // Context lines
-}
 
 // MARK: - Unified Line Row
 
@@ -222,7 +153,7 @@ struct UnifiedLineRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.trailing, DesignTokens.Spacing.sm)
         }
-        .frame(height: 22)
+        .frame(height: 24)
         .background(backgroundColor(theme: theme))
     }
 
@@ -235,17 +166,17 @@ struct UnifiedLineRow: View {
             Text("A")
                 .font(DesignTokens.Typography.caption2.weight(.bold))
                 .foregroundColor(.white)
-                .frame(width: 18, height: 18)
+                .frame(width: 14, height: 14)
                 .background(AppTheme.accent)
-                .cornerRadius(3)
+                .cornerRadius(2)
 
         case .b:
             Text("B")
                 .font(DesignTokens.Typography.caption2.weight(.bold))
                 .foregroundColor(.white)
-                .frame(width: 18, height: 18)
+                .frame(width: 14, height: 14)
                 .background(AppTheme.info)
-                .cornerRadius(3)
+                .cornerRadius(2)
 
         case .both:
             Color.clear

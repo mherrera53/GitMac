@@ -42,7 +42,7 @@ struct TerminalPanelContent: View {
 
     var body: some View {
         #if GHOSTTY_AVAILABLE
-        GhosttyNativeView()
+        EnhancedTerminalPanel()
             .environmentObject(appState)
         #else
         TerminalView()

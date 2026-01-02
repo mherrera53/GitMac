@@ -3,6 +3,7 @@ import SwiftUI
 struct CommitDetailPanel: View {
     let commit: Commit?
     let onClose: () -> Void
+    var onOpenDiff: ((Commit) -> Void)? = nil
 
     @StateObject private var themeManager = ThemeManager.shared
     @State private var selectedTab: DetailTab = .info
@@ -217,16 +218,36 @@ struct CommitDetailPanel: View {
     }
 
     private func commitDiffView(commit: Commit, theme: Color.Theme) -> some View {
-        VStack {
-            Text("Diff view")
-                .font(DesignTokens.Typography.caption)
+        VStack(spacing: DesignTokens.Spacing.md) {
+            Image(systemName: "doc.text.magnifyingglass")
+                .font(.system(size: 32))
                 .foregroundColor(theme.textMuted)
-                .padding()
 
-            Text("(Integration with DiffView needed)")
-                .font(DesignTokens.Typography.caption2)
-                .foregroundColor(theme.textMuted)
+            Text("View Detailed Diff")
+                .font(DesignTokens.Typography.body.weight(.semibold))
+                .foregroundColor(theme.textPrimary)
+
+            Text("Open this commit in the full Kaleidoscope view to inspect changes.")
+                .font(DesignTokens.Typography.caption)
+                .foregroundColor(theme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
+             Button {
+                onOpenDiff?(commit)
+            } label: {
+                Text("Open Diff")
+                    .font(DesignTokens.Typography.callout.weight(.medium))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, DesignTokens.Spacing.lg)
+                    .padding(.vertical, DesignTokens.Spacing.sm)
+                    .background(AppTheme.accent)
+                    .cornerRadius(DesignTokens.CornerRadius.md)
+            }
+            .buttonStyle(.plain)
         }
+        .padding()
+        .frame(maxHeight: .infinity)
     }
 
     private func infoRow(label: String, value: String, theme: Color.Theme) -> some View {

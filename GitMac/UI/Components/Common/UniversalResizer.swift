@@ -235,9 +235,7 @@ private struct ResizerViewRepresentable: NSViewRepresentable {
             // For right panel: drag left (-) = increase width (invert)
             // For vertical: drag up (+) = decrease height (invert)
             var adjustedDelta = delta
-            if orientation == .vertical {
-                adjustedDelta = -delta
-            } else if invertDirection {
+            if invertDirection {
                 adjustedDelta = -delta
             }
 

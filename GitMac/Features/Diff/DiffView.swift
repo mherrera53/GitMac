@@ -140,7 +140,10 @@ struct DiffView: View {
         for hunk in fileDiff.hunks {
             for line in hunk.lines {
                 if line.type == .addition || line.type == .context {
-                    lines.append(line.content)
+                    let printable = line.content.filter { char in
+                        !char.isNewline && !(char.unicodeScalars.first?.properties.generalCategory == .control)
+                    }
+                    lines.append(printable)
                 }
             }
         }
@@ -267,7 +270,7 @@ struct DiffView: View {
                         .frame(width: 1)
 
                     OptimizedMinimapView(
-                        hunks: fileDiff.hunks,
+                        rows: minimapRows(from: fileDiff.hunks),
                         scrollPosition: scrollPosition,
                         viewportRatio: viewportRatio,
                         onScrollToPosition: { normalizedPos in
@@ -282,6 +285,24 @@ struct DiffView: View {
             }
 
         .background(theme.background)
+    }
+    private func minimapRows(from hunks: [DiffHunk]) -> [MinimapRow] {
+        var rows: [MinimapRow] = []
+        var id = 0
+        for hunk in hunks {
+            id += 1
+            rows.append(MinimapRow(id: id, color: AppTheme.accent.opacity(0.3), isHeader: true))
+            for line in hunk.lines {
+                id += 1
+                let color: SwiftUI.Color = switch line.type {
+                case .addition: AppTheme.diffAddition
+                case .deletion: AppTheme.diffDeletion
+                default: SwiftUI.Color.clear
+                }
+                rows.append(MinimapRow(id: id, color: color, isHeader: false))
+            }
+        }
+        return rows
     }
 }
 

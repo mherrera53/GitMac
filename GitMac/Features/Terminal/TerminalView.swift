@@ -442,29 +442,30 @@ extension Color {
     }
 }
 
-// MARK: - Terminal Colors (Warp-inspired dark theme)
+// MARK: - Terminal Colors (Now using dynamic AppTheme)
 
+@MainActor
 struct TerminalColors {
-    static let background = Color(hex: "0D1117")
-    static let blockBackground = Color(hex: "161B22")
-    static let blockBorder = Color(hex: "30363D")
-    static let inputBackground = Color(hex: "21262D")
-    static let headerBackground = Color(hex: "161B22")
+    static var background: Color { AppTheme.background }
+    static var blockBackground: Color { AppTheme.backgroundSecondary }
+    static var blockBorder: Color { AppTheme.border }
+    static var inputBackground: Color { AppTheme.backgroundTertiary }
+    static var headerBackground: Color { AppTheme.backgroundSecondary }
 
-    static let textPrimary = Color(hex: "E6EDF3")
-    static let textSecondary = Color(hex: "8B949E")
-    static let textMuted = Color(hex: "6E7681")
+    static var textPrimary: Color { AppTheme.textPrimary }
+    static var textSecondary: Color { AppTheme.textSecondary }
+    static var textMuted: Color { AppTheme.textMuted }
 
-    static let prompt = Color(hex: "7EE787")  // Green
-    static let command = Color(hex: "E6EDF3")
-    static let output = Color(hex: "C9D1D9")
-    static let error = Color(hex: "F85149")
-    static let system = Color(hex: "58A6FF")
-    static let warning = Color(hex: "D29922")
-    static let success = Color(hex: "3FB950")
+    static var prompt: Color { AppTheme.success }  // Green
+    static var command: Color { AppTheme.textPrimary }
+    static var output: Color { AppTheme.textSecondary }
+    static var error: Color { AppTheme.error }
+    static var system: Color { AppTheme.info }
+    static var warning: Color { AppTheme.warning }
+    static var success: Color { AppTheme.success }
 
-    static let accent = Color(hex: "58A6FF")
-    static let selection = Color(hex: "388BFD").opacity(0.3)
+    static var accent: Color { AppTheme.accent }
+    static var selection: Color { AppTheme.selection }
 }
 
 // MARK: - Command Block (Warp-style)
@@ -2026,26 +2027,28 @@ class GhosttyViewModel: ObservableObject {
     }
 }
 
-// MARK: - Ghostty Color Scheme
+// MARK: - Ghostty Color Scheme (Now using dynamic AppTheme)
 
+@MainActor
 enum GhosttyColors {
-    static let background = Color(hex: "1a1b26")
-    static let backgroundSecondary = Color(hex: "16161e")
-    static let textPrimary = Color(hex: "c0caf5")
-    static let textMuted = Color(hex: "565f89")
-    static let accent = Color(hex: "7aa2f7")
-    static let cursor = Color(hex: "c0caf5")
-    static let selection = Color(hex: "283457")
+    static var background: Color { AppTheme.background }
+    static var backgroundSecondary: Color { AppTheme.backgroundSecondary }
+    static var textPrimary: Color { AppTheme.textPrimary }
+    static var textSecondary: Color { AppTheme.textSecondary }
+    static var textMuted: Color { AppTheme.textMuted }
+    static var accent: Color { AppTheme.accent }
+    static var cursor: Color { AppTheme.textPrimary }
+    static var selection: Color { AppTheme.selection }
 
-    // ANSI Colors (Tokyo Night theme)
-    static let black = Color(hex: "15161e")
-    static let red = Color(hex: "f7768e")
-    static let green = Color(hex: "9ece6a")
-    static let yellow = Color(hex: "e0af68")
-    static let blue = Color(hex: "7aa2f7")
-    static let magenta = Color(hex: "bb9af7")
-    static let cyan = Color(hex: "7dcfff")
-    static let white = Color(hex: "a9b1d6")
+    // ANSI Colors (Using AppTheme semantic colors)
+    static var black: Color { AppTheme.background }
+    static var red: Color { AppTheme.error }
+    static var green: Color { AppTheme.success }
+    static var yellow: Color { AppTheme.warning }
+    static var blue: Color { AppTheme.accent }
+    static var magenta: Color { AppTheme.accentPurple }
+    static var cyan: Color { AppTheme.accentCyan }
+    static var white: Color { AppTheme.textPrimary }
 }
 
 #endif

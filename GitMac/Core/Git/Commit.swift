@@ -164,7 +164,14 @@ struct FileDiff: Identifiable {
     }
 }
 
-struct DiffHunk: Identifiable {
+struct DiffHunk: Identifiable, Equatable {
+    static func == (lhs: DiffHunk, rhs: DiffHunk) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.header == rhs.header &&
+        lhs.oldStart == rhs.oldStart &&
+        lhs.newStart == rhs.newStart &&
+        lhs.lines.count == rhs.lines.count
+    }
     let id: UUID
     let header: String
     let oldStart: Int
@@ -213,7 +220,12 @@ struct DiffHunk: Identifiable {
     }
 }
 
-struct DiffLine: Identifiable {
+struct DiffLine: Identifiable, Equatable {
+    static func == (lhs: DiffLine, rhs: DiffLine) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.type == rhs.type &&
+        lhs.content == rhs.content
+    }
     let id: UUID
     let type: DiffLineType
     let content: String
@@ -248,7 +260,7 @@ struct DiffLine: Identifiable {
     }
 }
 
-enum DiffLineType {
+enum DiffLineType: Equatable {
     case context
     case addition
     case deletion

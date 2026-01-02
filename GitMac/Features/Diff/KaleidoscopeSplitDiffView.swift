@@ -17,89 +17,7 @@ struct KaleidoscopeSplitDiffView: View {
     @State private var isHandlingMinimapClick = false
 
     private var pairedLines: [DiffPairWithConnection] {
-        var pairs: [DiffPairWithConnection] = []
-        var pairId = 0
-
-        for hunk in hunks {
-            pairId += 1
-            pairs.append(DiffPairWithConnection(
-                id: pairId,
-                left: nil,
-                right: nil,
-                hunkHeader: hunk.header,
-                connectionType: .none
-            ))
-
-            var i = 0
-            let lines = hunk.lines
-
-            while i < lines.count {
-                let line = lines[i]
-
-                if line.type == .context {
-                    pairId += 1
-                    pairs.append(DiffPairWithConnection(
-                        id: pairId,
-                        left: line,
-                        right: line,
-                        hunkHeader: nil,
-                        connectionType: .none
-                    ))
-                    i += 1
-                } else {
-                    // Collect block of changes
-                    var deletions: [DiffLine] = []
-                    var additions: [DiffLine] = []
-
-                    // Consume consecutive deletions
-                    var j = i
-                    while j < lines.count && lines[j].type == .deletion {
-                        deletions.append(lines[j])
-                        j += 1
-                    }
-
-                    // Consume consecutive additions
-                    var k = j
-                    while k < lines.count && lines[k].type == .addition {
-                        additions.append(lines[k])
-                        k += 1
-                    }
-
-                    let maxCount = max(deletions.count, additions.count)
-
-                    if maxCount > 0 {
-                        for idx in 0..<maxCount {
-                            pairId += 1
-                            let left = idx < deletions.count ? deletions[idx] : nil
-                            let right = idx < additions.count ? additions[idx] : nil
-
-                            // Determine connection type
-                            let connectionType: ConnectionType
-                            if left != nil && right != nil {
-                                connectionType = .change
-                            } else if left != nil {
-                                connectionType = .deletion
-                            } else {
-                                connectionType = .addition
-                            }
-
-                            pairs.append(DiffPairWithConnection(
-                                id: pairId,
-                                left: left,
-                                right: right,
-                                hunkHeader: nil,
-                                connectionType: connectionType
-                            ))
-                        }
-
-                        i = k
-                    } else {
-                        i += 1
-                    }
-                }
-            }
-        }
-        return pairs
+        KaleidoscopePairingEngine.calculatePairs(from: hunks)
     }
 
     var body: some View {
@@ -115,11 +33,10 @@ struct KaleidoscopeSplitDiffView: View {
                     .frame(height: 0)
                     .id("scroll_top")
                     
-                    // Single LazyVStack with paired rows for perfect alignment
-                    LazyVStack(spacing: 0, pinnedViews: []) {
-                        ForEach(pairedLines) { pair in
-                            ZStack(alignment: .leading) {
-                                // Row content
+                    ZStack(alignment: .topLeading) {
+                        // Base layer: Single LazyVStack with paired rows
+                        LazyVStack(spacing: 0, pinnedViews: []) {
+                            ForEach(pairedLines) { pair in
                                 HStack(spacing: 0) {
                                     // Left pane
                                     Group {
@@ -136,12 +53,12 @@ struct KaleidoscopeSplitDiffView: View {
                                             EmptyDiffLine(showLineNumber: showLineNumbers)
                                         }
                                     }
-                                    .frame(width: geometry.size.width / 2)
+                                    .frame(width: max(0, (geometry.size.width - 60) / 2))
                                     
-                                    // Vertical divider
+                                    // Central Gutter (Ribbon Area)
                                     Rectangle()
-                                        .fill(AppTheme.border)
-                                        .frame(width: 1)
+                                        .fill(AppTheme.background) // Clear or background color
+                                        .frame(width: 60)
                                     
                                     // Right pane
                                     Group {
@@ -158,78 +75,93 @@ struct KaleidoscopeSplitDiffView: View {
                                             EmptyDiffLine(showLineNumber: showLineNumbers)
                                         }
                                     }
-                                    .frame(width: geometry.size.width / 2)
+                                    .frame(width: max(0, (geometry.size.width - 60) / 2))
                                 }
-                                
-                                // Connection line overlay for this row
-                                if showConnectionLines && pair.connectionType == .change {
-                                    RowConnectionLine(
-                                        isFluidMode: isFluidMode,
-                                        width: geometry.size.width
-                                    )
-                                    .allowsHitTesting(false)
-                                }
+                                .frame(height: 24)
+                                .id("line_\(pair.id)")
                             }
-                            .id("line_\(pair.id)")
+                        }
+
+                        // Top layer: Connection ribbons overlay
+                        if showConnectionLines {
+                            ConnectionRibbonsView(
+                                pairs: pairedLines,
+                                lineHeight: 24,
+                                isFluidMode: isFluidMode,
+                                viewWidth: geometry.size.width
+                            )
+                            .allowsHitTesting(false)
                         }
                     }
-                    .background(
-                        GeometryReader { contentGeometry in
-                            Color.clear.preference(
-                                key: ContentHeightKey.self,
-                                value: contentGeometry.size.height
-                            )
-                        }
-                    )
                 }
+                .scrollIndicators(.hidden)
+                .scrollDisabled(false)
                 .background(AppTheme.background)
                 .coordinateSpace(name: "scroll")
-                .onPreferenceChange(ContentHeightKey.self) { height in
-                    contentHeight = height
-                }
                 .onPreferenceChange(DiffScrollOffsetKey.self) { offset in
                     if !isHandlingMinimapClick {
                         scrollOffset = offset
                         lastExternalScrollOffset = offset
+                        // Debug: Log scroll updates
+                        NSLog("📜 [SplitDiff] scrollOffset: %.1f, contentHeight: %.1f, viewportHeight: %.1f", offset, contentHeight, viewportHeight)
                     }
                 }
                 .background(
                     GeometryReader { geo in
-                        Color.clear.onAppear {
-                            viewportHeight = geo.size.height
-                        }
-                        .onChange(of: geo.size.height) { newHeight in
-                            viewportHeight = newHeight
-                        }
+                        Color.clear
+                            .onAppear {
+                                viewportHeight = geo.size.height
+                                // Calculate content height based on line count (consistent measure)
+                                let calculatedHeight = CGFloat(pairedLines.count) * 24
+                                if contentHeight != calculatedHeight {
+                                    contentHeight = calculatedHeight
+                                }
+                            }
+                            .onChange(of: geo.size.height) { newHeight in
+                                viewportHeight = newHeight
+                            }
+                            .onChange(of: hunks) { _ in
+                                // Recalculate on data change
+                                let calculatedHeight = CGFloat(pairedLines.count) * 24
+                                if contentHeight != calculatedHeight {
+                                    contentHeight = calculatedHeight
+                                }
+                            }
                     }
                 )
                 // Handle programmatic scrolling from minimap clicks
                 .onChange(of: scrollOffset) { newOffset in
+                    // Only react if the change didn't come from internal scrolling
                     guard abs(newOffset - lastExternalScrollOffset) > 1 else { return }
                     guard contentHeight > viewportHeight else { return }
                     
+                    // Simple programmatic scroll
                     isHandlingMinimapClick = true
                     
-                    let normalizedPosition = newOffset / (contentHeight - viewportHeight)
-                    let targetLineIndex = Int(normalizedPosition * CGFloat(pairedLines.count))
-                    let clampedIndex = min(max(0, targetLineIndex), pairedLines.count - 1)
+                    // Calculate target ID based on percentage
+                    // Using a more robust calculation for the target index
+                    let percentage = newOffset / (contentHeight - viewportHeight)
+                    let targetIndex = Int(round(percentage * CGFloat(pairedLines.count - 1)))
+                    let safeIndex = max(0, min(targetIndex, pairedLines.count - 1))
                     
-                    if clampedIndex < pairedLines.count {
-                        let targetID = pairedLines[clampedIndex].id
-                        withAnimation(.easeOut(duration: 0.2)) {
+                    if safeIndex < pairedLines.count {
+                        let targetID = pairedLines[safeIndex].id
+                        withAnimation(.easeInOut(duration: 0.25)) {
                             proxy.scrollTo("line_\(targetID)", anchor: .top)
                         }
                     }
                     
+                    // Reset lock after animation
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         isHandlingMinimapClick = false
+                        lastExternalScrollOffset = newOffset
                     }
                 }
             }
         }
     }
 
-    // MARK: - Connection Lines Drawing
+    // Removed manual updateContentHeight as it is now handled by PreferenceKey
 
     private func drawConnectionLines(
         context: GraphicsContext,
@@ -304,20 +236,7 @@ struct KaleidoscopeSplitDiffView: View {
 
 // MARK: - Diff Pair with Connection
 
-struct DiffPairWithConnection: Identifiable {
-    let id: Int
-    let left: DiffLine?
-    let right: DiffLine?
-    let hunkHeader: String?
-    let connectionType: ConnectionType
-}
 
-enum ConnectionType {
-    case none
-    case change
-    case deletion
-    case addition
-}
 
 // MARK: - Kaleidoscope Diff Line
 
@@ -399,7 +318,7 @@ struct KaleidoscopeDiffLine: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.trailing, DesignTokens.Spacing.sm)
         }
-        .frame(height: 22)
+        .frame(height: 24)
         .background(backgroundColor(theme: theme))
     }
 
@@ -464,7 +383,7 @@ struct KaleidoscopeHunkHeader: View {
                 .foregroundColor(AppTheme.accent)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 22)
+        .frame(height: 24)
         .padding(.horizontal, DesignTokens.Spacing.md)
         .background(AppTheme.accent.opacity(0.08))
     }
@@ -492,7 +411,7 @@ struct EmptyDiffLine: View {
                 .fill(theme.backgroundSecondary.opacity(0.3))
                 .frame(maxWidth: .infinity)
         }
-        .frame(height: 22)
+        .frame(height: 24)
     }
 }
 
@@ -554,7 +473,7 @@ struct RowConnectionLine: View {
                           style: StrokeStyle(lineWidth: 3, lineCap: .round))
             }
         }
-        .frame(height: 22)
+        .frame(height: 24)
     }
 }
 

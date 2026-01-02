@@ -201,6 +201,25 @@ class EnhancedGhosttyContainerView: NSView {
         if flags.contains(.option) { mods = ghostty_input_mods_e(mods.rawValue | GHOSTTY_MODS_ALT.rawValue) }
         if flags.contains(.command) { mods = ghostty_input_mods_e(mods.rawValue | GHOSTTY_MODS_SUPER.rawValue) }
 
+        // Special handling for Ctrl+C (Interrupt)
+        if flags.contains(.control) {
+            if let chars = event.charactersIgnoringModifiers, chars == "c" {
+                // Force send Ctrl+C (ETX - End of Text)
+                var key = ghostty_input_key_s()
+                key.action = GHOSTTY_ACTION_PRESS
+                key.mods = mods
+                key.keycode = UInt32(event.keyCode)
+                
+                // Use explicit ETX character (0x03)
+                let etx = "\u{03}"
+                etx.utf8CString.withUnsafeBufferPointer { buffer in
+                    key.text = buffer.baseAddress
+                    _ = ghostty_surface_key(surface, key)
+                }
+                return
+            }
+        }
+
         var key = ghostty_input_key_s()
         key.action = GHOSTTY_ACTION_PRESS
         key.mods = mods
@@ -241,6 +260,35 @@ class EnhancedGhosttyContainerView: NSView {
         }
     }
 
+    override func scrollWheel(with event: NSEvent) {
+        guard let surface = surface else {
+             super.scrollWheel(with: event)
+             return
+        }
+        
+        // Emulate scrollback using Shift + PageUp / PageDown
+        // This is a common binding for terminal scrollback
+        if abs(event.deltaY) > 0.1 {
+            let isUp = event.deltaY > 0
+            // Use GHOSTTY_KEY_PAGE_UP/DOWN if available, otherwise rely on keycode?
+            // Since we import GhosttyKit, we should have access to the enums.
+            
+            // Construct key event for Shift + PageUp/Down
+            var keyStr = ghostty_input_key_s()
+            keyStr.action = GHOSTTY_ACTION_PRESS
+            keyStr.mods = ghostty_input_mods_e(GHOSTTY_MODS_SHIFT.rawValue)
+            
+            // Map standard macOS keycodes for PageUp (116) / PageDown (121)
+            keyStr.keycode = isUp ? 116 : 121
+            
+            _ = ghostty_surface_key(surface, keyStr)
+            
+            // Release immediately
+            keyStr.action = GHOSTTY_ACTION_RELEASE
+            _ = ghostty_surface_key(surface, keyStr)
+        }
+    }
+
     private func handleInputTracking(_ input: String, event: NSEvent) {
         guard aiEnabled, let enhanced = enhancedViewModel else {
             print("⚠️ InputTracking: AI disabled or no enhanced view model")
@@ -258,6 +306,19 @@ class EnhancedGhosttyContainerView: NSView {
             return
         }
 
+        // Ignore arrow keys and navigation keys to prevent dirtying the buffer
+        let ignoredKeyCodes: Set<UInt16> = [
+            123, 124, 125, 126, // Arrows
+            116, 121, // Page Up/Down
+            115, 119, // Home/End
+            53, // Esc
+            48, // Tab
+        ]
+        
+        if ignoredKeyCodes.contains(event.keyCode) {
+            return
+        }
+
         // Check if backspace
         if event.keyCode == 51 {
             if !currentInputBuffer.isEmpty {
@@ -265,8 +326,14 @@ class EnhancedGhosttyContainerView: NSView {
                 print("⌫ InputTracking: Backspace, buffer now: '\(currentInputBuffer)'")
             }
         } else {
-            currentInputBuffer += input
-            print("⌨️ InputTracking: Added '\(input)', buffer now: '\(currentInputBuffer)' (length: \(currentInputBuffer.count))")
+            // Only append printable characters
+            let printable = input.filter { char in
+                !char.isNewline && !(char.unicodeScalars.first?.properties.generalCategory == .control)
+            }
+            if !printable.isEmpty {
+                currentInputBuffer += printable
+                print("⌨️ InputTracking: Added '\(printable)', buffer now: '\(currentInputBuffer)' (length: \(currentInputBuffer.count))")
+            }
         }
 
         // Update AI suggestions

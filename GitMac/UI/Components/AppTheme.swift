@@ -92,9 +92,9 @@ extension Color {
         var diffAddition: Color { colors.diffAddition.color }
         var diffDeletion: Color { colors.diffDeletion.color }
         var diffChange: Color { colors.diffChange.color }
-        var diffAdditionBg: Color { diffAddition.opacity(0.08) }
-        var diffDeletionBg: Color { diffDeletion.opacity(0.08) }
-        var diffChangeBg: Color { diffChange.opacity(0.08) }
+        var diffAdditionBg: Color { diffAddition.opacity(0.15) }
+        var diffDeletionBg: Color { diffDeletion.opacity(0.15) }
+        var diffChangeBg: Color { diffChange.opacity(0.15) }
         var diffLineNumberBg: Color { backgroundSecondary }
         var diffLineNumber: Color { textMuted }
 
@@ -216,13 +216,13 @@ enum AppTheme {
         Color.Theme(ThemeManager.shared.colors).diffChange
     }
     static var diffAdditionBg: Color {
-        diffAddition.opacity(0.08)
+        diffAddition.opacity(0.15)
     }
     static var diffDeletionBg: Color {
-        diffDeletion.opacity(0.08)
+        diffDeletion.opacity(0.15)
     }
     static var diffChangeBg: Color {
-        diffChange.opacity(0.08)
+        diffChange.opacity(0.15)
     }
     static var diffLineNumberBg: Color {
         backgroundSecondary.opacity(0.5)
