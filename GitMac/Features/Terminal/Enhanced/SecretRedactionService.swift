@@ -50,7 +50,7 @@ struct RedactedSecret: Identifiable {
 
 // MARK: - Secret Redaction Service
 
-class SecretRedactionService {
+final class SecretRedactionService: Sendable {
     static let shared = SecretRedactionService()
 
     private init() {}
