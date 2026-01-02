@@ -285,35 +285,9 @@ class EnhancedGhosttyContainerView: NSView {
     }
 
     override func scrollWheel(with event: NSEvent) {
-        guard let surface = surface else {
-             super.scrollWheel(with: event)
-             return
-        }
-
-        // Use native Ghostty scroll handling instead of emulating keys
-        // This prevents characters from being written during scroll
-        var mouse = ghostty_input_mouse_s()
-        mouse.action = GHOSTTY_ACTION_SCROLL
-
-        // Convert NSEvent coordinates to Ghostty coordinates
-        let locationInView = convert(event.locationInWindow, from: nil)
-        mouse.x = UInt32(locationInView.x)
-        mouse.y = UInt32(bounds.height - locationInView.y) // Flip Y coordinate
-
-        // Set scroll deltas
-        mouse.xoffset = event.scrollingDeltaX
-        mouse.yoffset = -event.scrollingDeltaY // Invert Y for natural scrolling
-
-        // Handle modifiers
-        var mods: ghostty_input_mods_e = GHOSTTY_MODS_NONE
-        let flags = event.modifierFlags
-        if flags.contains(.shift) { mods = ghostty_input_mods_e(mods.rawValue | GHOSTTY_MODS_SHIFT.rawValue) }
-        if flags.contains(.control) { mods = ghostty_input_mods_e(mods.rawValue | GHOSTTY_MODS_CTRL.rawValue) }
-        if flags.contains(.option) { mods = ghostty_input_mods_e(mods.rawValue | GHOSTTY_MODS_ALT.rawValue) }
-        if flags.contains(.command) { mods = ghostty_input_mods_e(mods.rawValue | GHOSTTY_MODS_SUPER.rawValue) }
-        mouse.mods = mods
-
-        _ = ghostty_surface_mouse(surface, mouse)
+        // Pass scroll events to super - Ghostty's scroll API may not be available
+        // The terminal should handle scrolling internally
+        super.scrollWheel(with: event)
     }
 
     private func handleInputTracking(_ input: String, event: NSEvent) {
