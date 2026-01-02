@@ -26,8 +26,9 @@ Frameworks/
 # Backups
 *.backup-*
 
-# Build scripts
+# Build scripts (except scripts/ directory)
 *.sh
+!scripts/*.sh
 *.py
 
 # Work in progress documentation
