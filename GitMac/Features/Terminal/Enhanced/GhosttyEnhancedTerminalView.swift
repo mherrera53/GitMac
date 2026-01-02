@@ -289,28 +289,31 @@ class EnhancedGhosttyContainerView: NSView {
              super.scrollWheel(with: event)
              return
         }
-        
-        // Emulate scrollback using Shift + PageUp / PageDown
-        // This is a common binding for terminal scrollback
-        if abs(event.deltaY) > 0.1 {
-            let isUp = event.deltaY > 0
-            // Use GHOSTTY_KEY_PAGE_UP/DOWN if available, otherwise rely on keycode?
-            // Since we import GhosttyKit, we should have access to the enums.
-            
-            // Construct key event for Shift + PageUp/Down
-            var keyStr = ghostty_input_key_s()
-            keyStr.action = GHOSTTY_ACTION_PRESS
-            keyStr.mods = ghostty_input_mods_e(GHOSTTY_MODS_SHIFT.rawValue)
-            
-            // Map standard macOS keycodes for PageUp (116) / PageDown (121)
-            keyStr.keycode = isUp ? 116 : 121
-            
-            _ = ghostty_surface_key(surface, keyStr)
-            
-            // Release immediately
-            keyStr.action = GHOSTTY_ACTION_RELEASE
-            _ = ghostty_surface_key(surface, keyStr)
-        }
+
+        // Use native Ghostty scroll handling instead of emulating keys
+        // This prevents characters from being written during scroll
+        var mouse = ghostty_input_mouse_s()
+        mouse.action = GHOSTTY_ACTION_SCROLL
+
+        // Convert NSEvent coordinates to Ghostty coordinates
+        let locationInView = convert(event.locationInWindow, from: nil)
+        mouse.x = UInt32(locationInView.x)
+        mouse.y = UInt32(bounds.height - locationInView.y) // Flip Y coordinate
+
+        // Set scroll deltas
+        mouse.xoffset = event.scrollingDeltaX
+        mouse.yoffset = -event.scrollingDeltaY // Invert Y for natural scrolling
+
+        // Handle modifiers
+        var mods: ghostty_input_mods_e = GHOSTTY_MODS_NONE
+        let flags = event.modifierFlags
+        if flags.contains(.shift) { mods = ghostty_input_mods_e(mods.rawValue | GHOSTTY_MODS_SHIFT.rawValue) }
+        if flags.contains(.control) { mods = ghostty_input_mods_e(mods.rawValue | GHOSTTY_MODS_CTRL.rawValue) }
+        if flags.contains(.option) { mods = ghostty_input_mods_e(mods.rawValue | GHOSTTY_MODS_ALT.rawValue) }
+        if flags.contains(.command) { mods = ghostty_input_mods_e(mods.rawValue | GHOSTTY_MODS_SUPER.rawValue) }
+        mouse.mods = mods
+
+        _ = ghostty_surface_mouse(surface, mouse)
     }
 
     private func handleInputTracking(_ input: String, event: NSEvent) {

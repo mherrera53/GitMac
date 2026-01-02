@@ -1,18 +1,53 @@
 import SwiftUI
 
+enum TerminalViewMode: String, CaseIterable {
+    case terminal = "Terminal"
+    case blocks = "Blocks"
+    case workflows = "Workflows"
+}
+
 struct EnhancedTerminalPanel: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = GhosttyViewModel()
     @StateObject private var enhancedViewModel = GhosttyEnhancedViewModel()
     @State private var inputHeight: CGFloat = 40
+    @State private var viewMode: TerminalViewMode = .terminal
+    @State private var showSessionSheet = false
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            terminalView
-            suggestionsOverlay
-            loadingIndicator
+        VStack(spacing: 0) {
+            // Toolbar with view mode switcher
+            terminalToolbar
+
+            // Main content based on view mode
+            GeometryReader { geometry in
+                ZStack(alignment: .topLeading) {
+                    contentView
+
+                    // AI suggestions overlay (only in terminal mode)
+                    if viewMode == .terminal {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Spacer()
+                                .frame(height: 60) // Space from top
+
+                            if !enhancedViewModel.aiSuggestions.isEmpty && !enhancedViewModel.currentInput.isEmpty {
+                                suggestionsOverlay
+                            } else if enhancedViewModel.isLoadingAI && !enhancedViewModel.currentInput.isEmpty {
+                                loadingIndicator
+                            }
+
+                            Spacer()
+                        }
+                    }
+                }
+            }
         }
         .background(AppTheme.background)
+        .sheet(isPresented: $showSessionSheet) {
+            if let currentSession = createCurrentSession() {
+                SessionSharingSheet(session: currentSession)
+            }
+        }
         .onAppear {
              if let repoPath = appState.currentRepository?.path {
                  viewModel.setWorkingDirectory(repoPath)
@@ -25,6 +60,68 @@ struct EnhancedTerminalPanel: View {
                  enhancedViewModel.updateContext(repoPath: path)
              }
         }
+    }
+
+    // MARK: - Toolbar
+
+    private var terminalToolbar: some View {
+        HStack(spacing: 12) {
+            // View mode picker
+            Picker("View Mode", selection: $viewMode) {
+                ForEach(TerminalViewMode.allCases, id: \.self) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 300)
+
+            Spacer()
+
+            // Session sharing button
+            Button {
+                showSessionSheet = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "square.and.arrow.up")
+                    Text("Share Session")
+                }
+                .font(.system(size: 12, weight: .medium))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(AppTheme.backgroundSecondary)
+            .cornerRadius(6)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(AppTheme.backgroundSecondary.opacity(0.5))
+    }
+
+    // MARK: - Content Views
+
+    @ViewBuilder
+    private var contentView: some View {
+        switch viewMode {
+        case .terminal:
+            terminalView
+        case .blocks:
+            blocksView
+        case .workflows:
+            workflowsView
+        }
+    }
+
+    private var blocksView: some View {
+        TerminalBlocksView(
+            blocks: enhancedViewModel.trackedCommands.map { cmd in
+                TerminalBlock(command: cmd)
+            }
+        )
+    }
+
+    private var workflowsView: some View {
+        TerminalWorkflowsView(viewModel: enhancedViewModel)
     }
 
     // MARK: - Subviews
@@ -40,47 +137,39 @@ struct EnhancedTerminalPanel: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    @ViewBuilder
     private var suggestionsOverlay: some View {
-        if !enhancedViewModel.aiSuggestions.isEmpty && !enhancedViewModel.currentInput.isEmpty {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(enhancedViewModel.aiSuggestions.prefix(5).enumerated()), id: \.offset) { index, suggestion in
-                    suggestionRow(suggestion: suggestion, index: index)
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(enhancedViewModel.aiSuggestions.prefix(5).enumerated()), id: \.offset) { index, suggestion in
+                suggestionRow(suggestion: suggestion, index: index)
 
-                    if index < enhancedViewModel.aiSuggestions.count - 1 && index < 4 {
-                        Divider()
-                            .background(AppTheme.backgroundSecondary)
-                    }
+                if index < enhancedViewModel.aiSuggestions.count - 1 && index < 4 {
+                    Divider()
+                        .background(AppTheme.backgroundSecondary)
                 }
             }
-            .background(suggestionBackground)
-            .frame(maxWidth: 500)
-            .padding(.leading, 20)
-            .padding(.bottom, 80)
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
-            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: enhancedViewModel.aiSuggestions.count)
         }
+        .background(suggestionBackground)
+        .frame(maxWidth: 500)
+        .padding(.leading, 20)
+        .transition(.opacity.combined(with: .move(edge: .top)))
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: enhancedViewModel.aiSuggestions.count)
     }
 
-    @ViewBuilder
     private var loadingIndicator: some View {
-        if enhancedViewModel.isLoadingAI && !enhancedViewModel.currentInput.isEmpty {
-            HStack(spacing: 8) {
-                ProgressView()
-                    .scaleEffect(0.7)
-                    .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.accent))
+        HStack(spacing: 8) {
+            ProgressView()
+                .scaleEffect(0.7)
+                .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.accent))
 
-                Text("AI thinking...")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(AppTheme.textSecondary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(loadingBackground)
-            .padding(.leading, 20)
-            .padding(.bottom, 80)
-            .transition(.opacity.combined(with: .scale))
+            Text("AI thinking...")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(AppTheme.textSecondary)
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(loadingBackground)
+        .padding(.leading, 20)
+        .transition(.opacity.combined(with: .scale))
     }
 
     private var suggestionBackground: some View {
@@ -173,5 +262,21 @@ struct EnhancedTerminalPanel: View {
 
         // Track command in history
         enhancedViewModel.trackCommand(suggestion.command)
+    }
+
+    // MARK: - Session Management
+
+    private func createCurrentSession() -> TerminalSession? {
+        guard !enhancedViewModel.trackedCommands.isEmpty else { return nil }
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .short
+        dateFormatter.timeStyle = .short
+        let sessionName = "Session \(dateFormatter.string(from: Date()))"
+
+        return TerminalSession(
+            name: sessionName,
+            commands: enhancedViewModel.trackedCommands
+        )
     }
 }
