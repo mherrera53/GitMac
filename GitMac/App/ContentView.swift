@@ -319,9 +319,13 @@ struct MainLayout: View {
 
                 // Settings Button
                 XcodeToolbarButton(icon: "gearshape.fill", color: AppTheme.textSecondary) {
-                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                    if #available(macOS 14.0, *) {
+                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                    } else {
+                        NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                    }
                 }
-                .help("Settings")
+                .help("Settings (⌘,)")
 
                 // Inspector Toggle
                 XcodeToolbarButton(icon: "sidebar.trailing", color: AppTheme.textSecondary) {

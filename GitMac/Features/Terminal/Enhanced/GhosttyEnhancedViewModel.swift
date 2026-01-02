@@ -8,10 +8,10 @@
 import Foundation
 import SwiftUI
 
-// MARK: - Tracked Command Model
+// MARK: - Tracked Command Model (Rich History)
 
-struct TrackedCommand: Identifiable {
-    let id = UUID()
+struct TrackedCommand: Identifiable, Codable {
+    let id: UUID
     let command: String
     let timestamp: Date
     var output: String = ""
@@ -19,6 +19,55 @@ struct TrackedCommand: Identifiable {
     var isComplete: Bool = false
     var error: String? = nil
     var aiSuggestion: String? = nil
+
+    // Rich History fields
+    var startTime: Date
+    var endTime: Date?
+    var duration: TimeInterval? {
+        guard let endTime = endTime else { return nil }
+        return endTime.timeIntervalSince(startTime)
+    }
+    var gitBranch: String?
+    var workingDirectory: String?
+    var processId: Int32?
+
+    init(command: String, timestamp: Date = Date(), gitBranch: String? = nil, workingDirectory: String? = nil) {
+        self.id = UUID()
+        self.command = command
+        self.timestamp = timestamp
+        self.startTime = timestamp
+        self.gitBranch = gitBranch
+        self.workingDirectory = workingDirectory
+    }
+
+    var durationFormatted: String {
+        guard let duration = duration else { return "Running..." }
+        if duration < 1 {
+            return String(format: "%.0fms", duration * 1000)
+        } else if duration < 60 {
+            return String(format: "%.1fs", duration)
+        } else {
+            let minutes = Int(duration / 60)
+            let seconds = Int(duration.truncatingRemainder(dividingBy: 60))
+            return "\(minutes)m \(seconds)s"
+        }
+    }
+
+    var statusIcon: String {
+        if !isComplete { return "circle.fill" }
+        if let code = exitCode {
+            return code == 0 ? "checkmark.circle.fill" : "xmark.circle.fill"
+        }
+        return "circle.fill"
+    }
+
+    var statusColor: String {
+        if !isComplete { return "info" }
+        if let code = exitCode {
+            return code == 0 ? "success" : "error"
+        }
+        return "textSecondary"
+    }
 }
 
 // MARK: - Workflow
@@ -69,12 +118,20 @@ class GhosttyEnhancedViewModel: ObservableObject {
         loadDefaultWorkflows()
     }
 
-    // MARK: - Command Tracking
+    // MARK: - Command Tracking (Rich History)
 
     func trackCommand(_ command: String) {
+        // Get current git branch if in a repo
+        var gitBranch: String?
+        if let repoPath = currentRepoPath {
+            gitBranch = getCurrentGitBranch(at: repoPath)
+        }
+
         let tracked = TrackedCommand(
             command: command,
-            timestamp: Date()
+            timestamp: Date(),
+            gitBranch: gitBranch,
+            workingDirectory: currentDirectory.isEmpty ? nil : currentDirectory
         )
         trackedCommands.append(tracked)
 
@@ -82,6 +139,9 @@ class GhosttyEnhancedViewModel: ObservableObject {
         if trackedCommands.count > 100 {
             trackedCommands.removeFirst()
         }
+
+        // Persist history
+        saveCommandHistory()
     }
 
     func updateCommandOutput(_ commandId: UUID, output: String) {
@@ -94,12 +154,55 @@ class GhosttyEnhancedViewModel: ObservableObject {
         if let index = trackedCommands.firstIndex(where: { $0.id == commandId }) {
             trackedCommands[index].exitCode = exitCode
             trackedCommands[index].isComplete = true
+            trackedCommands[index].endTime = Date()
 
             // Trigger Active AI if command failed
             if exitCode != 0 {
                 suggestErrorFix(for: trackedCommands[index])
             }
+
+            // Persist history
+            saveCommandHistory()
         }
+    }
+
+    private func getCurrentGitBranch(at path: String) -> String? {
+        let task = Process()
+        task.launchPath = "/usr/bin/git"
+        task.arguments = ["-C", path, "rev-parse", "--abbrev-ref", "HEAD"]
+        task.standardOutput = Pipe()
+        task.standardError = Pipe()
+
+        do {
+            try task.run()
+            task.waitUntilExit()
+
+            if task.terminationStatus == 0,
+               let data = (task.standardOutput as? Pipe)?.fileHandleForReading.readDataToEndOfFile(),
+               let branch = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !branch.isEmpty {
+                return branch
+            }
+        } catch {
+            return nil
+        }
+
+        return nil
+    }
+
+    // MARK: - History Persistence
+
+    private func saveCommandHistory() {
+        guard let data = try? JSONEncoder().encode(trackedCommands) else { return }
+        UserDefaults.standard.set(data, forKey: "terminal.commandHistory")
+    }
+
+    func loadCommandHistory() {
+        guard let data = UserDefaults.standard.data(forKey: "terminal.commandHistory"),
+              let commands = try? JSONDecoder().decode([TrackedCommand].self, from: data) else {
+            return
+        }
+        trackedCommands = commands
     }
 
     func clearCommands() {

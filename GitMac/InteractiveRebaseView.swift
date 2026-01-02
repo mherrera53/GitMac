@@ -66,28 +66,28 @@ struct InteractiveRebaseView: View {
             
             // Stats
             HStack(spacing: 16) {
-                StatBadge(
+                RebaseStatBadge(
                     icon: "checkmark.circle.fill",
                     color: .green,
                     label: "Pick",
                     count: rebaseItems.filter { $0.action == .pick }.count
                 )
-                
-                StatBadge(
+
+                RebaseStatBadge(
                     icon: "arrow.merge",
                     color: .purple,
                     label: "Squash",
                     count: rebaseItems.filter { $0.action == .squash }.count
                 )
-                
-                StatBadge(
+
+                RebaseStatBadge(
                     icon: "pencil.circle.fill",
                     color: .blue,
                     label: "Edit",
                     count: rebaseItems.filter { $0.action == .edit }.count
                 )
-                
-                StatBadge(
+
+                RebaseStatBadge(
                     icon: "trash.circle.fill",
                     color: .red,
                     label: "Drop",
@@ -234,7 +234,7 @@ struct RebaseInstructionItem: View {
     }
 }
 
-struct StatBadge: View {
+struct RebaseStatBadge: View {
     let icon: String
     let color: Color
     let label: String
