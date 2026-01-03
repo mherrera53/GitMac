@@ -37,8 +37,9 @@ jobs:
 
             - name: Check File Content
               run: |
-                  # Grep for "Claude" but exclude the workflow file itself
-                  if grep -rzi "Claude" . --exclude-dir=.git --exclude=.github/workflows/block-ai.yml --exclude=.mailmap; then
+                  # Grep for "Claude" but exclude the workflow file itself and mailmap
+                  # We use pipeline filtering for max reliability across environments
+                  if grep -rzi "Claude" . --exclude-dir=.git | grep -v "block-ai.yml" | grep -v ".mailmap"; then
                      echo "::error::Found prohibited content in files!"
                      exit 1
                   fi
