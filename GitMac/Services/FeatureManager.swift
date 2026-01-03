@@ -55,7 +55,7 @@ enum ProFeature: String, CaseIterable {
         case .localLLM:
             return "Use local LLMs (Ollama, LM Studio) for complete privacy"
         case .multipleAIProviders:
-            return "Access OpenAI, Claude, Gemini, Mistral, Cohere, and more"
+            return "Access OpenAI, Anthropic, Gemini, Mistral, Cohere, and more"
         case .jiraIntegration:
             return "Link commits to Jira issues automatically"
         case .linearIntegration:
@@ -205,7 +205,7 @@ struct UpgradePromptView: View {
                 ForEach([
                     ("AI-powered features (commit, conflict resolution, suggestions)", "sparkles"),
                     ("Local LLM support (Ollama, LM Studio)", "cpu"),
-                    ("Multiple AI providers (OpenAI, Claude, Gemini, Mistral, Cohere)", "brain"),
+                    ("Multiple AI providers (OpenAI, Anthropic, Gemini, Mistral, Cohere)", "brain"),
                     ("All integrations (Jira, Linear, Notion, etc.)", "link"),
                     ("Custom themes", "paintbrush"),
                     ("Advanced diff features", "doc.text.magnifyingglass"),
