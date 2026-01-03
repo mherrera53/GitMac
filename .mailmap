@@ -1,0 +1,3 @@
+mailmap_file = '.mailmap'
+with open(mailmap_file, 'w') as f:
+    f.write("Mario Herrera <herrera.monterroso.mario@gmail.com> <53062841+mherrera53@users.noreply.github.com>\n")
