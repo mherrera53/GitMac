@@ -32,6 +32,7 @@ extension Color {
         var background: Color { colors.background.color }
         var backgroundSecondary: Color { colors.backgroundSecondary.color }
         var backgroundTertiary: Color { colors.backgroundTertiary.color }
+        var inputBackground: Color { colors.backgroundSecondary.color.opacity(0.8) } // Added
 
         // MARK: - Text Colors
         var text: Color { colors.text.color }
@@ -277,6 +278,11 @@ extension AppTheme {
     /// Background for code blocks
     static var codeBackground: Color {
         backgroundSecondary.opacity(0.5)
+    }
+
+    /// Background for input fields
+    static var inputBackground: Color {
+        backgroundSecondary.opacity(0.3)
     }
 
     /// Background for inline code

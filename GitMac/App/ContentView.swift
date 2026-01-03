@@ -17,6 +17,12 @@ struct ContentView: View {
     @State private var revertCommits: [Commit] = []
     @State private var showDetachedHeadAlert = false
     @State private var themeRefreshTrigger = UUID()
+    @AppStorage("toolbarDisplayMode") private var toolbarDisplayMode: ToolbarDisplayMode = .iconAndText
+
+    enum ToolbarDisplayMode: String, CaseIterable {
+        case iconOnly = "Icon Only"
+        case iconAndText = "Icon and Text"
+    }
 
     init() {
         _bottomPanelManager = ObservedObject(wrappedValue: BottomPanelManager.shared)
@@ -99,7 +105,8 @@ struct ContentView: View {
                 leftPanelWidth: $leftPanelWidth,
                 rightPanelWidth: $rightPanelWidth,
                 themeRefreshTrigger: themeRefreshTrigger,
-                bottomPanelManager: bottomPanelManager
+                bottomPanelManager: bottomPanelManager,
+                toolbarDisplayMode: $toolbarDisplayMode
             )
         } else {
             WelcomeView(
@@ -235,6 +242,280 @@ struct MainLayout: View {
     }
 
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @Binding var toolbarDisplayMode: ContentView.ToolbarDisplayMode
+
+    private var toolbarConfigurationMenu: some View {
+        Group {
+            if #available(macOS 14.0, *) {
+                ControlGroup {
+                    ForEach(ContentView.ToolbarDisplayMode.allCases, id: \.self) { mode in
+                        Button(mode.rawValue) {
+                             toolbarDisplayMode = mode // Update binding
+                        }
+                    }
+                } label: {
+                    Text("Toolbar Display")
+                }
+            } else {
+                Text("Toolbar Display")
+                ForEach(ContentView.ToolbarDisplayMode.allCases, id: \.self) { mode in
+                    Button(mode.rawValue) {
+                         toolbarDisplayMode = mode
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var centerColumn: some View {
+        // Center Area - Graph/Diff + Bottom Panel
+        VStack(spacing: 0) {
+            // Center Panel - Graph OR Diff
+            CenterPanel(selectedFileDiff: $selectedFileDiff, isLoadingDiff: $isLoadingDiff)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+            // Bottom Panel (Terminal/Logs) - Resizable
+            if bottomPanelManager.isPanelVisible {
+                 UnifiedBottomPanel(panelManager: bottomPanelManager)
+                     .frame(height: bottomPanelManager.panelHeight)
+                     .transition(.move(edge: .bottom))
+            }
+        }
+        .contextMenu { toolbarConfigurationMenu }
+    }
+
+    private var toolbarTitleSection: some View {
+        HStack(spacing: 16) {
+            // Moved to Sidebar as per user request
+            
+            // Repository Tabs - kept in toolbar as they are navigation
+            if !appState.openTabs.isEmpty {
+                RepositoryTabsView()
+                    .layoutPriority(1)
+                    .padding(.leading, 12)
+            }
+        }
+    }
+
+    private var toolbarGitActions: some View {
+        Group {
+            if appState.currentRepository != nil {
+                HStack(spacing: 0) {
+                    // Separator
+                    Rectangle()
+                        .fill(AppTheme.border)
+                        .frame(width: 1, height: 24)
+                        .padding(.horizontal, 8)
+                    
+                    // Toobar Actions
+                    HStack(spacing: 2) {
+                        ToolbarActionButton(
+                            icon: "arrow.counterclockwise",
+                            title: "UNDO",
+                            helpText: "Reverts the last action performed.",
+                            displayMode: toolbarDisplayMode
+                        ) {
+                            // Undo action
+                        }
+                        .disabled(true) // Placeholder implementation
+                        
+                        ToolbarActionButton(
+                            icon: "arrow.clockwise",
+                            title: "REDO",
+                            helpText: "Reapplies the last action that was undone.",
+                            displayMode: toolbarDisplayMode
+                        ) {
+                            // Redo action
+                        }
+                        .disabled(true) // Placeholder implementation
+                        
+                        ToolbarActionButton(
+                            icon: "arrow.down.to.line",
+                            title: "PULL",
+                            helpText: "Fetches changes from the remote and merges them into current branch.",
+                            color: AppTheme.accent,
+                            displayMode: toolbarDisplayMode
+                        ) {
+                            NotificationCenter.default.post(name: .pull, object: nil)
+                        }
+                        .contextMenu {
+                            Button("Pull (Rebase)") {
+                                NotificationCenter.default.post(name: .pull, object: ["rebase": true])
+                            }
+                            Button("Pull (Fast-Forward Only)") {
+                                NotificationCenter.default.post(name: .pull, object: ["ff-only": true])
+                            }
+                        }
+                        
+                        ToolbarActionButton(
+                            icon: "arrow.triangle.2.circlepath",
+                            title: "FETCH",
+                            helpText: "Downloads objects and refs from another repository.",
+                            color: AppTheme.accent,
+                            displayMode: toolbarDisplayMode
+                        ) {
+                            NotificationCenter.default.post(name: .fetch, object: nil)
+                        }
+                        .contextMenu {
+                            Button("Fetch All") {
+                                NotificationCenter.default.post(name: .fetch, object: ["all": true])
+                            }
+                            Button("Fetch (Prune)") {
+                                 NotificationCenter.default.post(name: .fetch, object: ["prune": true])
+                            }
+                        }
+                        
+                        ToolbarActionButton(
+                            icon: "arrow.up.to.line",
+                            title: "PUSH",
+                            helpText: "Uploads local commits to the remote repository.",
+                            color: AppTheme.success,
+                            displayMode: toolbarDisplayMode
+                        ) {
+                            NotificationCenter.default.post(name: .push, object: nil)
+                        }
+                        .contextMenu {
+                            Button("Force Push") {
+                                NotificationCenter.default.post(name: .push, object: ["force": true])
+                            }
+                            Button("Push Tags") {
+                                NotificationCenter.default.post(name: .push, object: ["tags": true])
+                            }
+                        }
+                        
+                        ToolbarActionButton(
+                            icon: "arrow.triangle.branch",
+                            title: "BRANCH",
+                            helpText: "Creates a new branch from the current HEAD.",
+                            color: AppTheme.accent,
+                            displayMode: toolbarDisplayMode
+                        ) {
+                             NotificationCenter.default.post(name: .newBranch, object: nil)
+                        }
+                        .contextMenu {
+                            Button("New Branch...") {
+                                NotificationCenter.default.post(name: .newBranch, object: nil)
+                            }
+                            Button("Checkout Tag/Revision...") {
+                                NotificationCenter.default.post(name: .newBranch, object: ["checkout": true])
+                            }
+                        }
+                        
+                        ToolbarActionButton(
+                            icon: "tray.and.arrow.down",
+                            title: "STASH",
+                            helpText: "Temporarily saves uncommitted changes.",
+                            color: AppTheme.warning,
+                            displayMode: toolbarDisplayMode
+                        ) {
+                            NotificationCenter.default.post(name: .stash, object: nil)
+                        }
+                        .contextMenu {
+                            Button("Stash (Include Untracked)") {
+                                NotificationCenter.default.post(name: .stash, object: ["include-untracked": true])
+                            }
+                            Button("Stash (Keep Index)") {
+                                NotificationCenter.default.post(name: .stash, object: ["keep-index": true])
+                            }
+                        }
+                        
+                        ToolbarActionButton(
+                            icon: "tray.and.arrow.up",
+                            title: "POP",
+                            helpText: "Restores the most recently stashed changes.",
+                            color: AppTheme.warning,
+                            displayMode: toolbarDisplayMode
+                        ) {
+                            NotificationCenter.default.post(name: .popStash, object: nil)
+                        }
+                        .contextMenu {
+                            Button("Pop Stash") {
+                                NotificationCenter.default.post(name: .popStash, object: nil)
+                            }
+                            Button("Apply Stash (Keep in Stash)") {
+                                NotificationCenter.default.post(name: .popStash, object: ["apply": true])
+                            }
+                            Button("Drop Stash") {
+                                 NotificationCenter.default.post(name: .popStash, object: ["drop": true])
+                            }
+                        }
+                        
+                        ToolbarActionButton(
+                            icon: "terminal",
+                            title: "TERMINAL",
+                            helpText: "Toggles the integrated terminal view.",
+                            color: AppTheme.textPrimary,
+                            displayMode: toolbarDisplayMode
+                        ) {
+                            bottomPanelManager.openTab(type: .terminal)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Plugin buttons
+    private var toolbarPluginActions: some View {
+         Group {
+            // Team Activity (Replaces "Right Panel Terminal")
+            XcodeToolbarButton(icon: "person.2.fill", color: AppTheme.accent) {
+                NotificationCenter.default.post(name: Notification.Name("openTeamActivity"), object: nil)
+            }
+            .help("Team Activity")
+
+            // Integrations
+            XcodeToolbarButton(icon: "tag.fill", color: AppTheme.success) {
+                bottomPanelManager.openTab(type: .taiga)
+            }
+            .help("Taiga")
+
+            XcodeToolbarButton(icon: "square.stack.3d.up", color: AppTheme.info) {
+                 bottomPanelManager.openTab(type: .jira)
+            }
+            .help("Jira")
+
+            XcodeToolbarButton(icon: "lineweight", color: AppTheme.accent) {
+                 bottomPanelManager.openTab(type: .linear)
+            }
+            .help("Linear")
+
+            XcodeToolbarDivider()
+
+            // Settings Button - use SettingsLink for macOS 14+
+            if #available(macOS 14.0, *) {
+                SettingsLink {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: DesignTokens.Toolbar.iconSize, weight: .regular))
+                        .foregroundColor(AppTheme.textSecondary)
+                        .frame(
+                            width: DesignTokens.Toolbar.iconOnlyButtonSize.width,
+                            height: DesignTokens.Toolbar.iconOnlyButtonSize.height
+                        )
+                }
+                .buttonStyle(.plain)
+                .help("Settings (⌘,)")
+            } else {
+                XcodeToolbarButton(icon: "gearshape.fill", color: AppTheme.textSecondary) {
+                    NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                }
+                .help("Settings (⌘,)")
+            }
+
+            // Inspector Toggle
+            XcodeToolbarButton(icon: "sidebar.trailing", color: AppTheme.textSecondary) {
+                withAnimation {
+                    if columnVisibility == .all {
+                        columnVisibility = .doubleColumn
+                    } else {
+                        columnVisibility = .all
+                    }
+                }
+            }
+            .help("Toggle Inspector")
+        }
+    }
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -247,18 +528,7 @@ struct MainLayout: View {
                     // but we can add sidebar specific ones here if needed
                 }
         } content: {
-            // Center Area - Graph/Diff + Bottom Panel
-            VStack(spacing: 0) {
-                // Center Panel - Graph OR Diff
-                CenterPanel(selectedFileDiff: $selectedFileDiff, isLoadingDiff: $isLoadingDiff)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(AppTheme.background)
-
-                // Unified Bottom Panel
-                UnifiedBottomPanel(panelManager: bottomPanelManager)
-                    .environmentObject(appState)
-            }
-            .navigationSplitViewColumnWidth(min: 400, ideal: 600)
+            centerColumn
         } detail: {
             // Right Panel - Staging/Commit
             RightStagingPanel(selectedFileDiff: $selectedFileDiff, isLoadingDiff: $isLoadingDiff)
@@ -266,83 +536,23 @@ struct MainLayout: View {
                 .background(AppTheme.backgroundSecondary)
         }
         .navigationSplitViewStyle(.balanced)
+        // .windowTitleHidden() // Hide system title to prevent duplicates with custom title
+        .navigationTitle("") // Hide system title
         .toolbar {
             ToolbarItem(placement: .navigation) {
-                HStack(spacing: 0) {
-                    // Navigation History
-                    XcodeToolbarButton(icon: "chevron.left", color: AppTheme.textSecondary) { }
-                        .help("Go Back")
-
-                    XcodeToolbarButton(icon: "chevron.right", color: AppTheme.textSecondary) { }
-                        .help("Go Forward")
+                HStack(spacing: 16) {
+                    toolbarTitleSection
+                    toolbarGitActions
                 }
             }
-
-            // Principal area - Repository Tabs or App Title
-            ToolbarItem(placement: .principal) {
-                if appState.openTabs.isEmpty {
-                    // Show app title when no repositories open
-                    Text("GitMac")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(AppTheme.textPrimary)
-                } else {
-                    // Show repository tabs when repos are open
-                    RepositoryTabsView()
-                        .frame(minWidth: 200, maxWidth: 600)
-                }
-            }
-
-            // Plugin buttons
+            
             ToolbarItemGroup(placement: .automatic) {
-                XcodeToolbarButton(icon: "terminal.fill", color: AppTheme.textSecondary) {
-                    bottomPanelManager.openTab(type: .terminal)
-                }
-                .help("Terminal")
-
-                // Integrations
-                XcodeToolbarButton(icon: "tag.fill", color: AppTheme.success) {
-                    bottomPanelManager.openTab(type: .taiga)
-                }
-                .help("Taiga")
-
-                XcodeToolbarButton(icon: "square.stack.3d.up", color: AppTheme.info) {
-                     bottomPanelManager.openTab(type: .jira)
-                }
-                .help("Jira")
-
-                XcodeToolbarButton(icon: "lineweight", color: AppTheme.accent) {
-                     bottomPanelManager.openTab(type: .linear)
-                }
-                .help("Linear")
-
-                XcodeToolbarDivider()
-
-                // Settings Button
-                XcodeToolbarButton(icon: "gearshape.fill", color: AppTheme.textSecondary) {
-                    if #available(macOS 14.0, *) {
-                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                    } else {
-                        NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
-                    }
-                }
-                .help("Settings (⌘,)")
-
-                // Inspector Toggle
-                XcodeToolbarButton(icon: "sidebar.trailing", color: AppTheme.textSecondary) {
-                    withAnimation {
-                        if columnVisibility == .all {
-                            columnVisibility = .doubleColumn
-                        } else {
-                            columnVisibility = .all
-                        }
-                    }
-                }
-                .help("Toggle Inspector")
+                toolbarPluginActions
             }
         }
-        .toolbarBackground(.clear, for: .windowToolbar)
+        .toolbarBackground(Color.clear, for: .windowToolbar)
         .background(VisualEffectBlur.toolbar.ignoresSafeArea(edges: .top))
-        .toolbarColorScheme(ThemeManager.shared.currentTheme == .light ? .light : .dark, for: .windowToolbar)
+        .toolbarColorScheme(ThemeManager.shared.currentTheme == .light ? SwiftUI.ColorScheme.light : SwiftUI.ColorScheme.dark, for: .windowToolbar)
         .id(themeRefreshTrigger)
         .onChange(of: appState.activeTabId) { _, _ in
             // Clear diff when switching repositories
@@ -456,6 +666,39 @@ struct LeftSidebarPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Repository & Branch Header (Previously in Toolbar)
+            if let repo = appState.currentRepository {
+                VStack(spacing: 4) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "folder.fill")
+                            .foregroundColor(AppTheme.accent)
+                            .font(.system(size: 12))
+                        Text(repo.name)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(AppTheme.textPrimary)
+                        Spacer()
+                    }
+                    
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.triangle.branch")
+                            .font(.system(size: 10))
+                            .foregroundColor(AppTheme.textSecondary)
+                        Text(appState.selectedBranch?.name ?? repo.currentBranch?.name ?? "No Branch")
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundColor(AppTheme.textSecondary)
+                            .lineLimit(1)
+                        Spacer()
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(AppTheme.backgroundSecondary)
+                
+                Divider()
+            }
+
+
+
             // Xcode-style horizontal navigator tabs
             XcodeSidebarNavigatorBar(selectedNavigator: $selectedNavigator)
 
@@ -3929,6 +4172,57 @@ struct CommitSection: View {
 }
 
 // MARK: - Tab Button
+// MARK: - Custom Toolbar Button
+struct ToolbarActionButton: View {
+    let icon: String
+    let title: String
+    let helpText: String // Tooltip text
+    let color: Color
+    let action: () -> Void
+    var displayMode: ContentView.ToolbarDisplayMode = .iconAndText // Default fallback
+    @AppStorage("toolbarDisplayMode") private var storedMode: ContentView.ToolbarDisplayMode = .iconAndText
+
+    // Default initializer with empty help text if not provided (though we are providing it)
+    init(icon: String, title: String, helpText: String = "", color: Color = AppTheme.textSecondary, displayMode: ContentView.ToolbarDisplayMode? = nil, action: @escaping () -> Void) {
+        self.icon = icon
+        self.title = title
+        self.helpText = helpText
+        self.color = color
+        self.action = action
+        if let mode = displayMode {
+            self._storedMode = AppStorage(wrappedValue: mode, "toolbarDisplayMode")
+        }
+    }
+    
+    @State private var isHovering = false
+    @Environment(\.isEnabled) var isEnabled
+    
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                if storedMode == .iconOnly {
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .medium))
+                } else {
+                    VStack(spacing: 2) {
+                        Image(systemName: icon)
+                            .font(.system(size: 14))
+                        Text(title)
+                            .font(.system(size: 9, weight: .semibold))
+                    }
+                }
+            }
+            .foregroundColor(isEnabled ? (isHovering ? color : color.opacity(0.85)) : AppTheme.textMuted.opacity(0.5))
+            .frame(width: storedMode == .iconOnly ? 36 : 50, height: storedMode == .iconOnly ? 32 : 40)
+            .background(isHovering && isEnabled ? AppTheme.backgroundTertiary : Color.clear)
+            .cornerRadius(6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(helpText)
+        .onHover { isHovering = $0 }
+    }
+}
 private struct TabButton: View {
     let title: String
     let isSelected: Bool
@@ -6142,3 +6436,5 @@ struct ColorPickerButton: View {
         .buttonStyle(.plain)
     }
 }
+
+

@@ -80,7 +80,7 @@ struct BottomPanelTabBar: View {
             .help("Close Panel")
         }
         .frame(height: DesignTokens.BottomBar.height)
-        .background(VisualEffectBlur.bottomBar)
+        .background(AppTheme.backgroundSecondary)
     }
 }
 

@@ -24,6 +24,11 @@ struct DiffView: View {
     @State private var viewportHeight: CGFloat = 400
     @State private var contentHeight: CGFloat = 1000
     @StateObject private var themeManager = ThemeManager.shared
+    
+    // History and Blame panel states
+    @State private var showHistory = false
+    @State private var showBlame = false
+    @State private var minimapScrollTrigger: UUID = UUID()
 
     // Calculate line count for accurate minimap
     // Calculate line count for accurate minimap
@@ -163,7 +168,9 @@ struct DiffView: View {
                     showLineNumbers: $showLineNumbers,
                     wordWrap: $wordWrap,
                     isMarkdown: isMarkdown,
-                    showMinimap: $showMinimap
+                    showMinimap: $showMinimap,
+                    onHistoryTap: { showHistory.toggle() },
+                    onBlameTap: { showBlame.toggle() }
                 )
 
                 // Large File Mode indicator
@@ -233,24 +240,26 @@ struct DiffView: View {
                     case .kaleidoscopeBlocks:
                         // Kaleidoscope Blocks: traditional side-by-side with connection lines
                         KaleidoscopeSplitDiffView(
-                            hunks: fileDiff.hunks,
+                            pairedLines: KaleidoscopePairingEngine.calculatePairs(from: fileDiff.hunks),
                             showLineNumbers: showLineNumbers,
                             showConnectionLines: true,
                             isFluidMode: false,
                             scrollOffset: $scrollOffset,
                             viewportHeight: $viewportHeight,
-                            contentHeight: $contentHeight
+                            contentHeight: $contentHeight,
+                            minimapScrollTrigger: $minimapScrollTrigger
                         )
                     case .kaleidoscopeFluid:
                         // Kaleidoscope Fluid: compressed view with elegant curved lines
                         KaleidoscopeSplitDiffView(
-                            hunks: fileDiff.hunks,
+                            pairedLines: KaleidoscopePairingEngine.calculatePairs(from: fileDiff.hunks),
                             showLineNumbers: showLineNumbers,
                             showConnectionLines: true,
                             isFluidMode: true,
                             scrollOffset: $scrollOffset,
                             viewportHeight: $viewportHeight,
-                            contentHeight: $contentHeight
+                            contentHeight: $contentHeight,
+                            minimapScrollTrigger: $minimapScrollTrigger
                         )
                     case .kaleidoscopeUnified:
                         // Kaleidoscope unified view with A/B labels
@@ -277,6 +286,8 @@ struct DiffView: View {
                             // Calculate new scroll offset from normalized position (0-1)
                             let maxScroll = max(0, contentHeight - viewportHeight)
                             scrollOffset = normalizedPos * maxScroll
+                            // Force scroll update in child view
+                            minimapScrollTrigger = UUID()
                         }
                     )
                     .frame(width: 60)
@@ -285,6 +296,12 @@ struct DiffView: View {
             }
 
         .background(theme.background)
+        .sheet(isPresented: $showHistory) {
+            FileHistorySheet(path: fileDiff.newPath, repoPath: repoPath ?? "")
+        }
+        .sheet(isPresented: $showBlame) {
+            BlameSheet(path: fileDiff.newPath, repoPath: repoPath ?? "")
+        }
     }
     private func minimapRows(from hunks: [DiffHunk]) -> [MinimapRow] {
         var rows: [MinimapRow] = []
@@ -303,6 +320,72 @@ struct DiffView: View {
             }
         }
         return rows
+    }
+}
+
+// MARK: - History and Blame Sheet Wrappers
+
+struct FileHistorySheet: View {
+    let path: String
+    let repoPath: String
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var viewModel = HistoryViewModel()
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("File History: \(path.components(separatedBy: "/").last ?? path)")
+                    .font(.headline)
+                    .foregroundColor(AppTheme.textPrimary)
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.escape, modifiers: [])
+            }
+            .padding()
+            .background(AppTheme.backgroundSecondary)
+            
+            Divider()
+            
+            FileHistoryView(path: path, viewModel: viewModel)
+        }
+        .frame(minWidth: 800, minHeight: 500)
+        .background(AppTheme.background)
+        .onAppear {
+            viewModel.repositoryPath = repoPath
+        }
+    }
+}
+
+struct BlameSheet: View {
+    let path: String
+    let repoPath: String
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var viewModel = HistoryViewModel()
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Blame: \(path.components(separatedBy: "/").last ?? path)")
+                    .font(.headline)
+                    .foregroundColor(AppTheme.textPrimary)
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.escape, modifiers: [])
+            }
+            .padding()
+            .background(AppTheme.backgroundSecondary)
+            
+            Divider()
+            
+            BlameView(path: path, viewModel: viewModel)
+        }
+        .frame(minWidth: 800, minHeight: 500)
+        .background(AppTheme.background)
+        .onAppear {
+            viewModel.repositoryPath = repoPath
+        }
     }
 }
 

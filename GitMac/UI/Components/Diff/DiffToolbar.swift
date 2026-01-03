@@ -67,6 +67,10 @@ struct DiffToolbar: View {
     @Binding var wordWrap: Bool
     var isMarkdown: Bool = false
     @Binding var showMinimap: Bool
+    var showHistoryButton: Bool = true
+    var showBlameButton: Bool = true
+    var onHistoryTap: (() -> Void)? = nil
+    var onBlameTap: (() -> Void)? = nil
     var extraActions: [ToolbarAction] = []
 
     struct ToolbarAction: Identifiable {
@@ -106,8 +110,35 @@ struct DiffToolbar: View {
 
             Spacer()
 
+            // History and Blame buttons (always visible)
+            HStack(spacing: 4) {
+                if showHistoryButton {
+                    ToolbarButton(
+                        icon: "clock.arrow.circlepath",
+                        isActive: false,
+                        tooltip: "Show History"
+                    ) {
+                        onHistoryTap?()
+                    }
+                }
+                
+                if showBlameButton {
+                    ToolbarButton(
+                        icon: "person.text.rectangle",
+                        isActive: false,
+                        tooltip: "Show Blame"
+                    ) {
+                        onBlameTap?()
+                    }
+                }
+            }
+
             // Extra actions
             if !extraActions.isEmpty {
+                Rectangle()
+                    .fill(AppTheme.border)
+                    .frame(width: 1, height: 20)
+                
                 ForEach(extraActions) { action in
                     ToolbarButton(
                         icon: action.icon,
@@ -116,11 +147,11 @@ struct DiffToolbar: View {
                         action: action.action
                     )
                 }
-
-                Rectangle()
-                    .fill(AppTheme.border)
-                    .frame(width: 1, height: 20)
             }
+
+            Rectangle()
+                .fill(AppTheme.border)
+                .frame(width: 1, height: 20)
 
             // View options
             HStack(spacing: 4) {

@@ -92,9 +92,8 @@ struct NotionPanelContent: View {
 }
 
 struct TeamActivityPanelContent: View {
-    @State private var dummyHeight: CGFloat = 400
     var body: some View {
-        TeamActivityPanel(height: $dummyHeight, onClose: {})
+        RepositoryActivityPanel()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

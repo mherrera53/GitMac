@@ -90,7 +90,13 @@ struct GitHooksView: View {
         List {
             ForEach(GitHookCategory.allCases, id: \.self) { category in
                 if !viewModel.hooks(for: category).isEmpty {
-                    Section(header: Text(category.rawValue)) {
+                    Section(header: 
+                        Text(category.rawValue)
+                            .font(DesignTokens.Typography.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(AppTheme.textSecondary)
+                            .padding(.vertical, 4)
+                    ) {
                         ForEach(viewModel.hooks(for: category)) { hook in
                             GitHookRow(
                                 hook: hook,
@@ -104,12 +110,16 @@ struct GitHooksView: View {
                                     modalCoordinator.show(.deleteConfirm)
                                 }
                             )
+                            .listRowBackground(AppTheme.backgroundSecondary.opacity(0.3))
+                            .listRowSeparatorTint(AppTheme.border)
                         }
                     }
                 }
             }
         }
         .listStyle(.inset)
+        .scrollContentBackground(.hidden)
+        .background(AppTheme.background)
     }
 
     private var loadingView: some View {
@@ -239,6 +249,9 @@ struct GitHookEditorSheet: View {
 
             TextEditor(text: $content)
                 .font(.system(.body, design: .monospaced))
+                .scrollContentBackground(.hidden)
+                .background(AppTheme.backgroundSecondary.opacity(0.3))
+                .foregroundColor(AppTheme.textPrimary)
                 .padding()
 
             Separator.horizontal()

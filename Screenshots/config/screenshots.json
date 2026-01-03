@@ -1,0 +1,125 @@
+{
+  "version": "1.0.0",
+  "project": "GitMac",
+  "description": "Screenshot automation configuration for GitMac",
+
+  "paths": {
+    "demo_repo": "~/gitmac-demo-repo",
+    "output_base": "~/gitmac-screenshots",
+    "website_repo": "~/gitmac-website"
+  },
+
+  "image_processing": {
+    "max_width": 2560,
+    "web_width": 1600,
+    "thumbnail_width": 400,
+    "quality": 90,
+    "formats": ["png"],
+    "effects": {
+      "shadow": true,
+      "rounded_corners": false
+    }
+  },
+
+  "test_configuration": {
+    "scheme": "GitMac",
+    "target": "GitMacUITests",
+    "platform": "macOS",
+    "screenshot_delay": 2,
+    "themes": ["light", "dark"],
+    "retina": true
+  },
+
+  "deployment": {
+    "auto_deploy": false,
+    "website_path": "static/screenshots",
+    "git_auto_commit": false
+  },
+
+  "categories": [
+    {
+      "id": "general",
+      "name": "General",
+      "description": "Main window and general UI",
+      "priority": 1
+    },
+    {
+      "id": "commits",
+      "name": "Commits & History",
+      "description": "Commit graph and history views",
+      "priority": 2
+    },
+    {
+      "id": "branches",
+      "name": "Branch Management",
+      "description": "Branch operations and management",
+      "priority": 3
+    },
+    {
+      "id": "diff",
+      "name": "Diff Viewer",
+      "description": "File diff and comparison views",
+      "priority": 4
+    },
+    {
+      "id": "staging",
+      "name": "Staging Area",
+      "description": "File staging and commit preparation",
+      "priority": 5
+    },
+    {
+      "id": "merge",
+      "name": "Merge & Conflicts",
+      "description": "Merge conflict resolution",
+      "priority": 6
+    },
+    {
+      "id": "terminal",
+      "name": "Terminal Integration",
+      "description": "Integrated terminal features",
+      "priority": 7
+    },
+    {
+      "id": "plugins",
+      "name": "Plugin System",
+      "description": "Plugin management and customization",
+      "priority": 8
+    },
+    {
+      "id": "automation",
+      "name": "Workflow Automation",
+      "description": "Custom workflows and automation",
+      "priority": 9
+    },
+    {
+      "id": "team",
+      "name": "Team Features",
+      "description": "Team collaboration features",
+      "priority": 10
+    },
+    {
+      "id": "settings",
+      "name": "Settings",
+      "description": "Application settings and preferences",
+      "priority": 11
+    },
+    {
+      "id": "themes",
+      "name": "Themes",
+      "description": "Light and dark theme variations",
+      "priority": 12
+    }
+  ],
+
+  "optimization": {
+    "enabled": true,
+    "tools": {
+      "preferred": "pngquant",
+      "fallback": "optipng"
+    },
+    "quality_range": {
+      "min": 80,
+      "max": 95
+    }
+  }
+}

@@ -204,6 +204,20 @@ class EnhancedGhosttyContainerView: NSView {
                 }
                 return
             }
+            // Escape (53) - Dismiss suggestions
+            if event.keyCode == 53 {
+                enhanced.aiSuggestions.removeAll()
+                enhanced.currentInput = ""
+                return
+            }
+             // Tab (48) or Right Arrow (124) - Auto-complete/Apply
+            if event.keyCode == 48 || event.keyCode == 124 {
+                if let vm = viewModel {
+                    enhanced.applySelectedSuggestion(to: vm)
+                    currentInputBuffer = ""
+                }
+                return
+            }
         }
 
         // Track input for AI suggestions

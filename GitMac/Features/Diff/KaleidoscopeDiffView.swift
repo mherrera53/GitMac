@@ -21,8 +21,9 @@ struct KaleidoscopeDiffView: View {
     @State private var showMinimap = true
     @State private var swappedAB = false // For Swap A/B functionality
     @State private var scrollOffset: CGFloat = 0
-    @State private var viewportHeight: CGFloat = 400
-    @State private var contentHeight: CGFloat = 1000
+    @State private var viewportHeight: CGFloat = 0
+    @State private var contentHeight: CGFloat = 0
+    @State private var minimapScrollTrigger: UUID = UUID() // Unique trigger for minimap clicks
 
     @StateObject private var themeManager = ThemeManager.shared
 
@@ -77,14 +78,13 @@ struct KaleidoscopeDiffView: View {
                                 .frame(maxWidth: .infinity)
                             
                             if showMinimap {
-                                OptimizedMinimapView(
+                                KaleidoscopeMinimapWrapper(
                                     rows: minimapRows(from: unifiedLines),
-                                    scrollPosition: calculateScrollRatio(),
-                                    viewportRatio: calculateViewportRatio()
-                                ) { ratio in
-                                   let maxScroll = max(0, contentHeight - viewportHeight)
-                                   scrollOffset = ratio * maxScroll
-                                }
+                                    scrollOffset: $scrollOffset,
+                                    viewportHeight: $viewportHeight,
+                                    contentHeight: $contentHeight,
+                                    minimapScrollTriggerAction: { minimapScrollTrigger = UUID() }
+                                )
                                 .frame(width: 80)
                                 .padding(.trailing, 4)
                                 .padding(.vertical, 4)
@@ -95,14 +95,13 @@ struct KaleidoscopeDiffView: View {
                                 .frame(maxWidth: .infinity)
                             
                             if showMinimap {
-                                OptimizedMinimapView(
+                                KaleidoscopeMinimapWrapper(
                                     rows: minimapRows(from: pairedLines),
-                                    scrollPosition: calculateScrollRatio(),
-                                    viewportRatio: calculateViewportRatio()
-                                ) { ratio in
-                                   let maxScroll = max(0, contentHeight - viewportHeight)
-                                   scrollOffset = ratio * maxScroll
-                                }
+                                    scrollOffset: $scrollOffset,
+                                    viewportHeight: $viewportHeight,
+                                    contentHeight: $contentHeight,
+                                    minimapScrollTriggerAction: { minimapScrollTrigger = UUID() }
+                                )
                                 .frame(width: 80)
                                 .padding(.trailing, 4)
                                 .padding(.vertical, 4)
@@ -133,17 +132,17 @@ struct KaleidoscopeDiffView: View {
             // Initialize content height based on first file
             recalculateContentHeight()
         }
-        .onChange(of: viewMode) { _ in
+        .onChange(of: viewMode) { _, _ in
             // Force recalculation when switching between Blocks/Fluid/Unified
             recalculateContentHeight()
             scrollOffset = 0 // Reset scroll position
         }
-        .onChange(of: selectedFile?.id) { _ in
+        .onChange(of: selectedFile?.id) { _, _ in
             // Recalculate when file selection changes
             recalculateContentHeight()
             scrollOffset = 0
         }
-        .onChange(of: showMinimap) { newValue in
+        .onChange(of: showMinimap) { _, newValue in
             // Force recalculation when minimap is toggled
             if newValue {
                 recalculateContentHeight()
@@ -180,29 +179,27 @@ struct KaleidoscopeDiffView: View {
                     showFileList.toggle()
                 }
             }
-            
-            // History toggle (RIGHT) - Only if commits are available
-            if !commits.isEmpty {
-                 ToolbarToggle(
-                    icon: "clock.arrow.circlepath",
-                    isActive: showHistory,
-                    tooltip: "History"
-                ) {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showHistory.toggle()
-                    }
+            // History toggle - Always visible (will work when commits are loaded)
+            ToolbarToggle(
+                icon: "clock.arrow.circlepath",
+                isActive: showHistory,
+                tooltip: "History"
+            ) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showHistory.toggle()
                 }
-                 // Connection lines toggle
-                 ToolbarToggle(
-                     icon: "link",
-                     isActive: showConnectionLines,
-                     tooltip: "Connection Lines"
-                 ) {
-                     withAnimation(.easeInOut(duration: 0.2)) {
-                         showConnectionLines.toggle()
-                     }
-                 }
-             }
+            }
+            
+            // Connection lines toggle - Always visible
+            ToolbarToggle(
+                icon: "link",
+                isActive: showConnectionLines,
+                tooltip: "Connection Lines"
+            ) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showConnectionLines.toggle()
+                }
+            }
 
             Rectangle()
                 .fill(AppTheme.border)
@@ -313,25 +310,27 @@ struct KaleidoscopeDiffView: View {
             case .blocks:
                 // Traditional side-by-side (like Split)
                 KaleidoscopeSplitDiffView(
-                    hunks: hunks,
+                    pairedLines: pairedLines,
                     showLineNumbers: showLineNumbers,
                     showConnectionLines: showConnectionLines,
                     isFluidMode: false,
                     scrollOffset: $scrollOffset,
                     viewportHeight: $viewportHeight,
-                    contentHeight: $contentHeight
+                    contentHeight: $contentHeight,
+                    minimapScrollTrigger: $minimapScrollTrigger
                 )
 
             case .fluid:
                 // Fluid view with connection lines (enhanced version)
                 KaleidoscopeSplitDiffView(
-                    hunks: hunks,
+                    pairedLines: pairedLines,
                     showLineNumbers: showLineNumbers,
                     showConnectionLines: showConnectionLines,
                     isFluidMode: true,
                     scrollOffset: $scrollOffset,
                     viewportHeight: $viewportHeight,
-                    contentHeight: $contentHeight
+                    contentHeight: $contentHeight,
+                    minimapScrollTrigger: $minimapScrollTrigger
                 )
 
         case .unified:
@@ -428,9 +427,13 @@ struct KaleidoscopeDiffView: View {
     
     // Calculate normalized scroll ratio (0-1) for minimap
     private func calculateScrollRatio() -> CGFloat {
-        guard contentHeight > viewportHeight else { return 0 }
+        guard contentHeight > viewportHeight, contentHeight > 0 else { return 0 }
         let maxScroll = contentHeight - viewportHeight
-        return max(0, min(1, scrollOffset / maxScroll))
+        guard maxScroll > 0 else { return 0 }
+        let ratio = max(0, min(1, scrollOffset / maxScroll))
+        // Debug log for scroll sync
+        NSLog("🔍 [Minimap] scrollOffset: %.1f, contentHeight: %.1f, viewportHeight: %.1f, maxScroll: %.1f, ratio: %.3f", scrollOffset, contentHeight, viewportHeight, maxScroll, ratio)
+        return ratio
     }
     
     // Calculate viewport ratio (0-1) for minimap lens

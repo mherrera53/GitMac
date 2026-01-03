@@ -152,7 +152,7 @@ final class SecretRedactionService: Sendable {
     }
 
     private func createRedactedText(for type: SecretType, length: Int) -> String {
-        let icon = type.icon
+        _ = type.icon
         let dots = String(repeating: "•", count: min(length, 20))
         return "[\(type.rawValue): \(dots)]"
     }

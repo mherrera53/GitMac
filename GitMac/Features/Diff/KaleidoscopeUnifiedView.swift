@@ -47,10 +47,10 @@ struct KaleidoscopeUnifiedView: View {
                         viewportHeight = geo.size.height
                         updateContentHeight()
                     }
-                    .onChange(of: geo.size.height) { newHeight in
+                    .onChange(of: geo.size.height) { _, newHeight in
                         viewportHeight = newHeight
                     }
-                    .onChange(of: hunks) { _ in
+                    .onChange(of: hunks) { _, _ in
                         updateContentHeight()
                     }
             }

@@ -19,7 +19,7 @@ extension AIService {
         includeBody: Bool = false
     ) async throws -> SmartCommitSuggestion {
         
-        let prompt = """
+        _ = """
         Analyze this git diff and generate a conventional commit message.
         
         Rules:
@@ -84,7 +84,7 @@ extension AIService {
         let diffPreview = String(diff.prefix(3000))
         
         // Use the existing commit message generation with a custom prompt
-        let prompt = """
+        _ = """
         Generate a pull request description.
         
         Commits:

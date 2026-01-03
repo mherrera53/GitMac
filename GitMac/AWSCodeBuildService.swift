@@ -417,6 +417,7 @@ struct AWSBuildRow: View {
                     if build.buildStatus == "IN_PROGRESS" {
                         ProgressView()
                             .scaleEffect(0.5)
+                            .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.textPrimary))
                     }
                 }
 
@@ -733,7 +734,7 @@ class AWSCodeBuildViewModel: ObservableObject {
 
     // MARK: - AWS Command Execution (runs off main thread)
     
-    nonisolated private func runAWSCommandAsync(_ arguments: [String], timeout: TimeInterval = 15) async -> (success: Bool, output: String) {
+    nonisolated private func runAWSCommandAsync(_ arguments: [String], timeout: TimeInterval = 30) async -> (success: Bool, output: String) {
         // Use Task.detached to ensure we're completely off the main actor
         await Task.detached(priority: .userInitiated) {
             let process = Process()

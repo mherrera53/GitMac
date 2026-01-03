@@ -6,6 +6,7 @@ struct ConnectionRibbonsView: View {
     let lineHeight: CGFloat
     let isFluidMode: Bool
     let viewWidth: CGFloat
+    let visibleRange: Range<Int> // Virtualization support
 
     private let leftPanelWidth: CGFloat
     private let rightPanelWidth: CGFloat
@@ -14,11 +15,12 @@ struct ConnectionRibbonsView: View {
     private let ribbonOpacity: Double = 0.15
     private let strokeOpacity: Double = 0.6
 
-    init(pairs: [DiffPairWithConnection], lineHeight: CGFloat, isFluidMode: Bool, viewWidth: CGFloat) {
+    init(pairs: [DiffPairWithConnection], lineHeight: CGFloat, isFluidMode: Bool, viewWidth: CGFloat, visibleRange: Range<Int>) {
         self.pairs = pairs
         self.lineHeight = lineHeight
         self.isFluidMode = isFluidMode
         self.viewWidth = viewWidth
+        self.visibleRange = visibleRange
 
         // Calculate panel widths (assuming equal split)
         self.leftPanelWidth = viewWidth / 2
@@ -33,9 +35,14 @@ struct ConnectionRibbonsView: View {
     }
 
     private func drawRibbons(context: GraphicsContext, size: CGSize) {
-        var yOffset: CGFloat = 0
-
-        for pair in pairs {
+        // Start rendering from the first visible item
+        var yOffset: CGFloat = CGFloat(visibleRange.lowerBound) * lineHeight
+        
+        // Only iterate through visible range
+        for index in visibleRange {
+            guard index < pairs.count else { break }
+            let pair = pairs[index]
+            
             // Draw ribbons for any non-none connection
             guard pair.connectionType != .none else {
                 yOffset += lineHeight
@@ -203,7 +210,8 @@ struct ConnectionRibbonsView_Previews: PreviewProvider {
             ],
             lineHeight: 22,
             isFluidMode: true,
-            viewWidth: 800
+            viewWidth: 800,
+            visibleRange: 0..<1
         )
         .frame(width: 800, height: 400)
         .background(Color.black.opacity(0.8))

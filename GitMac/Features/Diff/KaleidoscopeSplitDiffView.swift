@@ -4,21 +4,26 @@ import SwiftUI
 
 /// Enhanced split diff view with connected change visualization
 struct KaleidoscopeSplitDiffView: View {
-    let hunks: [DiffHunk]
+    // Receive pre-calculated lines from parent to ensure 1:1 sync with Minimap
+    let pairedLines: [DiffPairWithConnection]
     let showLineNumbers: Bool
     var showConnectionLines: Bool = true
-    var isFluidMode: Bool = false  // Fluid vs Blocks mode
+    var isFluidMode: Bool = false
     @Binding var scrollOffset: CGFloat
     @Binding var viewportHeight: CGFloat
+    
+    // Content Height is now derived from pairedLines, but we bind it to report back to parent/minimap
     @Binding var contentHeight: CGFloat
+    @Binding var minimapScrollTrigger: UUID
 
     @StateObject private var themeManager = ThemeManager.shared
+    
+    // Virtualization state
+    @State private var visibleRange: Range<Int> = 0..<0
+    
+    // Scroll state management
     @State private var lastExternalScrollOffset: CGFloat = -1
     @State private var isHandlingMinimapClick = false
-
-    private var pairedLines: [DiffPairWithConnection] {
-        KaleidoscopePairingEngine.calculatePairs(from: hunks)
-    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -82,13 +87,14 @@ struct KaleidoscopeSplitDiffView: View {
                             }
                         }
 
-                        // Top layer: Connection ribbons overlay
-                        if showConnectionLines {
+                        // Top layer: Connection ribbons overlay (Optimized with Virtualization)
+                        if showConnectionLines, !pairedLines.isEmpty {
                             ConnectionRibbonsView(
                                 pairs: pairedLines,
                                 lineHeight: 24,
                                 isFluidMode: isFluidMode,
-                                viewWidth: geometry.size.width
+                                viewWidth: geometry.size.width,
+                                visibleRange: visibleRange
                             )
                             .allowsHitTesting(false)
                         }
@@ -102,8 +108,7 @@ struct KaleidoscopeSplitDiffView: View {
                     if !isHandlingMinimapClick {
                         scrollOffset = offset
                         lastExternalScrollOffset = offset
-                        // Debug: Log scroll updates
-                        NSLog("📜 [SplitDiff] scrollOffset: %.1f, contentHeight: %.1f, viewportHeight: %.1f", offset, contentHeight, viewportHeight)
+                        updateVisibleRange(offset: offset, viewport: viewportHeight)
                     }
                 }
                 .background(
@@ -111,57 +116,70 @@ struct KaleidoscopeSplitDiffView: View {
                         Color.clear
                             .onAppear {
                                 viewportHeight = geo.size.height
-                                // Calculate content height based on line count (consistent measure)
-                                let calculatedHeight = CGFloat(pairedLines.count) * 24
-                                if contentHeight != calculatedHeight {
-                                    contentHeight = calculatedHeight
-                                }
+                                updateVisibleRange(offset: scrollOffset, viewport: geo.size.height)
+                                updateContentHeight()
                             }
-                            .onChange(of: geo.size.height) { newHeight in
+                            .onChange(of: geo.size.height) { _, newHeight in
                                 viewportHeight = newHeight
+                                updateVisibleRange(offset: scrollOffset, viewport: newHeight)
                             }
-                            .onChange(of: hunks) { _ in
-                                // Recalculate on data change
-                                let calculatedHeight = CGFloat(pairedLines.count) * 24
-                                if contentHeight != calculatedHeight {
-                                    contentHeight = calculatedHeight
-                                }
+                            // Recalculate height if lines change
+                            .onChange(of: pairedLines.count) { _, _ in
+                                updateContentHeight()
                             }
                     }
                 )
                 // Handle programmatic scrolling from minimap clicks
-                .onChange(of: scrollOffset) { newOffset in
-                    // Only react if the change didn't come from internal scrolling
-                    guard abs(newOffset - lastExternalScrollOffset) > 1 else { return }
+                .onChange(of: minimapScrollTrigger) { _, newTrigger in
                     guard contentHeight > viewportHeight else { return }
                     
-                    // Simple programmatic scroll
+                    // Set flag to ignore outgoing scroll events temporarily (prevent feedback loop)
                     isHandlingMinimapClick = true
                     
-                    // Calculate target ID based on percentage
-                    // Using a more robust calculation for the target index
-                    let percentage = newOffset / (contentHeight - viewportHeight)
-                    let targetIndex = Int(round(percentage * CGFloat(pairedLines.count - 1)))
+                    // Calculate target ID based on scroll position provided by parent binding
+                    // The parent updates `scrollOffset` BEFORE toggling `minimapScrollTrigger`
+                    let rowHeight: CGFloat = 24
+                    let targetIndex = Int(scrollOffset / rowHeight)
                     let safeIndex = max(0, min(targetIndex, pairedLines.count - 1))
                     
                     if safeIndex < pairedLines.count {
                         let targetID = pairedLines[safeIndex].id
-                        withAnimation(.easeInOut(duration: 0.25)) {
-                            proxy.scrollTo("line_\(targetID)", anchor: .top)
-                        }
+                        // Use instant scroll (no animation) for responsive dragging
+                        proxy.scrollTo("line_\(targetID)", anchor: .top)
                     }
                     
-                    // Reset lock after animation
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    // Reset lock shortly after
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         isHandlingMinimapClick = false
-                        lastExternalScrollOffset = newOffset
                     }
                 }
             }
         }
     }
-
-    // Removed manual updateContentHeight as it is now handled by PreferenceKey
+    
+    // MARK: - Helpers
+    
+    private func updateContentHeight() {
+        let calculatedHeight = CGFloat(pairedLines.count) * 24
+        if contentHeight != calculatedHeight {
+            // Update binding so parent knows accurate height for minimap
+            contentHeight = calculatedHeight
+        }
+        // Also update visible range
+        updateVisibleRange(offset: scrollOffset, viewport: viewportHeight)
+    }
+    
+    private func updateVisibleRange(offset: CGFloat, viewport: CGFloat) {
+        guard !pairedLines.isEmpty else { return }
+        
+        let rowHeight: CGFloat = 24
+        let startRow = max(0, Int(offset / rowHeight) - 5) // Buffer
+        let endRow = min(pairedLines.count, Int((offset + viewport) / rowHeight) + 5) // Buffer
+        
+        if visibleRange.lowerBound != startRow || visibleRange.upperBound != endRow {
+            visibleRange = startRow..<endRow
+        }
+    }
 
     private func drawConnectionLines(
         context: GraphicsContext,
@@ -491,26 +509,30 @@ struct ContentHeightKey: PreferenceKey {
 #if DEBUG
 struct KaleidoscopeSplitDiffView_Previews: PreviewProvider {
     static var previews: some View {
+        let hunks = [
+            DiffHunk(
+                header: "@@ -16,8 +16,9 @@ use turbo_tasks::{",
+                oldStart: 16,
+                oldLines: 8,
+                newStart: 16,
+                newLines: 9,
+                lines: [
+                    DiffLine(type: .context, content: "use turbo_tasks::{", oldLineNumber: 16, newLineNumber: 16),
+                    DiffLine(type: .deletion, content: "    TryJoinIterExt, Value, Vc, trace::TraceRawVcs,", oldLineNumber: 17, newLineNumber: nil),
+                    DiffLine(type: .addition, content: "    trace::TraceRawVcs, TryJoinIterExt, Value, Vc,", oldLineNumber: nil, newLineNumber: 17),
+                    DiffLine(type: .context, content: "};", oldLineNumber: 18, newLineNumber: 18),
+                ]
+            ),
+        ]
+        let pairedLines = KaleidoscopePairingEngine.calculatePairs(from: hunks)
+        
         KaleidoscopeSplitDiffView(
-            hunks: [
-                DiffHunk(
-                    header: "@@ -16,8 +16,9 @@ use turbo_tasks::{",
-                    oldStart: 16,
-                    oldLines: 8,
-                    newStart: 16,
-                    newLines: 9,
-                    lines: [
-                        DiffLine(type: .context, content: "use turbo_tasks::{", oldLineNumber: 16, newLineNumber: 16),
-                        DiffLine(type: .deletion, content: "    TryJoinIterExt, Value, Vc, trace::TraceRawVcs,", oldLineNumber: 17, newLineNumber: nil),
-                        DiffLine(type: .addition, content: "    trace::TraceRawVcs, TryJoinIterExt, Value, Vc,", oldLineNumber: nil, newLineNumber: 17),
-                        DiffLine(type: .context, content: "};", oldLineNumber: 18, newLineNumber: 18),
-                    ]
-                ),
-            ],
+            pairedLines: pairedLines,
             showLineNumbers: true,
             scrollOffset: .constant(0),
             viewportHeight: .constant(400),
-            contentHeight: .constant(800)
+            contentHeight: .constant(800),
+            minimapScrollTrigger: .constant(UUID())
         )
         .frame(width: 1000, height: 600)
     }

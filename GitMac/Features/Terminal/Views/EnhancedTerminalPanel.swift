@@ -54,8 +54,7 @@ class EnhancedTerminalTabManager: ObservableObject {
     }
 
     func closeTab(_ id: UUID) {
-        guard tabs.count > 1 else { return } // Keep at least one tab
-
+        // Allow closing the last tab (handled by empty state UI)
         if let index = tabs.firstIndex(where: { $0.id == id }) {
             tabs.remove(at: index)
             viewModels.removeValue(forKey: id)
@@ -79,6 +78,7 @@ struct EnhancedTerminalPanel: View {
     @StateObject private var tabManager = EnhancedTerminalTabManager()
     @State private var viewMode: TerminalViewMode = .terminal
     @State private var showSessionSheet = false
+    @State private var showCommandPalette = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -89,34 +89,105 @@ struct EnhancedTerminalPanel: View {
                 viewMode: $viewMode,
                 onAddTab: { tabManager.addTab(workingDirectory: appState.currentRepository?.path ?? NSHomeDirectory()) },
                 onCloseTab: { tabManager.closeTab($0) },
-                onShareSession: { showSessionSheet = true }
+                onShareSession: { showSessionSheet = true },
+                onTogglePalette: { showCommandPalette.toggle() }
             )
 
             // Main content based on view mode
             if let viewModel = tabManager.currentViewModel,
                let enhancedViewModel = tabManager.currentEnhancedViewModel {
                 GeometryReader { geometry in
-                    ZStack(alignment: .topLeading) {
-                        contentView(viewModel: viewModel, enhancedViewModel: enhancedViewModel)
+                    // Main Layout: Content + Input Block
+                    VStack(spacing: 0) {
+                        // 1. Content Area (Terminal/Blocks)
+                        ZStack(alignment: .bottomLeading) {
+                            contentView(viewModel: viewModel, enhancedViewModel: enhancedViewModel)
+                                .frame(maxHeight: .infinity)
+                                .blur(radius: showSessionSheet ? 3 : 0)
 
-                        // AI suggestions overlay (only in terminal mode)
-                        if viewMode == .terminal {
-                            VStack(alignment: .leading, spacing: 0) {
-                                Spacer()
-                                    .frame(height: 60) // Space from top
-
-                                if !enhancedViewModel.aiSuggestions.isEmpty && !enhancedViewModel.currentInput.isEmpty {
+                            // Command Suggestions Overlay (Floating above terminal content)
+                            if viewMode == .terminal, !enhancedViewModel.aiSuggestions.isEmpty {
+                                VStack {
+                                    Spacer()
                                     suggestionsOverlay(enhancedViewModel: enhancedViewModel)
-                                } else if enhancedViewModel.isLoadingAI && !enhancedViewModel.currentInput.isEmpty {
-                                    loadingIndicator
+                                        .padding(.bottom, 8)
+                                        .transition(.opacity.combined(with: .move(edge: .bottom)))
                                 }
-
-                                Spacer()
+                            }
+                            
+                            if enhancedViewModel.isLoadingAI {
+                                VStack {
+                                    Spacer()
+                                    loadingIndicator
+                                        .padding(.bottom, 8)
+                                }
                             }
                         }
+                        
+                        // 2. Persistent Input Block (Warp Style)
+                        if viewMode == .terminal {
+                            VStack(spacing: 0) {
+                                Divider()
+                                    .background(AppTheme.border)
+                                
+                                HStack(spacing: 12) {
+                                    // Prompt
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundColor(AppTheme.accent)
+                                        
+                                        TextField("Type a command...", text: Binding(
+                                            get: { enhancedViewModel.currentInput },
+                                            set: { enhancedViewModel.updateInput($0, repoPath: appState.currentRepository?.path) }
+                                        ))
+                                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                            .textFieldStyle(.plain)
+                                            .foregroundColor(AppTheme.textPrimary)
+                                            .onSubmit {
+                                                if let viewModel = tabManager.currentViewModel {
+                                                    viewModel.writeInput(enhancedViewModel.currentInput + "\n")
+                                                    enhancedViewModel.trackCommand(enhancedViewModel.currentInput)
+                                                    enhancedViewModel.currentInput = ""
+                                                }
+                                            }
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    // Hints
+                                    HStack(spacing: 8) {
+                                        Text("ENTER")
+                                            .font(.system(size: 9, weight: .bold))
+                                            .foregroundColor(AppTheme.textSecondary)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 3)
+                                            .background(AppTheme.inputBackground)
+                                            .cornerRadius(4)
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                .background(AppTheme.backgroundSecondary)
+                            }
+                            .frame(height: 48)
+                        }
                     }
+
                 }
-                .background(AppTheme.background)
+            } else {
+                // Empty State
+                VStack(spacing: 16) {
+                    Text("No Terminal Session")
+                        .font(DesignTokens.Typography.headline)
+                        .foregroundColor(AppTheme.textSecondary)
+                    
+                    Button("Start New Session") {
+                        tabManager.addTab(workingDirectory: appState.currentRepository?.path ?? NSHomeDirectory())
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .background(AppTheme.background)
@@ -128,7 +199,8 @@ struct EnhancedTerminalPanel: View {
         }
         .onAppear {
             if tabManager.tabs.isEmpty {
-                tabManager.addTab(workingDirectory: appState.currentRepository?.path ?? NSHomeDirectory())
+                let initialPath = appState.currentRepository?.path ?? NSHomeDirectory()
+                tabManager.addTab(workingDirectory: initialPath)
             }
         }
         .onChange(of: appState.currentRepository?.path) { _, newPath in
@@ -136,6 +208,14 @@ struct EnhancedTerminalPanel: View {
                  viewModel.setWorkingDirectory(path)
                  enhancedViewModel.updateContext(repoPath: path)
              }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("performTerminalCommand"))) { notification in
+            if let command = notification.object as? String,
+               let viewModel = tabManager.currentViewModel,
+               let enhancedViewModel = tabManager.currentEnhancedViewModel {
+                viewModel.writeInput(command + "\n")
+                enhancedViewModel.trackCommand(command)
+            }
         }
     }
 
@@ -185,8 +265,24 @@ struct EnhancedTerminalPanel: View {
                 }
             }
         }
+        .padding(.vertical, 8)
         .background(suggestionBackground)
         .frame(maxWidth: 500)
+        .overlay(alignment: .topTrailing) {
+             Button {
+                 enhancedViewModel.aiSuggestions.removeAll()
+                 enhancedViewModel.currentInput = ""
+             } label: {
+                 Image(systemName: "xmark")
+                     .font(.system(size: 10, weight: .bold))
+                     .foregroundColor(AppTheme.textSecondary)
+                     .padding(8)
+                     .background(AppTheme.backgroundSecondary.opacity(0.8))
+                     .clipShape(Circle())
+             }
+             .buttonStyle(.plain)
+             .offset(x: -8, y: 8)
+        }
         .padding(.leading, 20)
         .transition(.opacity.combined(with: .move(edge: .top)))
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: enhancedViewModel.aiSuggestions.count)
@@ -229,6 +325,8 @@ struct EnhancedTerminalPanel: View {
             .shadow(color: Color.black.opacity(0.2), radius: 12, x: 0, y: 4)
     }
 
+
+
     private func suggestionRow(suggestion: AICommandSuggestion, index: Int, enhancedViewModel: GhosttyEnhancedViewModel) -> some View {
         Button {
             if let viewModel = tabManager.currentViewModel {
@@ -251,15 +349,9 @@ struct EnhancedTerminalPanel: View {
     }
 
     private func suggestionIcon(index: Int, isFromAI: Bool, enhancedViewModel: GhosttyEnhancedViewModel) -> some View {
-        ZStack {
-            Circle()
-                .fill(index == enhancedViewModel.selectedSuggestionIndex ? AppTheme.accent.opacity(0.15) : Color.clear)
-                .frame(width: 28, height: 28)
-
             Image(systemName: isFromAI ? "sparkles" : "terminal")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(index == enhancedViewModel.selectedSuggestionIndex ? AppTheme.accent : AppTheme.textSecondary)
-        }
     }
 
     private func suggestionContent(suggestion: AICommandSuggestion, index: Int, enhancedViewModel: GhosttyEnhancedViewModel) -> some View {
@@ -329,6 +421,7 @@ struct EnhancedTerminalTabBar: View {
     let onAddTab: () -> Void
     let onCloseTab: (UUID) -> Void
     let onShareSession: () -> Void
+    let onTogglePalette: () -> Void
 
     var body: some View {
         HStack(spacing: 0) {
@@ -389,6 +482,24 @@ struct EnhancedTerminalTabBar: View {
             }
             .buttonStyle(.plain)
             .help("Share terminal session")
+            .padding(.trailing, 8)
+            
+            // Command Palette Button
+            Button(action: { 
+                // Toggle command palette via binding/callback would be better, but need to pass it up
+                // For now, we need to expose a way to trigger it. 
+                // Let's add a callback to this view
+                onTogglePalette()
+            }) {
+                Image(systemName: "command")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(AppTheme.textSecondary)
+                    .frame(width: 28, height: 28)
+                    .background(AppTheme.backgroundTertiary)
+                    .cornerRadius(5)
+            }
+            .buttonStyle(.plain)
+            .help("Command Palette (Cmd+Shift+P)")
             .padding(.trailing, 12)
         }
         .frame(height: 38)

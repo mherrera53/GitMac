@@ -947,86 +947,8 @@ struct CommitGraphView: View {
 
             Spacer()
 
-            // Git actions - GitKraken style toolbar
-            HStack(spacing: DesignTokens.Spacing.xs) {
-                // Undo/Redo (GitKraken style)
-                Button(action: { /* TODO: Implement undo */ }) {
-                    Image(systemName: "arrow.uturn.backward.circle.fill")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(theme.textMuted)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.plain)
-                .help("Undo")
-                .disabled(true)
+            // Git actions removed (now in main toolbar)
 
-                Button(action: { /* TODO: Implement redo */ }) {
-                    Image(systemName: "arrow.uturn.forward.circle.fill")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(theme.textMuted)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.plain)
-                .help("Redo")
-                .disabled(true)
-
-                Divider()
-                    .frame(height: 16)
-
-                // Pull (GitKraken combines fetch+pull)
-                Button(action: { NotificationCenter.default.post(name: .pull, object: nil) }) {
-                    Image(systemName: "arrow.down.doc.fill")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(AppTheme.info)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.plain)
-                .help("Pull changes from remote")
-
-                // Push
-                Button(action: { NotificationCenter.default.post(name: .push, object: nil) }) {
-                    Image(systemName: "arrow.up.doc.fill")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(AppTheme.success)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.plain)
-                .help("Push commits to remote")
-
-                Divider()
-                    .frame(height: 16)
-
-                // Branch (GitKraken icon)
-                Button(action: { NotificationCenter.default.post(name: .newBranch, object: nil) }) {
-                    Image(systemName: "arrow.triangle.branch")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(AppTheme.accent)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.plain)
-                .help("Create new branch")
-
-                // Stash (GitKraken icon)
-                Button(action: { NotificationCenter.default.post(name: .stash, object: nil) }) {
-                    Image(systemName: "archivebox.circle.fill")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(AppTheme.warning)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.plain)
-                .help("Stash uncommitted changes")
-
-                // Pop Stash (GitKraken feature)
-                Button(action: { /* TODO: Implement pop stash */ }) {
-                    Image(systemName: "tray.and.arrow.up.fill")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(theme.textMuted)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.plain)
-                .help("Pop most recent stash")
-                .disabled(true)
-            }
 
             Spacer()
 
@@ -1667,7 +1589,7 @@ struct StashBadge: View {
     private var stashColor: Color { AppTheme.info }
 
     var body: some View {
-        let theme = Color.Theme(themeManager.colors)
+        _ = Color.Theme(themeManager.colors)
 
         return HStack(spacing: DesignTokens.Spacing.xxs + 1) {
             Image(systemName: "shippingbox.fill")

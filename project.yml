@@ -1,0 +1,71 @@
+name: GitMac
+
+options:
+  bundleIdPrefix: com.gitmac
+  deploymentTarget:
+    macOS: "14.0"
+
+targets:
+  GitMac:
+    type: application
+    platform: macOS
+    sources:
+      - GitMac
+    dependencies:
+      - package: KeychainAccess
+      - package: Splash
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gitmac.app
+        SWIFT_VERSION: "5.9"
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+
+  GitMacTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/GitMacTests
+    dependencies:
+      - target: GitMac
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gitmac.GitMacTests
+        INFOPLIST_FILE: Tests/GitMacTests/Info.plist
+
+  GitMacUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - Tests/GitMacUITests
+    dependencies:
+      - target: GitMac
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gitmac.GitMacUITests
+        TEST_TARGET_NAME: GitMac
+        INFOPLIST_FILE: Tests/GitMacUITests/Info.plist
+        SWIFT_VERSION: "5.9"
+
+packages:
+  KeychainAccess:
+    url: https://github.com/kishikawakatsumi/KeychainAccess.git
+    from: 4.2.2
+  Splash:
+    url: https://github.com/JohnSundell/Splash.git
+    from: 0.16.0
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm.git
+    from: 1.0.0
+
+schemes:
+  GitMac:
+    build:
+      targets:
+        GitMac: all
+        GitMacTests: [test]
+        GitMacUITests: [test]
+    test:
+      targets:
+        - GitMacTests
+        - GitMacUITests

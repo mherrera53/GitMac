@@ -8,6 +8,7 @@
 import SwiftUI
 import Combine
 import CommonCrypto
+import CryptoKit
 
 // MARK: - Models
 
@@ -226,13 +227,7 @@ class RepositoryActivityViewModel: ObservableObject {
 
 extension String {
     var md5: String {
-        let data = Data(self.utf8)
-        var digest = [UInt8](repeating: 0, count: Int(CC_MD5_DIGEST_LENGTH))
-        
-        data.withUnsafeBytes { buffer in
-            _ = CC_MD5(buffer.baseAddress, CC_LONG(data.count), &digest)
-        }
-        
+        let digest = Insecure.MD5.hash(data: Data(self.utf8))
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 }

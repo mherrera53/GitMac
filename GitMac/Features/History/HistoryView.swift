@@ -31,7 +31,8 @@ struct HistoryView: View {
                 .frame(width: Layout.viewPickerWidth)
             }
             .padding(DesignTokens.Spacing.md)
-            .background(Color(nsColor: .controlBackgroundColor))
+            .padding(DesignTokens.Spacing.md)
+            .background(AppTheme.backgroundSecondary)
 
             Divider()
 
@@ -218,7 +219,7 @@ struct FileHistoryView: View {
                     Spacer()
                 }
                 .padding(DesignTokens.Spacing.md)
-                .background(Color(nsColor: .controlBackgroundColor))
+                .background(AppTheme.backgroundSecondary)
 
                 Divider()
 
@@ -231,8 +232,11 @@ struct FileHistoryView: View {
                             .tag(commit)
                     }
                     .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .background(AppTheme.background)
                 }
             }
+            .background(AppTheme.background)
             .frame(minWidth: 300)
 
             // Diff for selected commit
@@ -258,29 +262,40 @@ struct FileCommitRow: View {
     let commit: Commit
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-            HStack {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
                 Text(commit.shortSHA)
-                    .font(DesignTokens.Typography.commitHash)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundColor(AppTheme.accent)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(AppTheme.accent.opacity(0.1))
+                    .cornerRadius(4)
 
                 Text(commit.summary)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(1)
             }
 
             HStack {
+                Image(systemName: "person.fill")
+                    .font(.system(size: 10))
+                    .foregroundColor(AppTheme.textSecondary)
+                
                 Text(commit.author)
-                    .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(AppTheme.textSecondary)
 
                 Spacer()
 
                 Text(commit.relativeDate)
-                    .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .font(.system(size: 11))
+                    .foregroundColor(AppTheme.textMuted)
             }
+            .padding(.leading, 2)
         }
-        .padding(.vertical, DesignTokens.Spacing.xs)
+        .padding(.vertical, 4)
     }
 }
 
@@ -294,15 +309,25 @@ struct CommitFileDiffView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
+            HStack(spacing: 8) {
                 Text(commit.shortSHA)
-                    .font(DesignTokens.Typography.commitHash)
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundColor(AppTheme.accent)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(AppTheme.accent.opacity(0.1))
+                    .cornerRadius(4)
+
                 Text(commit.summary)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(1)
+                
                 Spacer()
             }
             .padding(DesignTokens.Spacing.md)
-            .background(Color(nsColor: .controlBackgroundColor))
+            .padding(DesignTokens.Spacing.md)
+            .background(AppTheme.backgroundSecondary)
 
             Divider()
 
@@ -322,6 +347,7 @@ struct CommitFileDiffView: View {
         .task(id: commit.sha) {
             await loadDiff()
         }
+        .background(AppTheme.background)
     }
 
     private func loadDiff() async {
@@ -367,7 +393,8 @@ struct BlameView: View {
                     .foregroundColor(AppTheme.textPrimary)
             }
             .padding(DesignTokens.Spacing.md)
-            .background(Color(nsColor: .controlBackgroundColor))
+            .padding(DesignTokens.Spacing.md)
+            .background(AppTheme.backgroundSecondary)
 
             Divider()
 
@@ -394,6 +421,7 @@ struct BlameView: View {
         .task(id: path) {
             await viewModel.loadBlame(for: path)
         }
+        .background(AppTheme.background)
     }
 
     private func colorForAuthor(_ author: String) -> Color {
@@ -428,19 +456,19 @@ struct BlameLineRow: View {
                     .frame(width: Layout.authorIndicatorWidth)
 
                 Text(line.shortSHA)
-                    .font(DesignTokens.Typography.commitHash)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .font(.system(size: 11, weight: .bold, design: .monospaced)) // Monospaced & Bold
+                    .foregroundColor(AppTheme.accent) // Accent color
                     .frame(width: Layout.shaColumnWidth, alignment: .leading)
 
                 Text(line.author)
-                    .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .font(.system(size: 11, weight: .medium)) // Medium weight
+                    .foregroundColor(AppTheme.textSecondary) // Secondary text color
                     .frame(width: Layout.authorColumnWidth, alignment: .leading)
                     .lineLimit(1)
 
                 Text(line.relativeDate)
-                    .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .font(.system(size: 11))
+                    .foregroundColor(AppTheme.textMuted) // Muted text color
                     .frame(width: Layout.dateColumnWidth, alignment: .trailing)
             }
             .frame(width: Layout.blameInfoWidth)

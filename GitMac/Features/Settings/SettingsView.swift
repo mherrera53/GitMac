@@ -4,49 +4,59 @@ import SwiftData
 struct SettingsView: View {
     @StateObject private var themeManager = ThemeManager.shared
 
+    @AppStorage("settingsSelectedTab") private var selectedTab: String = "general"
+
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             GeneralSettingsView()
                 .tabItem {
                     Label("General", systemImage: "gear")
                 }
+                .tag("general")
 
             AccountsSettingsView()
                 .tabItem {
                     Label("Accounts", systemImage: "person.circle")
                 }
+                .tag("accounts")
 
             IntegrationsSettingsView()
                 .tabItem {
                     Label("Integrations", systemImage: "square.grid.2x2")
                 }
+                .tag("integrations")
 
             AISettingsView()
                 .tabItem {
                     Label("AI", systemImage: "brain")
                 }
+                .tag("ai")
 
             GitConfigView()
                 .tabItem {
                     Label("Git", systemImage: "arrow.triangle.branch")
                 }
+                .tag("git")
 
             WorkspaceConfigView()
                 .tabItem {
                     Label("Workspace", systemImage: "folder.badge.gearshape")
                 }
+                .tag("workspace")
 
             KeyboardShortcutsView()
                 .tabItem {
                     Label("Shortcuts", systemImage: "keyboard")
                 }
+                .tag("shortcuts")
 
             SubscriptionSettingsView()
                 .tabItem {
                     Label("Subscription", systemImage: "star.fill")
                 }
+                .tag("subscription")
         }
-        .frame(width: 650, height: 550)
+        .frame(width: 850, height: 550)
         .background(AppTheme.background)
         .preferredColorScheme(colorScheme)
         .onAppear {

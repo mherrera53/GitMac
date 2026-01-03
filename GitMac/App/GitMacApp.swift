@@ -38,6 +38,7 @@ struct GitMacApp: App {
                 window.titlebarAppearsTransparent = true
                 window.isMovableByWindowBackground = true
                 window.titleVisibility = .hidden  // Hide system title, we use custom toolbar title
+                window.title = "" // Explicitly clear title text to prevent duplicates
                 // Apply theme appearance
                 window.appearance = ThemeManager.shared.appearance
             }
@@ -304,9 +305,46 @@ class AppState: ObservableObject {
         saveSession()
     }
 
-    func selectTab(_ tabId: UUID) {
+    func selectTab(_ tabId: UUID, fromNavigation: Bool = false) {
+        if !fromNavigation, let current = activeTabId, current != tabId {
+            backStack.append(current)
+            forwardStack.removeAll() // Clear forward stack on new navigation
+        }
+        
         activeTabId = tabId
-        // Auto-save active tab
+        saveSession()
+    }
+    
+    // MARK: - Navigation History
+    
+    @Published var backStack: [UUID] = []
+    @Published var forwardStack: [UUID] = []
+    
+    var canGoBack: Bool { !backStack.isEmpty }
+    var canGoForward: Bool { !forwardStack.isEmpty }
+    
+    func goBack() {
+        guard let current = activeTabId, let previous = backStack.popLast() else { return }
+        forwardStack.append(current)
+        selectTab(previous, fromNavigation: true)
+    }
+    
+    func goForward() {
+        guard let current = activeTabId, let next = forwardStack.popLast() else { return }
+        backStack.append(current)
+        selectTab(next, fromNavigation: true)
+    }
+    
+    /// Reorder tabs by moving a tab to a new position (before another tab)
+    func reorderTab(from sourceId: UUID, to destinationId: UUID) {
+        guard let sourceIndex = openTabs.firstIndex(where: { $0.id == sourceId }),
+              let destIndex = openTabs.firstIndex(where: { $0.id == destinationId }),
+              sourceIndex != destIndex else { return }
+        
+        let tab = openTabs.remove(at: sourceIndex)
+        let newDestIndex = sourceIndex < destIndex ? destIndex - 1 : destIndex
+        openTabs.insert(tab, at: newDestIndex)
+        
         saveSession()
     }
 }
