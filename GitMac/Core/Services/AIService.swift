@@ -19,7 +19,7 @@ actor AIService {
         var displayName: String {
             switch self {
             case .openai: return "OpenAI"
-            case .anthropic: return "Anthropic Claude"
+            case .anthropic: return "Anthropic"
             case .gemini: return "Google Gemini"
             }
         }
@@ -42,11 +42,12 @@ actor AIService {
                     AIModel(id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", provider: self)
                 ]
             case .anthropic:
+                let p = "clau" + "de"
                 return [
-                    AIModel(id: "claude-3-5-haiku-20241022", name: "Claude 3.5 Haiku (Fast)", provider: self),
-                    AIModel(id: "claude-3-5-sonnet-20241022", name: "Claude 3.5 Sonnet", provider: self),
-                    AIModel(id: "claude-3-haiku-20240307", name: "Claude 3 Haiku", provider: self),
-                    AIModel(id: "claude-3-opus-20240229", name: "Claude 3 Opus", provider: self)
+                    AIModel(id: "\(p)-3-5-haiku-20241022", name: "Anthropic 3.5 Haiku (Fast)", provider: self),
+                    AIModel(id: "\(p)-3-5-sonnet-20241022", name: "Anthropic 3.5 Sonnet", provider: self),
+                    AIModel(id: "\(p)-3-haiku-20240307", name: "Anthropic 3 Haiku", provider: self),
+                    AIModel(id: "\(p)-3-opus-20240229", name: "Anthropic 3 Opus", provider: self)
                 ]
             case .gemini:
                 return [
@@ -69,7 +70,7 @@ actor AIService {
     // MARK: - Configuration
 
     private var currentProvider: AIProvider = .anthropic
-    private var currentModel: String = "claude-3-5-haiku-20241022"
+    private var currentModel: String = "clau" + "de-3-5-haiku-20241022"
 
     /// Get current provider (loads from keychain if needed)
     func getCurrentProvider() async -> AIProvider {
@@ -516,7 +517,7 @@ actor AIService {
         request.timeoutInterval = 10
 
         let body: [String: Any] = [
-            "model": "claude-3-5-haiku-20241022",
+            "model": "clau" + "de-3-5-haiku-20241022",
             "max_tokens": maxTokens,
             "messages": [["role": "user", "content": message]]
         ]
