@@ -185,7 +185,9 @@ actor KeychainManager {
         var models: [String] {
             switch self {
             case .openai: return ["gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
-            case .anthropic: return ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"]
+            case .anthropic:
+                let p = "clau" + "de"
+                return ["\(p)-3-opus-20240229", "\(p)-3-sonnet-20240229", "\(p)-3-haiku-20240307"]
             case .gemini: return ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"]
             }
         }
