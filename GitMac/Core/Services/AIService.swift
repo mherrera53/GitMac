@@ -516,7 +516,7 @@ actor AIService {
         request.timeoutInterval = 10
 
         let body: [String: Any] = [
-            "model": "claude-3-5-haiku-20241022", // Fastest Claude model
+            "model": "claude-3-5-haiku-20241022",
             "max_tokens": maxTokens,
             "messages": [["role": "user", "content": message]]
         ]
