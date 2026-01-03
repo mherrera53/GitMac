@@ -1,6 +1,5 @@
 # Xcode-Style Bars Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Redesign bottom bar, right sidebar, and app toolbar to match Xcode's exact visual style using DesignTokens and AppTheme system without losing any existing functionality.
 
@@ -52,9 +51,7 @@ Expected: BUILD SUCCEEDED
 git add GitMac/UI/Components/DesignTokens.swift
 git commit -m "feat: add Xcode-style design tokens
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -150,9 +147,7 @@ Expected: BUILD SUCCEEDED
 git add GitMac/UI/Components/Atoms/Buttons/DSXcodeTabButton.swift
 git commit -m "feat: add Xcode-style tab button component
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -252,9 +247,7 @@ git commit -m "feat: redesign bottom panel tab bar with Xcode style
 - Add visual effect blur background
 - Update spacing and height to match Xcode
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -346,9 +339,7 @@ Expected: BUILD SUCCEEDED
 git add GitMac/UI/Components/Atoms/Buttons/DSXcodeToolbarButton.swift
 git commit -m "feat: add Xcode-style toolbar button components
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -561,9 +552,7 @@ git commit -m "feat: redesign main toolbar with Xcode style
 - Add dividers between button groups
 - Reduce button sizes for compact look
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -600,9 +589,7 @@ Document: "Right sidebar not found, skipping Task 6"
 git add [modified files]
 git commit -m "feat: enhance right sidebar with Xcode style
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -662,9 +649,7 @@ Expected: BUILD SUCCEEDED
 git add GitMac/Features/BottomPanel/Views/UnifiedBottomPanel.swift
 git commit -m "feat: add visual effect blur to bottom panel background
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -711,9 +696,7 @@ Create: `docs/XCODE_STYLE_ISSUES.md` if needed
 git add -A
 git commit -m "docs: add screenshots and testing notes for Xcode-style redesign
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 ```
 
 ---

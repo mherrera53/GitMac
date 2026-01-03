@@ -1,6 +1,5 @@
 # Professional Commit Graph - Complete Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Transform the existing commit graph into a professional-grade visualization matching GitKraken and VSCode GitLens with ALL features: advanced search, minimap, branch panel, detail panel, file changes visualization, PR integration, and polished UX.
 

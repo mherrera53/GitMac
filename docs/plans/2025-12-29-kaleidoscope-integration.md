@@ -1,6 +1,5 @@
 # Kaleidoscope View Integration Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Integrate the existing KaleidoscopeDiffView into the main UI, fix hardcoded diff colors to use the theme system, and clean up deprecated files.
 

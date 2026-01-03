@@ -1,6 +1,5 @@
 # Xcode-Style Bars - Ultra-Detailed Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 > **CRITICAL:** Execute in PARALLEL SESSION. This plan is designed for background execution with context cleanup between phases. Do NOT execute in main session.
 
@@ -186,7 +185,6 @@ git commit -m "docs: add Xcode UI reference specifications
 - materials.md with NSVisualEffectView specs
 - All values are reference only - must use tokens
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 ```
 
@@ -483,7 +481,6 @@ git commit -m "docs: create comprehensive functionality audit
 - All sidebar features
 - Testing checklist for post-redesign
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 ```
 
@@ -906,7 +903,6 @@ Complete design token system:
 
 ZERO hardcoded values allowed - all components must use tokens
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 ```
 
@@ -1071,7 +1067,6 @@ git commit -m "feat: add VisualEffectBlur utility using design tokens
 - NO hardcoded materials or blending modes
 - Preview for all blur types
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 ```
 
@@ -1118,7 +1113,6 @@ Phase 1 complete:
 ## Execution Instructions for Parallel Session
 
 ### Setup
-1. Open new terminal/Claude Code session
 2. Navigate to: `cd /Users/mario/Sites/localhost/GitMac`
 3. Ensure clean git state: `git status`
 4. Start: `@superpowers:executing-plans docs/plans/2025-12-29-xcode-style-bars-detailed.md`

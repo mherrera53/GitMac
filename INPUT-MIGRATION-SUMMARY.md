@@ -329,7 +329,6 @@ All custom input components have been successfully migrated to Design System com
 ---
 
 **Generated:** 2025-12-29
-**Migrated By:** Claude (Sonnet 4.5)
 **Lines Changed:** ~500+
 **Components Affected:** 138
 **Files Modified:** 40+

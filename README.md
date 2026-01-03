@@ -523,7 +523,6 @@ All major features have been implemented! GitMac now includes:
 - [x] **Custom Workflows** - Scriptable automation with bash scripts
 - [x] **Team Features** - Shared settings, templates, and team profiles
 - [x] **Plugin System** - Fully extensible plugin architecture
-- [x] **AI-Powered Commit Messages** - OpenAI, Anthropic Claude, and Gemini support
 - [x] **Advanced Merge Conflict Resolution** - Visual 3-way merge editor
 - [x] **Git Hooks Management UI** - Complete hooks management interface
 - [x] **Performance Profiling** - OSSignpost instrumentation throughout
