@@ -28,7 +28,7 @@ actor LinearService {
 
         var request = URLRequest(url: URL(string: baseURL)!)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue(authorizationHeaderValue(for: token), forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         var body: [String: Any] = ["query": query]
@@ -44,13 +44,42 @@ actor LinearService {
         }
 
         guard httpResponse.statusCode == 200 else {
+            let body = String(data: data, encoding: .utf8)
+            if let body, !body.isEmpty {
+                throw LinearError.requestFailed("HTTP \(httpResponse.statusCode): \(body)")
+            }
             throw LinearError.requestFailed("HTTP \(httpResponse.statusCode)")
         }
 
-        return try JSONDecoder().decode(T.self, from: data)
+        do {
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            if let errorEnvelope = try? JSONDecoder().decode(LinearGraphQLErrorEnvelope.self, from: data) {
+                let message = errorEnvelope.errors.map(\.message).joined(separator: "\n")
+                if !message.isEmpty {
+                    throw LinearError.requestFailed(message)
+                }
+            }
+
+            if let body = String(data: data, encoding: .utf8), !body.isEmpty {
+                throw LinearError.requestFailed(body)
+            }
+
+            throw error
+        }
     }
 
-    // MARK: - Teams
+    private func authorizationHeaderValue(for token: String) -> String {
+        if token.hasPrefix("lin_api_") {
+            return token
+        }
+
+        if token.hasPrefix("lin_oauth_") || token.hasPrefix("eyJ") {
+            return "Bearer \(token)"
+        }
+
+        return token
+    }
 
     func listTeams() async throws -> [LinearTeam] {
         let query = """
@@ -191,6 +220,14 @@ actor LinearService {
             variables: ["issueId": issueId, "stateId": stateId]
         )
     }
+}
+
+private struct LinearGraphQLErrorEnvelope: Decodable {
+    let errors: [LinearGraphQLError]
+}
+
+private struct LinearGraphQLError: Decodable {
+    let message: String
 }
 
 // MARK: - Errors

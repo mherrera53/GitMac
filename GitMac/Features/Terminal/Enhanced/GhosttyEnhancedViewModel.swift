@@ -8,6 +8,41 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Natural Language Translation Models
+
+struct NLCommandRequest {
+    let input: String
+    let context: NLContext
+    let language: String = "en"
+}
+
+struct NLContext {
+    let workingDirectory: String?
+    let gitBranch: String?
+    let recentCommands: [String]
+    let environment: [String: String]
+    let osType: String
+}
+
+enum TerminalCommandCategory: String, CaseIterable {
+    case git = "Git"
+    case file = "File Management"
+    case network = "Network"
+    case system = "System"
+    case docker = "Docker"
+    case npm = "NPM/Yarn"
+    case other = "Other"
+}
+
+struct NLCommandResponse {
+    let command: String
+    let explanation: String
+    let confidence: Double
+    let alternatives: [String]
+    let warnings: [String]
+    let category: TerminalCommandCategory
+}
+
 // MARK: - Tracked Command Model (Rich History)
 
 struct TrackedCommand: Identifiable, Codable {
@@ -98,10 +133,16 @@ class GhosttyEnhancedViewModel: ObservableObject {
     @Published var trackedCommands: [TrackedCommand] = []
     @Published var currentInput: String = ""
 
-    // AI features
+    // AI Features
     @Published var aiSuggestions: [AICommandSuggestion] = []
     @Published var selectedSuggestionIndex: Int = 0
     @Published var isLoadingAI: Bool = false
+
+    // NL Translation State
+    @Published var showNLInput = false
+    @Published var nlInputText = ""
+    @Published var nlTranslationResult: NLCommandResponse? = nil
+    @Published var selectedNLCommand: String? = nil
 
     // Workflows
     @Published var workflows: [TerminalWorkflow] = []

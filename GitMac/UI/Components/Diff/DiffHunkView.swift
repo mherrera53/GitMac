@@ -27,10 +27,11 @@ struct FastHunkHeader: View {
     @State private var isHovered = false
 
     var body: some View {
+        let theme = Color.Theme(ThemeManager.shared.colors)
         VStack(spacing: 0) {
             // Hunk separator line
             Rectangle()
-                .fill(AppTheme.border.opacity(0.3))
+                .fill(theme.border.opacity(0.6))
                 .frame(height: 1)
                 .padding(.bottom, 4)
 
@@ -80,18 +81,20 @@ struct FastHunkHeader: View {
     }
 
     private var headerColor: Color {
+        let theme = Color.Theme(ThemeManager.shared.colors)
         switch style {
-        case .default, .compact: return AppTheme.accentCyan
-        case .prominent: return .white
+        case .default, .compact: return theme.accent
+        case .prominent: return theme.buttonTextOnColor
         }
     }
 
     private var backgroundColor: Color {
+        let theme = Color.Theme(ThemeManager.shared.colors)
         switch style {
         case .default, .compact:
-            return AppTheme.accentCyan.opacity(isHovered ? 0.15 : 0.1)
+            return theme.accent.opacity(isHovered ? 0.15 : 0.10)
         case .prominent:
-            return AppTheme.accentCyan.opacity(isHovered ? 0.9 : 0.7)
+            return theme.accent.opacity(isHovered ? 0.9 : 0.7)
         }
     }
 

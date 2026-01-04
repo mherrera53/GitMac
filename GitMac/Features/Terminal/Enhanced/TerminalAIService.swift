@@ -163,8 +163,8 @@ class TerminalAIService {
     // MARK: - OpenAI Fallback
 
     private func callOpenAI(prompt: String) async throws -> String {
-        // Import AIService for fallback to cloud providers
-        let aiService = AIService()
+        // Use the shared AIService to ensure shared configuration/state
+        let aiService = AIService.shared
 
         // Use the existing AIService which supports OpenAI, Anthropic, and Google
         return try await aiService.generateCommitMessage(diff: prompt)
@@ -190,11 +190,13 @@ class TerminalAIService {
         let recentContext = recentCommands.isEmpty ? "" : "\nRecent commands: \(recentCommands.suffix(3).joined(separator: ", "))"
         let repoContext = repoPath != nil ? "\nWorking in Git repository: \(repoPath!)" : ""
 
-        let prompt = """
+        // Default prompt template
+        let defaultPrompt = """
         You are a terminal command assistant. Suggest 3-5 relevant terminal commands based on the user's input.
 
-        User input: "\(input)"
-        \(recentContext)\(repoContext)
+        User input: "{{input}}"
+        {{recent_context}}
+        {{repo_context}}
 
         Return ONLY a JSON array of suggestions in this exact format:
         [
@@ -209,6 +211,16 @@ class TerminalAIService {
         - Order by relevance (highest confidence first)
         - Return ONLY valid JSON, no other text
         """
+        
+        // Load custom prompt or use default
+        let storedPrompt = UserDefaults.standard.string(forKey: "ai.prompt.terminal_suggestions")
+        let template = (storedPrompt?.isEmpty ?? true) ? defaultPrompt : storedPrompt!
+
+        // Replace placeholders
+        let prompt = template
+            .replacingOccurrences(of: "{{input}}", with: input)
+            .replacingOccurrences(of: "{{recent_context}}", with: recentContext)
+            .replacingOccurrences(of: "{{repo_context}}", with: repoContext)
 
         // Try Ollama first
         let ollamaAvailable = await checkOllamaAvailability()
@@ -499,13 +511,13 @@ class TerminalAIService {
     ) async throws -> String {
         let repoContext = repoPath != nil ? "\nWorking directory: \(repoPath!)" : ""
 
-        let prompt = """
+        let defaultPrompt = """
         You are a helpful terminal assistant. Explain this error and suggest a fix.
 
-        Command: \(command)
+        Command: {{command}}
         Error output:
-        \(error)
-        \(repoContext)
+        {{error}}
+        {{repo_context}}
 
         Provide:
         1. Brief explanation of what went wrong
@@ -514,6 +526,14 @@ class TerminalAIService {
 
         Format as plain text, not JSON.
         """
+
+        let storedPrompt = UserDefaults.standard.string(forKey: "ai.prompt.terminal_error")
+        let template = (storedPrompt?.isEmpty ?? true) ? defaultPrompt : storedPrompt!
+
+        let prompt = template
+            .replacingOccurrences(of: "{{command}}", with: command)
+            .replacingOccurrences(of: "{{error}}", with: error)
+            .replacingOccurrences(of: "{{repo_context}}", with: repoContext)
 
         // Try Ollama first
         let ollamaAvailable = await checkOllamaAvailability()
@@ -656,5 +676,137 @@ class TerminalAIService {
         }
 
         return results
+    }
+    
+    // MARK: - Natural Language Translation
+    
+    /// Translate natural language to terminal command
+    func translateNaturalLanguage(input: String, context: NLContext) async -> NLCommandResponse {
+        print("🧠 NL Translation: '\(input)'")
+        
+        // Simple pattern matching for common commands
+        let cleanedInput = input.lowercased()
+        
+        // Git patterns
+        if cleanedInput.contains("status") || cleanedInput.contains("modified") || cleanedInput.contains("changed") {
+            return NLCommandResponse(
+                command: "git status",
+                explanation: "Shows the working tree status",
+                confidence: 0.95,
+                alternatives: ["git status --porcelain", "git status -s"],
+                warnings: [],
+                category: .git
+            )
+        }
+        
+        if cleanedInput.contains("add") && (cleanedInput.contains("all") || cleanedInput.contains("changes")) {
+            return NLCommandResponse(
+                command: "git add .",
+                explanation: "Stage all changes for commit",
+                confidence: 0.9,
+                alternatives: ["git add -A"],
+                warnings: [],
+                category: .git
+            )
+        }
+        
+        if cleanedInput.contains("commit") {
+            return NLCommandResponse(
+                command: "git commit -m \"your message\"",
+                explanation: "Commit staged changes with a message",
+                confidence: 0.85,
+                alternatives: ["git commit -am \"your message\""],
+                warnings: [],
+                category: .git
+            )
+        }
+        
+        if cleanedInput.contains("push") {
+            return NLCommandResponse(
+                command: "git push",
+                explanation: "Push commits to remote repository",
+                confidence: 0.9,
+                alternatives: ["git push origin main"],
+                warnings: [],
+                category: .git
+            )
+        }
+        
+        if cleanedInput.contains("pull") {
+            return NLCommandResponse(
+                command: "git pull",
+                explanation: "Pull changes from remote repository",
+                confidence: 0.9,
+                alternatives: ["git pull origin main"],
+                warnings: [],
+                category: .git
+            )
+        }
+        
+        if cleanedInput.contains("log") || cleanedInput.contains("history") || cleanedInput.contains("commits") {
+            return NLCommandResponse(
+                command: "git log --oneline -10",
+                explanation: "Show recent commit history",
+                confidence: 0.9,
+                alternatives: ["git log --graph --oneline"],
+                warnings: [],
+                category: .git
+            )
+        }
+        
+        // File patterns
+        if cleanedInput.contains("list") || cleanedInput.contains("ls") || cleanedInput.contains("dir") {
+            return NLCommandResponse(
+                command: "ls -la",
+                explanation: "List files in current directory",
+                confidence: 0.95,
+                alternatives: ["ls", "ll"],
+                warnings: [],
+                category: .file
+            )
+        }
+        
+        if cleanedInput.contains("cd") || cleanedInput.contains("change directory") {
+            return NLCommandResponse(
+                command: "cd {{path}}",
+                explanation: "Change to a different directory",
+                confidence: 0.8,
+                alternatives: [],
+                warnings: [],
+                category: .file
+            )
+        }
+        
+        if cleanedInput.contains("mkdir") || cleanedInput.contains("create folder") {
+            return NLCommandResponse(
+                command: "mkdir {{name}}",
+                explanation: "Create a new directory",
+                confidence: 0.85,
+                alternatives: [],
+                warnings: [],
+                category: .file
+            )
+        }
+        
+        if cleanedInput.contains("remove") || cleanedInput.contains("delete") || cleanedInput.contains("rm") {
+            return NLCommandResponse(
+                command: "rm {{file}}",
+                explanation: "Remove a file",
+                confidence: 0.8,
+                alternatives: [],
+                warnings: ["This will permanently delete the file"],
+                category: .file
+            )
+        }
+        
+        // Default response
+        return NLCommandResponse(
+            command: "# Command not recognized",
+            explanation: "Please be more specific about what you want to do",
+            confidence: 0.1,
+            alternatives: [],
+            warnings: [],
+            category: .other
+        )
     }
 }

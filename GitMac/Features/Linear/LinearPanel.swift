@@ -165,6 +165,7 @@ struct LinearLoginPrompt: View {
                 if isLoading {
                     ProgressView()
                         .scaleEffect(0.8)
+                        .frame(width: 16, height: 16)
                 } else {
                     Text("Connect")
                 }

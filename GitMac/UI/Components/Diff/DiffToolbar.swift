@@ -82,13 +82,10 @@ struct DiffToolbar: View {
 
     /// Available modes based on file type and current mode
     private var availableModes: [DiffViewMode] {
-        if viewMode.isKaleidoscopeMode {
-            return DiffViewMode.kaleidoscopeModes
-        } else if isMarkdown {
-            return DiffViewMode.markdownModes
-        } else {
-            return DiffViewMode.standardModes
+        if isMarkdown {
+            return DiffViewMode.markdownModes + DiffViewMode.kaleidoscopeModes
         }
+        return DiffViewMode.standardModes + DiffViewMode.kaleidoscopeModes
     }
 
     var body: some View {
@@ -177,25 +174,6 @@ struct DiffToolbar: View {
                     tooltip: "Minimap"
                 ) {
                     showMinimap.toggle()
-                }
-            }
-
-            // Divider
-            Rectangle()
-                .fill(AppTheme.border)
-                .frame(width: 1, height: 20)
-
-            // Kaleidoscope mode toggle
-            ToolbarButton(
-                icon: "k.square.fill",
-                isActive: viewMode.isKaleidoscopeMode,
-                tooltip: "Kaleidoscope modes"
-            ) {
-                // Toggle between standard and Kaleidoscope modes
-                if viewMode.isKaleidoscopeMode {
-                    viewMode = .split  // Switch back to standard
-                } else {
-                    viewMode = .kaleidoscopeBlocks  // Switch to Kaleidoscope
                 }
             }
 

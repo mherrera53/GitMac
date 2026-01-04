@@ -26,6 +26,10 @@ struct DSLoadingState: View {
             ProgressView()
                 .scaleEffect(style == .large ? 1.2 : 1.0)
                 .tint(AppTheme.accent)
+                .frame(
+                    width: style == .inline ? 12 : 20,
+                    height: style == .inline ? 12 : 20
+                )
 
             Text(message)
                 .font(style == .large ? DesignTokens.Typography.body : DesignTokens.Typography.caption)

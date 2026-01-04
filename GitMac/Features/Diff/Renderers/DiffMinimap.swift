@@ -24,27 +24,26 @@ struct OptimizedMinimapView: View {
     var onScrollToPosition: ((CGFloat) -> Void)? = nil
 
     @State private var isDragging = false
+    @State private var dragStartLocation: CGFloat?
+    @State private var isLensInteraction = false
+    @State private var initialScrollPosition: CGFloat = 0
 
     var body: some View {
         GeometryReader { geo in
             let totalLines = rows.count
-            // Strictly scale content to fit the available height
             let stepHeight = geo.size.height / CGFloat(max(totalLines, 1))
-            // Ensure visible blocks are at least somewhat visible, even if they overlap
-            let drawHeight = max(stepHeight, 1.0) 
+            let drawHeight = max(stepHeight, 1.0)
             
             let vpHeight = max(20, geo.size.height * viewportRatio)
             let vpTop = scrollPosition * (geo.size.height - vpHeight)
 
             ZStack(alignment: .topLeading) {
-                // Dimmed background for non-viewport area (optional, for focus)
+                // Dimmed background
                 Color.black.opacity(0.05)
-
-                // Fast canvas-style rendering - disable hit testing
+                
+                // Content Canvas
                 Canvas { context, size in
                     var y: CGFloat = 0
-                    // No artificial spacing that accumulates error
-                    
                     for row in rows {
                         if row.color != .clear {
                             context.fill(
@@ -55,48 +54,72 @@ struct OptimizedMinimapView: View {
                         y += stepHeight
                     }
                 }
-                .allowsHitTesting(false) // CRITICAL: Don't let Canvas block gestures
+                .allowsHitTesting(false)
 
-                // Viewport indicator (Kaleidoscope-style lens)
+                // Lens
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.white.opacity(isDragging ? 0.3 : 0.15))
+                    .fill(Color.white.opacity(isDragging && isLensInteraction ? 0.3 : 0.15))
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
-                            .stroke(AppTheme.textPrimary.opacity(isDragging ? 0.8 : 0.4), lineWidth: 1.5)
+                            .stroke(AppTheme.textPrimary.opacity(isDragging && isLensInteraction ? 0.8 : 0.4), lineWidth: 1.5)
                     )
                     .frame(width: geo.size.width - 2, height: vpHeight)
                     .offset(x: 1, y: vpTop)
                     .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 1)
-                    .allowsHitTesting(false) // Don't block gestures
             }
-            // Invisible overlay to capture ALL gestures
-            .overlay(
-                Color.white.opacity(0.001) // Ensure it's hit-testable but invisible
-                    .contentShape(Rectangle())
-                    .highPriorityGesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { value in
-                                isDragging = true
-                                let h = geo.size.height
-                                // Center the lens under the cursor if possible
-                                // If we just use value.location.y, that's the top of the lens? 
-                                // Actually, standard minimap behavior is usually "absolute jump to this point".
-                                // Let's ensure the calculation is robust.
-                                let normalizedY = min(1, max(0, value.location.y / h))
-                                onScrollToPosition?(normalizedY)
+            .contentShape(Rectangle()) // Capture all touches
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        let locationY = value.location.y
+                        let trackHeight = geo.size.height - vpHeight
+                        guard trackHeight > 0 else { return }
+
+                        if !isDragging {
+                            // Start of gesture
+                            isDragging = true
+                            
+                            // Hit test: Did we click the lens?
+                            if locationY >= vpTop && locationY <= (vpTop + vpHeight) {
+                                isLensInteraction = true
+                                dragStartLocation = locationY
+                                initialScrollPosition = scrollPosition
+                            } else {
+                                isLensInteraction = false // Jump mode
                             }
-                            .onEnded { _ in
-                                isDragging = false
+                        }
+                        
+                        var newRatio: CGFloat = scrollPosition
+                        
+                        if isLensInteraction {
+                            // Dragging the lens relative to start
+                            if let startY = dragStartLocation {
+                                let deltaY = locationY - startY
+                                let deltaRatio = deltaY / trackHeight
+                                newRatio = initialScrollPosition + deltaRatio
                             }
-                    )
+                        } else {
+                            // Jump to specific point (center lens on mouse)
+                            // We want the mouse Y to be the center of the lens
+                            let targetTop = locationY - (vpHeight / 2)
+                            newRatio = targetTop / trackHeight
+                        }
+                        
+                        // Clamp
+                        newRatio = max(0, min(1, newRatio))
+                        
+                        // Notify
+                        if abs(newRatio - scrollPosition) > 0.001 {
+                            onScrollToPosition?(newRatio)
+                        }
+                    }
+                    .onEnded { _ in
+                        isDragging = false
+                        dragStartLocation = nil
+                        isLensInteraction = false
+                    }
             )
         }
-        .background(AppTheme.backgroundSecondary.opacity(0.5))
-        .cornerRadius(4)
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(AppTheme.border, lineWidth: 1)
-        )
     }
 }
 
@@ -110,8 +133,8 @@ struct KaleidoscopeMinimapWrapper: View {
     var minimapScrollTriggerAction: () -> Void
     
     var body: some View {
-        let maxScroll = max(1, contentHeight - viewportHeight)
-        let scrollRatio = contentHeight > viewportHeight && contentHeight > 0
+        let maxScroll = max(0, contentHeight - viewportHeight)
+        let scrollRatio = maxScroll > 0 && contentHeight > 0
             ? max(0, min(1, scrollOffset / maxScroll))
             : CGFloat(0)
         let vpRatio = contentHeight > 0 ? min(1, viewportHeight / contentHeight) : CGFloat(1)
@@ -119,11 +142,27 @@ struct KaleidoscopeMinimapWrapper: View {
         OptimizedMinimapView(
             rows: rows,
             scrollPosition: scrollRatio,
-            viewportRatio: vpRatio
-        ) { ratio in
-            NSLog("🔵 [MinimapWrapper] Callback! ratio=%.2f, maxScroll=%.1f, newOffset=%.1f", ratio, maxScroll, ratio * maxScroll)
-            scrollOffset = ratio * maxScroll
-            minimapScrollTriggerAction()
+            viewportRatio: vpRatio,
+            onScrollToPosition: { ratio in
+                NSLog("🔵 [MinimapWrapper] Callback! ratio=%.2f, maxScroll=%.1f, newOffset=%.1f", ratio, maxScroll, ratio * maxScroll)
+                let newOffset = ratio * maxScroll
+                if abs(newOffset - scrollOffset) > 0.5 {
+                    DispatchQueue.main.async {
+                        scrollOffset = newOffset
+                        minimapScrollTriggerAction()
+                    }
+                }
+            }
+        )
+        .onAppear {
+            NSLog("🔍 [KaleidoscopeMinimapWrapper] contentHeight: %.1f, viewportHeight: %.1f, scrollOffset: %.1f", contentHeight, viewportHeight, scrollOffset)
+            NSLog("🔍 [KaleidoscopeMinimapWrapper] maxScroll: %.1f, scrollRatio: %.3f, vpRatio: %.3f", maxScroll, scrollRatio, vpRatio)
+        }
+        .onChange(of: contentHeight) { _, newHeight in
+            NSLog("🔍 [KaleidoscopeMinimapWrapper] contentHeight changed to: %.1f", newHeight)
+        }
+        .onChange(of: scrollOffset) { _, newOffset in
+            NSLog("🔍 [KaleidoscopeMinimapWrapper] scrollOffset changed to: %.1f", newOffset)
         }
     }
 }

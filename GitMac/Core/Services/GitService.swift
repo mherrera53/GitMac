@@ -794,6 +794,14 @@ class GitService: ObservableObject {
         return try await engine.getCommitsV2(at: path, branch: branch, limit: limit, skip: skip)
     }
 
+    func getCommitsForFileV2(filePath: String, limit: Int = 100, skip: Int = 0) async throws -> [Commit] {
+        guard let path = currentRepository?.path else {
+            throw GitServiceError.noRepository
+        }
+
+        return try await engine.getCommitsForFileV2(at: path, filePath: filePath, limit: limit, skip: skip)
+    }
+
     /// Get branches using V2 optimized method (for-each-ref with NUL separators)
     func getBranchesV2() async throws -> [Branch] {
         guard let path = currentRepository?.path else {

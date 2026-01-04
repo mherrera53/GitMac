@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 // MARK: - Kaleidoscope-style Split Diff View
 
@@ -6,6 +7,11 @@ import SwiftUI
 struct KaleidoscopeSplitDiffView: View {
     // Receive pre-calculated lines from parent to ensure 1:1 sync with Minimap
     let pairedLines: [DiffPairWithConnection]
+    let filePath: String
+    let hunksById: [UUID: DiffHunk]
+    let repoPath: String?
+    var allowPatchActions: Bool = true
+    var contentVersion: Int = 0
     let showLineNumbers: Bool
     var showConnectionLines: Bool = true
     var isFluidMode: Bool = false
@@ -19,7 +25,7 @@ struct KaleidoscopeSplitDiffView: View {
     @StateObject private var themeManager = ThemeManager.shared
     
     // Virtualization state
-    @State private var visibleRange: Range<Int> = 0..<0
+    @State private var visibleRange: Range<Int> = 0..<50 // Initialize with first 50 items visible
     
     // Scroll state management
     @State private var lastExternalScrollOffset: CGFloat = -1
@@ -27,132 +33,122 @@ struct KaleidoscopeSplitDiffView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            ScrollViewReader { proxy in
-                ScrollView([.vertical, .horizontal], showsIndicators: true) {
-                    GeometryReader { scrollGeometry in
-                        Color.clear.preference(
-                            key: DiffScrollOffsetKey.self,
-                            value: -scrollGeometry.frame(in: .named("scroll")).minY
-                        )
-                    }
-                    .frame(height: 0)
-                    .id("scroll_top")
-                    
-                    ZStack(alignment: .topLeading) {
-                        // Base layer: Single LazyVStack with paired rows
-                        LazyVStack(spacing: 0, pinnedViews: []) {
-                            ForEach(pairedLines) { pair in
-                                HStack(spacing: 0) {
-                                    // Left pane
-                                    Group {
-                                        if let header = pair.hunkHeader {
-                                            KaleidoscopeHunkHeader(header: header)
-                                        } else if let line = pair.left {
-                                            KaleidoscopeDiffLine(
-                                                line: line,
-                                                side: .left,
-                                                showLineNumber: showLineNumbers,
-                                                pairedLine: pair.right
-                                            )
-                                        } else {
-                                            EmptyDiffLine(showLineNumber: showLineNumbers)
-                                        }
+            let theme = Color.Theme(themeManager.colors)
+            let rowHeight: CGFloat = 24
+            let safeLower = max(0, min(visibleRange.lowerBound, pairedLines.count))
+            let safeUpper = max(safeLower, min(visibleRange.upperBound, pairedLines.count))
+            let safeRange = safeLower..<safeUpper
+
+            let topSpacerHeight = CGFloat(safeLower) * rowHeight
+            let bottomSpacerHeight = CGFloat(max(0, pairedLines.count - safeUpper)) * rowHeight
+
+            KaleidoscopeScrollContainer(
+                scrollOffset: $scrollOffset,
+                viewportHeight: $viewportHeight,
+                contentHeight: $contentHeight,
+                minimapScrollTrigger: $minimapScrollTrigger,
+                contentVersion: contentVersion
+                    &+ safeLower &* 31
+                    &+ safeUpper &* 131
+                    &+ Int(geometry.size.width.rounded())
+            ) {
+                ZStack(alignment: .topLeading) {
+                    VStack(spacing: 0) {
+                        SwiftUI.Color.clear
+                            .frame(height: topSpacerHeight)
+
+                        ForEach(safeRange, id: \.self) { index in
+                            let pair = pairedLines[index]
+                            HStack(spacing: 0) {
+                                Group {
+                                    if let header = pair.hunkHeader {
+                                        KaleidoscopeHunkHeader(
+                                            header: header,
+                                            onStageHunk: stageHunkAction(for: pair),
+                                            onDiscardHunk: discardHunkAction(for: pair)
+                                        )
+                                    } else if let line = pair.left {
+                                        KaleidoscopeDiffLine(
+                                            line: line,
+                                            side: .left,
+                                            showLineNumber: showLineNumbers,
+                                            pairedLine: pair.right
+                                        )
+                                        .diffLineContextMenuWithActions(
+                                            line: line,
+                                            onStageLine: stageLineAction(for: pair, side: .left),
+                                            onDiscardLine: discardLineAction(for: pair, side: .left)
+                                        )
+                                    } else {
+                                        EmptyDiffLine(showLineNumber: showLineNumbers)
                                     }
-                                    .frame(width: max(0, (geometry.size.width - 60) / 2))
-                                    
-                                    // Central Gutter (Ribbon Area)
-                                    Rectangle()
-                                        .fill(AppTheme.background) // Clear or background color
-                                        .frame(width: 60)
-                                    
-                                    // Right pane
-                                    Group {
-                                        if let header = pair.hunkHeader {
-                                            KaleidoscopeHunkHeader(header: header)
-                                        } else if let line = pair.right {
-                                            KaleidoscopeDiffLine(
-                                                line: line,
-                                                side: .right,
-                                                showLineNumber: showLineNumbers,
-                                                pairedLine: pair.left
-                                            )
-                                        } else {
-                                            EmptyDiffLine(showLineNumber: showLineNumbers)
-                                        }
-                                    }
-                                    .frame(width: max(0, (geometry.size.width - 60) / 2))
                                 }
-                                .frame(height: 24)
-                                .id("line_\(pair.id)")
+                                .frame(width: max(0, (geometry.size.width - 60) / 2))
+
+                                KaleidoscopeGutterView()
+                                    .frame(width: 60)
+
+                                Group {
+                                    if let header = pair.hunkHeader {
+                                        KaleidoscopeHunkHeader(
+                                            header: header,
+                                            onStageHunk: stageHunkAction(for: pair),
+                                            onDiscardHunk: discardHunkAction(for: pair)
+                                        )
+                                    } else if let line = pair.right {
+                                        KaleidoscopeDiffLine(
+                                            line: line,
+                                            side: .right,
+                                            showLineNumber: showLineNumbers,
+                                            pairedLine: pair.left
+                                        )
+                                        .diffLineContextMenuWithActions(
+                                            line: line,
+                                            onStageLine: stageLineAction(for: pair, side: .right),
+                                            onDiscardLine: discardLineAction(for: pair, side: .right)
+                                        )
+                                    } else {
+                                        EmptyDiffLine(showLineNumber: showLineNumbers)
+                                    }
+                                }
+                                .frame(width: max(0, (geometry.size.width - 60) / 2))
                             }
+                            .frame(height: rowHeight)
                         }
 
-                        // Top layer: Connection ribbons overlay (Optimized with Virtualization)
-                        if showConnectionLines, !pairedLines.isEmpty {
-                            ConnectionRibbonsView(
-                                pairs: pairedLines,
-                                lineHeight: 24,
-                                isFluidMode: isFluidMode,
-                                viewWidth: geometry.size.width,
-                                visibleRange: visibleRange
-                            )
-                            .allowsHitTesting(false)
-                        }
+                        SwiftUI.Color.clear
+                            .frame(height: bottomSpacerHeight)
+                    }
+                    .frame(width: geometry.size.width, alignment: .topLeading)
+                    .background(theme.background)
+
+                    if showConnectionLines, !pairedLines.isEmpty {
+                        let gutterWidth: CGFloat = 60
+                        let panelWidth = max(0, (geometry.size.width - gutterWidth) / 2)
+                        let overlap = min(240, max(18, panelWidth * 0.24))
+                        ConnectionRibbonsView(
+                            pairs: pairedLines,
+                            lineHeight: rowHeight,
+                            isFluidMode: isFluidMode,
+                            viewWidth: geometry.size.width,
+                            gutterWidth: gutterWidth,
+                            panelOverlap: overlap,
+                            visibleRange: visibleRange
+                        )
+                        .frame(width: geometry.size.width, height: CGFloat(pairedLines.count) * rowHeight, alignment: .topLeading)
+                        .allowsHitTesting(false)
                     }
                 }
-                .scrollIndicators(.hidden)
-                .scrollDisabled(false)
-                .background(AppTheme.background)
-                .coordinateSpace(name: "scroll")
-                .onPreferenceChange(DiffScrollOffsetKey.self) { offset in
-                    if !isHandlingMinimapClick {
-                        scrollOffset = offset
-                        lastExternalScrollOffset = offset
-                        updateVisibleRange(offset: offset, viewport: viewportHeight)
-                    }
+                .onAppear {
+                    updateContentHeight()
+                    updateVisibleRange(offset: scrollOffset, viewport: viewportHeight)
                 }
-                .background(
-                    GeometryReader { geo in
-                        Color.clear
-                            .onAppear {
-                                viewportHeight = geo.size.height
-                                updateVisibleRange(offset: scrollOffset, viewport: geo.size.height)
-                                updateContentHeight()
-                            }
-                            .onChange(of: geo.size.height) { _, newHeight in
-                                viewportHeight = newHeight
-                                updateVisibleRange(offset: scrollOffset, viewport: newHeight)
-                            }
-                            // Recalculate height if lines change
-                            .onChange(of: pairedLines.count) { _, _ in
-                                updateContentHeight()
-                            }
-                    }
-                )
-                // Handle programmatic scrolling from minimap clicks
-                .onChange(of: minimapScrollTrigger) { _, newTrigger in
-                    guard contentHeight > viewportHeight else { return }
-                    
-                    // Set flag to ignore outgoing scroll events temporarily (prevent feedback loop)
-                    isHandlingMinimapClick = true
-                    
-                    // Calculate target ID based on scroll position provided by parent binding
-                    // The parent updates `scrollOffset` BEFORE toggling `minimapScrollTrigger`
-                    let rowHeight: CGFloat = 24
-                    let targetIndex = Int(scrollOffset / rowHeight)
-                    let safeIndex = max(0, min(targetIndex, pairedLines.count - 1))
-                    
-                    if safeIndex < pairedLines.count {
-                        let targetID = pairedLines[safeIndex].id
-                        // Use instant scroll (no animation) for responsive dragging
-                        proxy.scrollTo("line_\(targetID)", anchor: .top)
-                    }
-                    
-                    // Reset lock shortly after
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        isHandlingMinimapClick = false
-                    }
-                }
+            }
+            .onChange(of: pairedLines.count) { _, _ in
+                updateContentHeight()
+            }
+            .onChange(of: scrollOffset) { _, newValue in
+                updateVisibleRange(offset: newValue, viewport: viewportHeight)
             }
         }
     }
@@ -171,10 +167,11 @@ struct KaleidoscopeSplitDiffView: View {
     
     private func updateVisibleRange(offset: CGFloat, viewport: CGFloat) {
         guard !pairedLines.isEmpty else { return }
-        
+
         let rowHeight: CGFloat = 24
-        let startRow = max(0, Int(offset / rowHeight) - 5) // Buffer
-        let endRow = min(pairedLines.count, Int((offset + viewport) / rowHeight) + 5) // Buffer
+        let buffer = 24
+        let startRow = max(0, Int(offset / rowHeight) - buffer)
+        let endRow = min(pairedLines.count, Int((offset + viewport) / rowHeight) + buffer)
         
         if visibleRange.lowerBound != startRow || visibleRange.upperBound != endRow {
             visibleRange = startRow..<endRow
@@ -187,6 +184,7 @@ struct KaleidoscopeSplitDiffView: View {
         pairs: [DiffPairWithConnection],
         lineHeight: CGFloat
     ) {
+        let theme = Color.Theme(themeManager.colors)
         var yOffset: CGFloat = 0
 
         for pair in pairs {
@@ -199,24 +197,28 @@ struct KaleidoscopeSplitDiffView: View {
 
             switch pair.connectionType {
             case .change:
-                // Kaleidoscope-style curved connection line
+                // Kaleidoscope-style curved connection line spanning both panes
                 var path = Path()
-                path.move(to: CGPoint(x: 5, y: centerY))
-
-                // Smooth bezier curve
-                let controlPoint1 = CGPoint(x: size.width * 0.25, y: centerY)
-                let controlPoint2 = CGPoint(x: size.width * 0.75, y: centerY)
-
+                let paneWidth = size.width / 2
+                
+                // Start from the right edge of left pane
+                path.move(to: CGPoint(x: paneWidth - 2, y: centerY))
+                
+                // Smooth bezier curve spanning the gap between panes
+                let controlPoint1 = CGPoint(x: paneWidth + 10, y: centerY - 3)
+                let controlPoint2 = CGPoint(x: paneWidth + 10, y: centerY + 3)
+                
+                // End at the left edge of right pane
                 path.addCurve(
-                    to: CGPoint(x: size.width - 5, y: centerY),
+                    to: CGPoint(x: paneWidth + 2, y: centerY),
                     control1: controlPoint1,
                     control2: controlPoint2
                 )
-
+                
                 context.stroke(
                     path,
-                    with: .color(Color.blue.opacity(0.4)),
-                    style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
+                    with: .color(theme.info.opacity(0.6)),
+                    style: StrokeStyle(lineWidth: 2, lineCap: .round)
                 )
 
             case .deletion:
@@ -227,7 +229,7 @@ struct KaleidoscopeSplitDiffView: View {
 
                 context.stroke(
                     path,
-                    with: .color(AppTheme.diffDeletion.opacity(0.4)),
+                    with: .color(theme.diffDeletion.opacity(0.4)),
                     style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
                 )
 
@@ -239,7 +241,7 @@ struct KaleidoscopeSplitDiffView: View {
 
                 context.stroke(
                     path,
-                    with: .color(AppTheme.diffAddition.opacity(0.4)),
+                    with: .color(theme.diffAddition.opacity(0.4)),
                     style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
                 )
 
@@ -248,6 +250,241 @@ struct KaleidoscopeSplitDiffView: View {
             }
 
             yOffset += lineHeight
+        }
+    }
+
+    private func stageLineAction(for pair: DiffPairWithConnection, side: DiffSide) -> (() -> Void)? {
+        guard allowPatchActions else { return nil }
+        guard let repoPath else { return nil }
+        guard let hunkId = pair.hunkId, let hunk = hunksById[hunkId] else { return nil }
+
+        let lineIndex: Int?
+        switch side {
+        case .left:
+            lineIndex = pair.leftLineIndexInHunk
+        case .right:
+            lineIndex = pair.rightLineIndexInHunk
+        }
+        guard let lineIndex else { return nil }
+        return {
+            Task {
+                do {
+                    let service = GitService()
+                    service.currentRepository = Repository(path: repoPath)
+                    try await service.stageLine(filePath: filePath, hunk: hunk, lineIndex: lineIndex)
+                    NotificationManager.shared.success("Staged line")
+                } catch {
+                    NotificationManager.shared.error("Failed to stage line", detail: String(describing: error))
+                }
+            }
+        }
+    }
+
+    private func discardLineAction(for pair: DiffPairWithConnection, side: DiffSide) -> (() -> Void)? {
+        guard allowPatchActions else { return nil }
+        guard let repoPath else { return nil }
+        guard let hunkId = pair.hunkId, let hunk = hunksById[hunkId] else { return nil }
+
+        let lineIndex: Int?
+        switch side {
+        case .left:
+            lineIndex = pair.leftLineIndexInHunk
+        case .right:
+            lineIndex = pair.rightLineIndexInHunk
+        }
+        guard let lineIndex else { return nil }
+        return {
+            Task {
+                do {
+                    let service = GitService()
+                    service.currentRepository = Repository(path: repoPath)
+                    try await service.discardLine(filePath: filePath, hunk: hunk, lineIndex: lineIndex)
+                    NotificationManager.shared.success("Discarded line")
+                } catch {
+                    NotificationManager.shared.error("Failed to discard line", detail: String(describing: error))
+                }
+            }
+        }
+    }
+
+    private func stageHunkAction(for pair: DiffPairWithConnection) -> (() -> Void)? {
+        guard allowPatchActions else { return nil }
+        guard pair.hunkHeader != nil else { return nil }
+        guard let repoPath else { return nil }
+        guard let hunkId = pair.hunkId, let hunk = hunksById[hunkId] else { return nil }
+        return {
+            Task {
+                do {
+                    let service = GitService()
+                    service.currentRepository = Repository(path: repoPath)
+                    try await service.stageHunk(filePath: filePath, hunk: hunk)
+                    NotificationManager.shared.success("Staged hunk")
+                } catch {
+                    NotificationManager.shared.error("Failed to stage hunk", detail: String(describing: error))
+                }
+            }
+        }
+    }
+
+    private func discardHunkAction(for pair: DiffPairWithConnection) -> (() -> Void)? {
+        guard allowPatchActions else { return nil }
+        guard pair.hunkHeader != nil else { return nil }
+        guard let repoPath else { return nil }
+        guard let hunkId = pair.hunkId, let hunk = hunksById[hunkId] else { return nil }
+        return {
+            Task {
+                do {
+                    let service = GitService()
+                    service.currentRepository = Repository(path: repoPath)
+                    try await service.discardHunk(filePath: filePath, hunk: hunk)
+                    NotificationManager.shared.success("Discarded hunk")
+                } catch {
+                    NotificationManager.shared.error("Failed to discard hunk", detail: String(describing: error))
+                }
+            }
+        }
+    }
+}
+
+// MARK: - NSScrollView-backed container (minimap accurate scrolling)
+
+private struct KaleidoscopeScrollContainer<Content: View>: NSViewRepresentable {
+    @Binding var scrollOffset: CGFloat
+    @Binding var viewportHeight: CGFloat
+    @Binding var contentHeight: CGFloat
+    @Binding var minimapScrollTrigger: UUID
+    let contentVersion: Int
+    @ViewBuilder let content: () -> Content
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = true
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .noBorder
+        scrollView.drawsBackground = false
+        scrollView.verticalScrollElasticity = .none
+        scrollView.horizontalScrollElasticity = .none
+        scrollView.wantsLayer = true
+        scrollView.contentView.wantsLayer = true
+        scrollView.contentView.postsBoundsChangedNotifications = true
+
+        let hostingView = NSHostingView(rootView: content())
+        scrollView.documentView = hostingView
+
+        context.coordinator.scrollView = scrollView
+        context.coordinator.hostingView = hostingView
+        context.coordinator.lastContentVersion = contentVersion
+
+        NotificationCenter.default.addObserver(
+            context.coordinator,
+            selector: #selector(Coordinator.scrollViewDidScroll(_:)),
+            name: NSView.boundsDidChangeNotification,
+            object: scrollView.contentView
+        )
+
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard let hostingView = context.coordinator.hostingView else { return }
+
+        if context.coordinator.lastContentVersion != contentVersion {
+            hostingView.rootView = content()
+            context.coordinator.lastContentVersion = contentVersion
+        }
+
+        let viewport = scrollView.contentView.bounds.height
+        if viewport > 0, context.coordinator.lastViewportHeight != viewport {
+            context.coordinator.lastViewportHeight = viewport
+            DispatchQueue.main.async {
+                viewportHeight = viewport
+            }
+        }
+
+        // Ensure the document view has a real frame so the scroll view can scroll.
+        // Avoid calling `fittingSize` on every scroll tick (expensive layout).
+        let viewportWidth = scrollView.contentView.bounds.width
+        if viewportWidth > 0, context.coordinator.cachedDocumentWidth != viewportWidth {
+            context.coordinator.cachedDocumentWidth = viewportWidth
+        }
+        let docWidth = max(1, context.coordinator.cachedDocumentWidth)
+        let docHeight = max(contentHeight, viewport)
+        if hostingView.frame.size.width != docWidth || hostingView.frame.size.height != docHeight {
+            hostingView.frame = NSRect(x: 0, y: 0, width: docWidth, height: docHeight)
+        }
+
+        // Programmatic scroll: react to minimap trigger and clamp
+        let maxScroll = max(0, contentHeight - viewport)
+        let clampedOffset = max(0, min(scrollOffset, maxScroll))
+        if context.coordinator.lastAppliedMinimapTrigger != minimapScrollTrigger {
+            context.coordinator.lastAppliedMinimapTrigger = minimapScrollTrigger
+            Task { @MainActor in
+                context.coordinator.scrollTo(y: clampedOffset)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    final class Coordinator: NSObject {
+        var parent: KaleidoscopeScrollContainer
+        weak var scrollView: NSScrollView?
+        weak var hostingView: NSHostingView<Content>?
+
+        var isSyncing = false
+        var lastAppliedMinimapTrigger: UUID = UUID()
+        var lastContentVersion: Int = -1
+        var cachedDocumentWidth: CGFloat = 0
+        var lastViewportHeight: CGFloat = 0
+
+        init(parent: KaleidoscopeScrollContainer) {
+            self.parent = parent
+        }
+
+        deinit {
+            NotificationCenter.default.removeObserver(self)
+        }
+
+        @MainActor @objc func scrollViewDidScroll(_ notification: Notification) {
+            guard !isSyncing else { return }
+            guard let clipView = notification.object as? NSClipView else { return }
+            let y = max(0, clipView.bounds.origin.y)
+            let viewport = clipView.bounds.height
+            let maxScroll = max(0, parent.contentHeight - viewport)
+            let newOffset = min(y, maxScroll)
+            if parent.scrollOffset != newOffset {
+                DispatchQueue.main.async {
+                    self.parent.scrollOffset = newOffset
+                }
+            }
+        }
+
+        @MainActor func scrollTo(y: CGFloat) {
+            guard let scrollView else { return }
+            isSyncing = true
+            scrollView.contentView.scroll(to: NSPoint(x: scrollView.contentView.bounds.origin.x, y: y))
+            scrollView.reflectScrolledClipView(scrollView.contentView)
+            DispatchQueue.main.async {
+                self.isSyncing = false
+            }
+        }
+    }
+}
+
+private struct KaleidoscopeGutterView: View {
+    @StateObject private var themeManager = ThemeManager.shared
+
+    var body: some View {
+        let theme = Color.Theme(themeManager.colors)
+        ZStack {
+            Rectangle()
+                .fill(theme.backgroundSecondary)
+            Rectangle()
+                .fill(theme.border.opacity(0.7))
+                .frame(width: 1)
         }
     }
 }
@@ -272,6 +509,7 @@ struct KaleidoscopeDiffLine: View {
 
     // Character-level highlighting (Kaleidoscope-style)
     private var highlightedContent: AttributedString {
+        let theme = Color.Theme(themeManager.colors)
         guard let paired = pairedLine,
               line.type != .context,
               paired.type != .context else {
@@ -293,13 +531,13 @@ struct KaleidoscopeDiffLine: View {
             case .unchanged:
                 break
             case .added:
-                segmentAttr.backgroundColor = AppTheme.diffAddition.opacity(0.4)
-                segmentAttr.foregroundColor = AppTheme.diffAddition
+                segmentAttr.backgroundColor = theme.diffAddition.opacity(0.4)
+                segmentAttr.foregroundColor = theme.diffAddition
             case .removed:
-                segmentAttr.backgroundColor = AppTheme.diffDeletion.opacity(0.4)
-                segmentAttr.foregroundColor = AppTheme.diffDeletion
+                segmentAttr.backgroundColor = theme.diffDeletion.opacity(0.4)
+                segmentAttr.foregroundColor = theme.diffDeletion
             case .changed:
-                let color = line.type == .addition ? AppTheme.diffAddition : AppTheme.diffDeletion
+                let color = line.type == .addition ? theme.diffAddition : theme.diffDeletion
                 segmentAttr.backgroundColor = color.opacity(0.4)
             }
 
@@ -353,32 +591,32 @@ struct KaleidoscopeDiffLine: View {
 
     private func indicatorColor(theme: SwiftUI.Color.Theme) -> Color {
         switch line.type {
-        case .addition: return AppTheme.diffAddition
-        case .deletion: return AppTheme.diffDeletion
+        case .addition: return theme.diffAddition
+        case .deletion: return theme.diffDeletion
         default: return theme.textMuted
         }
     }
 
     private func backgroundColor(theme: SwiftUI.Color.Theme) -> Color {
         switch line.type {
-        case .addition: return AppTheme.diffAdditionBg
-        case .deletion: return AppTheme.diffDeletionBg
-        case .context, .hunkHeader: return Color.clear
+        case .addition: return theme.diffAdditionBg
+        case .deletion: return theme.diffDeletionBg
+        case .context, .hunkHeader: return SwiftUI.Color.clear
         }
     }
 
     private func lineNumberBackground(theme: SwiftUI.Color.Theme) -> Color {
         switch line.type {
-        case .addition: return AppTheme.diffLineNumberBg
-        case .deletion: return AppTheme.diffLineNumberBg
+        case .addition: return theme.diffLineNumberBg
+        case .deletion: return theme.diffLineNumberBg
         case .context, .hunkHeader: return theme.backgroundSecondary
         }
     }
 
     private func textColor(theme: SwiftUI.Color.Theme) -> Color {
         switch line.type {
-        case .addition: return AppTheme.diffAddition
-        case .deletion: return AppTheme.diffDeletion
+        case .addition: return theme.diffAddition
+        case .deletion: return theme.diffDeletion
         case .context, .hunkHeader: return theme.text
         }
     }
@@ -388,22 +626,42 @@ struct KaleidoscopeDiffLine: View {
 
 struct KaleidoscopeHunkHeader: View {
     let header: String
+    var onStageHunk: (() -> Void)? = nil
+    var onDiscardHunk: (() -> Void)? = nil
     @StateObject private var themeManager = ThemeManager.shared
 
     var body: some View {
+        let theme = Color.Theme(themeManager.colors)
         HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: "text.alignleft")
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(AppTheme.accent)
+                .foregroundColor(theme.accent)
 
             Text(header)
                 .font(DesignTokens.Typography.commitHash)
-                .foregroundColor(AppTheme.accent)
+                .foregroundColor(theme.accent)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: 24)
         .padding(.horizontal, DesignTokens.Spacing.md)
-        .background(AppTheme.accent.opacity(0.08))
+        .background(theme.accent.opacity(0.08))
+        .contextMenu {
+            if let onStageHunk {
+                Button {
+                    onStageHunk()
+                } label: {
+                    Label("Stage Hunk", systemImage: "plus.circle")
+                }
+            }
+
+            if let onDiscardHunk {
+                Button(role: .destructive) {
+                    onDiscardHunk()
+                } label: {
+                    Label("Discard Hunk", systemImage: "trash")
+                }
+            }
+        }
     }
 }
 
@@ -525,9 +783,13 @@ struct KaleidoscopeSplitDiffView_Previews: PreviewProvider {
             ),
         ]
         let pairedLines = KaleidoscopePairingEngine.calculatePairs(from: hunks)
+        let hunksById = Dictionary(uniqueKeysWithValues: hunks.map { ($0.id, $0) })
         
         KaleidoscopeSplitDiffView(
             pairedLines: pairedLines,
+            filePath: "preview.txt",
+            hunksById: hunksById,
+            repoPath: nil,
             showLineNumbers: true,
             scrollOffset: .constant(0),
             viewportHeight: .constant(400),

@@ -1,5 +1,6 @@
 import SwiftUI
 import Splash
+import DifferenceKit
 
 // NOTE: The following components have been extracted to separate files in Features/Diff/Renderers:
 // - WordLevelDiff (DiffSegment, WordLevelDiffResult, WordLevelDiff enum)
@@ -13,6 +14,7 @@ import Splash
 // - LargeFileDiffRenderer (LargeFileDiffViewWrapper, LargeFileDiffNSView)
 
 /// Complete diff viewer with multiple view modes - OPTIMIZED
+/// Includes full Kaleidoscope integration for professional diff viewing
 struct DiffView: View {
     let fileDiff: FileDiff
     var repoPath: String? = nil
@@ -20,7 +22,7 @@ struct DiffView: View {
     @AppStorage("diffShowLineNumbers") private var showLineNumbers = true
     @AppStorage("diffWordWrap") private var wordWrap = false
     @AppStorage("diffShowMinimap") private var showMinimap = true
-    @State private var scrollOffset: CGFloat = 0
+        @State private var scrollOffset: CGFloat = 0
     @State private var viewportHeight: CGFloat = 400
     @State private var contentHeight: CGFloat = 1000
     @StateObject private var themeManager = ThemeManager.shared
@@ -30,11 +32,38 @@ struct DiffView: View {
     @State private var showBlame = false
     @State private var minimapScrollTrigger: UUID = UUID()
 
+    // History diff override (when selecting commits)
+    @State private var overrideHunks: [DiffHunk]? = nil
+    @State private var isLoadingHistoryDiff = false
+    
+    // Kaleidoscope integration states
+    @State private var selectedCommitA: Commit? = nil
+    @State private var selectedCommitB: Commit? = nil
+    @State private var availableCommits: [Commit] = []
+    @State private var commitsLoaded = false
+    @State private var commitsLoadedForPath: String? = nil
+    @State private var kaleidoscopeViewMode: KaleidoscopeViewMode = .blocks
+
+    // Kaleidoscope performance caches (avoid recomputing on scroll)
+    @State private var cachedHunksById: [UUID: DiffHunk] = [:]
+    @State private var cachedPairedLines: [DiffPairWithConnection] = []
+    @State private var cachedUnifiedLines: [UnifiedLine] = []
+    @State private var kaleidoscopeRenderVersion: Int = 0
+
+    private var effectiveHunks: [DiffHunk] {
+        overrideHunks ?? fileDiff.hunks
+    }
+
+    private var allowPatchActions: Bool {
+        // Historical diffs should not offer stage/discard
+        overrideHunks == nil
+    }
+
     // Calculate line count for accurate minimap
     // Calculate line count for accurate minimap
     private var totalLineCount: Int {
         var count = 0
-        for hunk in fileDiff.hunks {
+        for hunk in effectiveHunks {
             count += 1 // hunk header
 
             if viewMode == .inline || viewMode == .preview {
@@ -69,7 +98,7 @@ struct DiffView: View {
 
     // Threshold for "large file" - switch to optimized inline view
     // Threshold for "large file" - switch to optimized inline view
-    private let largeFileLineThreshold = 20000
+    private let largeFileLineThreshold = 1000000
 
     private var isLargeFile: Bool {
         totalLineCount > largeFileLineThreshold
@@ -85,7 +114,7 @@ struct DiffView: View {
             // In split view, we pair simultaneous deletions and additions.
             // visualRows ≈ hunks + context + max(deletions, additions) in blocks
             var count = 0
-            for hunk in fileDiff.hunks {
+            for hunk in effectiveHunks {
                 count += 1 // Header
                 
                 var i = 0
@@ -120,7 +149,7 @@ struct DiffView: View {
             return count
         } else {
             // Unified/Inline: just sum of lines + headers
-            return fileDiff.hunks.reduce(0) { $0 + $1.lines.count + 1 }
+            return effectiveHunks.reduce(0) { $0 + $1.lines.count + 1 }
         }
     }
 
@@ -139,10 +168,36 @@ struct DiffView: View {
         let ext = (fileDiff.displayPath as NSString).pathExtension.lowercased()
         return ext == "md" || ext == "markdown" || ext == "mdown"
     }
+    
+    // Helper to reconstruct old file content from hunks
+    private var reconstructedOldContent: String {
+        var lines: [String] = []
+        for hunk in fileDiff.hunks {
+            for line in hunk.lines {
+                if line.type != .addition {
+                    lines.append(line.content)
+                }
+            }
+        }
+        return lines.joined(separator: "\n")
+    }
+    
+    // Helper to reconstruct new file content from hunks
+    private var reconstructedNewContent: String {
+        var lines: [String] = []
+        for hunk in fileDiff.hunks {
+            for line in hunk.lines {
+                if line.type != .deletion {
+                    lines.append(line.content)
+                }
+            }
+        }
+        return lines.joined(separator: "\n")
+    }
 
     private var previewContent: String {
         var lines: [String] = []
-        for hunk in fileDiff.hunks {
+        for hunk in effectiveHunks {
             for line in hunk.lines {
                 if line.type == .addition || line.type == .context {
                     let printable = line.content.filter { char in
@@ -157,163 +212,457 @@ struct DiffView: View {
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
-
+        
         VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                DiffToolbar(
-                    filename: fileDiff.displayPath,
-                    additions: fileDiff.additions,
-                    deletions: fileDiff.deletions,
-                    viewMode: $viewMode,
-                    showLineNumbers: $showLineNumbers,
-                    wordWrap: $wordWrap,
-                    isMarkdown: isMarkdown,
-                    showMinimap: $showMinimap,
-                    onHistoryTap: { showHistory.toggle() },
-                    onBlameTap: { showBlame.toggle() }
-                )
-
-                // Large File Mode indicator
-                if isLargeFile {
-                    HStack(spacing: DesignTokens.Spacing.xs) {
-                        Image(systemName: "bolt.fill")
-                            .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(theme.warning)
-                        Text("LFM")
-                            .font(DesignTokens.Typography.caption2.weight(.semibold))
-                        Text("(\(totalLineCount) lines)")
-                            .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(theme.text)
-                    }
-                    .foregroundColor(AppTheme.warning)
-                    .padding(.horizontal, DesignTokens.Spacing.sm)
-                    .padding(.vertical, DesignTokens.Spacing.xs)
-                    .background(theme.warning.opacity(0.15))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
-                    .padding(.trailing, DesignTokens.Spacing.sm)
-                }
-            }
+            DiffToolbar(
+                filename: fileDiff.displayPath,
+                additions: fileDiff.additions,
+                deletions: fileDiff.deletions,
+                viewMode: $viewMode,
+                showLineNumbers: $showLineNumbers,
+                wordWrap: $wordWrap,
+                isMarkdown: isMarkdown,
+                showMinimap: $showMinimap,
+                onHistoryTap: {
+                    showHistory.toggle()
+                    loadCommitsIfNeeded()
+                },
+                onBlameTap: { showBlame = true }
+            )
 
             Rectangle()
                 .fill(theme.border)
                 .frame(height: 1)
 
             HStack(spacing: 0) {
-                if fileDiff.isBinary {
-                    BinaryFileView(filename: fileDiff.displayPath, repoPath: repoPath)
-                } else if isLargeFile {
-                    // Use high-performance NSView-based rendering for large files
-                    LargeFileDiffViewWrapper(
-                        hunks: fileDiff.hunks,
-                        showLineNumbers: showLineNumbers,
-                        scrollOffset: $scrollOffset,
-                        viewportHeight: $viewportHeight
-                    )
-                } else {
-                    switch viewMode {
-                    case .split:
-                        OptimizedSplitDiffView(
-                            hunks: fileDiff.hunks,
+                Group {
+                    if fileDiff.isBinary {
+                        BinaryFileView(filename: fileDiff.displayPath, repoPath: repoPath)
+                    } else if isLargeFile {
+                        LargeFileDiffViewWrapper(
+                            hunks: effectiveHunks,
                             showLineNumbers: showLineNumbers,
                             scrollOffset: $scrollOffset,
-                            viewportHeight: $viewportHeight,
-                            contentHeight: $contentHeight
+                            viewportHeight: $viewportHeight
                         )
-                    case .inline:
-                        OptimizedInlineDiffView(
-                            hunks: fileDiff.hunks,
-                            showLineNumbers: showLineNumbers,
-                            scrollOffset: $scrollOffset,
-                            viewportHeight: $viewportHeight,
-                            contentHeight: $contentHeight
-                        )
-                    case .hunk:
-                        HunkDiffView(
-                            hunks: fileDiff.hunks,
-                            showLineNumbers: showLineNumbers,
-                            scrollOffset: $scrollOffset,
-                            viewportHeight: $viewportHeight,
-                            contentHeight: $contentHeight
-                        )
-                    case .preview:
-                        MarkdownView(content: previewContent, fileName: fileDiff.displayPath)
-                    case .kaleidoscopeBlocks:
-                        // Kaleidoscope Blocks: traditional side-by-side with connection lines
-                        KaleidoscopeSplitDiffView(
-                            pairedLines: KaleidoscopePairingEngine.calculatePairs(from: fileDiff.hunks),
-                            showLineNumbers: showLineNumbers,
-                            showConnectionLines: true,
-                            isFluidMode: false,
-                            scrollOffset: $scrollOffset,
-                            viewportHeight: $viewportHeight,
-                            contentHeight: $contentHeight,
-                            minimapScrollTrigger: $minimapScrollTrigger
-                        )
-                    case .kaleidoscopeFluid:
-                        // Kaleidoscope Fluid: compressed view with elegant curved lines
-                        KaleidoscopeSplitDiffView(
-                            pairedLines: KaleidoscopePairingEngine.calculatePairs(from: fileDiff.hunks),
-                            showLineNumbers: showLineNumbers,
-                            showConnectionLines: true,
-                            isFluidMode: true,
-                            scrollOffset: $scrollOffset,
-                            viewportHeight: $viewportHeight,
-                            contentHeight: $contentHeight,
-                            minimapScrollTrigger: $minimapScrollTrigger
-                        )
-                    case .kaleidoscopeUnified:
-                        // Kaleidoscope unified view with A/B labels
-                        KaleidoscopeUnifiedView(
-                            hunks: fileDiff.hunks,
-                            showLineNumbers: showLineNumbers,
-                            scrollOffset: $scrollOffset,
-                            viewportHeight: $viewportHeight,
-                            contentHeight: $contentHeight
-                        )
+                    } else if viewMode.isKaleidoscopeMode {
+                        kaleidoscopeContent(theme: theme)
+                    } else {
+                        standardContent(theme: theme)
                     }
                 }
 
-                if showMinimap && !fileDiff.isBinary && viewMode != .preview && !isLargeFile {
+                if showHistory {
                     Rectangle()
                         .fill(theme.border)
                         .frame(width: 1)
 
-                    OptimizedMinimapView(
-                        rows: minimapRows(from: fileDiff.hunks),
-                        scrollPosition: scrollPosition,
-                        viewportRatio: viewportRatio,
-                        onScrollToPosition: { normalizedPos in
-                            // Calculate new scroll offset from normalized position (0-1)
-                            let maxScroll = max(0, contentHeight - viewportHeight)
-                            scrollOffset = normalizedPos * maxScroll
-                            // Force scroll update in child view
-                            minimapScrollTrigger = UUID()
-                        }
+                    CommitHistorySidebar(
+                        commits: availableCommits,
+                        selectedCommitA: $selectedCommitA,
+                        selectedCommitB: $selectedCommitB
                     )
-                    .frame(width: 60)
                 }
             }
-            }
+        }
+        .background(theme.backgroundSecondary)
+        .onAppear {
+            rebuildKaleidoscopeCaches()
+        }
+        .onChange(of: fileDiff.hunks) { _, _ in
+            rebuildKaleidoscopeCaches()
+        }
+        .onChange(of: fileDiff.newPath) { _, _ in
+            commitsLoaded = false
+            commitsLoadedForPath = nil
+            availableCommits = []
+            selectedCommitA = nil
+            selectedCommitB = nil
 
-        .background(theme.background)
-        .sheet(isPresented: $showHistory) {
-            FileHistorySheet(path: fileDiff.newPath, repoPath: repoPath ?? "")
+            if showHistory {
+                loadCommitsIfNeeded()
+            }
+        }
+        .onChange(of: overrideHunks?.count ?? -1) { _, _ in
+            rebuildKaleidoscopeCaches()
+        }
+        .onChange(of: showHistory) { _, newValue in
+            if !newValue {
+                selectedCommitA = nil
+                selectedCommitB = nil
+                overrideHunks = nil
+                isLoadingHistoryDiff = false
+            }
+        }
+        .onChange(of: selectedCommitA) { _, _ in
+            loadHistoryDiffIfNeeded()
+        }
+        .onChange(of: selectedCommitB) { _, _ in
+            loadHistoryDiffIfNeeded()
+        }
+        .onChange(of: showLineNumbers) { _, _ in
+            kaleidoscopeRenderVersion &+= 1
+        }
+        .onChange(of: viewMode) { _, _ in
+            kaleidoscopeRenderVersion &+= 1
         }
         .sheet(isPresented: $showBlame) {
             BlameSheet(path: fileDiff.newPath, repoPath: repoPath ?? "")
         }
     }
+
+    private func rebuildKaleidoscopeCaches() {
+        let hunks = effectiveHunks
+        cachedHunksById = Dictionary(uniqueKeysWithValues: hunks.map { ($0.id, $0) })
+        cachedPairedLines = KaleidoscopePairingEngine.calculatePairs(from: hunks)
+        cachedUnifiedLines = KaleidoscopePairingEngine.calculateUnifiedLines(from: hunks)
+        kaleidoscopeRenderVersion &+= 1
+    }
+
+    private func loadHistoryDiffIfNeeded() {
+        guard showHistory else { return }
+        guard repoPath != nil else { return }
+        Task {
+            await loadHistoryDiff()
+        }
+    }
+
+    @MainActor
+    private func loadHistoryDiff() async {
+        guard let repoPath else { return }
+        func normalizePath(_ path: String) -> String {
+            if path.hasPrefix("a/") { return String(path.dropFirst(2)) }
+            if path.hasPrefix("b/") { return String(path.dropFirst(2)) }
+            return path
+        }
+
+        let primaryPath = normalizePath(fileDiff.newPath)
+        var candidatePaths: [String] = [primaryPath]
+        if let old = fileDiff.oldPath {
+            let normalizedOld = normalizePath(old)
+            if normalizedOld != primaryPath {
+                candidatePaths.append(normalizedOld)
+            }
+        }
+
+        let requestedCommitASHA = selectedCommitA?.sha
+        let requestedCommitBSHA = selectedCommitB?.sha
+
+        // No selection => back to working tree diff
+        if selectedCommitA == nil && selectedCommitB == nil {
+            overrideHunks = nil
+            rebuildKaleidoscopeCaches()
+            return
+        }
+
+        isLoadingHistoryDiff = true
+        defer { isLoadingHistoryDiff = false }
+
+        do {
+            let engine = GitEngine()
+
+            var diffString: String = ""
+            if let b = selectedCommitB {
+                if let a = selectedCommitA {
+                    for path in candidatePaths {
+                        let out = try await engine.getDiff(from: a.sha, to: b.sha, filePath: path, at: repoPath)
+                        if !out.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            diffString = out
+                            break
+                        }
+                    }
+
+                    if diffString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        for path in candidatePaths {
+                            let out = try await engine.getDiff(from: b.sha, to: a.sha, filePath: path, at: repoPath)
+                            if !out.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                diffString = out
+                                break
+                            }
+                        }
+                    }
+
+                    if diffString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        let out = try await engine.getDiff(from: a.sha, to: b.sha, at: repoPath)
+                        if !out.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            diffString = out
+                        }
+                    }
+                } else {
+                    for path in candidatePaths {
+                        let out = try await engine.getCommitFileDiff(sha: b.sha, filePath: path, at: repoPath)
+                        if !out.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            diffString = out
+                            break
+                        }
+                    }
+
+                    if diffString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        let out = try await engine.getCommitDiff(sha: b.sha, at: repoPath)
+                        if !out.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            diffString = out
+                        }
+                    }
+                }
+            } else if let a = selectedCommitA {
+                for path in candidatePaths {
+                    let out = try await engine.getCommitFileDiff(sha: a.sha, filePath: path, at: repoPath)
+                    if !out.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        diffString = out
+                        break
+                    }
+                }
+
+                if diffString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let out = try await engine.getCommitDiff(sha: a.sha, at: repoPath)
+                    if !out.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        diffString = out
+                    }
+                }
+            } else {
+                overrideHunks = nil
+                return
+            }
+
+            if diffString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                overrideHunks = []
+                rebuildKaleidoscopeCaches()
+                return
+            }
+
+            let files = await DiffParser.parseAsync(diffString)
+            let normalizedTargets = Set(candidatePaths.map(normalizePath))
+            let targetFilename = URL(fileURLWithPath: primaryPath).lastPathComponent
+            let matched = files.first(where: {
+                normalizedTargets.contains(normalizePath($0.newPath)) || normalizedTargets.contains(normalizePath($0.oldPath ?? ""))
+            }) ?? files.first(where: { $0.filename == targetFilename })
+
+            // Prevent races: only apply if selection is still the same.
+            guard showHistory else { return }
+            guard selectedCommitA?.sha == requestedCommitASHA,
+                  selectedCommitB?.sha == requestedCommitBSHA else {
+                return
+            }
+
+            overrideHunks = matched?.hunks ?? files.first?.hunks ?? []
+
+            // Reset scroll so minimap and view are consistent
+            scrollOffset = 0
+            minimapScrollTrigger = UUID()
+
+            // Force Kaleidoscope caches to rebuild even if hunk count didn't change.
+            rebuildKaleidoscopeCaches()
+        } catch {
+            overrideHunks = []
+            rebuildKaleidoscopeCaches()
+        }
+    }
+
+    @ViewBuilder
+    private func kaleidoscopeContent(theme: SwiftUI.Color.Theme) -> some View {
+        let hunksById = cachedHunksById
+
+        switch viewMode {
+        case .kaleidoscopeBlocks, .kaleidoscopeFluid:
+            let pairedLines = cachedPairedLines
+            HStack(spacing: 0) {
+                KaleidoscopeSplitDiffView(
+                    pairedLines: pairedLines,
+                    filePath: fileDiff.newPath,
+                    hunksById: hunksById,
+                    repoPath: repoPath,
+                    allowPatchActions: allowPatchActions,
+                    contentVersion: kaleidoscopeRenderVersion,
+                    showLineNumbers: showLineNumbers,
+                    showConnectionLines: true,
+                    isFluidMode: viewMode == .kaleidoscopeFluid,
+                    scrollOffset: $scrollOffset,
+                    viewportHeight: $viewportHeight,
+                    contentHeight: $contentHeight,
+                    minimapScrollTrigger: $minimapScrollTrigger
+                )
+
+                if showMinimap {
+                    Rectangle()
+                        .fill(theme.border)
+                        .frame(width: 1)
+
+                    KaleidoscopeMinimapWrapper(
+                        rows: minimapRows(from: pairedLines),
+                        scrollOffset: $scrollOffset,
+                        viewportHeight: $viewportHeight,
+                        contentHeight: $contentHeight,
+                        minimapScrollTriggerAction: { minimapScrollTrigger = UUID() }
+                    )
+                    .frame(width: 80)
+                    .padding(.trailing, 4)
+                    .padding(.vertical, 4)
+                }
+            }
+        case .kaleidoscopeUnified:
+            let unifiedLines = cachedUnifiedLines
+            HStack(spacing: 0) {
+                KaleidoscopeUnifiedView(
+                    unifiedLines: unifiedLines,
+                    showLineNumbers: showLineNumbers,
+                    scrollOffset: $scrollOffset,
+                    viewportHeight: $viewportHeight,
+                    contentHeight: $contentHeight,
+                    minimapScrollTrigger: $minimapScrollTrigger,
+                    contentVersion: kaleidoscopeRenderVersion
+                )
+
+                if showMinimap {
+                    Rectangle()
+                        .fill(theme.border)
+                        .frame(width: 1)
+
+                    KaleidoscopeMinimapWrapper(
+                        rows: minimapRows(from: unifiedLines),
+                        scrollOffset: $scrollOffset,
+                        viewportHeight: $viewportHeight,
+                        contentHeight: $contentHeight,
+                        minimapScrollTriggerAction: { minimapScrollTrigger = UUID() }
+                    )
+                    .frame(width: 80)
+                    .padding(.trailing, 4)
+                    .padding(.vertical, 4)
+                }
+            }
+        default:
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func standardContent(theme: SwiftUI.Color.Theme) -> some View {
+        HStack(spacing: 0) {
+            switch viewMode {
+            case .split:
+                OptimizedSplitDiffView(
+                    hunks: effectiveHunks,
+                    showLineNumbers: showLineNumbers,
+                    scrollOffset: $scrollOffset,
+                    viewportHeight: $viewportHeight,
+                    contentHeight: $contentHeight
+                )
+                .id(fileDiff.id)
+            case .inline:
+                OptimizedInlineDiffView(
+                    hunks: effectiveHunks,
+                    showLineNumbers: showLineNumbers,
+                    scrollOffset: $scrollOffset,
+                    viewportHeight: $viewportHeight,
+                    contentHeight: $contentHeight
+                )
+            case .hunk:
+                HunkDiffView(
+                    hunks: effectiveHunks,
+                    showLineNumbers: showLineNumbers,
+                    scrollOffset: $scrollOffset,
+                    viewportHeight: $viewportHeight,
+                    contentHeight: $contentHeight
+                )
+            case .preview:
+                MarkdownView(content: previewContent, fileName: fileDiff.displayPath)
+            case .kaleidoscopeBlocks, .kaleidoscopeFluid, .kaleidoscopeUnified:
+                EmptyView()
+            }
+
+            if showMinimap && viewMode != .preview {
+                Rectangle()
+                    .fill(theme.border)
+                    .frame(width: 1)
+
+                OptimizedMinimapView(
+                    rows: minimapRows(from: effectiveHunks),
+                    scrollPosition: scrollPosition,
+                    viewportRatio: viewportRatio,
+                    onScrollToPosition: { normalizedPos in
+                        NSLog("🔵 [DiffView] Minimap clicked! normalizedPos: %.3f", normalizedPos)
+                        let maxScroll = max(0, contentHeight - viewportHeight)
+                        let newOffset = normalizedPos * maxScroll
+                        NSLog("🔵 [DiffView] Calculated newOffset: %.1f (maxScroll: %.1f)", newOffset, maxScroll)
+                        scrollOffset = newOffset
+                        minimapScrollTrigger = UUID()
+                    }
+                )
+                .frame(width: 60)
+            }
+        }
+    }
+
+    private func minimapRows(from pairedLines: [DiffPairWithConnection]) -> [MinimapRow] {
+        let theme = Color.Theme(themeManager.colors)
+        return pairedLines.map { pair in
+            let color: SwiftUI.Color = switch pair.connectionType {
+            case .addition: theme.diffAddition
+            case .deletion: theme.diffDeletion
+            case .change: theme.info
+            case .none:
+                pair.hunkHeader != nil ? theme.accent.opacity(0.4) : SwiftUI.Color.clear
+            }
+            return MinimapRow(id: pair.id, color: color, isHeader: pair.hunkHeader != nil)
+        }
+    }
+
+    private func minimapRows(from unifiedLines: [UnifiedLine]) -> [MinimapRow] {
+        let theme = Color.Theme(themeManager.colors)
+        return unifiedLines.map { line in
+            let color: SwiftUI.Color = switch line.type {
+            case .addition: theme.diffAddition
+            case .deletion: theme.diffDeletion
+            case .hunkHeader: theme.accent.opacity(0.4)
+            case .context: SwiftUI.Color.clear
+            }
+            return MinimapRow(id: line.id, color: color, isHeader: line.type == .hunkHeader)
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    /// Load commits for kaleidoscope history sidebar
+    private func loadCommitsIfNeeded() {
+        guard let repoPath = repoPath else { return }
+        if commitsLoaded, commitsLoadedForPath == fileDiff.newPath, !availableCommits.isEmpty { return }
+        
+        Task {
+            do {
+                let gitService = GitService()
+                // Create a Repository object from the path
+                let repository = Repository(
+                    id: UUID(),
+                    path: repoPath,
+                    name: (repoPath as NSString).lastPathComponent
+                )
+                gitService.currentRepository = repository
+                let commits = try await gitService.getCommitsForFileV2(filePath: fileDiff.newPath, limit: 200)
+                await MainActor.run {
+                    self.availableCommits = commits
+                    self.commitsLoaded = !commits.isEmpty
+                    self.commitsLoadedForPath = self.fileDiff.newPath
+                }
+            } catch {
+                print("Failed to load commits: \(error)")
+                await MainActor.run {
+                    self.commitsLoaded = false
+                    self.commitsLoadedForPath = nil
+                }
+            }
+        }
+    }
     private func minimapRows(from hunks: [DiffHunk]) -> [MinimapRow] {
+        let theme = Color.Theme(themeManager.colors)
         var rows: [MinimapRow] = []
         var id = 0
         for hunk in hunks {
             id += 1
-            rows.append(MinimapRow(id: id, color: AppTheme.accent.opacity(0.3), isHeader: true))
+            rows.append(MinimapRow(id: id, color: theme.accent.opacity(0.3), isHeader: true))
             for line in hunk.lines {
                 id += 1
                 let color: SwiftUI.Color = switch line.type {
-                case .addition: AppTheme.diffAddition
-                case .deletion: AppTheme.diffDeletion
+                case .addition: theme.diffAddition
+                case .deletion: theme.diffDeletion
                 default: SwiftUI.Color.clear
                 }
                 rows.append(MinimapRow(id: id, color: color, isHeader: false))
@@ -392,6 +741,86 @@ struct BlameSheet: View {
 
 
 
+// MARK: - Large File Split Diff View Wrapper
+
+struct LargeFileSplitDiffViewWrapper: View {
+    @StateObject private var themeManager = ThemeManager.shared
+    
+    let hunks: [DiffHunk]
+    let showLineNumbers: Bool
+    
+    private var totalLineCount: Int {
+        hunks.reduce(0) { $0 + $1.lines.count + 1 }
+    }
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            // Left pane
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(hunks.enumerated()), id: \.offset) { hunkIndex, hunk in
+                        // Hunk header
+                        FastHunkHeader(header: hunk.header)
+                        
+                        // Left side lines
+                        ForEach(Array(hunk.lines.enumerated()), id: \.offset) { lineIndex, line in
+                            if line.type != .addition {
+                                FastDiffLine(
+                                    line: line,
+                                    side: .left,
+                                    showLineNumber: showLineNumbers,
+                                    paired: nil
+                                )
+                            } else {
+                                FastEmptyLine(
+                                    showLineNumber: showLineNumbers,
+                                    isDeleted: false,
+                                    isAdded: true
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            
+            // Divider
+            Rectangle()
+                .fill(Color(.separatorColor))
+                .frame(width: 1)
+            
+            // Right pane
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(hunks.enumerated()), id: \.offset) { hunkIndex, hunk in
+                        // Hunk header
+                        FastHunkHeader(header: hunk.header)
+                        
+                        // Right side lines
+                        ForEach(Array(hunk.lines.enumerated()), id: \.offset) { lineIndex, line in
+                            if line.type != .deletion {
+                                FastDiffLine(
+                                    line: line,
+                                    side: .right,
+                                    showLineNumber: showLineNumbers,
+                                    paired: nil
+                                )
+                            } else {
+                                FastEmptyLine(
+                                    showLineNumber: showLineNumbers,
+                                    isDeleted: true,
+                                    isAdded: false
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+}
+
 // MARK: - Optimized Split Diff View
 
 struct OptimizedSplitDiffView: View {
@@ -400,7 +829,8 @@ struct OptimizedSplitDiffView: View {
     @Binding var scrollOffset: CGFloat
     @Binding var viewportHeight: CGFloat
     @Binding var contentHeight: CGFloat
-    @State private var viewWidth: CGFloat = 1000
+
+    @StateObject private var themeManager = ThemeManager.shared
 
     private var pairs: [DiffPair] {
         // ... (implementation hidden, same as before)
@@ -462,25 +892,57 @@ struct OptimizedSplitDiffView: View {
     }
 
     var body: some View {
-        SynchronizedSplitDiffScrollView(
+        let theme = Color.Theme(themeManager.colors)
+        let rows = pairs
+
+        let contentVersion = {
+            var v = showLineNumbers ? 1 : 0
+            v &+= hunks.count &* 31
+            v &+= hunks.reduce(0) { $0 &+ $1.header.hashValue } &* 131
+            v &+= hunks.reduce(0) { $0 &+ $1.lines.count } &* 17
+            return v
+        }()
+
+        func desiredContentHeight(from rows: [DiffPair]) -> CGFloat {
+            var total: CGFloat = 0
+            for row in rows {
+                total += row.hunkHeader != nil ? 27 : 22
+            }
+            return max(total, 1)
+        }
+
+        let desiredHeight = desiredContentHeight(from: rows)
+
+        return SynchronizedSplitDiffScrollView(
             scrollOffset: $scrollOffset,
             viewportHeight: $viewportHeight,
             contentHeight: $contentHeight,
-            leftContent: {
-                SplitDiffContentView(
-                    pairs: pairs,
-                    side: .left,
-                    showLineNumbers: showLineNumbers
-                )
-            },
-            rightContent: {
-                SplitDiffContentView(
-                    pairs: pairs,
-                    side: .right,
-                    showLineNumbers: showLineNumbers
-                )
+            contentVersion: contentVersion
+        ) {
+            SplitDiffContentView(pairs: rows, side: .left, showLineNumbers: showLineNumbers)
+                .background(theme.background)
+        } rightContent: {
+            SplitDiffContentView(pairs: rows, side: .right, showLineNumbers: showLineNumbers)
+                .background(theme.background)
+        }
+        .background(theme.background)
+        .onAppear {
+            if abs(contentHeight - desiredHeight) > 0.5 {
+                contentHeight = desiredHeight
             }
-        )
+        }
+        .onChange(of: hunks.count) { _, _ in
+            let newDesired = desiredContentHeight(from: rows)
+            if abs(contentHeight - newDesired) > 0.5 {
+                contentHeight = newDesired
+            }
+        }
+        .onChange(of: hunks.reduce(0) { $0 + $1.lines.count }) { _, _ in
+            let newDesired = desiredContentHeight(from: rows)
+            if abs(contentHeight - newDesired) > 0.5 {
+                contentHeight = newDesired
+            }
+        }
     }
 }
 
@@ -491,6 +953,7 @@ struct SynchronizedSplitDiffScrollView<LeftContent: View, RightContent: View>: N
     @Binding var scrollOffset: CGFloat
     @Binding var viewportHeight: CGFloat
     @Binding var contentHeight: CGFloat
+    let contentVersion: Int
     @ViewBuilder let leftContent: () -> LeftContent
     @ViewBuilder let rightContent: () -> RightContent
 
@@ -504,6 +967,8 @@ struct SynchronizedSplitDiffScrollView<LeftContent: View, RightContent: View>: N
         leftScrollView.autohidesScrollers = false
         leftScrollView.borderType = .noBorder
         leftScrollView.drawsBackground = false
+        leftScrollView.verticalScrollElasticity = .none
+        leftScrollView.horizontalScrollElasticity = .none
 
         // Create right scroll view
         let rightScrollView = NSScrollView()
@@ -512,6 +977,8 @@ struct SynchronizedSplitDiffScrollView<LeftContent: View, RightContent: View>: N
         rightScrollView.autohidesScrollers = false
         rightScrollView.borderType = .noBorder
         rightScrollView.drawsBackground = false
+        rightScrollView.verticalScrollElasticity = .none
+        rightScrollView.horizontalScrollElasticity = .none
 
         // Create hosting views for SwiftUI content
         let leftHostingView = NSHostingView(rootView: leftContent())
@@ -524,6 +991,9 @@ struct SynchronizedSplitDiffScrollView<LeftContent: View, RightContent: View>: N
         context.coordinator.leftScrollView = leftScrollView
         context.coordinator.rightScrollView = rightScrollView
         context.coordinator.containerView = containerView
+        context.coordinator.leftHostingView = leftHostingView
+        context.coordinator.rightHostingView = rightHostingView
+        context.coordinator.lastContentVersion = contentVersion
 
         // Add scroll notification observers
         NotificationCenter.default.addObserver(
@@ -545,7 +1015,7 @@ struct SynchronizedSplitDiffScrollView<LeftContent: View, RightContent: View>: N
 
         let divider = NSView()
         divider.wantsLayer = true
-        divider.layer?.backgroundColor = NSColor.separatorColor.cgColor
+        divider.layer?.backgroundColor = NSColor(Color.Theme(ThemeManager.shared.colors).border).cgColor
         containerView.addSubview(divider)
 
         containerView.addSubview(rightScrollView)
@@ -580,6 +1050,14 @@ struct SynchronizedSplitDiffScrollView<LeftContent: View, RightContent: View>: N
               let rightScrollView = context.coordinator.rightScrollView,
               let divider = context.coordinator.divider else { return }
 
+        if context.coordinator.lastContentVersion != contentVersion {
+            context.coordinator.leftHostingView?.rootView = leftContent()
+            context.coordinator.rightHostingView?.rootView = rightContent()
+            context.coordinator.lastContentVersion = contentVersion
+        }
+
+        divider.layer?.backgroundColor = NSColor(Color.Theme(ThemeManager.shared.colors).border).cgColor
+
         // Update layout
         let frame = nsView.bounds
         let dividerWidth: CGFloat = 2
@@ -589,32 +1067,46 @@ struct SynchronizedSplitDiffScrollView<LeftContent: View, RightContent: View>: N
         divider.frame = NSRect(x: halfWidth, y: 0, width: dividerWidth, height: frame.height)
         rightScrollView.frame = NSRect(x: halfWidth + dividerWidth, y: 0, width: halfWidth, height: frame.height)
 
-        // Sync document view sizes (use max height for both)
+        // Sync document view sizes (ensure height is large enough for full scrolling)
         if let leftDocView = leftScrollView.documentView,
            let rightDocView = rightScrollView.documentView {
-            let maxHeight = max(leftDocView.fittingSize.height, rightDocView.fittingSize.height)
+            let fittedHeight = max(leftDocView.fittingSize.height, rightDocView.fittingSize.height)
+            let desiredHeight = max(contentHeight, fittedHeight, frame.height)
             let leftWidth = max(leftDocView.fittingSize.width, halfWidth)
             let rightWidth = max(rightDocView.fittingSize.width, halfWidth)
 
-            leftDocView.frame = NSRect(x: 0, y: 0, width: leftWidth, height: maxHeight)
-            rightDocView.frame = NSRect(x: 0, y: 0, width: rightWidth, height: maxHeight)
+            leftDocView.frame = NSRect(x: 0, y: 0, width: leftWidth, height: desiredHeight)
+            rightDocView.frame = NSRect(x: 0, y: 0, width: rightWidth, height: desiredHeight)
 
             // Update contentHeight binding
-            if maxHeight > 0 {
-                contentHeight = maxHeight
+            if desiredHeight > 0, context.coordinator.lastContentHeight != desiredHeight {
+                context.coordinator.lastContentHeight = desiredHeight
+                DispatchQueue.main.async {
+                    contentHeight = desiredHeight
+                }
             }
         }
 
         // Update viewport height
-        if frame.height > 0 {
-            viewportHeight = frame.height
+        if frame.height > 0, context.coordinator.lastViewportHeight != frame.height {
+            context.coordinator.lastViewportHeight = frame.height
+            DispatchQueue.main.async {
+                viewportHeight = frame.height
+            }
         }
 
         // Handle programmatic scrolling from SwiftUI (e.g., minimap clicks)
         if !context.coordinator.isSyncing {
-            let targetPoint = NSPoint(x: 0, y: scrollOffset)
-            leftScrollView.contentView.scroll(to: targetPoint)
-            rightScrollView.contentView.scroll(to: targetPoint)
+            let maxScroll = max(0, contentHeight - frame.height)
+            let targetY = max(0, min(scrollOffset, maxScroll))
+            if abs(context.coordinator.lastAppliedProgrammaticScrollOffset - targetY) > 0.5 {
+                context.coordinator.lastAppliedProgrammaticScrollOffset = targetY
+                let targetPoint = NSPoint(x: 0, y: targetY)
+                leftScrollView.contentView.scroll(to: targetPoint)
+                rightScrollView.contentView.scroll(to: targetPoint)
+                leftScrollView.reflectScrolledClipView(leftScrollView.contentView)
+                rightScrollView.reflectScrolledClipView(rightScrollView.contentView)
+            }
         }
     }
 
@@ -630,8 +1122,15 @@ struct SynchronizedSplitDiffScrollView<LeftContent: View, RightContent: View>: N
 
         weak var leftScrollView: NSScrollView?
         weak var rightScrollView: NSScrollView?
+        weak var leftHostingView: NSHostingView<LeftContent>?
+        weak var rightHostingView: NSHostingView<RightContent>?
         weak var containerView: NSView?
         weak var divider: NSView?
+
+        var lastViewportHeight: CGFloat = 0
+        var lastContentHeight: CGFloat = 0
+        var lastAppliedProgrammaticScrollOffset: CGFloat = -1
+        var lastContentVersion: Int = -1
 
         private var lastScrollTime: Date = Date()
         private let scrollDebounceInterval: TimeInterval = 0.016 // ~60fps
@@ -662,17 +1161,33 @@ struct SynchronizedSplitDiffScrollView<LeftContent: View, RightContent: View>: N
             if clipView == leftScrollView?.contentView {
                 // Left scrolled, sync to right
                 rightScrollView?.contentView.scroll(to: scrollPosition)
+                if let right = rightScrollView {
+                    right.reflectScrolledClipView(right.contentView)
+                }
             } else if clipView == rightScrollView?.contentView {
                 // Right scrolled, sync to left
                 leftScrollView?.contentView.scroll(to: scrollPosition)
+                if let left = leftScrollView {
+                    left.reflectScrolledClipView(left.contentView)
+                }
             }
 
             // Update SwiftUI binding for minimap integration (already on main thread)
-            parent.scrollOffset = max(0, scrollPosition.y)
+            let newOffset = max(0, scrollPosition.y)
+            if parent.scrollOffset != newOffset {
+                DispatchQueue.main.async {
+                    self.parent.scrollOffset = newOffset
+                }
+            }
 
             // Update viewport height if container is available
             if let container = containerView {
-                parent.viewportHeight = container.bounds.height
+                let newViewport = container.bounds.height
+                if newViewport > 0, self.parent.viewportHeight != newViewport {
+                    DispatchQueue.main.async {
+                        self.parent.viewportHeight = newViewport
+                    }
+                }
             }
         }
     }
@@ -1855,4 +2370,593 @@ private struct LargeDiffLineView: View {
 // 
 //     DiffView(fileDiff: sampleDiff)
 //         .frame(width: 800, height: 500)
-// }
+
+// MARK: - DifferenceKit Split Diff View
+
+struct DifferenceKitSplitDiffView: View {
+    @StateObject private var viewModel = DiffViewModel()
+    @State private var scrollOffset: CGFloat = 0
+    
+    let oldText: String
+    let newText: String
+    let showLineNumbers: Bool = true
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ScrollViewReader { proxy in
+                ScrollView {
+                    ZStack(alignment: .topLeading) {
+                        // Main content with synchronized scrolling
+                        LazyVStack(spacing: 0) {
+                            ForEach(viewModel.diffRows) { row in
+                                DiffRowView(
+                                    row: row,
+                                    showLineNumbers: showLineNumbers,
+                                    width: geometry.size.width
+                                )
+                                .id("row_\(row.id)")
+                            }
+                        }
+                        .background(
+                            GeometryReader { scrollGeometry in
+                                Color.clear.preference(
+                                    key: ScrollOffsetKey.self,
+                                    value: -scrollGeometry.frame(in: .named("scroll")).minY
+                                )
+                            }
+                        )
+                    }
+                }
+                .coordinateSpace(name: "scroll")
+                .onPreferenceChange(ScrollOffsetKey.self) { offset in
+                    scrollOffset = offset
+                }
+                .onAppear {
+                    viewModel.calculateDiff(oldText: oldText, newText: newText)
+                }
+                .onChange(of: oldText) { _, new in
+                    viewModel.calculateDiff(oldText: new, newText: newText)
+                }
+                .onChange(of: newText) { _, new in
+                    viewModel.calculateDiff(oldText: oldText, newText: new)
+                }
+            }
+        }
+        .background(Color(.textBackgroundColor))
+    }
+}
+
+// MARK: - Diff Row View
+
+struct DiffRowView: View {
+    let row: DKDiffRow
+    let showLineNumbers: Bool
+    let width: CGFloat
+    
+    private let gutterWidth: CGFloat = 60
+    private let paneWidth: CGFloat
+    
+    init(row: DKDiffRow, showLineNumbers: Bool, width: CGFloat) {
+        self.row = row
+        self.showLineNumbers = showLineNumbers
+        self.width = width
+        self.paneWidth = (width - gutterWidth) / 2
+    }
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            // Left pane
+            DiffPaneView(
+                content: row.left,
+                side: .left,
+                showLineNumbers: showLineNumbers,
+                width: paneWidth,
+                pairedContent: row.right
+            )
+            
+            // Gutter
+            Rectangle()
+                .fill(Color(.controlBackgroundColor))
+                .frame(width: gutterWidth)
+            
+            // Right pane
+            DiffPaneView(
+                content: row.right,
+                side: .right,
+                showLineNumbers: showLineNumbers,
+                width: paneWidth,
+                pairedContent: row.left
+            )
+        }
+        .frame(height: 24)
+    }
+}
+
+// MARK: - Diff Pane View
+
+struct DiffPaneView: View {
+    let content: DKDiffLineContent
+    let side: DKDiffSide
+    let showLineNumbers: Bool
+    let width: CGFloat
+    let pairedContent: DKDiffLineContent
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            if showLineNumbers {
+                Text(lineNumber)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .frame(width: 50, alignment: .trailing)
+                    .padding(.trailing, 8)
+                    .background(lineNumberBackground)
+            }
+            
+            Text(changeIndicator)
+                .font(.system(.caption, design: .monospaced))
+                .foregroundColor(indicatorColor)
+                .frame(width: 20)
+            
+            // Content with intra-line highlighting
+            if case .content(let text, _) = content, 
+               case .content(let pairedText, _) = pairedContent,
+               diffType == .deleted || diffType == .added {
+                Text(highlightedContent(text: text, pairedText: pairedText))
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundColor(textColor)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.trailing, 8)
+            } else {
+                Text(contentText)
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundColor(textColor)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.trailing, 8)
+            }
+        }
+        .frame(width: width)
+        .background(backgroundColor)
+    }
+    
+    private var lineNumber: String {
+        switch content {
+        case .content(_, let lineNumber):
+            return String(lineNumber)
+        case .spacer:
+            return ""
+        }
+    }
+    
+    private var contentText: String {
+        switch content {
+        case .content(let text, _):
+            return text
+        case .spacer:
+            return ""
+        }
+    }
+    
+    private var changeIndicator: String {
+        switch diffType {
+        case .added: return "+"
+        case .deleted: return "-"
+        default: return " "
+        }
+    }
+    
+    private var diffType: DKDiffLineType {
+        switch (content, pairedContent) {
+        case (.content, .spacer):
+            return side == .left ? .deleted : .added
+        case (.spacer, .content):
+            return .spacer
+        case (.content, .content):
+            return .unchanged
+        case (.spacer, .spacer):
+            return .spacer
+        }
+    }
+    
+    private var indicatorColor: SwiftUI.Color {
+        switch diffType {
+        case .added: return SwiftUI.Color(red: 0.373, green: 0.722, blue: 0.471) // #5FB878
+        case .deleted: return SwiftUI.Color(red: 0.851, green: 0.325, blue: 0.31) // #D9534F
+        default: return .secondary
+        }
+    }
+    
+    private var textColor: SwiftUI.Color {
+        switch diffType {
+        case .added: return SwiftUI.Color(red: 0.373, green: 0.722, blue: 0.471) // #5FB878
+        case .deleted: return SwiftUI.Color(red: 0.851, green: 0.325, blue: 0.31) // #D9534F
+        default: return .primary
+        }
+    }
+    
+    private var backgroundColor: SwiftUI.Color {
+        switch diffType {
+        case .added: return SwiftUI.Color(red: 0.373, green: 0.722, blue: 0.471, opacity: 0.25)
+        case .deleted: return SwiftUI.Color(red: 0.851, green: 0.325, blue: 0.31, opacity: 0.25)
+        case .spacer: return SwiftUI.Color.clear
+        default: return SwiftUI.Color.clear
+        }
+    }
+    
+    private var lineNumberBackground: SwiftUI.Color {
+        switch diffType {
+        case .added, .deleted: return SwiftUI.Color(.controlBackgroundColor).opacity(0.5)
+        default: return SwiftUI.Color(.controlBackgroundColor)
+        }
+    }
+    
+    private func highlightedContent(text: String, pairedText: String) -> AttributedString {
+        let diffResult = DKWordLevelDiff.compare(oldLine: text, newLine: pairedText)
+        let segments = diffType == .deleted ? diffResult.oldSegments : diffResult.newSegments
+        
+        var result = AttributedString()
+        
+        for segment in segments {
+            var segmentAttr = AttributedString(segment.text)
+            
+            switch segment.type {
+            case .unchanged:
+                break
+            case .added:
+                segmentAttr.backgroundColor = SwiftUI.Color(red: 0.373, green: 0.722, blue: 0.471, opacity: 0.4)
+                segmentAttr.foregroundColor = SwiftUI.Color(red: 0.373, green: 0.722, blue: 0.471)
+            case .removed:
+                segmentAttr.backgroundColor = SwiftUI.Color(red: 0.851, green: 0.325, blue: 0.31, opacity: 0.4)
+                segmentAttr.foregroundColor = SwiftUI.Color(red: 0.851, green: 0.325, blue: 0.31)
+            case .changed:
+                let color = diffType == .added ? 
+                    SwiftUI.Color(red: 0.373, green: 0.722, blue: 0.471) : 
+                    SwiftUI.Color(red: 0.851, green: 0.325, blue: 0.31)
+                segmentAttr.backgroundColor = color.opacity(0.4)
+            }
+            
+            result.append(segmentAttr)
+        }
+        
+        return result
+    }
+}
+
+// MARK: - DK Diff Side
+
+enum DKDiffSide {
+    case left
+    case right
+}
+
+// MARK: - Scroll Offset Preference Key
+
+struct ScrollOffsetKey: PreferenceKey {
+    nonisolated(unsafe) static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+// MARK: - DK Diff Line Types
+
+enum DKDiffLineType {
+    case unchanged
+    case added
+    case deleted
+    case spacer
+}
+
+enum DKDiffLineContent {
+    case content(String, lineNumber: Int)
+    case spacer
+}
+
+// MARK: - DK Diff Row Model
+
+struct DKDiffRow: Identifiable {
+    let id = UUID()
+    let left: DKDiffLineContent
+    let right: DKDiffLineContent
+}
+
+// MARK: - Diff ViewModel
+
+class DiffViewModel: ObservableObject {
+    @Published var diffRows: [DKDiffRow] = []
+    
+    // MARK: - Public Methods
+    
+    func calculateDiff(oldText: String, newText: String) {
+        let oldLines = oldText.components(separatedBy: .newlines)
+        let newLines = newText.components(separatedBy: .newlines)
+        
+        // Create differentiable elements
+        let oldElements = oldLines.enumerated().map { index, content in
+            DiffElement(content: content, index: index, side: .old)
+        }
+        
+        let newElements = newLines.enumerated().map { index, content in
+            DiffElement(content: content, index: index, side: .new)
+        }
+        
+        // Calculate changeset using DifferenceKit
+        let changeset = StagedChangeset(source: oldElements, target: newElements)
+        
+        // Apply gap insertion algorithm using the changeset
+        var finalRows: [DKDiffRow] = []
+        
+        for stage in changeset {
+            for deletion in stage.elementDeleted {
+                // Add deleted line to left, spacer to right
+                let element = oldElements[deletion.element]
+                finalRows.append(DKDiffRow(
+                    left: .content(element.content, lineNumber: element.index + 1),
+                    right: .spacer
+                ))
+            }
+            
+            for insertion in stage.elementInserted {
+                // Add spacer to left, inserted line to right
+                let element = newElements[insertion.element]
+                finalRows.append(DKDiffRow(
+                    left: .spacer,
+                    right: .content(element.content, lineNumber: element.index + 1)
+                ))
+            }
+            
+            for move in stage.elementMoved {
+                // Handle moves - for now treat as unchanged line
+                let newElement = newElements[move.target.element]
+                finalRows.append(DKDiffRow(
+                    left: .content(newElement.content, lineNumber: move.source.element + 1),
+                    right: .content(newElement.content, lineNumber: move.target.element + 1)
+                ))
+            }
+        }
+        
+        // Add unchanged lines that weren't in the changeset
+        var processedOldIndices = Set<Int>()
+        var processedNewIndices = Set<Int>()
+        
+        for stage in changeset {
+            for deletion in stage.elementDeleted {
+                processedOldIndices.insert(deletion.element)
+            }
+            
+            for insertion in stage.elementInserted {
+                processedNewIndices.insert(insertion.element)
+            }
+            
+            for move in stage.elementMoved {
+                processedOldIndices.insert(move.source.element)
+                processedNewIndices.insert(move.target.element)
+            }
+        }
+        
+        // Find unchanged lines and add them
+        var oldIndex = 0
+        var newIndex = 0
+        var allRows: [DKDiffRow] = []
+        
+        while oldIndex < oldLines.count || newIndex < newLines.count {
+            if oldIndex < oldLines.count && newIndex < newLines.count {
+                if !processedOldIndices.contains(oldIndex) && 
+                   !processedNewIndices.contains(newIndex) && 
+                   oldLines[oldIndex] == newLines[newIndex] {
+                    // Unchanged line
+                    allRows.append(DKDiffRow(
+                        left: .content(oldLines[oldIndex], lineNumber: oldIndex + 1),
+                        right: .content(newLines[newIndex], lineNumber: newIndex + 1)
+                    ))
+                    oldIndex += 1
+                    newIndex += 1
+                } else {
+                    // Find the next unchanged line
+                    let (nextOld, nextNew) = findNextUnchangedLines(
+                        oldLines: oldLines,
+                        newLines: newLines,
+                        oldStart: oldIndex,
+                        newStart: newIndex,
+                        processedOld: processedOldIndices,
+                        processedNew: processedNewIndices
+                    )
+                    
+                    // Add deletions from old
+                    for i in oldIndex..<nextOld {
+                        if !processedOldIndices.contains(i) {
+                            allRows.append(DKDiffRow(
+                                left: .content(oldLines[i], lineNumber: i + 1),
+                                right: .spacer
+                            ))
+                        }
+                    }
+                    
+                    // Add insertions to new
+                    for i in newIndex..<nextNew {
+                        if !processedNewIndices.contains(i) {
+                            allRows.append(DKDiffRow(
+                                left: .spacer,
+                                right: .content(newLines[i], lineNumber: i + 1)
+                            ))
+                        }
+                    }
+                    
+                    oldIndex = nextOld
+                    newIndex = nextNew
+                }
+            } else {
+                break
+            }
+        }
+        
+        // Merge the changeset rows with unchanged rows
+        self.diffRows = mergeChangesetRows(changesetRows: finalRows, unchangedRows: allRows)
+    }
+    
+    // MARK: - Private Methods
+    
+    private func findNextUnchangedLines(
+        oldLines: [String],
+        newLines: [String],
+        oldStart: Int,
+        newStart: Int,
+        processedOld: Set<Int>,
+        processedNew: Set<Int>
+    ) -> (oldIndex: Int, newIndex: Int) {
+        var oldIndex = oldStart
+        var newIndex = newStart
+        
+        // Look ahead to find the next unchanged line
+        let maxLookahead = 20
+        
+        while oldIndex < oldLines.count && newIndex < newLines.count && 
+              (oldIndex - oldStart < maxLookahead || newIndex - newStart < maxLookahead) {
+            
+            if !processedOld.contains(oldIndex) && 
+               !processedNew.contains(newIndex) && 
+               oldLines[oldIndex] == newLines[newIndex] {
+                return (oldIndex, newIndex)
+            }
+            
+            // Advance indices to find the next match
+            if oldIndex - oldStart < maxLookahead {
+                oldIndex += 1
+            }
+            if newIndex - newStart < maxLookahead {
+                newIndex += 1
+            }
+        }
+        
+        return (min(oldIndex, oldLines.count), min(newIndex, newLines.count))
+    }
+    
+    private func mergeChangesetRows(changesetRows: [DKDiffRow], unchangedRows: [DKDiffRow]) -> [DKDiffRow] {
+        // Create a map of line numbers to changeset rows for quick lookup
+        var deletionMap: [Int: DKDiffRow] = [:]
+        var insertionMap: [Int: DKDiffRow] = [:]
+        
+        for row in changesetRows {
+            switch (row.left, row.right) {
+            case (.content(_, let lineNumber), .spacer):
+                deletionMap[lineNumber] = row
+            case (.spacer, .content(_, let lineNumber)):
+                insertionMap[lineNumber] = row
+            default:
+                break
+            }
+        }
+        
+        // Merge unchanged rows with changeset rows
+        var merged: [DKDiffRow] = []
+        
+        for row in unchangedRows {
+            switch (row.left, row.right) {
+            case (.content(_, let oldLineNumber), .content(_, let newLineNumber)):
+                // Add any deletions before this unchanged line
+                if let deletion = deletionMap[oldLineNumber] {
+                    merged.append(deletion)
+                }
+                
+                // Add any insertions before this unchanged line
+                if let insertion = insertionMap[newLineNumber] {
+                    merged.append(insertion)
+                }
+                
+                // Add the unchanged line
+                merged.append(row)
+            default:
+                break
+            }
+        }
+        
+        // Add any remaining deletions or insertions
+        for row in changesetRows {
+            switch (row.left, row.right) {
+            case (.content, .spacer), (.spacer, .content):
+                if !merged.contains(where: { $0.id == row.id }) {
+                    merged.append(row)
+                }
+            default:
+                break
+            }
+        }
+        
+        return merged
+    }
+}
+
+// MARK: - Diff Element for DifferenceKit
+
+struct DiffElement: Differentiable {
+    let content: String
+    let index: Int
+    let side: Side
+    
+    enum Side {
+        case old
+        case new
+    }
+    
+    var differenceIdentifier: String {
+        return "\(side)_\(index)_\(content)"
+    }
+    
+    func isContentEqual(to source: DiffElement) -> Bool {
+        return content == source.content
+    }
+}
+
+// MARK: - DK Intra-line Diff
+
+struct DKWordLevelDiff {
+    struct Segment {
+        let text: String
+        let type: SegmentType
+        
+        enum SegmentType {
+            case unchanged
+            case added
+            case removed
+            case changed
+        }
+    }
+    
+    static func compare(oldLine: String, newLine: String) -> (oldSegments: [Segment], newSegments: [Segment]) {
+        let oldWords = oldLine.components(separatedBy: .whitespacesAndNewlines)
+        let newWords = newLine.components(separatedBy: .whitespacesAndNewlines)
+        
+        let oldElements = oldWords.map { DKWordElement(content: $0) }
+        let newElements = newWords.map { DKWordElement(content: $0) }
+        
+        let changeset = StagedChangeset(source: oldElements, target: newElements)
+        
+        var oldSegments: [Segment] = []
+        var newSegments: [Segment] = []
+        
+        for stage in changeset {
+            for deletion in stage.elementDeleted {
+                oldSegments.append(Segment(text: oldElements[deletion.element].content, type: .removed))
+            }
+            
+            for insertion in stage.elementInserted {
+                newSegments.append(Segment(text: newElements[insertion.element].content, type: .added))
+            }
+            
+            // Moves are ignored for word-level diff
+        }
+        
+        return (oldSegments, newSegments)
+    }
+}
+
+struct DKWordElement: Differentiable {
+    let content: String
+    
+    var differenceIdentifier: String {
+        return content
+    }
+    
+    func isContentEqual(to source: DKWordElement) -> Bool {
+        return content == source.content
+    }
+}

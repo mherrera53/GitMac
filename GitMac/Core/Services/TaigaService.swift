@@ -7,11 +7,17 @@ actor TaigaService {
     static let shared = TaigaService()
 
     private let baseURL = "https://api.taiga.io/api/v1"
+    private let session: URLSession
     private var authToken: String?
     private var refreshToken: String?
     private var userId: Int?
 
-    private init() {}
+    private init() {
+        let config = URLSessionConfiguration.ephemeral
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.urlCache = nil
+        self.session = URLSession(configuration: config)
+    }
 
     // MARK: - Authentication
 
@@ -43,7 +49,7 @@ actor TaigaService {
         let body = ["username": username, "password": password, "type": "normal"]
         request.httpBody = try JSONEncoder().encode(body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw TaigaError.invalidResponse
@@ -93,7 +99,7 @@ actor TaigaService {
         var request = URLRequest(url: URL(string: urlString)!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let (data, _) = try await session.data(for: request)
         return try JSONDecoder().decode([TaigaProject].self, from: data)
     }
 
@@ -110,7 +116,7 @@ actor TaigaService {
         var request = URLRequest(url: URL(string: urlString)!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
 
         // Debug logging
         if let httpResponse = response as? HTTPURLResponse {
@@ -137,7 +143,7 @@ actor TaigaService {
         var request = URLRequest(url: URL(string: urlString)!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let (data, _) = try await session.data(for: request)
         return try JSONDecoder().decode([TaigaTask].self, from: data)
     }
 
@@ -151,7 +157,7 @@ actor TaigaService {
         var request = URLRequest(url: URL(string: urlString)!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let (data, _) = try await session.data(for: request)
         return try JSONDecoder().decode([TaigaIssue].self, from: data)
     }
 
@@ -165,7 +171,7 @@ actor TaigaService {
         var request = URLRequest(url: URL(string: urlString)!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let (data, _) = try await session.data(for: request)
         return try JSONDecoder().decode([TaigaEpic].self, from: data)
     }
 
@@ -179,7 +185,7 @@ actor TaigaService {
         var request = URLRequest(url: URL(string: urlString)!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let (data, _) = try await session.data(for: request)
         return try JSONDecoder().decode([TaigaStatus].self, from: data)
     }
 }
@@ -247,7 +253,7 @@ struct TaigaUserStory: Identifiable, Codable {
     let createdDate: String
     let modifiedDate: String
     let isClosed: Bool
-    let tags: [[String]]?
+    let tags: [[String?]]?
 
     enum CodingKeys: String, CodingKey {
         case id, ref, subject, description, status, tags

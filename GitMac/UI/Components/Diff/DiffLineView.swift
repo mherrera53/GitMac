@@ -90,18 +90,20 @@ struct FastDiffLine: View {
     }
 
     private var indicatorColor: SwiftUI.Color {
+        let theme = Color.Theme(themeManager.colors)
         switch line.type {
-        case .addition: return Color.Theme(themeManager.colors).diffAddition
-        case .deletion: return Color.Theme(themeManager.colors).diffDeletion
-        default: return AppTheme.textMuted
+        case .addition: return theme.diffAddition
+        case .deletion: return theme.diffDeletion
+        default: return theme.textMuted
         }
     }
 
     private var textColor: SwiftUI.Color {
+        let theme = Color.Theme(themeManager.colors)
         switch line.type {
-        case .addition: return Color.Theme(themeManager.colors).diffAddition
-        case .deletion: return Color.Theme(themeManager.colors).diffDeletion
-        default: return AppTheme.textPrimary
+        case .addition: return theme.diffAddition
+        case .deletion: return theme.diffDeletion
+        default: return theme.text
         }
     }
 
@@ -212,18 +214,20 @@ struct FastInlineLine: View {
     }
 
     private var indicatorColor: SwiftUI.Color {
+        let theme = Color.Theme(themeManager.colors)
         switch line.type {
-        case .addition: return Color.Theme(themeManager.colors).diffAddition
-        case .deletion: return Color.Theme(themeManager.colors).diffDeletion
-        default: return AppTheme.textMuted
+        case .addition: return theme.diffAddition
+        case .deletion: return theme.diffDeletion
+        default: return theme.textMuted
         }
     }
 
     private var textColor: SwiftUI.Color {
+        let theme = Color.Theme(themeManager.colors)
         switch line.type {
-        case .addition: return Color.Theme(themeManager.colors).diffAddition
-        case .deletion: return Color.Theme(themeManager.colors).diffDeletion
-        default: return AppTheme.textPrimary
+        case .addition: return theme.diffAddition
+        case .deletion: return theme.diffDeletion
+        default: return theme.text
         }
     }
 
@@ -255,7 +259,7 @@ struct FastEmptyLine: View {
             if showLineNumber {
                 Text("")
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(AppTheme.textSecondary.opacity(0.3))
+                    .foregroundColor(Color.Theme(themeManager.colors).textSecondary.opacity(0.3))
                     .frame(width: 45, alignment: .trailing)
                     .padding(.leading, 8)
                     .padding(.trailing, 8)
@@ -293,7 +297,7 @@ struct FastEmptyLine: View {
             }
         }
         .frame(height: 22)
-        .background(AppTheme.textMuted.opacity(0.03))
+        .background(Color.Theme(themeManager.colors).textMuted.opacity(0.03))
     }
 }
 

@@ -280,6 +280,9 @@ struct MainLayout: View {
                  UnifiedBottomPanel(panelManager: bottomPanelManager)
                      .frame(height: bottomPanelManager.panelHeight)
                      .transition(.move(edge: .bottom))
+                     // Force recreation of the panel when repository changes to ensure
+                     // correct context (Terminal sessions, Integration tabs, etc.)
+                     .id(appState.currentRepository?.id.uuidString ?? "no-repo")
             }
         }
         .contextMenu { toolbarConfigurationMenu }
@@ -2270,7 +2273,33 @@ struct RightStagingPanel: View {
         }
         .onChange(of: appState.selectedCommit) { _, newCommit in
             if let commit = newCommit, let path = appState.currentRepository?.path {
-                Task { await commitDetailVM.loadCommitFiles(sha: commit.sha, at: path) }
+                let requestedSHA = commit.sha
+                Task {
+                    await commitDetailVM.loadCommitFiles(sha: requestedSHA, at: path)
+
+                    let firstFile = await MainActor.run { commitDetailVM.changedFiles.first }
+                    guard let firstFile else { return }
+
+                    let stillSelectedBefore = await MainActor.run { appState.selectedCommit?.sha == requestedSHA }
+                    guard stillSelectedBefore else { return }
+
+                    await MainActor.run {
+                        isLoadingDiff = true
+                        selectedFileDiff = nil
+                    }
+
+                    let diff = await commitDetailVM.getDiff(for: firstFile, commit: commit, at: path)
+
+                    let stillSelectedAfter = await MainActor.run { appState.selectedCommit?.sha == requestedSHA }
+                    guard stillSelectedAfter else { return }
+
+                    await MainActor.run {
+                        if let diff {
+                            selectedFileDiff = diff
+                        }
+                        isLoadingDiff = false
+                    }
+                }
             }
         }
         .onChange(of: appState.selectedStash) { _, newStash in

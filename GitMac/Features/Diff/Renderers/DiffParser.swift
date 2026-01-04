@@ -72,7 +72,8 @@ struct DiffParser {
                 currentFile = nil
                 currentHunk = nil
             } else if line.hasPrefix("--- ") {
-                let path = String(line.dropFirst(4))
+                let raw = String(line.dropFirst(4))
+                let path = raw.hasPrefix("a/") ? String(raw.dropFirst(2)) : raw
                 if currentFile == nil {
                     currentFile = (oldPath: path == "/dev/null" ? nil : path, newPath: "", hunks: [], additions: 0, deletions: 0)
                 } else {

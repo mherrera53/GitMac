@@ -33,7 +33,6 @@ struct TiledDiffView: NSViewRepresentable {
         // Enable layer-backed rendering for maximum performance
         scrollView.wantsLayer = true
         scrollView.contentView.wantsLayer = true
-        scrollView.contentView.copiesOnScroll = false
         
         // Set up notification for scroll changes
         NotificationCenter.default.addObserver(

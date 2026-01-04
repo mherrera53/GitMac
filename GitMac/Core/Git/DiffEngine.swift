@@ -6,16 +6,16 @@ import os.signpost
 /// Large File Mode configuration
 public struct LargeFileModeConfig: Codable, Equatable {
     /// File size threshold in bytes (default: 8 MB)
-    public var fileSizeThreshold: Int = 8 * 1024 * 1024
+    public var fileSizeThreshold: Int = 100 * 1024 * 1024  // 100 MB
 
     /// Estimated lines threshold (default: 50k)
-    public var linesThreshold: Int = 50_000
+    public var linesThreshold: Int = 1_000_000  // 1M lines
 
     /// Maximum line length before triggering LFM (default: 2k characters)
-    public var maxLineLengthThreshold: Int = 2_000
+    public var maxLineLengthThreshold: Int = 10_000
 
     /// Maximum hunks before triggering LFM (default: 1k)
-    public var hunksThreshold: Int = 1_000
+    public var hunksThreshold: Int = 10_000
 
     /// Context lines in LFM mode (default: 3)
     public var lfmContextLines: Int = 3

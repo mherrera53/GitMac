@@ -647,6 +647,41 @@ struct AISettingsView: View {
                 }
             }
 
+            SettingsSection(title: "System Prompts") {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
+                    PromptEditor(
+                        title: "Terminal Suggestions",
+                        key: "ai.prompt.terminal_suggestions",
+                        placeholders: "{{input}}, {{recent_context}}, {{repo_context}}",
+                        defaultPrompt: """
+                        You are a terminal command assistant. Suggest 3-5 relevant terminal commands based on the user's input.
+                        
+                        User input: "{{input}}"
+                        {{recent_context}}
+                        {{repo_context}}
+                        
+                        Return ONLY a JSON array of suggestions.
+                        """
+                    )
+
+                    Divider()
+
+                    PromptEditor(
+                        title: "Terminal Error Explanation",
+                        key: "ai.prompt.terminal_error",
+                        placeholders: "{{command}}, {{error}}, {{repo_context}}",
+                        defaultPrompt: """
+                        You are a helpful terminal assistant. Explain this error and suggest a fix.
+                        
+                        Command: {{command}}
+                        Error output:
+                        {{error}}
+                        {{repo_context}}
+                        """
+                    )
+                }
+            }
+
             SettingsSection(title: "Get API Keys") {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Link(destination: URL(string: "https://platform.openai.com/api-keys")!) {
@@ -2703,3 +2738,76 @@ struct SettingsSection<Content: View>: View {
 // #Preview {
 //     SettingsView()
 // }
+
+// MARK: - Prompt Editor
+
+struct PromptEditor: View {
+    let title: String
+    let key: String
+    let placeholders: String
+    let defaultPrompt: String
+
+    @State private var prompt: String = ""
+    @State private var isEditing = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+            HStack {
+                VStack(alignment: .leading) {
+                    Text(title)
+                        .foregroundColor(AppTheme.textPrimary)
+                        .fontWeight(.medium)
+                    Text("Placeholders: \(placeholders)")
+                        .foregroundColor(AppTheme.textSecondary)
+                        .font(DesignTokens.Typography.caption)
+                }
+
+                Spacer()
+
+                if prompt != defaultPrompt && !prompt.isEmpty {
+                    DSButton("Reset", variant: .secondary, size: .sm) {
+                        prompt = ""
+                        UserDefaults.standard.removeObject(forKey: key)
+                    }
+                }
+
+                DSButton(isEditing ? "Done" : "Edit", variant: isEditing ? .primary : .secondary, size: .sm) {
+                    isEditing.toggle()
+                }
+            }
+
+            if isEditing {
+                VStack(spacing: 0) {
+                    TextEditor(text: $prompt)
+                        .font(.custom("Menlo", size: 12))
+                        .foregroundColor(AppTheme.textPrimary)
+                        .frame(height: 150)
+                        .padding(8)
+                        .background(AppTheme.backgroundSecondary)
+                        .cornerRadius(6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(AppTheme.border, lineWidth: 1)
+                        )
+                }
+                .onChange(of: prompt) { _, newValue in
+                    if newValue.isEmpty {
+                        UserDefaults.standard.removeObject(forKey: key)
+                    } else {
+                        UserDefaults.standard.set(newValue, forKey: key)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(AppTheme.backgroundSecondary.opacity(0.3))
+        .cornerRadius(8)
+        .onAppear {
+            if let stored = UserDefaults.standard.string(forKey: key), !stored.isEmpty {
+                prompt = stored
+            } else {
+                prompt = defaultPrompt
+            }
+        }
+    }
+}

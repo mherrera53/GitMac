@@ -1028,7 +1028,7 @@ actor GitEngine {
             // Truncate very large diffs early (500KB max)
             let maxBytes = 500_000
             if output.utf8.count > maxBytes {
-                let truncated = String(output.utf8.prefix(maxBytes)) ?? String(output.prefix(maxBytes / 4))
+                let truncated = String(decoding: output.utf8.prefix(maxBytes), as: UTF8.self)
                 return truncated + "\n\n... [Output truncated - file too large] ..."
             }
 
@@ -1052,7 +1052,60 @@ actor GitEngine {
             throw GitError.commandFailed("git diff", result.stderr)
         }
 
-        return result.stdout
+        let output = result.stdout
+        let maxBytes = 500_000
+        if output.utf8.count > maxBytes {
+            let truncated = String(decoding: output.utf8.prefix(maxBytes), as: UTF8.self)
+            return truncated + "\n\n... [Output truncated - file too large] ..."
+        }
+
+        return output
+    }
+
+    /// Get full patch for a commit (all files)
+    /// Useful as a fallback for renamed files / history-follow scenarios
+    func getCommitDiff(sha: String, at path: String) async throws -> String {
+        let result = await shellExecutor.execute(
+            "git",
+            arguments: ["show", "-p", "--format=", sha],
+            workingDirectory: path
+        )
+
+        guard result.exitCode == 0 else {
+            throw GitError.commandFailed("git show", result.stderr)
+        }
+
+        let output = result.stdout
+        let maxBytes = 500_000
+        if output.utf8.count > maxBytes {
+            let truncated = String(decoding: output.utf8.prefix(maxBytes), as: UTF8.self)
+            return truncated + "\n\n... [Output truncated - file too large] ..."
+        }
+
+        return output
+    }
+
+    /// Get diff between two refs for a specific file
+    /// Truncates output for very large diffs to prevent UI freeze
+    func getDiff(from: String, to: String, filePath: String, at path: String) async throws -> String {
+        let result = await shellExecutor.execute(
+            "git",
+            arguments: ["diff", from, to, "--", filePath],
+            workingDirectory: path
+        )
+
+        guard result.exitCode == 0 else {
+            throw GitError.commandFailed("git diff", result.stderr)
+        }
+
+        let output = result.stdout
+        let maxBytes = 500_000
+        if output.utf8.count > maxBytes {
+            let truncated = String(decoding: output.utf8.prefix(maxBytes), as: UTF8.self)
+            return truncated + "\n\n... [Output truncated - file too large] ..."
+        }
+
+        return output
     }
 
     /// Get files changed in a specific commit
@@ -1135,7 +1188,7 @@ actor GitEngine {
         if result.exitCode != 0 {
             let fallbackResult = await shellExecutor.execute(
                 "git",
-                arguments: ["show", sha, "--format=", "--", filePath],
+                arguments: ["show", "-p", "--format=", sha, "--", filePath],
                 workingDirectory: path
             )
             output = fallbackResult.stdout
@@ -1146,7 +1199,7 @@ actor GitEngine {
         // Truncate very large diffs early (500KB max)
         let maxBytes = 500_000
         if output.utf8.count > maxBytes {
-            let truncated = String(output.utf8.prefix(maxBytes)) ?? String(output.prefix(maxBytes / 4))
+            let truncated = String(decoding: output.utf8.prefix(maxBytes), as: UTF8.self)
             return truncated + "\n\n... [Output truncated - file too large] ..."
         }
 
@@ -1607,6 +1660,30 @@ actor GitEngine {
 
         let result = await shellExecutor.execute("git", arguments: args, workingDirectory: path)
 
+        guard result.exitCode == 0 else {
+            throw GitError.commandFailed("git log", result.stderr)
+        }
+
+        return parseCommitsNUL(result.stdout)
+    }
+
+    func getCommitsForFileV2(
+        at path: String,
+        filePath: String,
+        limit: Int = 100,
+        skip: Int = 0
+    ) async throws -> [Commit] {
+        let args = [
+            "log",
+            "--follow",
+            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x01",
+            "-n", String(limit),
+            "--skip", String(skip),
+            "--",
+            filePath
+        ]
+
+        let result = await shellExecutor.execute("git", arguments: args, workingDirectory: path)
         guard result.exitCode == 0 else {
             throw GitError.commandFailed("git log", result.stderr)
         }

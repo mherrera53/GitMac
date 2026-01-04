@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 // MARK: - Kaleidoscope Diff View (Main Container)
 
@@ -8,6 +9,7 @@ struct KaleidoscopeDiffView: View {
     let files: [FileDiff]
     // Optional commits for history view
     let commits: [Commit]
+    let repoPath: String?
     @Binding var selectedCommitA: Commit?
     @Binding var selectedCommitB: Commit?
     
@@ -24,6 +26,11 @@ struct KaleidoscopeDiffView: View {
     @State private var viewportHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
     @State private var minimapScrollTrigger: UUID = UUID() // Unique trigger for minimap clicks
+    
+    // Callback to notify parent of view mode changes
+    var onViewModeChanged: ((KaleidoscopeViewMode) -> Void)?
+    var onHistoryTap: (() -> Void)?
+    var onBlameTap: (() -> Void)?
 
     @StateObject private var themeManager = ThemeManager.shared
 
@@ -31,14 +38,24 @@ struct KaleidoscopeDiffView: View {
     init(
         files: [FileDiff],
         commits: [Commit] = [],
+        repoPath: String? = nil,
         selectedCommitA: Binding<Commit?> = .constant(nil),
-        selectedCommitB: Binding<Commit?> = .constant(nil)
+        selectedCommitB: Binding<Commit?> = .constant(nil),
+        initialViewMode: KaleidoscopeViewMode = .blocks,
+        onViewModeChanged: ((KaleidoscopeViewMode) -> Void)? = nil,
+        onHistoryTap: (() -> Void)? = nil,
+        onBlameTap: (() -> Void)? = nil
     ) {
         self.files = files
         self.commits = commits
+        self.repoPath = repoPath
         self._selectedCommitA = selectedCommitA
         self._selectedCommitB = selectedCommitB
         self._selectedFile = State(initialValue: files.first)
+        self._viewMode = State(initialValue: initialViewMode)
+        self.onViewModeChanged = onViewModeChanged
+        self.onHistoryTap = onHistoryTap
+        self.onBlameTap = onBlameTap
     }
 
     var body: some View {
@@ -117,13 +134,32 @@ struct KaleidoscopeDiffView: View {
                     .frame(width: 1)
                 
                 // History Sidebar (RIGHT side)
-                if showHistory && !commits.isEmpty {
-                    CommitHistorySidebar(
-                        commits: commits,
-                        selectedCommitA: $selectedCommitA,
-                        selectedCommitB: $selectedCommitB
-                    )
-                    .transition(.move(edge: .trailing))
+                if showHistory {
+                    if commits.isEmpty {
+                        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                            HStack(spacing: DesignTokens.Spacing.sm) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                Text("Loading commits…")
+                                    .font(DesignTokens.Typography.body.weight(.semibold))
+                                    .foregroundColor(AppTheme.textPrimary)
+                            }
+                            Text("If this takes too long, check repository access or try refreshing.")
+                                .font(DesignTokens.Typography.caption)
+                                .foregroundColor(AppTheme.textSecondary)
+                        }
+                        .padding(DesignTokens.Spacing.md)
+                        .frame(width: 320, alignment: .topLeading)
+                        .background(theme.backgroundSecondary)
+                        .transition(.move(edge: .trailing))
+                    } else {
+                        CommitHistorySidebar(
+                            commits: commits,
+                            selectedCommitA: $selectedCommitA,
+                            selectedCommitB: $selectedCommitB
+                        )
+                        .transition(.move(edge: .trailing))
+                    }
                 }
             }
         }
@@ -188,6 +224,14 @@ struct KaleidoscopeDiffView: View {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     showHistory.toggle()
                 }
+            }
+
+            ToolbarToggle(
+                icon: "person.text.rectangle",
+                isActive: false,
+                tooltip: "Blame"
+            ) {
+                onBlameTap?()
             }
             
             // Connection lines toggle - Always visible
@@ -293,6 +337,7 @@ struct KaleidoscopeDiffView: View {
                 ) {
                     withAnimation(.easeInOut(duration: 0.15)) {
                         viewMode = mode
+                        onViewModeChanged?(mode)
                     }
                 }
             }
@@ -305,12 +350,64 @@ struct KaleidoscopeDiffView: View {
     @ViewBuilder
     private func diffContentView(for file: FileDiff, pairedLines: [DiffPairWithConnection], unifiedLines: [UnifiedLine]) -> some View {
         let hunks = swappedAB ? swapHunks(file.hunks) : file.hunks
+        let hunksById = Dictionary(uniqueKeysWithValues: hunks.map { ($0.id, $0) })
 
         switch viewMode {
+            case .split:
+                // Traditional split view
+                OptimizedSplitDiffView(
+                    hunks: hunks,
+                    showLineNumbers: showLineNumbers,
+                    scrollOffset: $scrollOffset,
+                    viewportHeight: $viewportHeight,
+                    contentHeight: $contentHeight
+                )
+                .id(file.id)
+            case .inline:
+                // Traditional inline view
+                OptimizedInlineDiffView(
+                    hunks: hunks,
+                    showLineNumbers: showLineNumbers,
+                    scrollOffset: $scrollOffset,
+                    viewportHeight: $viewportHeight,
+                    contentHeight: $contentHeight
+                )
+            case .hunk:
+                // Hunk-only view
+                HunkDiffView(
+                    hunks: hunks,
+                    showLineNumbers: showLineNumbers,
+                    scrollOffset: $scrollOffset,
+                    viewportHeight: $viewportHeight,
+                    contentHeight: $contentHeight
+                )
+            case .preview:
+                // Markdown preview
+                if let file = selectedFile {
+                    let previewContent: String = {
+                        var lines: [String] = []
+                        for hunk in file.hunks {
+                            for line in hunk.lines {
+                                if line.type == .addition || line.type == .context {
+                                    let printable = line.content.filter { char in
+                                        !char.isNewline && !(char.unicodeScalars.first?.properties.generalCategory == .control)
+                                    }
+                                    lines.append(printable)
+                                }
+                            }
+                        }
+                        return lines.joined(separator: "\n")
+                    }()
+                    MarkdownView(content: previewContent, fileName: file.displayPath)
+                }
             case .blocks:
                 // Traditional side-by-side (like Split)
                 KaleidoscopeSplitDiffView(
                     pairedLines: pairedLines,
+                    filePath: file.newPath,
+                    hunksById: hunksById,
+                    repoPath: repoPath,
+                    allowPatchActions: !swappedAB,
                     showLineNumbers: showLineNumbers,
                     showConnectionLines: showConnectionLines,
                     isFluidMode: false,
@@ -324,6 +421,10 @@ struct KaleidoscopeDiffView: View {
                 // Fluid view with connection lines (enhanced version)
                 KaleidoscopeSplitDiffView(
                     pairedLines: pairedLines,
+                    filePath: file.newPath,
+                    hunksById: hunksById,
+                    repoPath: repoPath,
+                    allowPatchActions: !swappedAB,
                     showLineNumbers: showLineNumbers,
                     showConnectionLines: showConnectionLines,
                     isFluidMode: true,
@@ -335,25 +436,28 @@ struct KaleidoscopeDiffView: View {
 
         case .unified:
             // True Unified view with A/B labels in margin
+            let unifiedLines = KaleidoscopePairingEngine.calculateUnifiedLines(from: hunks)
             KaleidoscopeUnifiedView(
-                hunks: hunks,
+                unifiedLines: unifiedLines,
                 showLineNumbers: showLineNumbers,
                 scrollOffset: $scrollOffset,
                 viewportHeight: $viewportHeight,
-                contentHeight: $contentHeight
+                contentHeight: $contentHeight,
+                minimapScrollTrigger: $minimapScrollTrigger
             )
         }
     }
 
     private func minimapRows(from pairedLines: [DiffPairWithConnection]) -> [MinimapRow] {
-        pairedLines.map { pair in
+        let theme = Color.Theme(themeManager.colors)
+        return pairedLines.map { pair in
             let color: Color = switch pair.connectionType {
-            case .addition: AppTheme.diffAddition
-            case .deletion: AppTheme.diffDeletion
-            case .change: AppTheme.diffChange
-            case .none: 
+            case .addition: theme.diffAddition
+            case .deletion: theme.diffDeletion
+            case .change: theme.info
+            case .none:
                 if pair.hunkHeader != nil {
-                    AppTheme.accent.opacity(0.4)
+                    theme.accent.opacity(0.4)
                 } else {
                     Color.clear
                 }
@@ -363,11 +467,12 @@ struct KaleidoscopeDiffView: View {
     }
 
     private func minimapRows(from unifiedLines: [UnifiedLine]) -> [MinimapRow] {
-        unifiedLines.map { line in
+        let theme = Color.Theme(themeManager.colors)
+        return unifiedLines.map { line in
             let color: Color = switch line.type {
-            case .addition: AppTheme.diffAddition
-            case .deletion: AppTheme.diffDeletion
-            case .hunkHeader: AppTheme.accent.opacity(0.4)
+            case .addition: theme.diffAddition
+            case .deletion: theme.diffDeletion
+            case .hunkHeader: theme.accent.opacity(0.4)
             case .context: Color.clear
             }
             return MinimapRow(id: line.id, color: color, isHeader: line.type == .hunkHeader)
@@ -420,7 +525,8 @@ struct KaleidoscopeDiffView: View {
                         )
                     }
                     return newLine
-                }
+                },
+                byteOffsets: hunk.byteOffsets
             )
         }
     }
@@ -508,13 +614,28 @@ struct DiffPairWithConnection: Identifiable {
     let right: DiffLine?
     let hunkHeader: String?
     let connectionType: ConnectionType
+    let hunkId: UUID?
+    let leftLineIndexInHunk: Int?
+    let rightLineIndexInHunk: Int?
     
-    init(id: Int, left: DiffLine?, right: DiffLine?, hunkHeader: String?, connectionType: ConnectionType) {
+    init(
+        id: Int,
+        left: DiffLine?,
+        right: DiffLine?,
+        hunkHeader: String?,
+        connectionType: ConnectionType,
+        hunkId: UUID? = nil,
+        leftLineIndexInHunk: Int? = nil,
+        rightLineIndexInHunk: Int? = nil
+    ) {
         self.id = id
         self.left = left
         self.right = right
         self.hunkHeader = hunkHeader
         self.connectionType = connectionType
+        self.hunkId = hunkId
+        self.leftLineIndexInHunk = leftLineIndexInHunk
+        self.rightLineIndexInHunk = rightLineIndexInHunk
     }
 }
 
@@ -532,7 +653,8 @@ enum KaleidoscopePairingEngine {
                 left: nil,
                 right: nil,
                 hunkHeader: hunk.header,
-                connectionType: .none
+                connectionType: .none,
+                hunkId: hunk.id
             ))
 
             var i = 0
@@ -548,22 +670,25 @@ enum KaleidoscopePairingEngine {
                         left: line,
                         right: line,
                         hunkHeader: nil,
-                        connectionType: .none
+                        connectionType: .none,
+                        hunkId: hunk.id,
+                        leftLineIndexInHunk: i,
+                        rightLineIndexInHunk: i
                     ))
                     i += 1
                 } else {
-                    var deletions: [DiffLine] = []
-                    var additions: [DiffLine] = []
+                    var deletions: [(index: Int, line: DiffLine)] = []
+                    var additions: [(index: Int, line: DiffLine)] = []
 
                     var j = i
                     while j < lines.count && lines[j].type == .deletion {
-                        deletions.append(lines[j])
+                        deletions.append((index: j, line: lines[j]))
                         j += 1
                     }
 
                     var k = j
                     while k < lines.count && lines[k].type == .addition {
-                        additions.append(lines[k])
+                        additions.append((index: k, line: lines[k]))
                         k += 1
                     }
 
@@ -572,8 +697,10 @@ enum KaleidoscopePairingEngine {
                     if maxCount > 0 {
                         for idx in 0..<maxCount {
                             pairId += 1
-                            let left = idx < deletions.count ? deletions[idx] : nil
-                            let right = idx < additions.count ? additions[idx] : nil
+                            let left = idx < deletions.count ? deletions[idx].line : nil
+                            let right = idx < additions.count ? additions[idx].line : nil
+                            let leftIndex = idx < deletions.count ? deletions[idx].index : nil
+                            let rightIndex = idx < additions.count ? additions[idx].index : nil
 
                             let connectionType: ConnectionType
                             if left != nil && right != nil {
@@ -589,7 +716,10 @@ enum KaleidoscopePairingEngine {
                                 left: left,
                                 right: right,
                                 hunkHeader: nil,
-                                connectionType: connectionType
+                                connectionType: connectionType,
+                                hunkId: hunk.id,
+                                leftLineIndexInHunk: leftIndex,
+                                rightLineIndexInHunk: rightIndex
                             ))
                         }
 
@@ -808,7 +938,11 @@ struct CommitHistorySidebar: View {
     private func selectCommitAtIndex(_ index: Int) {
         guard index >= 0, index < commits.count else { return }
         let commit = commits[index]
-        if selectedCommitA == nil { selectedCommitA = commit } else { selectedCommitB = commit }
+        if selectedCommitA == nil {
+            _selectedCommitA.wrappedValue = commit
+        } else {
+            _selectedCommitB.wrappedValue = commit
+        }
     }
 }
 
@@ -860,18 +994,36 @@ struct CommitHistoryRow: View {
 
 
 
-// MARK: - Kaleidoscope View Mode (Exact names from Kaleidoscope)
+// MARK: - Kaleidoscope View Mode (Enhanced with all modes)
 
 enum KaleidoscopeViewMode: String, CaseIterable {
-    case blocks = "Blocks"
-    case fluid = "Fluid"
-    case unified = "Unified"
+    case split = "Split"
+    case inline = "Inline"
+    case hunk = "Hunk"
+    case preview = "Preview"
+    case blocks = "Blocks"    // Kaleidoscope split with connection lines
+    case fluid = "Fluid"      // Kaleidoscope split (cleaner)
+    case unified = "Unified"  // Kaleidoscope unified with A/B labels
 
     var icon: String {
         switch self {
-        case .blocks: return "rectangle.split.2x1"
-        case .fluid: return "point.3.connected.trianglepath.dotted"
-        case .unified: return "rectangle.stack"
+        case .split: return "rectangle.split.2x1"
+        case .inline: return "rectangle.stack"
+        case .hunk: return "text.alignleft"
+        case .preview: return "eye"
+        case .blocks: return "square.split.2x1.fill"
+        case .fluid: return "square.split.2x1"
+        case .unified: return "rectangle.stack.fill"
+        }
+    }
+    
+    /// Check if this is a Kaleidoscope-specific mode
+    var isKaleidoscopeSpecific: Bool {
+        switch self {
+        case .blocks, .fluid, .unified:
+            return true
+        default:
+            return false
         }
     }
 }
@@ -887,20 +1039,14 @@ struct ViewModeButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: DesignTokens.Spacing.xs) {
-                Image(systemName: mode.icon)
-                    .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(isSelected ? .white : AppTheme.textSecondary)
-
-                Text(mode.rawValue)
-                    .font(DesignTokens.Typography.caption.weight(.medium))
-            }
-            .foregroundColor(isSelected ? .white : AppTheme.textSecondary)
-            .padding(.horizontal, DesignTokens.Spacing.sm)
-            .padding(.vertical, DesignTokens.Spacing.xs)
-            .background(
-                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.sm)
-                    .fill(isSelected ? AppTheme.accent : (isHovered ? AppTheme.hover : Color.clear))
+            Text(mode.rawValue)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(isSelected ? .white : AppTheme.textSecondary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
+                .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isSelected ? AppTheme.accent : (isHovered ? AppTheme.backgroundTertiary : Color.clear))
             )
         }
         .buttonStyle(.plain)
