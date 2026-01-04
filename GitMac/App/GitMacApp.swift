@@ -7,6 +7,8 @@ struct GitMacApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        URLCache.shared = URLCache(memoryCapacity: 10 * 1024 * 1024, diskCapacity: 0, diskPath: nil)
+
         // Preload keychain cache to avoid repeated password prompts
         Task {
             await KeychainManager.shared.preloadCache()
