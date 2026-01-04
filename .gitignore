@@ -12,6 +12,7 @@ build_log*.txt
 # macOS
 .DS_Store
 *.app
+*.dmg
 
 # Xcode
 xcuserdata/
@@ -35,4 +36,3 @@ Frameworks/
 GHOSTTY_*.md
 TERMINAL_INTEGRATION_STEPS.md
 build/
-
