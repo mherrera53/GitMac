@@ -15,8 +15,8 @@ actor GitHubService {
         // Configure cache
         let cache = URLCache(
             memoryCapacity: 20 * 1024 * 1024,  // 20 MB RAM
-            diskCapacity: 200 * 1024 * 1024,    // 200 MB disk
-            diskPath: "com.gitmac.github-cache"
+            diskCapacity: 0,
+            diskPath: nil
         )
         config.urlCache = cache
         config.requestCachePolicy = .useProtocolCachePolicy

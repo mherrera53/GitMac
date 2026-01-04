@@ -100,8 +100,36 @@ struct RepositoryTabsView: View {
                 }
                 .padding(.horizontal, 4)
             }
+            .frame(maxWidth: .infinity) // Take all available horizontal space
+            
+            // Overflow Menu ("More" Button)
+            Menu {
+                ForEach(appState.openTabs) { tab in
+                    Button(action: { appState.selectTab(tab.id) }) {
+                        HStack {
+                            if appState.activeTabId == tab.id {
+                                Image(systemName: "checkmark")
+                            }
+                            Text(tab.repository.name)
+                            Spacer()
+                            Text(tab.repository.path)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(AppTheme.textSecondary)
+                    .frame(width: 20, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.borderlessButton)
+            .padding(.leading, 4)
+            .help("Show All Open Repositories")
         }
-        .frame(height: 28) // Fixed toolbar height
+        .frame(height: 32) // Slightly taller for dedicated space
     }
 }
 
@@ -122,17 +150,17 @@ private struct GroupContainer: View {
         HStack(spacing: 0) {
             // Group Header Label (if grouped)
             if let name = group.name {
-                HStack(spacing: 3) {
+                HStack(spacing: 2) {
                     Circle()
                         .fill(groupColor)
-                        .frame(width: 4, height: 4)
+                        .frame(width: 3, height: 3)
                     
-                    Text(name.uppercased())
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(groupColor.opacity(0.9))
+                    Text(name)
+                        .font(.system(size: 7, weight: .bold))
+                        .foregroundColor(groupColor.opacity(0.8))
                 }
-                .padding(.leading, 6)
-                .padding(.trailing, 2)
+                .padding(.leading, 4)
+                .padding(.trailing, 1)
             }
             
             // Tabs in this group

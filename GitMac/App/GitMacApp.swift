@@ -541,6 +541,74 @@ struct GitMacCommands: Commands {
             }
             .keyboardShortcut("r", modifiers: [.command, .shift])
         }
+
+        CommandMenu("Navigate") {
+            Button("Repositories") {
+                NotificationCenter.default.post(name: .showRepositories, object: nil)
+            }
+            .keyboardShortcut("1", modifiers: .command)
+
+            Button("Branches") {
+                NotificationCenter.default.post(name: .showBranches, object: nil)
+            }
+            .keyboardShortcut("2", modifiers: .command)
+
+            Button("Remotes") {
+                NotificationCenter.default.post(name: .showRemotes, object: nil)
+            }
+            .keyboardShortcut("3", modifiers: .command)
+
+            Button("Stashes") {
+                NotificationCenter.default.post(name: .showStashes, object: nil)
+            }
+            .keyboardShortcut("4", modifiers: .command)
+
+            Button("Tags") {
+                NotificationCenter.default.post(name: .showTags, object: nil)
+            }
+            .keyboardShortcut("5", modifiers: .command)
+
+            Button("Worktrees") {
+                NotificationCenter.default.post(name: .showWorktrees, object: nil)
+            }
+            .keyboardShortcut("6", modifiers: .command)
+
+            Button("CI/CD") {
+                // notification for cicd? 
+            }
+            .keyboardShortcut("7", modifiers: .command)
+        }
+
+        CommandMenu("View") {
+            Button("Commit Graph") {
+                NotificationCenter.default.post(name: .showGraph, object: nil)
+            }
+            .keyboardShortcut("g", modifiers: [.command, .shift])
+
+            Button("History") {
+                NotificationCenter.default.post(name: .showHistory, object: nil)
+            }
+            .keyboardShortcut("h", modifiers: [.command, .shift])
+
+            Divider()
+
+            Button("Toggle Sidebar") {
+                NotificationCenter.default.post(name: .toggleSidebar, object: nil)
+            }
+            .keyboardShortcut("s", modifiers: [.command, .control])
+
+            Divider()
+
+            Button("Terminal") {
+                BottomPanelManager.shared.openTab(type: .terminal)
+            }
+            .keyboardShortcut("t", modifiers: [.command, .shift])
+
+            Button("Theme Editor") {
+                ThemeEditorWindowController.shared.showWindow()
+            }
+            .keyboardShortcut("t", modifiers: [.command, .option])
+        }
     }
 }
 
@@ -557,5 +625,14 @@ extension Notification.Name {
     static let newBranch = Notification.Name("newBranch")
     static let merge = Notification.Name("merge")
     static let rebase = Notification.Name("rebase")
+    static let showGraph = Notification.Name("show_graph")
+    static let showHistory = Notification.Name("show_history")
+    static let showRepositories = Notification.Name("show_repositories")
+    static let showBranches = Notification.Name("show_branches")
+    static let showRemotes = Notification.Name("show_remotes")
+    static let showStashes = Notification.Name("show_stashes")
+    static let showTags = Notification.Name("show_tags")
+    static let showWorktrees = Notification.Name("show_worktrees")
+    static let toggleSidebar = Notification.Name("toggle_sidebar")
     static let repositoryDidRefresh = Notification.Name("repositoryDidRefresh")
 }

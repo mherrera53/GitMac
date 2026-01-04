@@ -45,6 +45,9 @@ actor LinearService {
 
         guard httpResponse.statusCode == 200 else {
             let body = String(data: data, encoding: .utf8)
+            if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
+                throw LinearError.requestFailed("Authentication failed. Please check your API key.")
+            }
             if let body, !body.isEmpty {
                 throw LinearError.requestFailed("HTTP \(httpResponse.statusCode): \(body)")
             }
@@ -55,7 +58,13 @@ actor LinearService {
             return try JSONDecoder().decode(T.self, from: data)
         } catch {
             if let errorEnvelope = try? JSONDecoder().decode(LinearGraphQLErrorEnvelope.self, from: data) {
-                let message = errorEnvelope.errors.map(\.message).joined(separator: "\n")
+                let message = errorEnvelope.errors.map { error -> String in
+                    if error.message.contains("authentication") {
+                        return "Invalid API key or insufficient permissions."
+                    }
+                    return error.message
+                }.joined(separator: "\n")
+                
                 if !message.isEmpty {
                     throw LinearError.requestFailed(message)
                 }

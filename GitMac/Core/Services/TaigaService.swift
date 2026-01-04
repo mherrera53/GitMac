@@ -6,7 +6,7 @@ import Foundation
 actor TaigaService {
     static let shared = TaigaService()
 
-    private let baseURL = "https://api.taiga.io/api/v1"
+    private var baseURL = "https://api.taiga.io/api/v1"
     private let session: URLSession
     private var authToken: String?
     private var refreshToken: String?
@@ -17,6 +17,24 @@ actor TaigaService {
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
         config.urlCache = nil
         self.session = URLSession(configuration: config)
+        
+        // Restore saved base URL if exists
+        if let savedBaseURL = UserDefaults.standard.string(forKey: "taiga_base_url") {
+            self.baseURL = savedBaseURL
+        }
+    }
+    
+    func setBaseURL(_ url: String) {
+        var cleanURL = url
+        if !cleanURL.contains("/api/v1") {
+            if cleanURL.hasSuffix("/") {
+                cleanURL += "api/v1"
+            } else {
+                cleanURL += "/api/v1"
+            }
+        }
+        self.baseURL = cleanURL
+        UserDefaults.standard.set(cleanURL, forKey: "taiga_base_url")
     }
 
     // MARK: - Authentication

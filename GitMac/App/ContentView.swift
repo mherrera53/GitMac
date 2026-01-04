@@ -24,6 +24,9 @@ struct ContentView: View {
         case iconAndText = "Icon and Text"
     }
 
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var selectedFileDiff: FileDiff? = nil
+
     init() {
         _bottomPanelManager = ObservedObject(wrappedValue: BottomPanelManager.shared)
     }
@@ -118,50 +121,44 @@ struct ContentView: View {
     
     private func attachGitListeners<Content: View>(to content: Content) -> some View {
         content
-            .onReceive(NotificationCenter.default.publisher(for: .openRepository)) { _ in
-                showOpenPanel = true
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .cloneRepository)) { _ in
-                showCloneSheet = true
-            }
-            // Git operation notifications
-            .onReceive(NotificationCenter.default.publisher(for: .fetch)) { _ in
-                Task { await gitOperationHandler.handleFetch() }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .pull)) { _ in
-                Task { await gitOperationHandler.handlePull() }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .push)) { _ in
-                Task { await gitOperationHandler.handlePush() }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .stash)) { _ in
-                Task { await gitOperationHandler.handleStash() }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .popStash)) { _ in
-                Task { await gitOperationHandler.handlePopStash() }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .newBranch)) { _ in
-                showNewBranchSheet = true
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .merge)) { _ in
-                showMergeSheet = true
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .revertCommit)) { notification in
-                if let commits = notification.object as? [Commit] {
-                    revertCommits = commits
-                    showRevertSheet = true
+            .onReceive(NotificationCenter.default.publisher(for: .openRepository)) { _ in showOpenPanel = true }
+            .onReceive(NotificationCenter.default.publisher(for: .cloneRepository)) { _ in showCloneSheet = true }
+            .modifier(GitOperationListeners())
+            .modifier(NavigationListeners(columnVisibility: $columnVisibility, selectedFileDiff: $selectedFileDiff))
+    }
+
+    struct GitOperationListeners: ViewModifier {
+        @EnvironmentObject var appState: AppState
+        func body(content: Content) -> some View {
+            content
+                .onReceive(NotificationCenter.default.publisher(for: .fetch)) { _ in Task { await GitOperationHandler().handleFetch() } }
+                .onReceive(NotificationCenter.default.publisher(for: .pull)) { _ in Task { await GitOperationHandler().handlePull() } }
+                .onReceive(NotificationCenter.default.publisher(for: .push)) { _ in Task { await GitOperationHandler().handlePush() } }
+                .onReceive(NotificationCenter.default.publisher(for: .stash)) { _ in Task { await GitOperationHandler().handleStash() } }
+                .onReceive(NotificationCenter.default.publisher(for: .popStash)) { _ in Task { await GitOperationHandler().handlePopStash() } }
+                .onReceive(NotificationCenter.default.publisher(for: .newBranch)) { _ in NotificationCenter.default.post(name: .newBranch, object: nil) }
+        }
+    }
+
+    struct NavigationListeners: ViewModifier {
+        @Binding var columnVisibility: NavigationSplitViewVisibility
+        @Binding var selectedFileDiff: FileDiff?
+        func body(content: Content) -> some View {
+            content
+                .onReceive(NotificationCenter.default.publisher(for: .showGraph)) { _ in
+                    selectedFileDiff = nil
                 }
-            }
-            // File ignore/tracking handlers
-            .onReceive(NotificationCenter.default.publisher(for: .ignoreFile)) { notification in
-                handleIgnoreFile(notification)
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .assumeUnchanged)) { notification in
-                handleAssumeUnchanged(notification)
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .stopTrackingFile)) { notification in
-                handleStopTrackingFile(notification)
-            }
+                .onReceive(NotificationCenter.default.publisher(for: .showHistory)) { _ in
+                    // Logic to show history if it's a separate view state
+                    // For now, history is often part of the graph or a separate tab
+                    NotificationCenter.default.post(name: .showHistory, object: nil)
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
+                    withAnimation {
+                        columnVisibility = columnVisibility == .all ? .detailOnly : .all
+                    }
+                }
+        }
     }
 
     // MARK: - File Ignore/Tracking Notification Handlers
@@ -271,6 +268,15 @@ struct MainLayout: View {
     private var centerColumn: some View {
         // Center Area - Graph/Diff + Bottom Panel
         VStack(spacing: 0) {
+            // "Defining Space" for Repository Tabs
+            if !appState.openTabs.isEmpty {
+                RepositoryTabsView()
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.backgroundSecondary)
+                    .overlay(Divider(), alignment: .bottom)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
             // Center Panel - Graph OR Diff
             CenterPanel(selectedFileDiff: $selectedFileDiff, isLoadingDiff: $isLoadingDiff)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -286,19 +292,16 @@ struct MainLayout: View {
             }
         }
         .contextMenu { toolbarConfigurationMenu }
+        .onReceive(NotificationCenter.default.publisher(for: .showGraph)) { _ in
+            selectedFileDiff = nil
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showHistory)) { _ in
+            selectedFileDiff = nil
+        }
     }
 
     private var toolbarTitleSection: some View {
-        HStack(spacing: 16) {
-            // Moved to Sidebar as per user request
-            
-            // Repository Tabs - kept in toolbar as they are navigation
-            if !appState.openTabs.isEmpty {
-                RepositoryTabsView()
-                    .layoutPriority(1)
-                    .padding(.leading, 12)
-            }
-        }
+        EmptyView()
     }
 
     private var toolbarGitActions: some View {
@@ -518,6 +521,11 @@ struct MainLayout: View {
             }
             .help("Toggle Inspector")
         }
+        .onReceive(NotificationCenter.default.publisher(for: .showBranches)) { _ in
+             // Post notification or update selectNavigator via notification? 
+             // Simplest is to have MainLayout handle it if it had access.
+             // But selectedNavigator is inside LeftSidebarPanel.
+        }
     }
 
     var body: some View {
@@ -543,14 +551,13 @@ struct MainLayout: View {
         .navigationTitle("") // Hide system title
         .toolbar {
             ToolbarItem(placement: .navigation) {
-                HStack(spacing: 16) {
-                    toolbarTitleSection
-                    toolbarGitActions
-                }
+                toolbarGitActions
+                    .layoutPriority(10)
             }
             
             ToolbarItemGroup(placement: .automatic) {
                 toolbarPluginActions
+                    .layoutPriority(1) // Low priority for plugins
             }
         }
         .toolbarBackground(Color.clear, for: .windowToolbar)
@@ -712,6 +719,12 @@ struct LeftSidebarPanel: View {
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .showRepositories)) { _ in selectedNavigator = .repositories }
+        .onReceive(NotificationCenter.default.publisher(for: .showBranches)) { _ in selectedNavigator = .branches }
+        .onReceive(NotificationCenter.default.publisher(for: .showRemotes)) { _ in selectedNavigator = .remote }
+        .onReceive(NotificationCenter.default.publisher(for: .showStashes)) { _ in selectedNavigator = .stashes }
+        .onReceive(NotificationCenter.default.publisher(for: .showTags)) { _ in selectedNavigator = .tags }
+        .onReceive(NotificationCenter.default.publisher(for: .showWorktrees)) { _ in selectedNavigator = .worktrees }
     }
 
     @ViewBuilder
@@ -799,6 +812,9 @@ struct LeftSidebarPanel: View {
                 }
             }
 
+        case .cicd:
+            CICDSidebarSection()
+
         case .worktrees:
             WorktreeSidebarSection()
 
@@ -807,9 +823,6 @@ struct LeftSidebarPanel: View {
 
         case .hooks:
             GitHooksSidebarSection()
-
-        case .cicd:
-            CICDSidebarSection()
         }
     }
 }

@@ -22,7 +22,7 @@ struct MermaidDiagramView: NSViewRepresentable {
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
 
         // Enable content caching
-        config.websiteDataStore = .default()
+        config.websiteDataStore = .nonPersistent()
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator

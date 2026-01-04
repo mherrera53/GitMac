@@ -29,6 +29,12 @@ struct TaigaLoginPrompt: View {
                 .multilineTextAlignment(.center)
 
             VStack(spacing: DesignTokens.Spacing.sm) {
+                DSTextField(placeholder: "Server URL (e.g. https://api.taiga.io)", text: $viewModel.serverURL)
+                    .padding(DesignTokens.Spacing.sm)
+                    .background(AppTheme.backgroundSecondary)
+                    .cornerRadius(DesignTokens.CornerRadius.md)
+                    .frame(width: 250)
+
                 DSTextField(placeholder: "Username or Email", text: $username)
                     .padding(DesignTokens.Spacing.sm)
                     .background(AppTheme.backgroundSecondary)
@@ -50,7 +56,7 @@ struct TaigaLoginPrompt: View {
 
             Button {
                 Task {
-                    await viewModel.login(username: username, password: password)
+                    await viewModel.login(username: username, password: password, serverURL: viewModel.serverURL)
                 }
             } label: {
                 if viewModel.isLoading {

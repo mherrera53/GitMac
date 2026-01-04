@@ -42,6 +42,7 @@ class TaigaTicketsViewModel: ObservableObject, IntegrationViewModel {
     @Published var issues: [TaigaIssue] = []
     @Published var epics: [TaigaEpic] = []
     @Published var statuses: [TaigaStatus] = []
+    @Published var serverURL: String = "https://api.taiga.io"
 
     private let service = TaigaService.shared
 
@@ -57,6 +58,14 @@ class TaigaTicketsViewModel: ObservableObject, IntegrationViewModel {
                     await service.setUserId(userIdInt)
                     print("🔐 Taiga: Restored userId \(userId)")
                 }
+                
+                // Restore server URL
+                if let savedURL = UserDefaults.standard.string(forKey: "taiga_base_url_display") {
+                    await MainActor.run { [weak self] in
+                        self?.serverURL = savedURL
+                    }
+                }
+
                 await MainActor.run { [weak self] in
                     self?.isAuthenticated = true
                 }
@@ -94,11 +103,15 @@ class TaigaTicketsViewModel: ObservableObject, IntegrationViewModel {
 
     // MARK: - Taiga-specific methods
 
-    func login(username: String, password: String) async {
+    func login(username: String, password: String, serverURL: String) async {
         isLoading = true
         error = nil
 
         do {
+            // Update service with new base URL before login
+            await service.setBaseURL(serverURL)
+            UserDefaults.standard.set(serverURL, forKey: "taiga_base_url_display")
+            
             let response = try await service.login(username: username, password: password)
             try await KeychainManager.shared.saveTaigaToken(response.authToken)
             // Save userId for project filtering
