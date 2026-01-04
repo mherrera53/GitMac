@@ -1337,6 +1337,7 @@ struct CommitGraphView: View {
         }
 
         // Update AppState for the primarily selected item
+        // DISABLED: User requested to remove automatic diff loading from CommitGraph
         if let firstId = selectedIds.first {
             if let commitItem = vm.timelineItems.first(where: { $0.id == firstId }),
                case .commit(let node) = commitItem {

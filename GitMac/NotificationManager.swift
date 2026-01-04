@@ -9,7 +9,7 @@ class NotificationManager: ObservableObject {
     @Published var notifications: [ToastNotification] = []
     
     private let maxNotifications = 5
-    private let defaultDuration: TimeInterval = 4.0
+    private let defaultDuration: TimeInterval = 5.0
     
     init() {
         // Listen to global notifications
@@ -192,11 +192,13 @@ struct ToastNotificationView: View {
     let notification: ToastNotification
     let onDismiss: () -> Void
     
+    @State private var timeRemaining: CGFloat = 1.0
+    @State private var timer: Timer?
     @State private var isHovered = false
     @State private var dragOffset: CGFloat = 0
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
                 // Icon
                 Image(systemName: notification.type.icon)
@@ -206,28 +208,31 @@ struct ToastNotificationView: View {
                 // Message
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(notification.message.components(separatedBy: "\n"), id: \.self) { line in
-                        Text(line)
+                        Text(shouldCapitalize(line) ? line.capitalizedFirst : line)
                             .font(line == notification.message.components(separatedBy: "\n").first ? .body : .caption)
                             .foregroundColor(line == notification.message.components(separatedBy: "\n").first ? .primary : .secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 
-                // Close button (on hover)
-                if isHovered {
-                    Button {
-                        onDismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(AppTheme.textPrimary)
-                    }
-                    .buttonStyle(.plain)
+                // Close button
+                Button {
+                    onDismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(AppTheme.textSecondary)
+                        .opacity(isHovered ? 1.0 : 0.6)
                 }
+                .buttonStyle(.plain)
+                .contentShape(Rectangle()) // Ease of clicking
             }
+            .padding()
             
-            // Action button for error recovery with explanation
+            // Action button logic...
             if notification.hasAction, let title = notification.actionTitle {
                 Divider()
+                    .padding(.horizontal)
                 
                 VStack(alignment: .leading, spacing: 6) {
                     if let hint = notification.actionHint {
@@ -251,9 +256,18 @@ struct ToastNotificationView: View {
                     .tint(notification.type.color)
                     .controlSize(.small)
                 }
+                .padding()
             }
+            
+            // Progress Bar (Visual Timer)
+            GeometryReader { geo in
+                Rectangle()
+                    .fill(notification.type.color)
+                    .frame(width: geo.size.width * timeRemaining, height: 4)
+                    .animation(.linear(duration: notification.duration), value: timeRemaining)
+            }
+            .frame(height: 4)
         }
-        .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(nsColor: .controlBackgroundColor))
@@ -265,9 +279,20 @@ struct ToastNotificationView: View {
         )
         .frame(width: 380)
         .offset(x: dragOffset)
-        .onHover { isHovered = $0 }
-        .highPriorityGesture(
-            DragGesture(minimumDistance: 0)
+        .onHover { hovering in
+            isHovered = hovering
+            // Optional: Pause timer on hover? User asked for "se cierre solita", usually implies it shouldn't get stuck.
+            // Leaving it effectively "running" but user interactions can dismiss.
+        }
+        .onAppear {
+            withAnimation(.linear(duration: notification.duration)) {
+                timeRemaining = 0
+            }
+        }
+        // Use simultaneousGesture to allow Button clicks to pass through if necessary,
+        // though usually standard gesture on container works fine with buttons.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 20)
                 .onChanged { value in
                     dragOffset = value.translation.width
                 }
@@ -282,6 +307,17 @@ struct ToastNotificationView: View {
                 }
         )
     }
+    
+    private func shouldCapitalize(_ text: String) -> Bool {
+        // Simple heuristic: capitalize if it starts with a letter
+        return !text.isEmpty
+    }
+}
+
+extension String {
+    var capitalizedFirst: String {
+        prefix(1).capitalized + dropFirst()
+    }
 }
 
 // MARK: - Toast Container View
@@ -292,9 +328,12 @@ struct ToastContainer: View {
     var body: some View {
         VStack(spacing: 8) {
             ForEach(notificationManager.notifications) { notification in
-                ToastNotificationView(notification: notification) {
-                    notificationManager.dismiss(notification)
-                }
+                ToastNotificationView(
+                    notification: notification,
+                    onDismiss: {
+                        notificationManager.dismiss(notification)
+                    }
+                )
                 .transition(.asymmetric(
                     insertion: .move(edge: .trailing).combined(with: .opacity),
                     removal: .move(edge: .trailing).combined(with: .opacity)
@@ -324,9 +363,9 @@ struct ToastNotificationView_Previews: PreviewProvider {
         VStack(spacing: 20) {
             ToastNotificationView(
                 notification: ToastNotification(
-                    message: "Operation completed successfully",
+                    message: "Successfully committed changes",
                     type: .success,
-                    duration: 4.0
+                    duration: 5.0
                 ),
                 onDismiss: {}
             )

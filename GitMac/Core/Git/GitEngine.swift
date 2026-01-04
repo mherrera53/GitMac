@@ -1007,7 +1007,7 @@ actor GitEngine {
     /// Get diff for a file
     /// Truncates output for very large diffs to prevent UI freeze
     func getDiff(for file: String? = nil, staged: Bool = false, at path: String) async throws -> String {
-        var args = ["diff"]
+        var args = ["diff", "--no-color", "--no-ext-diff"]
 
         if staged {
             args.append("--cached")
@@ -1044,7 +1044,7 @@ actor GitEngine {
     func getDiff(from: String, to: String, at path: String) async throws -> String {
         let result = await shellExecutor.execute(
             "git",
-            arguments: ["diff", from, to],
+            arguments: ["diff", "--no-color", "--no-ext-diff", from, to],
             workingDirectory: path
         )
 
@@ -1067,7 +1067,7 @@ actor GitEngine {
     func getCommitDiff(sha: String, at path: String) async throws -> String {
         let result = await shellExecutor.execute(
             "git",
-            arguments: ["show", "-p", "--format=", sha],
+            arguments: ["show", "--no-color", "--no-ext-diff", "-p", "--format=", sha],
             workingDirectory: path
         )
 
@@ -1090,7 +1090,7 @@ actor GitEngine {
     func getDiff(from: String, to: String, filePath: String, at path: String) async throws -> String {
         let result = await shellExecutor.execute(
             "git",
-            arguments: ["diff", from, to, "--", filePath],
+            arguments: ["diff", "--no-color", "--no-ext-diff", from, to, "--", filePath],
             workingDirectory: path
         )
 
@@ -1112,7 +1112,7 @@ actor GitEngine {
     func getCommitFiles(sha: String, at path: String) async throws -> [CommitFile] {
         let result = await shellExecutor.execute(
             "git",
-            arguments: ["diff-tree", "--no-commit-id", "--name-status", "-r", "--numstat", sha],
+            arguments: ["diff-tree", "--no-color", "--no-ext-diff", "--no-commit-id", "--name-status", "-r", "--numstat", sha],
             workingDirectory: path
         )
 
@@ -1123,14 +1123,14 @@ actor GitEngine {
         // First get name-status for file status
         let statusResult = await shellExecutor.execute(
             "git",
-            arguments: ["diff-tree", "--no-commit-id", "--name-status", "-r", sha],
+            arguments: ["diff-tree", "--no-color", "--no-ext-diff", "--no-commit-id", "--name-status", "-r", sha],
             workingDirectory: path
         )
 
         // Then get numstat for additions/deletions
         let numstatResult = await shellExecutor.execute(
             "git",
-            arguments: ["diff-tree", "--no-commit-id", "--numstat", "-r", sha],
+            arguments: ["diff-tree", "--no-color", "--no-ext-diff", "--no-commit-id", "--numstat", "-r", sha],
             workingDirectory: path
         )
 

@@ -164,9 +164,23 @@ struct DiffView: View {
         return min(1, max(0.05, viewportHeight / contentHeight))
     }
 
-    private var isMarkdown: Bool {
+    private var isPreviewable: Bool {
         let ext = (fileDiff.displayPath as NSString).pathExtension.lowercased()
-        return ext == "md" || ext == "markdown" || ext == "mdown"
+        switch ext {
+        case "md", "markdown", "mdown", "mkdn",
+             "png", "jpg", "jpeg", "gif", "webp", "bmp", "tiff", "ico", "svg",
+             "html", "htm", "css", "js", "ts", "json", "xml", "yml", "yaml",
+             "swift", "py", "rb", "go", "rs", "c", "cpp", "h", "hpp", "java", "kt",
+             "pdf", "txt", "sh", "sql", "graphql", "gql":
+            return true
+        default:
+            return false
+        }
+    }
+
+    private var isImage: Bool {
+        let ext = (fileDiff.displayPath as NSString).pathExtension.lowercased()
+        return ["png", "jpg", "jpeg", "gif", "webp", "bmp", "tiff", "ico", "svg"].contains(ext)
     }
     
     // Helper to reconstruct old file content from hunks
@@ -221,7 +235,7 @@ struct DiffView: View {
                 viewMode: $viewMode,
                 showLineNumbers: $showLineNumbers,
                 wordWrap: $wordWrap,
-                isMarkdown: isMarkdown,
+                isPreviewable: isPreviewable,
                 showMinimap: $showMinimap,
                 onHistoryTap: {
                     showHistory.toggle()
@@ -235,22 +249,7 @@ struct DiffView: View {
                 .frame(height: 1)
 
             HStack(spacing: 0) {
-                Group {
-                    if fileDiff.isBinary {
-                        BinaryFileView(filename: fileDiff.displayPath, repoPath: repoPath)
-                    } else if isLargeFile {
-                        LargeFileDiffViewWrapper(
-                            hunks: effectiveHunks,
-                            showLineNumbers: showLineNumbers,
-                            scrollOffset: $scrollOffset,
-                            viewportHeight: $viewportHeight
-                        )
-                    } else if viewMode.isKaleidoscopeMode {
-                        kaleidoscopeContent(theme: theme)
-                    } else {
-                        standardContent(theme: theme)
-                    }
-                }
+                mainDiffContent(theme: theme)
 
                 if showHistory {
                     Rectangle()
@@ -303,7 +302,10 @@ struct DiffView: View {
         .onChange(of: showLineNumbers) { _, _ in
             kaleidoscopeRenderVersion &+= 1
         }
-        .onChange(of: viewMode) { _, _ in
+        .onChange(of: viewMode) { _, newValue in
+            if newValue.isKaleidoscopeMode {
+                rebuildKaleidoscopeCaches()
+            }
             kaleidoscopeRenderVersion &+= 1
         }
         .sheet(isPresented: $showBlame) {
@@ -431,12 +433,7 @@ struct DiffView: View {
             }
 
             let files = await DiffParser.parseAsync(diffString)
-            let normalizedTargets = Set(candidatePaths.map(normalizePath))
-            let targetFilename = URL(fileURLWithPath: primaryPath).lastPathComponent
-            let matched = files.first(where: {
-                normalizedTargets.contains(normalizePath($0.newPath)) || normalizedTargets.contains(normalizePath($0.oldPath ?? ""))
-            }) ?? files.first(where: { $0.filename == targetFilename })
-
+            
             // Prevent races: only apply if selection is still the same.
             guard showHistory else { return }
             guard selectedCommitA?.sha == requestedCommitASHA,
@@ -444,7 +441,8 @@ struct DiffView: View {
                 return
             }
 
-            overrideHunks = matched?.hunks ?? files.first?.hunks ?? []
+            // Since we requested a diff for a specific file, we take the first result.
+            overrideHunks = files.first?.hunks ?? []
 
             // Reset scroll so minimap and view are consistent
             scrollOffset = 0
@@ -455,6 +453,26 @@ struct DiffView: View {
         } catch {
             overrideHunks = []
             rebuildKaleidoscopeCaches()
+        }
+    }
+
+    @ViewBuilder
+    private func mainDiffContent(theme: SwiftUI.Color.Theme) -> some View {
+        if fileDiff.isBinary {
+            BinaryFileView(filename: fileDiff.displayPath, repoPath: repoPath)
+        } else if isLargeFile {
+            LargeFileDiffViewWrapper(
+                hunks: effectiveHunks,
+                showLineNumbers: showLineNumbers,
+                scrollOffset: $scrollOffset,
+                viewportHeight: $viewportHeight
+            )
+        } else if viewMode.isKaleidoscopeMode {
+            kaleidoscopeContent(theme: theme)
+                .id("\(fileDiff.id)-\(viewMode.rawValue)")
+        } else {
+            standardContent(theme: theme)
+                .id("\(fileDiff.id)-\(viewMode.rawValue)")
         }
     }
 
@@ -564,7 +582,7 @@ struct DiffView: View {
                     contentHeight: $contentHeight
                 )
             case .preview:
-                MarkdownView(content: previewContent, fileName: fileDiff.displayPath)
+                previewView()
             case .kaleidoscopeBlocks, .kaleidoscopeFluid, .kaleidoscopeUnified:
                 EmptyView()
             }
@@ -589,6 +607,17 @@ struct DiffView: View {
                 )
                 .frame(width: 60)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func previewView() -> some View {
+        if isImage, let repoPath = repoPath {
+            let path = URL(fileURLWithPath: repoPath).appendingPathComponent(fileDiff.newPath)
+            ImagePreviewView(imageURL: path, filename: fileDiff.displayPath)
+                .padding()
+        } else {
+            MarkdownView(content: previewContent, fileName: fileDiff.displayPath)
         }
     }
 

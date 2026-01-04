@@ -28,8 +28,8 @@ enum DiffViewMode: String, CaseIterable {
         [.split, .inline, .hunk]
     }
 
-    /// Modes available for markdown files (includes preview)
-    static var markdownModes: [DiffViewMode] {
+    /// Modes available for files supporting preview (Markdown, Images, etc.)
+    static var previewableModes: [DiffViewMode] {
         [.split, .inline, .hunk, .preview]
     }
 
@@ -65,7 +65,7 @@ struct DiffToolbar: View {
     @Binding var viewMode: DiffViewMode
     @Binding var showLineNumbers: Bool
     @Binding var wordWrap: Bool
-    var isMarkdown: Bool = false
+    var isPreviewable: Bool = false
     @Binding var showMinimap: Bool
     var showHistoryButton: Bool = true
     var showBlameButton: Bool = true
@@ -82,8 +82,8 @@ struct DiffToolbar: View {
 
     /// Available modes based on file type and current mode
     private var availableModes: [DiffViewMode] {
-        if isMarkdown {
-            return DiffViewMode.markdownModes + DiffViewMode.kaleidoscopeModes
+        if isPreviewable {
+            return DiffViewMode.previewableModes + DiffViewMode.kaleidoscopeModes
         }
         return DiffViewMode.standardModes + DiffViewMode.kaleidoscopeModes
     }
@@ -312,7 +312,7 @@ struct DiffToolbar_Previews: PreviewProvider {
                 viewMode: .constant(.split),
                 showLineNumbers: .constant(true),
                 wordWrap: .constant(false),
-                isMarkdown: false,
+                isPreviewable: false,
                 showMinimap: .constant(true)
             )
 
@@ -328,7 +328,7 @@ struct DiffToolbar_Previews: PreviewProvider {
                 viewMode: .constant(.preview),
                 showLineNumbers: .constant(true),
                 wordWrap: .constant(true),
-                isMarkdown: true,
+                isPreviewable: true,
                 showMinimap: .constant(false)
             )
 
@@ -344,7 +344,7 @@ struct DiffToolbar_Previews: PreviewProvider {
                 viewMode: .constant(.inline),
                 showLineNumbers: .constant(true),
                 wordWrap: .constant(false),
-                isMarkdown: false,
+                isPreviewable: false,
                 showMinimap: .constant(true),
                 extraActions: [
                     DiffToolbar.ToolbarAction(icon: "arrow.clockwise", tooltip: "Refresh") { print("Refresh") },

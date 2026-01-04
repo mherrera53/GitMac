@@ -80,7 +80,8 @@ struct DiffParser {
                     currentFile?.oldPath = path == "/dev/null" ? nil : path
                 }
             } else if line.hasPrefix("+++ ") {
-                let path = String(line.dropFirst(4)).replacingOccurrences(of: "b/", with: "")
+                let raw = String(line.dropFirst(4))
+                let path = raw.hasPrefix("b/") ? String(raw.dropFirst(2)) : raw
                 if currentFile == nil {
                     currentFile = (oldPath: nil, newPath: path, hunks: [], additions: 0, deletions: 0)
                 } else {

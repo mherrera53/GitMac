@@ -131,11 +131,11 @@ struct ContentView: View {
         @EnvironmentObject var appState: AppState
         func body(content: Content) -> some View {
             content
-                .onReceive(NotificationCenter.default.publisher(for: .fetch)) { _ in Task { await GitOperationHandler().handleFetch() } }
-                .onReceive(NotificationCenter.default.publisher(for: .pull)) { _ in Task { await GitOperationHandler().handlePull() } }
-                .onReceive(NotificationCenter.default.publisher(for: .push)) { _ in Task { await GitOperationHandler().handlePush() } }
-                .onReceive(NotificationCenter.default.publisher(for: .stash)) { _ in Task { await GitOperationHandler().handleStash() } }
-                .onReceive(NotificationCenter.default.publisher(for: .popStash)) { _ in Task { await GitOperationHandler().handlePopStash() } }
+                .onReceive(NotificationCenter.default.publisher(for: .fetch)) { _ in Task { await GitOperationHandler(appState: appState).handleFetch() } }
+                .onReceive(NotificationCenter.default.publisher(for: .pull)) { _ in Task { await GitOperationHandler(appState: appState).handlePull() } }
+                .onReceive(NotificationCenter.default.publisher(for: .push)) { _ in Task { await GitOperationHandler(appState: appState).handlePush() } }
+                .onReceive(NotificationCenter.default.publisher(for: .stash)) { _ in Task { await GitOperationHandler(appState: appState).handleStash() } }
+                .onReceive(NotificationCenter.default.publisher(for: .popStash)) { _ in Task { await GitOperationHandler(appState: appState).handlePopStash() } }
                 .onReceive(NotificationCenter.default.publisher(for: .newBranch)) { _ in NotificationCenter.default.post(name: .newBranch, object: nil) }
         }
     }
@@ -300,10 +300,7 @@ struct MainLayout: View {
         }
     }
 
-    private var toolbarTitleSection: some View {
-        EmptyView()
-    }
-
+    // Simplified Toolbar Sections
     private var toolbarGitActions: some View {
         Group {
             if appState.currentRepository != nil {
@@ -316,26 +313,6 @@ struct MainLayout: View {
                     
                     // Toobar Actions
                     HStack(spacing: 2) {
-                        ToolbarActionButton(
-                            icon: "arrow.counterclockwise",
-                            title: "UNDO",
-                            helpText: "Reverts the last action performed.",
-                            displayMode: toolbarDisplayMode
-                        ) {
-                            // Undo action
-                        }
-                        .disabled(true) // Placeholder implementation
-                        
-                        ToolbarActionButton(
-                            icon: "arrow.clockwise",
-                            title: "REDO",
-                            helpText: "Reapplies the last action that was undone.",
-                            displayMode: toolbarDisplayMode
-                        ) {
-                            // Redo action
-                        }
-                        .disabled(true) // Placeholder implementation
-                        
                         ToolbarActionButton(
                             icon: "arrow.down.to.line",
                             title: "PULL",
@@ -355,7 +332,7 @@ struct MainLayout: View {
                         }
                         
                         ToolbarActionButton(
-                            icon: "arrow.triangle.2.circlepath",
+                            icon: "arrow.counterclockwise",
                             title: "FETCH",
                             helpText: "Downloads objects and refs from another repository.",
                             color: AppTheme.accent,

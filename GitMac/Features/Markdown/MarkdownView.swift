@@ -9,11 +9,17 @@ import Splash
 /// Supports Mermaid diagrams (flowchart, sequence, class, state, ER, pie, gantt)
 struct MarkdownView: View {
     @StateObject private var themeManager = ThemeManager.shared
-
+    @Environment(\.colorScheme) private var colorScheme
+    
     let content: String
     let fileName: String?
 
-    @Environment(\.colorScheme) private var colorScheme
+    private var isDarkMode: Bool {
+        if themeManager.currentTheme == .system {
+            return colorScheme == .dark
+        }
+        return themeManager.currentTheme == .dark
+    }
 
     private var lineCount: Int {
         content.components(separatedBy: "\n").count
@@ -43,11 +49,11 @@ struct MarkdownView: View {
             // Choose renderer based on content type and size
             if hasMermaid {
                 // Use mixed renderer for Mermaid content
-                MermaidMarkdownView(content: content, isDarkMode: colorScheme == .dark)
+                MermaidMarkdownView(content: content, isDarkMode: isDarkMode)
             } else if lineCount > Self.fastRenderThreshold {
-                FastMarkdownView(content: content, isDarkMode: colorScheme == .dark)
+                FastMarkdownView(content: content, isDarkMode: isDarkMode)
             } else {
-                RichMarkdownView(content: content, isDarkMode: colorScheme == .dark)
+                RichMarkdownView(content: content, isDarkMode: isDarkMode)
             }
         }
     }
@@ -388,17 +394,20 @@ final class FastMarkdownTextView: NSTextView {
 /// No regex, minimal allocations, O(n) complexity
 enum FastMarkdownRenderer {
 
+    @MainActor
     static func render(_ markdown: String, isDarkMode: Bool) -> NSAttributedString {
         let result = NSMutableAttributedString()
 
         // Pre-compute styles once
         let styles = Styles(isDarkMode: isDarkMode)
 
-        // Process line by line with minimal overhead
+        // Process line by line staying on MainActor
         var inCodeBlock = false
         var codeBlockBuffer = ""
 
-        markdown.enumerateLines { line, _ in
+        let lines = markdown.split(separator: "\n", omittingEmptySubsequences: false)
+        for lineRef in lines {
+            let line = String(lineRef)
             // Code block handling (fast path)
             if line.hasPrefix("```") {
                 if inCodeBlock {
@@ -409,19 +418,19 @@ enum FastMarkdownRenderer {
                 } else {
                     inCodeBlock = true
                 }
-                return
+                continue
             }
 
             if inCodeBlock {
                 if !codeBlockBuffer.isEmpty { codeBlockBuffer += "\n" }
                 codeBlockBuffer += line
-                return
+                continue
             }
 
             // Empty line
             if line.isEmpty {
                 result.append(NSAttributedString(string: "\n", attributes: styles.body))
-                return
+                continue
             }
 
             // Fast prefix checks (ordered by frequency)
@@ -432,36 +441,36 @@ enum FastMarkdownRenderer {
                 if let headerResult = parseHeader(trimmed, styles: styles) {
                     result.append(headerResult)
                     result.append(NSAttributedString(string: "\n", attributes: styles.body))
-                    return
+                    continue
                 }
             }
 
             // List items
             if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") || trimmed.hasPrefix("+ ") {
                 appendListItem(String(trimmed.dropFirst(2)), to: result, styles: styles)
-                return
+                continue
             }
 
             // Task lists
             if trimmed.hasPrefix("- [ ] ") {
                 appendTaskItem(String(trimmed.dropFirst(6)), checked: false, to: result, styles: styles)
-                return
+                continue
             }
             if trimmed.hasPrefix("- [x] ") || trimmed.hasPrefix("- [X] ") {
                 appendTaskItem(String(trimmed.dropFirst(6)), checked: true, to: result, styles: styles)
-                return
+                continue
             }
 
             // Blockquotes
             if trimmed.hasPrefix("> ") {
                 appendBlockquote(String(trimmed.dropFirst(2)), to: result, styles: styles)
-                return
+                continue
             }
 
             // Horizontal rule
             if trimmed == "---" || trimmed == "***" || trimmed == "___" {
                 appendHorizontalRule(to: result, styles: styles)
-                return
+                continue
             }
 
             // Ordered list (simple check)
@@ -472,7 +481,7 @@ enum FastMarkdownRenderer {
                     if afterDot < trimmed.endIndex && trimmed[afterDot] == " " {
                         let content = String(trimmed[trimmed.index(after: afterDot)...])
                         appendOrderedListItem(content, to: result, styles: styles)
-                        return
+                        continue
                     }
                 }
             }
@@ -492,6 +501,7 @@ enum FastMarkdownRenderer {
 
     // MARK: - Inline Formatting (Optimized)
 
+    @MainActor
     private static func appendInlineFormatted(_ text: String, to result: NSMutableAttributedString, styles: Styles) {
         var i = text.startIndex
         var plainStart = i
@@ -576,6 +586,7 @@ enum FastMarkdownRenderer {
 
     // MARK: - Block Elements
 
+    @MainActor
     private static func parseHeader(_ line: String, styles: Styles) -> NSAttributedString? {
         var level = 0
         var i = line.startIndex
@@ -600,23 +611,27 @@ enum FastMarkdownRenderer {
         return NSAttributedString(string: content, attributes: attrs)
     }
 
+    @MainActor
     private static func appendCodeBlock(_ code: String, to result: NSMutableAttributedString, styles: Styles) {
         let codeAttr = NSAttributedString(string: code + "\n\n", attributes: styles.codeBlock)
         result.append(codeAttr)
     }
 
+    @MainActor
     private static func appendListItem(_ text: String, to result: NSMutableAttributedString, styles: Styles) {
         result.append(NSAttributedString(string: "  • ", attributes: styles.bullet))
         appendInlineFormatted(text, to: result, styles: styles)
         result.append(NSAttributedString(string: "\n", attributes: styles.body))
     }
 
+    @MainActor
     private static func appendOrderedListItem(_ text: String, to result: NSMutableAttributedString, styles: Styles) {
         result.append(NSAttributedString(string: "    ", attributes: styles.body))
         appendInlineFormatted(text, to: result, styles: styles)
         result.append(NSAttributedString(string: "\n", attributes: styles.body))
     }
 
+    @MainActor
     private static func appendTaskItem(_ text: String, checked: Bool, to result: NSMutableAttributedString, styles: Styles) {
         let checkbox = checked ? "  ☑ " : "  ☐ "
         let attrs = checked ? styles.checkboxChecked : styles.checkbox
@@ -625,12 +640,14 @@ enum FastMarkdownRenderer {
         result.append(NSAttributedString(string: "\n", attributes: styles.body))
     }
 
+    @MainActor
     private static func appendBlockquote(_ text: String, to result: NSMutableAttributedString, styles: Styles) {
         result.append(NSAttributedString(string: "│ ", attributes: styles.quoteBorder))
         result.append(NSAttributedString(string: text, attributes: styles.quote))
         result.append(NSAttributedString(string: "\n", attributes: styles.body))
     }
 
+    @MainActor
     private static func appendHorizontalRule(to result: NSMutableAttributedString, styles: Styles) {
         let line = String(repeating: "─", count: 60)
         result.append(NSAttributedString(string: "\n\(line)\n\n", attributes: styles.hr))
@@ -655,33 +672,34 @@ enum FastMarkdownRenderer {
         let checkboxChecked: [NSAttributedString.Key: Any]
         let hr: [NSAttributedString.Key: Any]
 
+        @MainActor
         init(isDarkMode: Bool) {
-            let textColor = isDarkMode ? NSColor.white : NSColor(calibratedRed: 0.14, green: 0.15, blue: 0.17, alpha: 1)
-            let secondaryColor = isDarkMode ? NSColor.secondaryLabelColor : NSColor(calibratedRed: 0.4, green: 0.43, blue: 0.47, alpha: 1)
-            let codeBackground = isDarkMode ? NSColor(calibratedRed: 0.15, green: 0.16, blue: 0.18, alpha: 1) : NSColor(calibratedRed: 0.95, green: 0.96, blue: 0.97, alpha: 1)
-            let linkColor = NSColor(calibratedRed: 0.03, green: 0.40, blue: 0.80, alpha: 1)
+            let colors = ThemeManager.shared.colors
+            let nsTextColor = colors.text.nsColor
+            let nsSecondaryColor = colors.textSecondary.nsColor
+            let nsCodeBackground = colors.backgroundTertiary.nsColor
+            let nsLinkColor = colors.accent.nsColor
 
             // Typography from DesignTokens
-            let bodyFont = NSFont.systemFont(ofSize: 14) // Close to headline size
+            let bodyFont = NSFont.systemFont(ofSize: 14)
             let boldFont = NSFont.boldSystemFont(ofSize: 14)
-            let codeFont = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular) // body monospaced
+            let codeFont = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
 
-            body = [.font: bodyFont, .foregroundColor: textColor]
-            bold = [.font: boldFont, .foregroundColor: textColor]
-            // Headers - slightly reduced from original to align with design system scale
-            h1 = [.font: NSFont.systemFont(ofSize: 28, weight: .bold), .foregroundColor: textColor] // largeTitle
-            h2 = [.font: NSFont.systemFont(ofSize: 22, weight: .bold), .foregroundColor: textColor] // title1
-            h3 = [.font: NSFont.systemFont(ofSize: 20, weight: .semibold), .foregroundColor: textColor] // title2
-            h4 = [.font: NSFont.systemFont(ofSize: 15, weight: .semibold), .foregroundColor: textColor] // subheadline
-            inlineCode = [.font: codeFont, .foregroundColor: textColor, .backgroundColor: codeBackground]
-            codeBlock = [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular), .foregroundColor: textColor, .backgroundColor: codeBackground] // callout monospaced
-            link = [.font: bodyFont, .foregroundColor: linkColor, .underlineStyle: NSUnderlineStyle.single.rawValue]
-            quote = [.font: bodyFont, .foregroundColor: secondaryColor]
+            body = [.font: bodyFont, .foregroundColor: nsTextColor]
+            bold = [.font: boldFont, .foregroundColor: nsTextColor]
+            h1 = [.font: NSFont.systemFont(ofSize: 28, weight: .bold), .foregroundColor: nsTextColor]
+            h2 = [.font: NSFont.systemFont(ofSize: 22, weight: .bold), .foregroundColor: nsTextColor]
+            h3 = [.font: NSFont.systemFont(ofSize: 20, weight: .semibold), .foregroundColor: nsTextColor]
+            h4 = [.font: NSFont.systemFont(ofSize: 15, weight: .semibold), .foregroundColor: nsTextColor]
+            inlineCode = [.font: codeFont, .foregroundColor: nsTextColor, .backgroundColor: nsCodeBackground]
+            codeBlock = [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular), .foregroundColor: nsTextColor, .backgroundColor: nsCodeBackground]
+            link = [.font: bodyFont, .foregroundColor: nsLinkColor, .underlineStyle: NSUnderlineStyle.single.rawValue]
+            quote = [.font: bodyFont, .foregroundColor: nsSecondaryColor]
             quoteBorder = [.font: bodyFont, .foregroundColor: NSColor.separatorColor]
-            bullet = [.font: bodyFont, .foregroundColor: textColor]
-            checkbox = [.font: bodyFont, .foregroundColor: secondaryColor]
+            bullet = [.font: bodyFont, .foregroundColor: nsTextColor]
+            checkbox = [.font: bodyFont, .foregroundColor: nsSecondaryColor]
             checkboxChecked = [.font: bodyFont, .foregroundColor: NSColor.systemGreen]
-            hr = [.font: NSFont.systemFont(ofSize: 10), .foregroundColor: NSColor.separatorColor] // caption2
+            hr = [.font: NSFont.systemFont(ofSize: 10), .foregroundColor: NSColor.separatorColor]
         }
     }
 }

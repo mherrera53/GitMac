@@ -31,10 +31,19 @@ struct KaleidoscopeSplitDiffView: View {
     @State private var lastExternalScrollOffset: CGFloat = -1
     @State private var isHandlingMinimapClick = false
 
+    // Layout Constants
+    private let rowHeight: CGFloat = 24
+    private let gutterWidth: CGFloat = 60
+
+
+
     var body: some View {
         GeometryReader { geometry in
             let theme = Color.Theme(themeManager.colors)
-            let rowHeight: CGFloat = 24
+            // Dynamic Layout Metrics
+            let panelWidth = max(0, (geometry.size.width - gutterWidth) / 2)
+            let overlap = min(240, max(18, panelWidth * 0.24))
+            
             let safeLower = max(0, min(visibleRange.lowerBound, pairedLines.count))
             let safeUpper = max(safeLower, min(visibleRange.upperBound, pairedLines.count))
             let safeRange = safeLower..<safeUpper
@@ -42,113 +51,115 @@ struct KaleidoscopeSplitDiffView: View {
             let topSpacerHeight = CGFloat(safeLower) * rowHeight
             let bottomSpacerHeight = CGFloat(max(0, pairedLines.count - safeUpper)) * rowHeight
 
-            KaleidoscopeScrollContainer(
-                scrollOffset: $scrollOffset,
-                viewportHeight: $viewportHeight,
-                contentHeight: $contentHeight,
-                minimapScrollTrigger: $minimapScrollTrigger,
-                contentVersion: contentVersion
-                    &+ safeLower &* 31
-                    &+ safeUpper &* 131
-                    &+ Int(geometry.size.width.rounded())
-            ) {
-                ZStack(alignment: .topLeading) {
-                    VStack(spacing: 0) {
-                        SwiftUI.Color.clear
-                            .frame(height: topSpacerHeight)
+            if geometry.size.width > 0 {
+                KaleidoscopeScrollContainer(
+                    scrollOffset: $scrollOffset,
+                    viewportHeight: $viewportHeight,
+                    contentHeight: $contentHeight,
+                    minimapScrollTrigger: $minimapScrollTrigger,
+                    desiredWidth: geometry.size.width,
+                    contentVersion: contentVersion
+                        &+ safeLower &* 31
+                        &+ safeUpper &* 131
+                        &+ Int(geometry.size.width)
+                ) {
+                    ZStack(alignment: .topLeading) {
+                        VStack(spacing: 0) {
+                            SwiftUI.Color.clear
+                                .frame(height: topSpacerHeight)
 
-                        ForEach(safeRange, id: \.self) { index in
-                            let pair = pairedLines[index]
-                            HStack(spacing: 0) {
-                                Group {
-                                    if let header = pair.hunkHeader {
-                                        KaleidoscopeHunkHeader(
-                                            header: header,
-                                            onStageHunk: stageHunkAction(for: pair),
-                                            onDiscardHunk: discardHunkAction(for: pair)
-                                        )
-                                    } else if let line = pair.left {
-                                        KaleidoscopeDiffLine(
-                                            line: line,
-                                            side: .left,
-                                            showLineNumber: showLineNumbers,
-                                            pairedLine: pair.right
-                                        )
-                                        .diffLineContextMenuWithActions(
-                                            line: line,
-                                            onStageLine: stageLineAction(for: pair, side: .left),
-                                            onDiscardLine: discardLineAction(for: pair, side: .left)
-                                        )
-                                    } else {
-                                        EmptyDiffLine(showLineNumber: showLineNumbers)
+                            ForEach(safeRange, id: \.self) { index in
+                                let pair = pairedLines[index]
+                                HStack(spacing: 0) {
+                                    Group {
+                                        if let header = pair.hunkHeader {
+                                            KaleidoscopeHunkHeader(
+                                                header: header,
+                                                onStageHunk: stageHunkAction(for: pair),
+                                                onDiscardHunk: discardHunkAction(for: pair)
+                                            )
+                                        } else if let line = pair.left {
+                                            KaleidoscopeDiffLine(
+                                                line: line,
+                                                side: .left,
+                                                showLineNumber: showLineNumbers,
+                                                pairedLine: pair.right
+                                            )
+                                            .diffLineContextMenuWithActions(
+                                                line: line,
+                                                onStageLine: stageLineAction(for: pair, side: .left),
+                                                onDiscardLine: discardLineAction(for: pair, side: .left)
+                                            )
+                                        } else {
+                                            EmptyDiffLine(showLineNumber: showLineNumbers)
+                                        }
                                     }
-                                }
-                                .frame(width: max(0, (geometry.size.width - 60) / 2))
+                                    .frame(width: panelWidth)
 
-                                KaleidoscopeGutterView()
-                                    .frame(width: 60)
+                                    KaleidoscopeGutterView()
+                                        .frame(width: gutterWidth)
 
-                                Group {
-                                    if let header = pair.hunkHeader {
-                                        KaleidoscopeHunkHeader(
-                                            header: header,
-                                            onStageHunk: stageHunkAction(for: pair),
-                                            onDiscardHunk: discardHunkAction(for: pair)
-                                        )
-                                    } else if let line = pair.right {
-                                        KaleidoscopeDiffLine(
-                                            line: line,
-                                            side: .right,
-                                            showLineNumber: showLineNumbers,
-                                            pairedLine: pair.left
-                                        )
-                                        .diffLineContextMenuWithActions(
-                                            line: line,
-                                            onStageLine: stageLineAction(for: pair, side: .right),
-                                            onDiscardLine: discardLineAction(for: pair, side: .right)
-                                        )
-                                    } else {
-                                        EmptyDiffLine(showLineNumber: showLineNumbers)
+                                    Group {
+                                        if let header = pair.hunkHeader {
+                                            KaleidoscopeHunkHeader(
+                                                header: header,
+                                                onStageHunk: stageHunkAction(for: pair),
+                                                onDiscardHunk: discardHunkAction(for: pair)
+                                            )
+                                        } else if let line = pair.right {
+                                            KaleidoscopeDiffLine(
+                                                line: line,
+                                                side: .right,
+                                                showLineNumber: showLineNumbers,
+                                                pairedLine: pair.left
+                                            )
+                                            .diffLineContextMenuWithActions(
+                                                line: line,
+                                                onStageLine: stageLineAction(for: pair, side: .right),
+                                                onDiscardLine: discardLineAction(for: pair, side: .right)
+                                            )
+                                        } else {
+                                            EmptyDiffLine(showLineNumber: showLineNumbers)
+                                        }
                                     }
+                                    .frame(width: panelWidth)
                                 }
-                                .frame(width: max(0, (geometry.size.width - 60) / 2))
+                                .frame(height: rowHeight)
                             }
-                            .frame(height: rowHeight)
+
+                            SwiftUI.Color.clear
+                                .frame(height: bottomSpacerHeight)
                         }
+                        .frame(width: geometry.size.width, alignment: .topLeading)
+                        .background(theme.background)
 
-                        SwiftUI.Color.clear
-                            .frame(height: bottomSpacerHeight)
-                    }
-                    .frame(width: geometry.size.width, alignment: .topLeading)
-                    .background(theme.background)
-
-                    if showConnectionLines, !pairedLines.isEmpty {
-                        let gutterWidth: CGFloat = 60
-                        let panelWidth = max(0, (geometry.size.width - gutterWidth) / 2)
-                        let overlap = min(240, max(18, panelWidth * 0.24))
-                        ConnectionRibbonsView(
-                            pairs: pairedLines,
-                            lineHeight: rowHeight,
-                            isFluidMode: isFluidMode,
-                            viewWidth: geometry.size.width,
-                            gutterWidth: gutterWidth,
-                            panelOverlap: overlap,
-                            visibleRange: visibleRange
-                        )
-                        .frame(width: geometry.size.width, height: CGFloat(pairedLines.count) * rowHeight, alignment: .topLeading)
-                        .allowsHitTesting(false)
+                        if showConnectionLines, !pairedLines.isEmpty {
+                            ConnectionRibbonsView(
+                                pairs: pairedLines,
+                                lineHeight: rowHeight,
+                                isFluidMode: isFluidMode,
+                                viewWidth: geometry.size.width,
+                                gutterWidth: gutterWidth,
+                                panelOverlap: overlap,
+                                visibleRange: visibleRange
+                            )
+                            .frame(width: geometry.size.width, height: CGFloat(pairedLines.count) * rowHeight, alignment: .topLeading)
+                            .allowsHitTesting(false)
+                        }
                     }
                 }
                 .onAppear {
                     updateContentHeight()
                     updateVisibleRange(offset: scrollOffset, viewport: viewportHeight)
                 }
-            }
-            .onChange(of: pairedLines.count) { _, _ in
-                updateContentHeight()
-            }
-            .onChange(of: scrollOffset) { _, newValue in
-                updateVisibleRange(offset: newValue, viewport: viewportHeight)
+                .onChange(of: pairedLines.count) { _, _ in
+                    updateContentHeight()
+                }
+                .onChange(of: scrollOffset) { _, newValue in
+                    updateVisibleRange(offset: newValue, viewport: viewportHeight)
+                }
+            } else {
+                Color.clear
             }
         }
     }
@@ -156,7 +167,7 @@ struct KaleidoscopeSplitDiffView: View {
     // MARK: - Helpers
     
     private func updateContentHeight() {
-        let calculatedHeight = CGFloat(pairedLines.count) * 24
+        let calculatedHeight = CGFloat(pairedLines.count) * rowHeight
         if contentHeight != calculatedHeight {
             // Update binding so parent knows accurate height for minimap
             contentHeight = calculatedHeight
@@ -164,12 +175,11 @@ struct KaleidoscopeSplitDiffView: View {
         // Also update visible range
         updateVisibleRange(offset: scrollOffset, viewport: viewportHeight)
     }
-    
+
     private func updateVisibleRange(offset: CGFloat, viewport: CGFloat) {
         guard !pairedLines.isEmpty else { return }
 
-        let rowHeight: CGFloat = 24
-        let buffer = 24
+        let buffer = max(10, Int(viewport / rowHeight)) // Dynamic buffer based on viewport height
         let startRow = max(0, Int(offset / rowHeight) - buffer)
         let endRow = min(pairedLines.count, Int((offset + viewport) / rowHeight) + buffer)
         
@@ -353,6 +363,7 @@ private struct KaleidoscopeScrollContainer<Content: View>: NSViewRepresentable {
     @Binding var viewportHeight: CGFloat
     @Binding var contentHeight: CGFloat
     @Binding var minimapScrollTrigger: UUID
+    let desiredWidth: CGFloat
     let contentVersion: Int
     @ViewBuilder let content: () -> Content
 
@@ -408,7 +419,10 @@ private struct KaleidoscopeScrollContainer<Content: View>: NSViewRepresentable {
         if viewportWidth > 0, context.coordinator.cachedDocumentWidth != viewportWidth {
             context.coordinator.cachedDocumentWidth = viewportWidth
         }
-        let docWidth = max(1, context.coordinator.cachedDocumentWidth)
+        
+        // Use desired width if explicitly provided and scroll view is still waking up
+        let effectiveWidth = desiredWidth > 0 ? desiredWidth : context.coordinator.cachedDocumentWidth
+        let docWidth = max(1, effectiveWidth)
         let docHeight = max(contentHeight, viewport)
         if hostingView.frame.size.width != docWidth || hostingView.frame.size.height != docHeight {
             hostingView.frame = NSRect(x: 0, y: 0, width: docWidth, height: docHeight)
@@ -437,11 +451,12 @@ private struct KaleidoscopeScrollContainer<Content: View>: NSViewRepresentable {
         var isSyncing = false
         var lastAppliedMinimapTrigger: UUID = UUID()
         var lastContentVersion: Int = -1
-        var cachedDocumentWidth: CGFloat = 0
+        var cachedDocumentWidth: CGFloat = 0 // Initialized dynamically in init
         var lastViewportHeight: CGFloat = 0
 
         init(parent: KaleidoscopeScrollContainer) {
             self.parent = parent
+            self.cachedDocumentWidth = parent.desiredWidth
         }
 
         deinit {
@@ -796,7 +811,7 @@ struct KaleidoscopeSplitDiffView_Previews: PreviewProvider {
             contentHeight: .constant(800),
             minimapScrollTrigger: .constant(UUID())
         )
-        .frame(width: 1000, height: 600)
+
     }
 }
 #endif
