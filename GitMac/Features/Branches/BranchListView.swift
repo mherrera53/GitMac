@@ -25,6 +25,9 @@ struct BranchListView: View {
     @State private var cachedFilteredRemoteBranches: [Branch] = []
     @State private var cachedGroupedRemoteBranches: [String: [Branch]] = [:]
 
+    // PR update trigger - forces re-render when PR data changes
+    @State private var prRefreshTrigger: UUID = UUID()
+
     var body: some View {
         VStack(spacing: 0) {
             searchHeader
@@ -132,13 +135,24 @@ struct BranchListView: View {
                 viewModel.loadBranches(from: repo)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .pullRequestCreated)) { _ in
+            // Immediately refresh when PR is created - force re-render
+            prRefreshTrigger = UUID()
+            Task { await prTracker.refresh() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .pullRequestMerged)) { _ in
+            // Immediately refresh when PR is merged - force re-render
+            prRefreshTrigger = UUID()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .branchPRsDidUpdate)) { _ in
             // Force view refresh when PR data updates
-            // Trigger cache update to force SwiftUI re-render
+            // Generate new UUID to force all branch rows to re-render
+            prRefreshTrigger = UUID()
             updateFilterCache()
         }
         .onChange(of: prTracker.branchPRs.count) { _, _ in
             // Also react to PR count changes for immediate UI update
+            prRefreshTrigger = UUID()
             updateFilterCache()
         }
         // Phase 0.2: Cache updates for performance
@@ -293,7 +307,7 @@ struct BranchListView: View {
                 }
             )
             // Force re-render when PR state changes for this branch
-            .id("\(branch.id)-\(pr?.number ?? 0)")
+            .id("\(branch.id)-\(pr?.number ?? 0)-\(prRefreshTrigger)")
         }
     }
 
