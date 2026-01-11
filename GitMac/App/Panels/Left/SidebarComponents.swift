@@ -17,8 +17,6 @@ struct SidebarBranchRow: View {
     @EnvironmentObject var appState: AppState
     @State private var isHovered = false
     @State private var showPRSheet = false
-    @State private var branchPRs: [GitHubPullRequest] = []
-    @State private var isLoadingPRs = false
     @State private var showUncommittedAlert = false
     @State private var showForceCheckoutAlert = false
 
@@ -26,7 +24,13 @@ struct SidebarBranchRow: View {
     @State private var isDropTarget = false
     @State private var showDragDropPRSheet = false
 
-    private let githubService = GitHubService()
+    // Use shared PR tracker for reactive updates
+    @ObservedObject private var prTracker = BranchPRTracker.shared
+
+    /// Get PR for this branch from the shared tracker
+    private var branchPR: GitHubPullRequest? {
+        prTracker.getPR(for: branch.name)
+    }
 
     private var branchIconColor: Color {
         if branch.isRemote {
@@ -101,45 +105,43 @@ struct SidebarBranchRow: View {
 
             Divider()
 
-            // Existing PRs for this branch
-            if !branchPRs.isEmpty {
-                ForEach(branchPRs) { pr in
-                    Menu {
-                        if pr.state == "open" {
-                            Button {
-                                Task { await mergePR(pr, method: .merge) }
-                            } label: {
-                                Label("Merge", systemImage: "arrow.triangle.merge")
-                            }
-
-                            Button {
-                                Task { await mergePR(pr, method: .squash) }
-                            } label: {
-                                Label("Squash and Merge", systemImage: "square.stack.3d.up")
-                            }
-
-                            Button {
-                                Task { await mergePR(pr, method: .rebase) }
-                            } label: {
-                                Label("Rebase and Merge", systemImage: "arrow.triangle.branch")
-                            }
-
-                            Divider()
+            // Existing PR for this branch (from shared tracker)
+            if let pr = branchPR {
+                Menu {
+                    if pr.state == "open" && !pr.draft {
+                        Button {
+                            Task { await mergePR(pr, method: .merge) }
+                        } label: {
+                            Label("Merge", systemImage: "arrow.triangle.merge")
                         }
 
                         Button {
-                            if let url = URL(string: pr.htmlUrl) {
-                                NSWorkspace.shared.open(url)
-                            }
+                            Task { await mergePR(pr, method: .squash) }
                         } label: {
-                            Label("Open in GitHub", systemImage: "safari")
+                            Label("Squash and Merge", systemImage: "square.stack.3d.up")
+                        }
+
+                        Button {
+                            Task { await mergePR(pr, method: .rebase) }
+                        } label: {
+                            Label("Rebase and Merge", systemImage: "arrow.triangle.branch")
+                        }
+
+                        Divider()
+                    }
+
+                    Button {
+                        if let url = URL(string: pr.htmlUrl) {
+                            NSWorkspace.shared.open(url)
                         }
                     } label: {
-                        HStack {
-                            Image(systemName: pr.state == "open" ? "arrow.triangle.pull" : "checkmark.circle.fill")
-                                .foregroundColor(pr.state == "open" ? .green : .purple)
-                            Text("PR #\(pr.number): \(pr.title)")
-                        }
+                        Label("Open in GitHub", systemImage: "safari")
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: pr.draft ? "doc.text" : (pr.state == "open" ? "arrow.triangle.pull" : "checkmark.circle.fill"))
+                            .foregroundColor(pr.draft ? .gray : (pr.state == "open" ? .green : .purple))
+                        Text("PR #\(pr.number): \(pr.title)")
                     }
                 }
 
@@ -171,9 +173,6 @@ struct SidebarBranchRow: View {
                 Label("Delete", systemImage: "trash")
             }
             .disabled(branch.isCurrent)
-        }
-        .onAppear {
-            loadBranchPRs()
         }
         .sheet(isPresented: $showPRSheet) {
             CreatePullRequestSheet(branch: branch)
@@ -295,73 +294,16 @@ struct SidebarBranchRow: View {
         }
     }
 
-    private func loadBranchPRs() {
-        guard !isLoadingPRs else { return }
-        isLoadingPRs = true
-
-        Task {
-            guard let repo = appState.currentRepository,
-                  let remoteURL = repo.remotes.first?.fetchURL else {
-                isLoadingPRs = false
-                return
-            }
-
-            let (owner, repoName) = parseGitHubURL(remoteURL)
-            guard !owner.isEmpty, !repoName.isEmpty else {
-                isLoadingPRs = false
-                return
-            }
-
-            do {
-                let allPRs = try await githubService.listPullRequests(
-                    owner: owner,
-                    repo: repoName,
-                    state: .all
-                )
-                // Filter PRs that have this branch as head
-                branchPRs = allPRs.filter { $0.head.ref == branch.name }
-            } catch {
-                // Silently fail
-            }
-
-            isLoadingPRs = false
-        }
-    }
-
-    private func parseGitHubURL(_ url: String) -> (owner: String, repo: String) {
-        let cleanURL = url
-            .replacingOccurrences(of: "git@github.com:", with: "")
-            .replacingOccurrences(of: "https://github.com/", with: "")
-            .replacingOccurrences(of: ".git", with: "")
-
-        let parts = cleanURL.components(separatedBy: "/")
-        guard parts.count >= 2 else { return ("", "") }
-
-        return (parts[0], parts[1])
-    }
-
     private func mergePR(_ pr: GitHubPullRequest, method: MergeMethod) async {
-        guard let repo = appState.currentRepository,
-              let remoteURL = repo.remotes.first?.fetchURL else {
-            return
-        }
-
-        let (owner, repoName) = parseGitHubURL(remoteURL)
-        guard !owner.isEmpty, !repoName.isEmpty else {
-            return
-        }
-
         do {
-            try await githubService.mergePullRequest(
-                owner: owner,
-                repo: repoName,
-                number: pr.number,
-                mergeMethod: method
-            )
-            loadBranchPRs()
+            try await prTracker.mergePR(pr, method: method)
+            // Refresh repository after merge
             try? await appState.gitService.refresh()
         } catch {
-            // Merge PR failed silently
+            NotificationManager.shared.error(
+                "Merge failed",
+                detail: error.localizedDescription
+            )
         }
     }
 }
