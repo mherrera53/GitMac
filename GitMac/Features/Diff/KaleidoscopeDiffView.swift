@@ -165,8 +165,10 @@ struct KaleidoscopeDiffView: View {
         }
         .background(theme.background)
         .onAppear {
-            // Initialize content height based on first file
-            recalculateContentHeight()
+            // Defer state updates to avoid SwiftUI appearance deadlock
+            DispatchQueue.main.async {
+                recalculateContentHeight()
+            }
         }
         .onChange(of: viewMode) { _, _ in
             // Force recalculation when switching between Blocks/Fluid/Unified
@@ -534,10 +536,7 @@ struct KaleidoscopeDiffView: View {
         guard contentHeight > viewportHeight, contentHeight > 0 else { return 0 }
         let maxScroll = contentHeight - viewportHeight
         guard maxScroll > 0 else { return 0 }
-        let ratio = max(0, min(1, scrollOffset / maxScroll))
-        // Debug log for scroll sync
-        NSLog("🔍 [Minimap] scrollOffset: %.1f, contentHeight: %.1f, viewportHeight: %.1f, maxScroll: %.1f, ratio: %.3f", scrollOffset, contentHeight, viewportHeight, maxScroll, ratio)
-        return ratio
+        return max(0, min(1, scrollOffset / maxScroll))
     }
     
     // Calculate viewport ratio (0-1) for minimap lens

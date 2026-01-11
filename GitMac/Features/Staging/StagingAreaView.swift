@@ -1217,6 +1217,8 @@ struct UntrackedFileRow: View {
     var onSelect: () -> Void = {}
     var onStage: (() -> Void)? = nil
 
+    @State private var showDeleteConfirmation = false
+
     var filename: String {
         URL(fileURLWithPath: path).lastPathComponent
     }
@@ -1279,7 +1281,7 @@ struct UntrackedFileRow: View {
             Divider()
 
             Button(role: .destructive) {
-                try? FileManager.default.removeItem(atPath: path)
+                showDeleteConfirmation = true
             } label: {
                 Label("Delete File", systemImage: "trash")
             }
@@ -1291,6 +1293,18 @@ struct UntrackedFileRow: View {
             } label: {
                 Label("Ignore", systemImage: "eye.slash")
             }
+        }
+        .confirmationDialog(
+            "Delete '\(filename)'?",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                try? FileManager.default.removeItem(atPath: path)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This file will be permanently deleted. This action cannot be undone.")
         }
     }
 }

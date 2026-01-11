@@ -8,19 +8,19 @@ struct ConnectionRibbonsView: View {
     let viewWidth: CGFloat
     let gutterWidth: CGFloat
     let panelOverlap: CGFloat
-    let visibleRange: Range<Int> // Virtualization support
-
-    @ObservedObject private var themeManager = ThemeManager.shared
+    let visibleRange: Range<Int>
+    let themeColors: ColorScheme
 
     var body: some View {
-        Canvas { context, size in
+        Canvas(opaque: false, colorMode: .linear, rendersAsynchronously: true) { context, size in
             drawRibbons(context: context, size: size)
         }
         .frame(width: viewWidth, alignment: .topLeading)
+        .drawingGroup()
     }
 
     private func drawRibbons(context: GraphicsContext, size: CGSize) {
-        let theme = Color.Theme(themeManager.colors)
+        let theme = Color.Theme(themeColors)
         let layoutWidth = viewWidth
         let lower = max(0, min(visibleRange.lowerBound, pairs.count))
         let upper = max(lower, min(visibleRange.upperBound, pairs.count))
@@ -454,7 +454,8 @@ struct ConnectionRibbonsView_Previews: PreviewProvider {
             viewWidth: 800,
             gutterWidth: 60,
             panelOverlap: 18,
-            visibleRange: 0..<1
+            visibleRange: 0..<1,
+            themeColors: ColorScheme.default(for: .dark)
         )
         .frame(width: 800, height: 400)
         .background(Color.black.opacity(0.8))

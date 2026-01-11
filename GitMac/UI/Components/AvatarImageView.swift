@@ -141,7 +141,7 @@ struct AvatarImageView: View {
                     return
                 }
             } catch {
-                NSLog("⚠️ Failed to load avatar from \(avatarURL): \(error)")
+                // Silently fail - will try Gravatar fallback
             }
         }
 

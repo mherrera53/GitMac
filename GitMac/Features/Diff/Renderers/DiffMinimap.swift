@@ -144,7 +144,6 @@ struct KaleidoscopeMinimapWrapper: View {
             scrollPosition: scrollRatio,
             viewportRatio: vpRatio,
             onScrollToPosition: { ratio in
-                NSLog("🔵 [MinimapWrapper] Callback! ratio=%.2f, maxScroll=%.1f, newOffset=%.1f", ratio, maxScroll, ratio * maxScroll)
                 let newOffset = ratio * maxScroll
                 if abs(newOffset - scrollOffset) > 0.5 {
                     DispatchQueue.main.async {
@@ -154,15 +153,5 @@ struct KaleidoscopeMinimapWrapper: View {
                 }
             }
         )
-        .onAppear {
-            NSLog("🔍 [KaleidoscopeMinimapWrapper] contentHeight: %.1f, viewportHeight: %.1f, scrollOffset: %.1f", contentHeight, viewportHeight, scrollOffset)
-            NSLog("🔍 [KaleidoscopeMinimapWrapper] maxScroll: %.1f, scrollRatio: %.3f, vpRatio: %.3f", maxScroll, scrollRatio, vpRatio)
-        }
-        .onChange(of: contentHeight) { _, newHeight in
-            NSLog("🔍 [KaleidoscopeMinimapWrapper] contentHeight changed to: %.1f", newHeight)
-        }
-        .onChange(of: scrollOffset) { _, newOffset in
-            NSLog("🔍 [KaleidoscopeMinimapWrapper] scrollOffset changed to: %.1f", newOffset)
-        }
     }
 }

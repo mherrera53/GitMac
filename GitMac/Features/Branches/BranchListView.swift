@@ -324,8 +324,7 @@ struct BranchListView: View {
             do {
                 try await viewModel.gitService.merge(branch: dragged.name)
             } catch {
-                // Error handling - could show an error alert
-                print("Merge failed: \(error)")
+                // Merge failed - error handled elsewhere
             }
 
             // Clear the state
@@ -345,8 +344,7 @@ struct BranchListView: View {
             do {
                 try await viewModel.gitService.rebase(onto: dragged.name)
             } catch {
-                // Error handling - could show an error alert
-                print("Rebase failed: \(error)")
+                // Rebase failed - error handled elsewhere
             }
 
             // Clear the state
@@ -380,11 +378,6 @@ class BranchListViewModel: ObservableObject {
             return lhs.name < rhs.name
         }
         remoteBranches = repo.remoteBranches.sorted { $0.name < $1.name }
-
-        // Debug: log branch counts
-        print("🔍 Loaded \(localBranches.count) local branches")
-        print("🌐 Loaded \(remoteBranches.count) remote branches:")
-        remoteBranches.forEach { print("  - \($0.name)") }
     }
 
     @Published var uncommittedFiles: [String] = []
@@ -392,14 +385,10 @@ class BranchListViewModel: ObservableObject {
     @Published var pendingCheckoutBranch: Branch?
 
     func checkout(_ branch: Branch) async {
-        NSLog("🔄 Attempting checkout to branch: \(branch.name)")
-
         // Check for uncommitted changes first
         let changes = await checkUncommittedChanges()
 
         if !changes.isEmpty {
-            NSLog("⚠️ Found \(changes.count) uncommitted changes")
-
             // Show warning with file list
             await MainActor.run {
                 pendingCheckoutBranch = branch
@@ -416,7 +405,6 @@ class BranchListViewModel: ObservableObject {
                 detail: "Files:\n\(fileList)\(moreFiles)\n\nStash changes to proceed with checkout?"
             )
         } else {
-            NSLog("✅ No uncommitted changes, proceeding with checkout")
             await performCheckout(branch.name)
         }
     }

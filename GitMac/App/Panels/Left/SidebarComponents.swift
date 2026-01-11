@@ -187,17 +187,13 @@ struct SidebarBranchRow: View {
                         _ = try await appState.gitService.stash(message: "Auto-stash before checkout to \(branch.name)")
                         try await appState.gitService.checkout(branch.name)
                     } catch {
-                        print("Stash & checkout failed: \(error)")
+                        // Stash & checkout failed silently
                     }
                 }
             }
             Button("Force Checkout", role: .destructive) {
                 Task {
-                    do {
-                        try await appState.gitService.checkoutForce(branch.name)
-                    } catch {
-                        print("Force checkout failed: \(error)")
-                    }
+                    try? await appState.gitService.checkoutForce(branch.name)
                 }
             }
         } message: {
@@ -252,7 +248,7 @@ struct SidebarBranchRow: View {
             await appState.refresh()
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: appState.currentRepository?.path)
         } catch {
-            print("Checkout failed: \(error)")
+            // Checkout failed silently
         }
     }
 
@@ -276,15 +272,11 @@ struct SidebarBranchRow: View {
 
             // 3. Pop stash if we stashed something
             if didStash {
-                let popResult = await shell.execute(
+                _ = await shell.execute(
                     "git",
                     arguments: ["stash", "pop"],
                     workingDirectory: path
                 )
-
-                if !popResult.isSuccess {
-                    print("Stash pop failed - changes remain in stash")
-                }
             }
 
             // 4. Refresh UI to update graph and branch indicator
@@ -299,7 +291,7 @@ struct SidebarBranchRow: View {
                     workingDirectory: path
                 )
             }
-            print("Checkout failed: \(error)")
+            // Checkout failed silently
         }
     }
 
@@ -366,12 +358,10 @@ struct SidebarBranchRow: View {
                 number: pr.number,
                 mergeMethod: method
             )
-            // Reload PRs after merge
             loadBranchPRs()
-            // Refresh git status
             try? await appState.gitService.refresh()
         } catch {
-            print("Failed to merge PR: \(error)")
+            // Merge PR failed silently
         }
     }
 }

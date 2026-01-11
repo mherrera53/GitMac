@@ -309,8 +309,25 @@ class AppState: ObservableObject {
             activeTabId = openTabs.last?.id
         }
 
+        // Clear caches to free memory
+        Task {
+            await clearCaches()
+        }
+
         // Auto-save after closing tab
         saveSession()
+    }
+
+    /// Clear caches to free memory when switching repositories
+    private func clearCaches() async {
+        // Clear diff cache
+        await GlobalDiffCache.shared.clear()
+
+        // Clear URL cache
+        URLCache.shared.removeAllCachedResponses()
+
+        // Clear avatar in-memory cache
+        await AvatarService.shared.clearInMemoryCaches()
     }
 
     func selectTab(_ tabId: UUID, fromNavigation: Bool = false) {

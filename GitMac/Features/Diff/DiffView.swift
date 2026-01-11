@@ -611,11 +611,8 @@ struct DiffView: View {
                     scrollPosition: scrollPosition,
                     viewportRatio: viewportRatio,
                     onScrollToPosition: { normalizedPos in
-                        NSLog("🔵 [DiffView] Minimap clicked! normalizedPos: %.3f", normalizedPos)
                         let maxScroll = max(0, contentHeight - viewportHeight)
-                        let newOffset = normalizedPos * maxScroll
-                        NSLog("🔵 [DiffView] Calculated newOffset: %.1f (maxScroll: %.1f)", newOffset, maxScroll)
-                        scrollOffset = newOffset
+                        scrollOffset = normalizedPos * maxScroll
                         minimapScrollTrigger = UUID()
                     }
                 )
@@ -970,8 +967,11 @@ struct OptimizedSplitDiffView: View {
         }
         .background(theme.background)
         .onAppear {
-            if abs(contentHeight - desiredHeight) > 0.5 {
-                contentHeight = desiredHeight
+            // Defer binding update to avoid SwiftUI appearance deadlock
+            DispatchQueue.main.async {
+                if abs(contentHeight - desiredHeight) > 0.5 {
+                    contentHeight = desiredHeight
+                }
             }
         }
         .onChange(of: hunks.count) { _, _ in
