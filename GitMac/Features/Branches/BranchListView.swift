@@ -1099,6 +1099,10 @@ struct CreatePullRequestSheet: View {
                 detail: title
             )
 
+            // Post notification to refresh PR data across the app
+            NotificationCenter.default.post(name: .pullRequestCreated, object: newPR)
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: repo.path)
+
             dismiss()
         } catch {
             NotificationManager.shared.error(
@@ -1215,4 +1219,5 @@ struct CreatePullRequestSheet: View {
 
 extension Notification.Name {
     static let renameBranch = Notification.Name("renameBranch")
+    static let pullRequestCreated = Notification.Name("pullRequestCreated")
 }

@@ -125,7 +125,37 @@ struct WelcomeView: View {
     @EnvironmentObject var recentReposManager: RecentRepositoriesManager
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) private var colorScheme
     @State private var refreshTrigger = UUID()
+
+    // Computed colors that respond to theme changes
+    private var backgroundColor: Color {
+        colorScheme == .dark ? Color(hex: "#1E1E1E") : Color(hex: "#FFFFFF")
+    }
+
+    private var backgroundSecondaryColor: Color {
+        colorScheme == .dark ? Color(hex: "#252526") : Color(hex: "#F5F5F7")
+    }
+
+    private var textPrimaryColor: Color {
+        colorScheme == .dark ? Color.white : Color(hex: "#1D1D1F")
+    }
+
+    private var textSecondaryColor: Color {
+        colorScheme == .dark ? Color(hex: "#CCCCCC") : Color(hex: "#48484A")
+    }
+
+    private var textMutedColor: Color {
+        colorScheme == .dark ? Color(hex: "#999999") : Color(hex: "#6E6E73")
+    }
+
+    private var accentColor: Color {
+        Color.accentColor
+    }
+
+    private var successColor: Color {
+        Color(nsColor: .systemGreen)
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -138,16 +168,16 @@ struct WelcomeView: View {
 
                 Text("GitMac")
                     .font(.system(size: 36, weight: .bold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundColor(textPrimaryColor)
 
                 Text("A Git client for Mac")
                     .font(.system(size: 16))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundColor(textSecondaryColor)
 
                 HStack(spacing: 16) {
-                    WelcomeButton(icon: "folder", title: "Open", color: AppTheme.accent, action: onOpen)
-                    WelcomeButton(icon: "arrow.down.circle", title: "Clone", color: AppTheme.success, action: onClone)
-                    WelcomeButton(icon: "plus.circle", title: "Init", color: AppTheme.accent) {
+                    WelcomeButton(icon: "folder", title: "Open", color: accentColor, action: onOpen)
+                    WelcomeButton(icon: "arrow.down.circle", title: "Clone", color: successColor, action: onClone)
+                    WelcomeButton(icon: "plus.circle", title: "Init", color: accentColor) {
                         NotificationCenter.default.post(name: .initRepository, object: nil)
                     }
                 }
@@ -155,48 +185,69 @@ struct WelcomeView: View {
                 Spacer()
             }
             .frame(maxWidth: .infinity)
-            .background(AppTheme.background)
+            .background(backgroundColor)
 
             // Right side - Recent repos
-            VStack(alignment: .leading, spacing: 0) {
-                Text("RECENT REPOSITORIES")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(AppTheme.textMuted)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, 12)
-
-                ScrollView {
-                    VStack(spacing: 0) {
-                        if recentReposManager.recentRepos.isEmpty {
-                            VStack(spacing: 12) {
-                                Image(systemName: "clock")
-                                    .font(.system(size: 32))
-                                    .foregroundColor(AppTheme.textMuted)
-                                Text("No recent repositories")
-                                    .foregroundColor(AppTheme.textMuted)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 60)
-                        } else {
-                            ForEach(recentReposManager.recentRepos) { repo in
-                                RecentRepoRow(repo: repo)
-                            }
-                        }
-                    }
-                }
-            }
-            .frame(width: 320)
-            .background(AppTheme.backgroundSecondary)
+            RecentReposSidebar(
+                recentRepos: recentReposManager.recentRepos,
+                backgroundColor: backgroundSecondaryColor,
+                textMutedColor: textMutedColor
+            )
         }
-        // Force re-render when theme changes via multiple triggers
-        .id("\(themeManager.currentTheme.rawValue)-\(refreshTrigger)")
+        // Force re-render when theme changes
+        .id("\(themeManager.currentTheme.rawValue)-\(colorScheme)-\(refreshTrigger)")
         .onReceive(NotificationCenter.default.publisher(for: .themeDidChange)) { _ in
-            // Force view refresh when theme changes
             refreshTrigger = UUID()
         }
         .preferredColorScheme(themeManager.currentTheme == .light ? .light :
                               themeManager.currentTheme == .dark ? .dark : nil)
+        .onAppear {
+            // Ensure window appearance matches theme on appear
+            if let window = NSApplication.shared.windows.first(where: { $0.isKeyWindow }) {
+                window.appearance = themeManager.appearance
+            }
+        }
+    }
+}
+
+// MARK: - Recent Repos Sidebar
+
+struct RecentReposSidebar: View {
+    let recentRepos: [RecentRepository]
+    let backgroundColor: Color
+    let textMutedColor: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("RECENT REPOSITORIES")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(textMutedColor)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 12)
+
+            ScrollView {
+                VStack(spacing: 0) {
+                    if recentRepos.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "clock")
+                                .font(.system(size: 32))
+                                .foregroundColor(textMutedColor)
+                            Text("No recent repositories")
+                                .foregroundColor(textMutedColor)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 60)
+                    } else {
+                        ForEach(recentRepos) { repo in
+                            RecentRepoRow(repo: repo)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(width: 320)
+        .background(backgroundColor)
     }
 }
 
@@ -233,7 +284,20 @@ struct RecentRepoRow: View {
     let repo: RecentRepository
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var recentReposManager: RecentRepositoriesManager
+    @Environment(\.colorScheme) private var colorScheme
     @State private var isHovered = false
+
+    private var textPrimaryColor: Color {
+        colorScheme == .dark ? Color.white : Color(hex: "#1D1D1F")
+    }
+
+    private var textMutedColor: Color {
+        colorScheme == .dark ? Color(hex: "#999999") : Color(hex: "#6E6E73")
+    }
+
+    private var hoverColor: Color {
+        Color.accentColor.opacity(0.1)
+    }
 
     var body: some View {
         Button {
@@ -244,15 +308,15 @@ struct RecentRepoRow: View {
             HStack(spacing: 12) {
                 Image(systemName: "folder.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundColor(Color.accentColor)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(repo.name)
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundColor(textPrimaryColor)
                     Text(repo.path)
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundColor(textMutedColor)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
@@ -261,7 +325,7 @@ struct RecentRepoRow: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
-            .background(isHovered ? AppTheme.hover : Color.clear)
+            .background(isHovered ? hoverColor : Color.clear)
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }

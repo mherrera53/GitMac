@@ -86,6 +86,7 @@ struct GitMacApp: App {
         Settings {
             SettingsView()
                 .environmentObject(appState)
+                .environmentObject(themeManager)
         }
     }
 }
