@@ -2393,7 +2393,7 @@ struct CreatePRSheetFromCommit: View {
 
     @State private var title = ""
     @State private var prBody = ""
-    @State private var baseBranch = "main"
+    @State private var baseBranch = ""  // Will be set from WorkspaceSettings
     @State private var isDraft = false
     @State private var isCreating = false
     @State private var isGenerating = false
@@ -2466,13 +2466,11 @@ struct CreatePRSheetFromCommit: View {
 
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                             Text("To").font(.caption).foregroundColor(theme.textSecondary)
-                            Picker("", selection: $baseBranch) {
-                                Text("main").tag("main")
-                                Text("master").tag("master")
-                                Text("develop").tag("develop")
-                            }
-                            .labelsHidden()
-                            .frame(width: 120)
+                            Text(baseBranch.isEmpty ? "Loading..." : baseBranch)
+                                .padding(.horizontal, DesignTokens.Spacing.sm)
+                                .padding(.vertical, DesignTokens.Spacing.xs)
+                                .background(theme.success.opacity(0.15))
+                                .cornerRadius(DesignTokens.CornerRadius.sm)
                         }
                     }
                     .padding()
@@ -2601,8 +2599,9 @@ struct CreatePRSheetFromCommit: View {
     private func generateTitleAndDescription() async {
         isGenerating = true
         do {
-            // Get diff between base and head branches
-            let diff = try await appState.gitService.getDiff(from: baseBranch, to: headBranch)
+            // Use origin/baseBranch to compare against remote (works even if local branch doesn't exist)
+            let remoteBase = "origin/\(baseBranch)"
+            let diff = try await appState.gitService.getDiff(from: remoteBase, to: headBranch)
             let commits = try await appState.gitService.getCommits(branch: headBranch, limit: 20)
 
             // Generate both in parallel
@@ -2641,6 +2640,9 @@ struct CreatePRSheetFromCommit: View {
         guard let repo = appState.currentRepository,
               let remote = repo.remotes.first(where: { $0.isGitHub }),
               let ownerRepo = remote.ownerAndRepo else { return }
+
+        // Set base branch from WorkspaceSettings
+        baseBranch = WorkspaceSettingsManager.shared.getMainBranch(for: repo.path)
 
         // Configure viewModel
         viewModel.owner = ownerRepo.owner
