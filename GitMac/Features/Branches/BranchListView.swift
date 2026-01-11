@@ -4,6 +4,7 @@ import SwiftUI
 struct BranchListView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = BranchListViewModel()
+    @ObservedObject private var prTracker = BranchPRTracker.shared
     @State private var searchText = ""
     @State private var showNewBranchSheet = false
     @State private var selectedBranch: Branch?
@@ -115,17 +116,30 @@ struct BranchListView: View {
         .task {
             if let repo = appState.currentRepository {
                 viewModel.loadBranches(from: repo)
+                // Configure PR tracker for this repository
+                await prTracker.configure(forRepoAt: repo.path)
             }
         }
-        .onChange(of: appState.currentRepository?.path) { _, _ in
+        .onChange(of: appState.currentRepository?.path) { _, newPath in
             if let repo = appState.currentRepository {
                 viewModel.loadBranches(from: repo)
+                // Reconfigure PR tracker when repo changes
+                Task { await prTracker.configure(forRepoAt: repo.path) }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { notification in
             if let repo = appState.currentRepository {
                 viewModel.loadBranches(from: repo)
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .branchPRsDidUpdate)) { _ in
+            // Force view refresh when PR data updates
+            // Trigger cache update to force SwiftUI re-render
+            updateFilterCache()
+        }
+        .onChange(of: prTracker.branchPRs.count) { _, _ in
+            // Also react to PR count changes for immediate UI update
+            updateFilterCache()
         }
         // Phase 0.2: Cache updates for performance
         .onChange(of: searchText) { _, newValue in
@@ -227,7 +241,10 @@ struct BranchListView: View {
 
 
     private func branchRowView(for branch: Branch) -> some View {
-        Group {
+        // Get PR for this branch (if any)
+        let pr = prTracker.getPR(for: branch.name)
+
+        return Group {
             BranchRow(
                 branch: branch,
                 isSelected: selectedBranch?.id == branch.id,
@@ -254,10 +271,29 @@ struct BranchListView: View {
                     selectedBranch = branch
                     showRebaseSheet = true
                 },
+                // PR integration
+                pullRequest: pr,
+                onCreatePR: branch.isRemote ? nil : {
+                    selectedBranch = branch
+                    showPRSheet = true
+                },
+                onViewPR: { prItem in
+                    // Open PR in browser
+                    if let url = URL(string: prItem.htmlUrl) {
+                        NSWorkspace.shared.open(url)
+                    }
+                },
+                onMergePR: { prItem, method in
+                    Task {
+                        try? await prTracker.mergePR(prItem, method: method)
+                    }
+                },
                 onBranchDropped: { droppedBranch in
                     handleBranchDrop(dragged: droppedBranch, onto: branch)
                 }
             )
+            // Force re-render when PR state changes for this branch
+            .id("\(branch.id)-\(pr?.number ?? 0)")
         }
     }
 
@@ -434,6 +470,9 @@ class BranchListViewModel: ObservableObject {
             // Post both notifications for full sync
             NotificationCenter.default.post(name: .branchDidCheckout, object: branchName)
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+
+            // Refresh PR tracker after checkout
+            await BranchPRTracker.shared.refresh()
         } catch let gitError as GitError {
             self.error = gitError.localizedDescription
             if let fix = gitError.suggestedFix {
@@ -537,6 +576,9 @@ class BranchListViewModel: ObservableObject {
             // Post notifications for full sync
             NotificationCenter.default.post(name: .branchDidCheckout, object: localName)
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+
+            // Refresh PR tracker after checkout
+            await BranchPRTracker.shared.refresh()
         } catch {
             self.error = error.localizedDescription
         }
@@ -568,6 +610,9 @@ class BranchListViewModel: ObservableObject {
 
             // Notify UI
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+
+            // Refresh PR tracker after delete (PR may have been closed)
+            await BranchPRTracker.shared.refresh()
         } catch {
             self.error = error.localizedDescription
         }
@@ -583,6 +628,9 @@ class BranchListViewModel: ObservableObject {
 
             // Notify UI
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+
+            // Refresh PR tracker after merge
+            await BranchPRTracker.shared.refresh()
 
             // Track successful merge
             RemoteOperationTracker.shared.recordMerge(
@@ -622,24 +670,27 @@ class BranchListViewModel: ObservableObject {
         guard let path = currentRepoPath else { return }
         isLoading = true
         do {
-            if branch.isHead {
-                try await engine.push(at: path)
+            // Push the specific branch (works for both HEAD and non-HEAD branches)
+            let options = PushOptions(branch: branch.name)
+            try await engine.push(options: options, at: path)
 
-                // Notify UI
-                NotificationCenter.default.post(name: .remoteOperationCompleted, object: "push")
-                NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
-                GitHubSyncManager.shared.notifyOperationCompleted(type: .push, details: branch.name)
+            // Notify UI
+            NotificationCenter.default.post(name: .remoteOperationCompleted, object: "push")
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+            GitHubSyncManager.shared.notifyOperationCompleted(type: .push, details: branch.name)
 
-                NotificationManager.shared.success(
-                    "Pushed '\(branch.name)'",
-                    detail: "Changes pushed to remote"
-                )
-                RemoteOperationTracker.shared.recordPush(
-                    success: true,
-                    branch: branch.name,
-                    remote: "origin"
-                )
-            }
+            // Refresh PR tracker immediately after push
+            await BranchPRTracker.shared.refresh()
+
+            NotificationManager.shared.success(
+                "Pushed '\(branch.name)'",
+                detail: "Changes pushed to remote"
+            )
+            RemoteOperationTracker.shared.recordPush(
+                success: true,
+                branch: branch.name,
+                remote: "origin"
+            )
         } catch let gitError as GitError {
             self.error = gitError.localizedDescription
             RemoteOperationTracker.shared.recordPush(
@@ -689,6 +740,9 @@ class BranchListViewModel: ObservableObject {
                 NotificationCenter.default.post(name: .remoteOperationCompleted, object: "pull")
                 NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
                 GitHubSyncManager.shared.notifyOperationCompleted(type: .pull, details: branch.name)
+
+                // Refresh PR tracker immediately after pull
+                await BranchPRTracker.shared.refresh()
 
                 NotificationManager.shared.success(
                     "Pulled '\(branch.name)'",
@@ -1117,6 +1171,9 @@ struct CreatePullRequestSheet: View {
                 "PR #\(newPR.number) created",
                 detail: title
             )
+
+            // Refresh PR tracker immediately so branch context menu updates
+            await BranchPRTracker.shared.refresh()
 
             // Post notification to refresh PR data across the app
             NotificationCenter.default.post(name: .pullRequestCreated, object: newPR)

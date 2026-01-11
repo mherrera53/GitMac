@@ -55,14 +55,8 @@ class BranchPRTracker: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // Refresh periodically (every 60 seconds)
-        Timer.publish(every: 60, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                guard let self, !self.owner.isEmpty else { return }
-                Task { await self.refresh() }
-            }
-            .store(in: &cancellables)
+        // Note: No periodic timer - PR data is refreshed after each git action
+        // (push, pull, checkout, merge, delete) for immediate feedback
     }
 
     // MARK: - Configuration
