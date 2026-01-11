@@ -76,24 +76,53 @@ class WorkspaceSettingsManager: ObservableObject {
 // MARK: - Workspace Configuration
 
 struct WorkspaceConfig: Codable {
-    // Git Configuration
-    var mainBranchName: String?  // Per-repository main branch (e.g., "main", "master", "develop")
+    // MARK: - Repository Info
+    var displayName: String?  // Custom display name/alias for the repo
+    var repositoryColor: String?  // Hex color for visual identification
 
-    // Taiga Integration
+    // MARK: - Git Configuration
+    var mainBranchName: String?  // Per-repository main branch (e.g., "main", "master", "develop")
+    var defaultRemote: String?  // Default remote (usually "origin")
+    var gitUserName: String?  // Override global git user.name
+    var gitUserEmail: String?  // Override global git user.email
+    var signCommits: Bool?  // Sign commits with GPG
+
+    // MARK: - Branch Settings
+    var featureBranchPrefix: String?  // e.g., "feature/"
+    var bugfixBranchPrefix: String?  // e.g., "bugfix/" or "fix/"
+    var releaseBranchPrefix: String?  // e.g., "release/"
+    var hotfixBranchPrefix: String?  // e.g., "hotfix/"
+    var autoDeleteMergedBranches: Bool?
+
+    // MARK: - Commit Settings
+    var commitMessageTemplate: String?  // Template for commit messages
+    var requireIssueReference: Bool?  // Require issue reference in commits
+
+    // MARK: - PR Settings
+    var defaultPRBaseBranch: String?  // Default base branch for PRs
+    var defaultReviewers: [String]?  // Default reviewers for PRs
+    var prTitlePrefix: String?  // Prefix for PR titles
+
+    // MARK: - Auto-fetch Settings
+    var autoFetchEnabled: Bool?
+    var autoFetchIntervalMinutes: Int?  // Interval in minutes
+
+    // MARK: - Taiga Integration
     var taigaProjectId: Int?
     var taigaProjectName: String?
 
-    // Microsoft Planner Integration
+    // MARK: - Microsoft Planner Integration
     var plannerPlanId: String?
     var plannerPlanName: String?
     var plannerGroupId: String?
 
-    // Future integrations
+    // MARK: - Other Integrations
     var jiraProjectKey: String?
     var linearTeamId: String?
     var asanaProjectId: String?
+    var notionDatabaseId: String?
 
-    // AWS CodeBuild
+    // MARK: - AWS CodeBuild
     var codeBuildProjectName: String?
     var awsRegion: String?
 
