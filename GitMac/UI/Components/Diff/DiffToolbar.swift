@@ -71,6 +71,7 @@ struct DiffToolbar: View {
     var showBlameButton: Bool = true
     var onHistoryTap: (() -> Void)? = nil
     var onBlameTap: (() -> Void)? = nil
+    var onClose: (() -> Void)? = nil
     var extraActions: [ToolbarAction] = []
 
     struct ToolbarAction: Identifiable {
@@ -89,7 +90,7 @@ struct DiffToolbar: View {
     }
 
     var body: some View {
-        HStack(spacing: DesignTokens.Spacing.lg) {
+        HStack(spacing: DesignTokens.Spacing.md) {
             // File info
             HStack(spacing: DesignTokens.Spacing.sm) {
                 Image(systemName: "doc.fill")
@@ -100,14 +101,15 @@ struct DiffToolbar: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(1)
+                    .truncationMode(.middle)
             }
 
             // Stats badges
             DiffStatsView.badges(additions: additions, deletions: deletions, size: .medium)
 
-            Spacer()
+            Spacer(minLength: DesignTokens.Spacing.md)
 
-            // History and Blame buttons (always visible)
+            // History and Blame buttons
             HStack(spacing: DesignTokens.Spacing.xs) {
                 if showHistoryButton {
                     ToolbarButton(
@@ -118,7 +120,7 @@ struct DiffToolbar: View {
                         onHistoryTap?()
                     }
                 }
-                
+
                 if showBlameButton {
                     ToolbarButton(
                         icon: "person.text.rectangle",
@@ -135,7 +137,7 @@ struct DiffToolbar: View {
                 Rectangle()
                     .fill(AppTheme.border)
                     .frame(width: 1, height: 20)
-                
+
                 ForEach(extraActions) { action in
                     ToolbarButton(
                         icon: action.icon,
@@ -177,10 +179,10 @@ struct DiffToolbar: View {
                 }
             }
 
-            // View mode selector
-            HStack(spacing: DesignTokens.Spacing.xxs) {
+            // View mode selector (compact icon-only)
+            HStack(spacing: 2) {
                 ForEach(availableModes, id: \.self) { mode in
-                    DiffModeButton(
+                    DiffModeIconButton(
                         mode: mode,
                         isSelected: viewMode == mode
                     ) {
@@ -193,9 +195,21 @@ struct DiffToolbar: View {
             .padding(3)
             .background(AppTheme.backgroundTertiary)
             .cornerRadius(DesignTokens.CornerRadius.md)
+
+            // Close button (if provided)
+            if let onClose = onClose {
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(AppTheme.textMuted)
+                }
+                .buttonStyle(.plain)
+                .help("Close")
+            }
         }
         .padding(.horizontal, DesignTokens.Spacing.lg)
-        .padding(.vertical, 10) // Keeping 10 as it's a specific visual choice for toolbar height
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity)
         .background(AppTheme.toolbar)
     }
 }
@@ -230,7 +244,32 @@ struct ToolbarButton: View {
 
 // MARK: - Diff Mode Button
 
-/// View mode selector button (Split, Inline, Hunk, Preview)
+/// Compact icon-only mode selector button with tooltip
+struct DiffModeIconButton: View {
+    let mode: DiffViewMode
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: mode.icon)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(isSelected ? .white : AppTheme.textSecondary)
+                .frame(width: 26, height: 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(isSelected ? AppTheme.accent : (isHovered ? AppTheme.hover : Color.clear))
+                )
+        }
+        .buttonStyle(.plain)
+        .help(mode.rawValue)
+        .onHover { isHovered = $0 }
+    }
+}
+
+/// View mode selector button with text (for wider layouts)
 struct DiffModeButton: View {
     let mode: DiffViewMode
     let isSelected: Bool
@@ -252,7 +291,7 @@ struct DiffModeButton: View {
             .padding(.vertical, 5)
             .background(
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(isSelected ? AppTheme.accent : (isHovered ? AppTheme.hover : SwiftUI.Color.clear))
+                    .fill(isSelected ? AppTheme.accent : (isHovered ? AppTheme.hover : Color.clear))
             )
         }
         .buttonStyle(.plain)
@@ -269,9 +308,9 @@ extension DiffToolbar {
         additions: Int,
         deletions: Int
     ) -> some View {
-        HStack(spacing: 16) {
+        HStack(spacing: DesignTokens.Spacing.md) {
             // File info
-            HStack(spacing: 8) {
+            HStack(spacing: DesignTokens.Spacing.sm) {
                 Image(systemName: "doc.fill")
                     .font(.system(size: 14))
                     .foregroundColor(AppTheme.accent)
@@ -280,15 +319,17 @@ extension DiffToolbar {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(1)
+                    .truncationMode(.middle)
             }
 
             // Stats badges
             DiffStatsView.badges(additions: additions, deletions: deletions, size: .medium)
 
-            Spacer()
+            Spacer(minLength: DesignTokens.Spacing.md)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, DesignTokens.Spacing.lg)
         .padding(.vertical, 10)
+        .frame(maxWidth: .infinity)
         .background(AppTheme.toolbar)
     }
 }

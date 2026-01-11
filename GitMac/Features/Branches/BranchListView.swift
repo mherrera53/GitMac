@@ -1103,7 +1103,11 @@ struct CreatePullRequestSheet: View {
     @State private var baseBranch: String? = "main"
     @State private var isDraft = false
     @State private var isCreating = false
+    @State private var isGeneratingAI = false
     @State private var error: String?
+
+    private let aiService = AIService.shared
+    private let gitEngine = GitEngine()
 
     var body: some View {
         VStack(spacing: DesignTokens.Spacing.lg) {
@@ -1140,7 +1144,33 @@ struct CreatePullRequestSheet: View {
                 DSTextField(placeholder: "Title", text: $title)
 
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                    Text("Description")
+                    HStack {
+                        Text("Description")
+                        Spacer()
+                        Button {
+                            Task { await generateWithAI() }
+                        } label: {
+                            HStack(spacing: 4) {
+                                if isGeneratingAI {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                        .frame(width: 14, height: 14)
+                                } else {
+                                    Image(systemName: "sparkles")
+                                        .font(.system(size: 12))
+                                }
+                                Text(isGeneratingAI ? "Generating..." : "Generate with AI")
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .foregroundColor(AppTheme.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(AppTheme.accent.opacity(0.1))
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isGeneratingAI)
+                    }
                     DSTextEditor(
                         placeholder: "Enter PR description...",
                         text: $prBody,
@@ -1210,7 +1240,7 @@ struct CreatePullRequestSheet: View {
             }
 
             let githubService = GitHubService()
-            _ = try await githubService.createPullRequest(
+            let newPR = try await githubService.createPullRequest(
                 owner: owner,
                 repo: repoName,
                 title: title,
@@ -1220,9 +1250,18 @@ struct CreatePullRequestSheet: View {
                 draft: isDraft
             )
 
+            NotificationManager.shared.success(
+                "PR #\(newPR.number) created",
+                detail: title
+            )
+
             dismiss()
         } catch {
-            self.self.error = error.localizedDescription
+            NotificationManager.shared.error(
+                "Failed to create PR",
+                detail: error.localizedDescription
+            )
+            self.error = error.localizedDescription
         }
 
         isCreating = false
@@ -1241,6 +1280,52 @@ struct CreatePullRequestSheet: View {
         guard parts.count >= 2 else { return ("", "") }
 
         return (parts[0], parts[1])
+    }
+
+    private func generateWithAI() async {
+        guard let repo = appState.currentRepository else { return }
+
+        isGeneratingAI = true
+        error = nil
+
+        do {
+            let base = baseBranch ?? "main"
+
+            // Get diff between branches
+            let diff = try await gitEngine.getDiff(
+                from: base,
+                to: branch.name,
+                at: repo.path
+            )
+
+            // Get recent commits on this branch (use range notation)
+            let commits = try await gitEngine.getCommits(
+                at: repo.path,
+                branch: "\(base)..\(branch.name)",
+                limit: 10
+            )
+
+            // Generate title if empty
+            if title.isEmpty {
+                let generatedTitle = try await aiService.generatePRTitle(
+                    commits: commits,
+                    diff: diff
+                )
+                title = generatedTitle
+            }
+
+            // Generate description
+            let generatedBody = try await aiService.generatePRDescription(
+                diff: diff,
+                commits: commits
+            )
+            prBody = generatedBody
+
+        } catch {
+            self.error = "AI generation failed: \(error.localizedDescription)"
+        }
+
+        isGeneratingAI = false
     }
 }
 

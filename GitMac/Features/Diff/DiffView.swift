@@ -18,6 +18,7 @@ import DifferenceKit
 struct DiffView: View {
     let fileDiff: FileDiff
     var repoPath: String? = nil
+    var onClose: (() -> Void)? = nil
     @AppStorage("diffViewMode") private var viewMode: DiffViewMode = .split
     @AppStorage("diffShowLineNumbers") private var showLineNumbers = true
     @AppStorage("diffWordWrap") private var wordWrap = false
@@ -241,7 +242,8 @@ struct DiffView: View {
                     showHistory.toggle()
                     loadCommitsIfNeeded()
                 },
-                onBlameTap: { showBlame = true }
+                onBlameTap: { showBlame = true },
+                onClose: onClose
             )
 
             Rectangle()
