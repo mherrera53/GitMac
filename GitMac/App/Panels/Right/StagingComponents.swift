@@ -454,11 +454,13 @@ class LegacyStagingViewModel: ObservableObject {
         guard let path = currentPath, !message.isEmpty else { return }
         Task {
             do {
-                _ = try await engine.commit(message: message, at: path)
+                let commit = try await engine.commit(message: message, at: path)
+                let shortSHA = String(commit.sha.prefix(7))
                 await loadStatus(at: path)
                 onSuccess()
+                NotificationManager.shared.success("Commit completed", detail: "SHA: \(shortSHA)")
             } catch {
-                print("Error committing: \(error)")
+                NotificationManager.shared.error("Commit failed", detail: error.localizedDescription)
             }
         }
     }

@@ -212,7 +212,7 @@ struct IntegrationsSettingsView: View {
                 ForEach(IntegrationType.allCases.filter { !$0.isAvailable }) { integration in
                     HStack {
                         Image(systemName: integration.icon)
-                            .foregroundColor(Color(hex: integration.color))
+                            .foregroundColor(SwiftUI.Color(hex: integration.color))
                             .frame(width: 24)
                         Text(integration.rawValue)
                             .foregroundColor(AppTheme.textPrimary)

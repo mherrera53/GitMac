@@ -97,7 +97,7 @@ struct GroupManagementRow: View {
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.md) {
             Circle()
-                .fill(Color(hex: group.color))
+                .fill(SwiftUI.Color(hex: group.color))
                 .frame(width: 12, height: 12)
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                 Text(group.name)
@@ -176,7 +176,7 @@ struct CreateGroupSheet: View {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: DesignTokens.Spacing.md) {
                         ForEach(availableColors, id: \.1) { _, hex in
                             ColorPickerButton(
-                                color: Color(hex: hex),
+                                color: SwiftUI.Color(hex: hex),
                                 isSelected: selectedColor == hex
                             ) {
                                 selectedColor = hex
@@ -261,7 +261,7 @@ struct EditGroupSheet: View {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: DesignTokens.Spacing.md) {
                         ForEach(availableColors, id: \.1) { _, hex in
                             ColorPickerButton(
-                                color: Color(hex: hex),
+                                color: SwiftUI.Color(hex: hex),
                                 isSelected: selectedColor == hex
                             ) {
                                 selectedColor = hex

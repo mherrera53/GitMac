@@ -20,7 +20,7 @@ struct PlannerLoginView: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             HStack {
                 Image(systemName: "calendar.badge.checkmark")
-                    .foregroundColor(Color(hex: "0078D4"))
+                    .foregroundColor(SwiftUI.Color(hex: "0078D4"))
                 Text("Connect to Microsoft Planner")
                     .foregroundColor(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.headline)
@@ -171,7 +171,7 @@ struct MicrosoftOAuthWaitingView: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: "link.circle.fill")
                 .font(DesignTokens.Typography.iconXXXL)
-                .foregroundColor(Color(hex: "0078D4"))
+                .foregroundColor(SwiftUI.Color(hex: "0078D4"))
 
             Text("Enter this code on Microsoft")
                 .foregroundColor(AppTheme.textPrimary)
@@ -274,7 +274,7 @@ struct PlannerConnectedView: View {
                 if let planName = config.plannerPlanName {
                     HStack {
                         Image(systemName: "checklist")
-                            .foregroundColor(Color(hex: "0078D4"))
+                            .foregroundColor(SwiftUI.Color(hex: "0078D4"))
                         Text("Linked to: \(planName)")
                             .foregroundColor(AppTheme.textPrimary)
                             .font(DesignTokens.Typography.caption)

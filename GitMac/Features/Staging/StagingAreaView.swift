@@ -9,6 +9,8 @@ struct StagingAreaView: View {
     @State private var isAmending = false
     @State private var selectedFile: String?
     @State private var showAICommitSheet = false
+    @State private var showCreatePRSheet = false
+    @State private var commitSHAForPR: String = ""  // SHA after commit for PR creation
     @State private var showConflictResolver = false
     @State private var conflictFileToResolve: FileStatus?
     @State private var viewMode: FileViewMode = .tree
@@ -82,6 +84,11 @@ struct StagingAreaView: View {
                             }
                         }
                     },
+                    onCommitPushPR: {
+                        Task {
+                            await commitPushAndOpenPR()
+                        }
+                    },
                     onGenerateAI: { showAICommitSheet = true }
                 )
                 .frame(height: commitHeight)
@@ -116,6 +123,13 @@ struct StagingAreaView: View {
         }
         .sheet(isPresented: $showAICommitSheet) {
             AICommitMessageSheet(message: $commitMessage, diff: viewModel.currentDiff)
+        }
+        .sheet(isPresented: $showCreatePRSheet) {
+            CreatePRSheetFromCommit(
+                commitSHA: commitSHAForPR,
+                onDismiss: { showCreatePRSheet = false }
+            )
+            .environmentObject(appState)
         }
         .sheet(isPresented: $showConflictResolver) {
             if let file = conflictFileToResolve, let repoPath = appState.currentRepository?.path {
@@ -158,6 +172,42 @@ struct StagingAreaView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Commit + Push + PR Flow
+
+    /// Commits staged changes, pushes to remote, and opens PR creation sheet
+    private func commitPushAndOpenPR() async {
+        // Step 1: Commit
+        let commitSuccess = await viewModel.commit(message: commitMessage, amend: isAmending)
+        guard commitSuccess else {
+            return // Commit failed, error already shown
+        }
+
+        // Clear commit message after successful commit
+        commitMessage = ""
+        isAmending = false
+
+        // Step 2: Push
+        do {
+            let pushSHA = try await appState.gitService.push()
+            let shortSHA = String(pushSHA.prefix(7))
+
+            NotificationManager.shared.success(
+                "Commit & Push completed",
+                detail: "SHA: \(shortSHA)"
+            )
+
+            // Step 3: Open PR sheet
+            commitSHAForPR = shortSHA
+            showCreatePRSheet = true
+
+        } catch {
+            NotificationManager.shared.error(
+                "Push failed",
+                detail: error.localizedDescription
+            )
         }
     }
 
@@ -930,7 +980,8 @@ class StagingAreaViewModel: ObservableObject {
         guard currentPath != nil, let gitService = gitService else { return false }
 
         do {
-            _ = try await gitService.commit(message: message, amend: amend)
+            let commit = try await gitService.commit(message: message, amend: amend)
+            let shortSHA = String(commit.sha.prefix(7))
             commitError = nil
             showError = false
 
@@ -945,8 +996,16 @@ class StagingAreaViewModel: ObservableObject {
                 NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
             }
 
+            // Show success notification with SHA
+            let actionName = amend ? "Amend" : "Commit"
+            NotificationManager.shared.success(
+                "\(actionName) completed",
+                detail: "SHA: \(shortSHA)"
+            )
+
             return true
         } catch {
+            NotificationManager.shared.error("Commit failed", detail: error.localizedDescription)
             return false
         }
     }
@@ -2316,6 +2375,307 @@ struct PreviewFileTypeIcon: View {
         case "png", "jpg", "jpeg", "gif", "svg", "webp": return .purple
         case "pdf": return .red
         default: return .blue
+        }
+    }
+}
+
+// MARK: - File Preview Helper
+
+// MARK: - Create PR Sheet from Commit
+
+/// Sheet to create a PR after commit + push flow
+struct CreatePRSheetFromCommit: View {
+    let commitSHA: String
+    let onDismiss: () -> Void
+
+    @EnvironmentObject var appState: AppState
+    @StateObject private var viewModel = PRListViewModel()
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var themeManager = ThemeManager.shared
+
+    @State private var title = ""
+    @State private var prBody = ""
+    @State private var baseBranch = "main"
+    @State private var isDraft = false
+    @State private var isCreating = false
+    @State private var isGenerating = false
+    @State private var selectedReviewers: Set<String> = []
+    @State private var selectedLabels: Set<String> = []
+    @State private var availableReviewers: [GitHubUser] = []
+    @State private var availableLabels: [GitHubLabel] = []
+
+    private let aiService = AIService()
+
+    private var headBranch: String {
+        appState.currentRepository?.currentBranch?.name ?? ""
+    }
+
+    var body: some View {
+        let theme = Color.Theme(themeManager.colors)
+
+        return VStack(spacing: DesignTokens.Spacing.lg) {
+            // Header
+            HStack {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                    Text("Create Pull Request")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+
+                    if !commitSHA.isEmpty {
+                        Text("Commit: \(commitSHA)")
+                            .font(.caption)
+                            .foregroundColor(theme.textSecondary)
+                    }
+                }
+
+                Spacer()
+
+                // AI Generate Button
+                Button {
+                    Task { await generateTitleAndDescription() }
+                } label: {
+                    HStack(spacing: DesignTokens.Spacing.sm - 2) {
+                        if isGenerating {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                            Text("Generating...")
+                        } else {
+                            Image(systemName: "sparkles")
+                                .foregroundColor(theme.accent)
+                            Text("Generate with AI")
+                        }
+                    }
+                    .font(.subheadline)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isGenerating || headBranch.isEmpty)
+            }
+
+            ScrollView {
+                VStack(spacing: DesignTokens.Spacing.lg) {
+                    // Branch info (read-only)
+                    HStack {
+                        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                            Text("From").font(.caption).foregroundColor(theme.textSecondary)
+                            Text(headBranch)
+                                .padding(.horizontal, DesignTokens.Spacing.sm)
+                                .padding(.vertical, DesignTokens.Spacing.xs)
+                                .background(AppTheme.accent.opacity(0.15))
+                                .cornerRadius(DesignTokens.CornerRadius.sm)
+                        }
+
+                        Image(systemName: "arrow.right")
+                            .foregroundColor(theme.textSecondary)
+                            .padding(.horizontal, DesignTokens.Spacing.sm)
+
+                        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                            Text("To").font(.caption).foregroundColor(theme.textSecondary)
+                            Picker("", selection: $baseBranch) {
+                                Text("main").tag("main")
+                                Text("master").tag("master")
+                                Text("develop").tag("develop")
+                            }
+                            .labelsHidden()
+                            .frame(width: 120)
+                        }
+                    }
+                    .padding()
+                    .background(Color(nsColor: .controlBackgroundColor))
+                    .cornerRadius(DesignTokens.CornerRadius.lg)
+
+                    // Title
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                        Text("Title").font(.caption).foregroundColor(theme.textSecondary)
+                        DSTextField(placeholder: "Enter PR title", text: $title)
+                    }
+
+                    // Description
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                        Text("Description").font(.caption).foregroundColor(theme.textSecondary)
+                        DSTextEditor(
+                            placeholder: "Enter PR description...",
+                            text: $prBody,
+                            minHeight: 120
+                        )
+                    }
+
+                    // Reviewers
+                    if !availableReviewers.isEmpty {
+                        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                            Text("Reviewers (optional)").font(.caption).foregroundColor(theme.textSecondary)
+                            FlowLayout(spacing: DesignTokens.Spacing.sm - 2) {
+                                ForEach(availableReviewers.prefix(10), id: \.id) { user in
+                                    Button {
+                                        toggleSelection(user.login, in: &selectedReviewers)
+                                    } label: {
+                                        HStack(spacing: DesignTokens.Spacing.xs) {
+                                            AsyncImage(url: URL(string: user.avatarUrl)) { image in
+                                                image.resizable()
+                                            } placeholder: {
+                                                Image(systemName: "person.circle.fill")
+                                                    .foregroundColor(theme.textSecondary)
+                                            }
+                                            .frame(width: DesignTokens.Size.avatarXS, height: DesignTokens.Size.avatarXS)
+                                            .clipShape(Circle())
+
+                                            Text(user.login)
+                                                .font(.caption)
+                                        }
+                                        .padding(.horizontal, DesignTokens.Spacing.sm)
+                                        .padding(.vertical, DesignTokens.Spacing.xs)
+                                        .background(selectedReviewers.contains(user.login) ? AppTheme.accent : theme.textMuted.opacity(0.2))
+                                        .foregroundColor(selectedReviewers.contains(user.login) ? .white : .primary)
+                                        .cornerRadius(DesignTokens.CornerRadius.xl)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+
+                    // Labels
+                    if !availableLabels.isEmpty {
+                        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                            Text("Labels (optional)").font(.caption).foregroundColor(theme.textSecondary)
+                            FlowLayout(spacing: DesignTokens.Spacing.sm - 2) {
+                                ForEach(availableLabels.prefix(15), id: \.id) { label in
+                                    Button {
+                                        toggleSelection(label.name, in: &selectedLabels)
+                                    } label: {
+                                        Text(label.name)
+                                            .font(.caption)
+                                            .padding(.horizontal, DesignTokens.Spacing.sm)
+                                            .padding(.vertical, DesignTokens.Spacing.xs)
+                                            .background(selectedLabels.contains(label.name) ? theme.info : theme.textMuted.opacity(0.2))
+                                            .foregroundColor(selectedLabels.contains(label.name) ? .white : .primary)
+                                            .cornerRadius(DesignTokens.CornerRadius.xl)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+
+                    // Options
+                    Toggle("Create as draft", isOn: $isDraft)
+                        .padding(.vertical, DesignTokens.Spacing.sm)
+                }
+                .padding(.horizontal)
+            }
+
+            // Actions
+            HStack {
+                Button("Cancel") {
+                    onDismiss()
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button {
+                    Task {
+                        await createPullRequest()
+                    }
+                } label: {
+                    if isCreating {
+                        HStack(spacing: DesignTokens.Spacing.xs) {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                            Text("Creating...")
+                        }
+                    } else {
+                        Text("Create Pull Request")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(title.isEmpty || headBranch.isEmpty || isCreating || isGenerating)
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding()
+        .frame(width: 650, height: 600)
+        .task {
+            await loadMetadata()
+        }
+    }
+
+    // MARK: - Actions
+
+    private func generateTitleAndDescription() async {
+        isGenerating = true
+        do {
+            let gitService = appState.gitService
+            let diff = try await gitService.getDiff(from: baseBranch, to: headBranch)
+            let commits = try await gitService.getCommits(branch: headBranch, limit: 10)
+
+            async let generatedTitle = aiService.generatePRTitle(commits: commits, diff: diff)
+            async let generatedDescription = aiService.generatePRDescription(diff: diff, commits: commits, template: nil)
+
+            title = try await generatedTitle
+            prBody = try await generatedDescription
+        } catch {
+            print("Failed to generate PR content: \(error)")
+        }
+        isGenerating = false
+    }
+
+    private func createPullRequest() async {
+        isCreating = true
+
+        await viewModel.createPRWithMetadata(
+            title: title,
+            body: prBody,
+            head: headBranch,
+            base: baseBranch,
+            draft: isDraft,
+            reviewers: Array(selectedReviewers),
+            assignees: [],
+            labels: Array(selectedLabels)
+        )
+
+        isCreating = false
+        onDismiss()
+        dismiss()
+    }
+
+    private func loadMetadata() async {
+        guard let repo = appState.currentRepository,
+              let remote = repo.remotes.first(where: { $0.isGitHub }),
+              let ownerRepo = remote.ownerAndRepo else { return }
+
+        // Configure viewModel
+        viewModel.owner = ownerRepo.owner
+        viewModel.repo = ownerRepo.repo
+
+        // Load collaborators
+        do {
+            let githubService = GitHubService()
+            availableReviewers = try await githubService.getCollaborators(
+                owner: ownerRepo.owner,
+                repo: ownerRepo.repo
+            )
+        } catch {
+            print("Failed to load collaborators: \(error)")
+        }
+
+        // Load labels
+        do {
+            let githubService = GitHubService()
+            availableLabels = try await githubService.getLabels(
+                owner: ownerRepo.owner,
+                repo: ownerRepo.repo
+            )
+        } catch {
+            print("Failed to load labels: \(error)")
+        }
+    }
+
+    private func toggleSelection(_ item: String, in set: inout Set<String>) {
+        if set.contains(item) {
+            set.remove(item)
+        } else {
+            set.insert(item)
         }
     }
 }

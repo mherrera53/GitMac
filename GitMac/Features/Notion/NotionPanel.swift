@@ -418,13 +418,13 @@ struct SimpleNotionTaskRow: View {
         guard let color = color else { return AppTheme.textSecondary }
         switch color {
         case "gray": return AppTheme.textSecondary
-        case "brown": return Color(hex: "8B4513")  // Notion API color, do not change
+        case "brown": return SwiftUI.Color(hex: "8B4513")  // Notion API color, do not change
         case "orange": return AppTheme.warning
         case "yellow": return AppTheme.warning
         case "green": return AppTheme.success
         case "blue": return AppTheme.accent
         case "purple": return AppTheme.accentPurple
-        case "pink": return Color(hex: "FF69B4")  // Notion API color, do not change
+        case "pink": return SwiftUI.Color(hex: "FF69B4")  // Notion API color, do not change
         case "red": return AppTheme.error
         default: return AppTheme.textSecondary
         }

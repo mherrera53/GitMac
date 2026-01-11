@@ -345,10 +345,10 @@ struct RemoteProviderIcon: View {
 
     var backgroundColor: Color {
         switch provider {
-        case .github: return Color(hex: "24292E")
-        case .gitlab: return Color(hex: "FC6D26")
-        case .bitbucket: return Color(hex: "0052CC")
-        case .azureDevOps: return Color(hex: "0078D4")
+        case .github: return SwiftUI.Color(hex: "24292E")
+        case .gitlab: return SwiftUI.Color(hex: "FC6D26")
+        case .bitbucket: return SwiftUI.Color(hex: "0052CC")
+        case .azureDevOps: return SwiftUI.Color(hex: "0078D4")
         case .other: return AppTheme.textMuted.opacity(0.3)
         }
     }

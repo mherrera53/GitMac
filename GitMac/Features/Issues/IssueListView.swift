@@ -234,8 +234,8 @@ struct IssueLabelBadge: View {
             .font(DesignTokens.Typography.caption2)
             .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
             .padding(.vertical, DesignTokens.Spacing.xxs)
-            .background(Color(hex: label.color).opacity(0.3))
-            .foregroundColor(Color(hex: label.color))
+            .background(SwiftUI.Color(hex: label.color).opacity(0.3))
+            .foregroundColor(SwiftUI.Color(hex: label.color))
             .cornerRadius(DesignTokens.CornerRadius.lg + DesignTokens.Spacing.xxs)
     }
 }

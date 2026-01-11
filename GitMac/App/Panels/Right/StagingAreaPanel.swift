@@ -10,6 +10,8 @@ struct StagingAreaPanel: View {
     @ObservedObject private var themeManager = ThemeManager.shared
     @State private var viewMode: StagingViewMode = .tree
     @State private var extensionFilter: String? = nil
+    @State private var showCreatePRSheet = false
+    @State private var commitSHAForPR: String = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -61,7 +63,53 @@ struct StagingAreaPanel: View {
                 commitMessage: $commitMessage,
                 canCommit: !stagingVM.stagedFiles.isEmpty,
                 repositoryPath: appState.currentRepository?.path,
-                onCommit: { stagingVM.commit(message: commitMessage) { commitMessage = "" } }
+                onCommit: { stagingVM.commit(message: commitMessage) { commitMessage = "" } },
+                onCommitPushPR: {
+                    Task {
+                        await commitPushAndOpenPR()
+                    }
+                }
+            )
+        }
+        .sheet(isPresented: $showCreatePRSheet) {
+            CreatePRSheetFromCommit(
+                commitSHA: commitSHAForPR,
+                onDismiss: { showCreatePRSheet = false }
+            )
+            .environmentObject(appState)
+        }
+    }
+
+    // MARK: - Commit + Push + PR Flow
+
+    private func commitPushAndOpenPR() async {
+        // Step 1: Commit
+        let commitSuccess = await stagingVM.commitAsync(message: commitMessage)
+        guard commitSuccess else {
+            return // Commit failed, error already shown
+        }
+
+        // Clear commit message
+        commitMessage = ""
+
+        // Step 2: Push
+        do {
+            let pushSHA = try await appState.gitService.push()
+            let shortSHA = String(pushSHA.prefix(7))
+
+            NotificationManager.shared.success(
+                "Commit & Push completed",
+                detail: "SHA: \(shortSHA)"
+            )
+
+            // Step 3: Open PR sheet
+            commitSHAForPR = shortSHA
+            showCreatePRSheet = true
+
+        } catch {
+            NotificationManager.shared.error(
+                "Push failed",
+                detail: error.localizedDescription
             )
         }
     }

@@ -129,24 +129,24 @@ struct WelcomeView: View {
     @State private var refreshTrigger = UUID()
 
     // Computed colors that respond to theme changes
-    private var backgroundColor: Color {
-        colorScheme == .dark ? Color(hex: "#1E1E1E") : Color(hex: "#FFFFFF")
+    private var backgroundColor: SwiftUI.Color {
+        colorScheme == .dark ? SwiftUI.Color(hex: "#1E1E1E") : SwiftUI.Color(hex: "#FFFFFF")
     }
 
-    private var backgroundSecondaryColor: Color {
-        colorScheme == .dark ? Color(hex: "#252526") : Color(hex: "#F5F5F7")
+    private var backgroundSecondaryColor: SwiftUI.Color {
+        colorScheme == .dark ? SwiftUI.Color(hex: "#252526") : SwiftUI.Color(hex: "#F5F5F7")
     }
 
-    private var textPrimaryColor: Color {
-        colorScheme == .dark ? Color.white : Color(hex: "#1D1D1F")
+    private var textPrimaryColor: SwiftUI.Color {
+        colorScheme == .dark ? SwiftUI.Color.white : SwiftUI.Color(hex: "#1D1D1F")
     }
 
-    private var textSecondaryColor: Color {
-        colorScheme == .dark ? Color(hex: "#CCCCCC") : Color(hex: "#48484A")
+    private var textSecondaryColor: SwiftUI.Color {
+        colorScheme == .dark ? SwiftUI.Color(hex: "#CCCCCC") : SwiftUI.Color(hex: "#48484A")
     }
 
-    private var textMutedColor: Color {
-        colorScheme == .dark ? Color(hex: "#999999") : Color(hex: "#6E6E73")
+    private var textMutedColor: SwiftUI.Color {
+        colorScheme == .dark ? SwiftUI.Color(hex: "#999999") : SwiftUI.Color(hex: "#6E6E73")
     }
 
     private var accentColor: Color {
@@ -287,12 +287,12 @@ struct RecentRepoRow: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovered = false
 
-    private var textPrimaryColor: Color {
-        colorScheme == .dark ? Color.white : Color(hex: "#1D1D1F")
+    private var textPrimaryColor: SwiftUI.Color {
+        colorScheme == .dark ? SwiftUI.Color.white : SwiftUI.Color(hex: "#1D1D1F")
     }
 
-    private var textMutedColor: Color {
-        colorScheme == .dark ? Color(hex: "#999999") : Color(hex: "#6E6E73")
+    private var textMutedColor: SwiftUI.Color {
+        colorScheme == .dark ? SwiftUI.Color(hex: "#999999") : SwiftUI.Color(hex: "#6E6E73")
     }
 
     private var hoverColor: Color {

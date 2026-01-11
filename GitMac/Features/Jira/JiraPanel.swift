@@ -29,7 +29,7 @@ struct JiraPanel: View {
             VStack(spacing: 0) {
                 // Header
                 HStack(spacing: DesignTokens.Spacing.md) {
-                    DSIcon("square.stack.3d.up.fill", size: .md, color: Color(hex: "0052CC"))
+                    DSIcon("square.stack.3d.up.fill", size: .md, color: SwiftUI.Color(hex: "0052CC"))
 
                     Text("Jira")
                         .font(DesignTokens.Typography.headline)

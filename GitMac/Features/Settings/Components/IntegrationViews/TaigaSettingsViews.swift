@@ -14,7 +14,7 @@ struct TaigaLoginView: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             HStack {
                 Image(systemName: "ticket.fill")
-                    .foregroundColor(Color(hex: "4DC8A8"))
+                    .foregroundColor(SwiftUI.Color(hex: "4DC8A8"))
                 Text("Connect to Taiga")
                     .foregroundColor(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.headline)
@@ -99,7 +99,7 @@ struct TaigaConnectedView: View {
                 if let projectName = config.taigaProjectName {
                     HStack {
                         Image(systemName: "folder.fill")
-                            .foregroundColor(Color(hex: "4DC8A8"))
+                            .foregroundColor(SwiftUI.Color(hex: "4DC8A8"))
                         Text("Linked to: \(projectName)")
                             .foregroundColor(AppTheme.textPrimary)
                             .font(DesignTokens.Typography.caption)

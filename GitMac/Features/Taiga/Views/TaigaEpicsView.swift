@@ -30,7 +30,7 @@ struct TaigaEpicRow: View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             // Color bar
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.sm)
-                .fill(Color(hex: epic.color ?? "7b68ee"))
+                .fill(SwiftUI.Color(hex: epic.color ?? "7b68ee"))
                 .frame(width: 4, height: 24)
 
             // Ref
@@ -52,8 +52,8 @@ struct TaigaEpicRow: View {
                     .font(DesignTokens.Typography.caption2)
                     .padding(.horizontal, DesignTokens.Spacing.xs)
                     .padding(.vertical, 2)
-                    .background(Color(hex: status.color).opacity(0.2))
-                    .foregroundColor(Color(hex: status.color))
+                    .background(SwiftUI.Color(hex: status.color).opacity(0.2))
+                    .foregroundColor(SwiftUI.Color(hex: status.color))
                     .cornerRadius(DesignTokens.CornerRadius.sm)
             }
         }

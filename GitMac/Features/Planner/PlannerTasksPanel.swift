@@ -24,7 +24,7 @@ struct PlannerTasksPanel: View {
             VStack(spacing: 0) {
                 // Header
                 HStack(spacing: DesignTokens.Spacing.md) {
-                    DSIcon("checklist", size: .md, color: Color(hex: "0078D4"))
+                    DSIcon("checklist", size: .md, color: SwiftUI.Color(hex: "0078D4"))
 
                     Text("Planner")
                         .font(DesignTokens.Typography.headline)

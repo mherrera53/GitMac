@@ -153,7 +153,7 @@ struct WorkspaceConfigView: View {
                             saveConfig(for: repoPath)
                         } label: {
                             Circle()
-                                .fill(Color(hex: hex))
+                                .fill(SwiftUI.Color(hex: hex))
                                 .frame(width: 24, height: 24)
                                 .overlay(
                                     Circle()
@@ -419,7 +419,7 @@ struct WorkspaceConfigView: View {
             // Taiga
             integrationRow(
                 icon: "ticket.fill",
-                color: Color(hex: "4DC8A8"),
+                color: SwiftUI.Color(hex: "4DC8A8"),
                 name: "Taiga",
                 value: config.taigaProjectName,
                 onClear: {
@@ -432,7 +432,7 @@ struct WorkspaceConfigView: View {
             // Planner
             integrationRow(
                 icon: "calendar.badge.checkmark",
-                color: Color(hex: "0078D4"),
+                color: SwiftUI.Color(hex: "0078D4"),
                 name: "Microsoft Planner",
                 value: config.plannerPlanName,
                 onClear: {
@@ -446,7 +446,7 @@ struct WorkspaceConfigView: View {
             // Jira
             integrationRow(
                 icon: "square.stack.3d.up.fill",
-                color: Color(hex: "0052CC"),
+                color: SwiftUI.Color(hex: "0052CC"),
                 name: "Jira",
                 value: config.jiraProjectKey,
                 onClear: {
@@ -458,7 +458,7 @@ struct WorkspaceConfigView: View {
             // Linear
             integrationRow(
                 icon: "lineweight",
-                color: Color(hex: "5E6AD2"),
+                color: SwiftUI.Color(hex: "5E6AD2"),
                 name: "Linear",
                 value: config.linearTeamId,
                 onClear: {
@@ -470,7 +470,7 @@ struct WorkspaceConfigView: View {
             // CodeBuild
             integrationRow(
                 icon: "hammer.fill",
-                color: Color(hex: "FF9900"),
+                color: SwiftUI.Color(hex: "FF9900"),
                 name: "AWS CodeBuild",
                 value: config.codeBuildProjectName,
                 onClear: {

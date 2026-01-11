@@ -191,9 +191,12 @@ class ConflictResolverViewModel: ObservableObject {
 
         // Commit the merge
         do {
-            _ = try await gitService.commit(message: "Merge conflict resolved")
+            let commit = try await gitService.commit(message: "Merge conflict resolved")
+            let shortSHA = String(commit.sha.prefix(7))
+            NotificationManager.shared.success("Merge resolved", detail: "SHA: \(shortSHA)")
         } catch {
             self.error = error.localizedDescription
+            NotificationManager.shared.error("Merge commit failed", detail: error.localizedDescription)
         }
     }
 }

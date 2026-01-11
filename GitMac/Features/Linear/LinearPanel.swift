@@ -11,7 +11,7 @@ struct LinearPanel: View {
         DSIntegrationBottomPanel(
             title: "Linear",
             icon: "lineweight",
-            iconColor: Color(hex: "5E6AD2"),
+            iconColor: SwiftUI.Color(hex: "5E6AD2"),
             viewModel: viewModel,
             content: {
                 LinearPanelContentView(viewModel: viewModel)
@@ -139,7 +139,7 @@ struct LinearLoginPrompt: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "lineweight")
                 .font(DesignTokens.Typography.iconXXXL)
-                .foregroundColor(Color(hex: "5E6AD2"))
+                .foregroundColor(SwiftUI.Color(hex: "5E6AD2"))
 
             Text("Connect to Linear")
                 .font(DesignTokens.Typography.headline) // Was: .system(size: 15, weight: .semibold)
@@ -371,10 +371,10 @@ struct SimpleLinearIssueRow: View {
             if let state = issue.state {
                 Text(state.name)
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(Color(hex: state.color))
+                    .foregroundColor(SwiftUI.Color(hex: state.color))
                     .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                     .padding(.vertical, DesignTokens.Spacing.xxs)
-                    .background(Color(hex: state.color).opacity(0.2))
+                    .background(SwiftUI.Color(hex: state.color).opacity(0.2))
                     .cornerRadius(DesignTokens.CornerRadius.sm)
             }
 

@@ -151,6 +151,7 @@ struct CommitSection: View {
     let canCommit: Bool
     let repositoryPath: String?
     let onCommit: () -> Void
+    var onCommitPushPR: (() -> Void)? = nil  // Optional: Commit + Push + Create PR
 
     @State private var linkedTaigaRef: String?
     @State private var linkedTaigaSubject: String?
@@ -265,20 +266,43 @@ struct CommitSection: View {
             .background(AppTheme.backgroundTertiary)
             .cornerRadius(6)
 
-            Button(action: onCommit) {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("Commit")
-                        .fontWeight(.semibold)
+            // Commit buttons row
+            HStack(spacing: 8) {
+                // Standard Commit button
+                Button(action: onCommit) {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Commit")
+                            .fontWeight(.semibold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(canCommit && !commitMessage.isEmpty ? AppTheme.success : AppTheme.backgroundTertiary)
+                    .foregroundColor(canCommit && !commitMessage.isEmpty ? AppTheme.textPrimary : AppTheme.textMuted)
+                    .cornerRadius(6)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(canCommit && !commitMessage.isEmpty ? AppTheme.success : AppTheme.backgroundTertiary)
-                .foregroundColor(canCommit && !commitMessage.isEmpty ? AppTheme.textPrimary : AppTheme.textMuted)
-                .cornerRadius(6)
+                .buttonStyle(.plain)
+                .disabled(!canCommit || commitMessage.isEmpty)
+
+                // Commit + Push + PR button
+                if let onCommitPushPR = onCommitPushPR {
+                    Button(action: onCommitPushPR) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.up.circle.fill")
+                            Text("Commit & PR")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(canCommit && !commitMessage.isEmpty ? AppTheme.accent : AppTheme.backgroundTertiary)
+                        .foregroundColor(canCommit && !commitMessage.isEmpty ? .white : AppTheme.textMuted)
+                        .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canCommit || commitMessage.isEmpty)
+                    .help("Commit, Push, and Create Pull Request")
+                }
             }
-            .buttonStyle(.plain)
-            .disabled(!canCommit || commitMessage.isEmpty)
         }
         .padding(12)
         .background(AppTheme.backgroundSecondary)

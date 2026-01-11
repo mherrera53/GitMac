@@ -13,7 +13,7 @@ struct CompactRepoTab: View {
     var groupColor: Color? {
         let groups = groupsService.getGroupsForRepo(tab.repository.path)
         guard let firstGroup = groups.first else { return nil }
-        return Color(hex: firstGroup.color)
+        return SwiftUI.Color(hex: firstGroup.color)
     }
 
     var body: some View {

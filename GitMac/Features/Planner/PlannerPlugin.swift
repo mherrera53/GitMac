@@ -13,7 +13,7 @@ struct PlannerPlugin: IntegrationPlugin {
     let id = "planner"
     let name = "Planner"
     let icon = "checklist"
-    let iconColor = Color(hex: "0078D4")
+    let iconColor = SwiftUI.Color(hex: "0078D4")
 
     @MainActor func makeViewModel() -> PlannerTasksViewModel {
         PlannerTasksViewModel()

@@ -1349,7 +1349,7 @@ struct CompactColorPicker: View {
                         text: Binding(
                             get: { color.hexString },
                             set: { hex in
-                                color = CodableColor(Color(hex: hex))
+                                color = CodableColor(SwiftUI.Color(hex: hex))
                             }
                         )
                     )

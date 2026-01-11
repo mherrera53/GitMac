@@ -139,12 +139,29 @@ class StagingViewModel: ObservableObject {
         guard let path = currentPath, !message.isEmpty else { return }
         Task {
             do {
-                _ = try await engine.commit(message: message, at: path)
+                let commit = try await engine.commit(message: message, at: path)
+                let shortSHA = String(commit.sha.prefix(7))
                 await loadStatus(at: path)
                 onSuccess()
+                NotificationManager.shared.success("Commit completed", detail: "SHA: \(shortSHA)")
             } catch {
-                print("Error committing: \(error)")
+                NotificationManager.shared.error("Commit failed", detail: error.localizedDescription)
             }
+        }
+    }
+
+    /// Async version of commit that returns success status
+    func commitAsync(message: String) async -> Bool {
+        guard let path = currentPath, !message.isEmpty else { return false }
+        do {
+            let commit = try await engine.commit(message: message, at: path)
+            let shortSHA = String(commit.sha.prefix(7))
+            await loadStatus(at: path)
+            NotificationManager.shared.success("Commit completed", detail: "SHA: \(shortSHA)")
+            return true
+        } catch {
+            NotificationManager.shared.error("Commit failed", detail: error.localizedDescription)
+            return false
         }
     }
 
