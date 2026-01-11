@@ -9,6 +9,7 @@
 import SwiftUI
 import Foundation
 import AppKit
+import UniformTypeIdentifiers
 
 // MARK: - Sidebar Branch Row
 struct SidebarBranchRow: View {
@@ -21,19 +22,38 @@ struct SidebarBranchRow: View {
     @State private var showUncommittedAlert = false
     @State private var showForceCheckoutAlert = false
 
+    // Drag & drop state
+    @State private var isDropTarget = false
+    @State private var showDragDropPRSheet = false
+
     private let githubService = GitHubService()
+
+    private var branchIconColor: Color {
+        if branch.isRemote {
+            return AppTheme.accentCyan
+        } else if branch.isCurrent {
+            return AppTheme.success
+        } else {
+            return AppTheme.textSecondary
+        }
+    }
 
     var body: some View {
         HStack(spacing: 8) {
-            Circle()
-                .fill(branch.isCurrent ? AppTheme.success : AppTheme.textMuted)
-                .frame(width: 8, height: 8)
+            // Status indicator - not shown for remote branches
+            if !branch.isRemote {
+                Circle()
+                    .fill(branch.isCurrent ? AppTheme.success : AppTheme.textMuted)
+                    .frame(width: 8, height: 8)
+            }
 
-            Image(systemName: "arrow.triangle.branch")
+            // Icon: cloud for remote, branch for local
+            Image(systemName: branch.isRemote ? "cloud" : "arrow.triangle.branch")
                 .font(.system(size: 12))
-                .foregroundColor(branch.isCurrent ? AppTheme.success : AppTheme.textSecondary)
+                .foregroundColor(branchIconColor)
 
-            Text(branch.name)
+            // Branch name (show display name for remote to strip origin/)
+            Text(branch.isRemote ? branch.displayName : branch.name)
                 .font(.system(size: 12))
                 .foregroundColor(branch.isCurrent ? AppTheme.textPrimary : AppTheme.textSecondary)
                 .lineLimit(1)
@@ -48,13 +68,26 @@ struct SidebarBranchRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
-        .background(isHovered ? AppTheme.hover : Color.clear)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(isDropTarget ? AppTheme.accent.opacity(0.2) : (isHovered ? AppTheme.hover : Color.clear))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(isDropTarget ? AppTheme.accent : Color.clear, lineWidth: 2)
+        )
+        .scaleEffect(isDropTarget ? 1.02 : 1.0)
+        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isDropTarget)
         .onHover { isHovered = $0 }
         .onTapGesture {
             appState.selectedBranch = branch
         }
         .onDrag {
             return NSItemProvider(object: branch.name as NSString)
+        }
+        // Accept drops from CommitGraph BranchTransferable
+        .onDrop(of: [.branchData, .text], isTargeted: $isDropTarget) { providers in
+            handleDrop(providers: providers)
         }
         .contextMenu {
             Button {
@@ -154,22 +187,48 @@ struct SidebarBranchRow: View {
                         _ = try await appState.gitService.stash(message: "Auto-stash before checkout to \(branch.name)")
                         try await appState.gitService.checkout(branch.name)
                     } catch {
-                        print("Stash & checkout failed: \(error)")
+                        // Stash & checkout failed silently
                     }
                 }
             }
             Button("Force Checkout", role: .destructive) {
                 Task {
-                    do {
-                        try await appState.gitService.checkoutForce(branch.name)
-                    } catch {
-                        print("Force checkout failed: \(error)")
-                    }
+                    try? await appState.gitService.checkoutForce(branch.name)
                 }
             }
         } message: {
             Text("You have uncommitted changes. Commit them first, stash them, or force checkout (will discard changes).")
         }
+        .sheet(isPresented: $showDragDropPRSheet) {
+            // PR from current checkout branch → dropped-on branch
+            if let currentBranch = appState.currentRepository?.currentBranch {
+                CreatePullRequestSheet(
+                    branch: currentBranch,
+                    defaultBaseBranch: branch.name
+                )
+                .environmentObject(appState)
+            }
+        }
+    }
+
+    // MARK: - Drop Handling
+
+    private func handleDrop(providers: [NSItemProvider]) -> Bool {
+        guard providers.first != nil else { return false }
+
+        // Get the current branch - must be different from drop target
+        guard let currentBranch = appState.currentRepository?.currentBranch?.name,
+              currentBranch != branch.name else {
+            // Can't create PR from same branch to itself
+            return false
+        }
+
+        // Show PR creation sheet
+        DispatchQueue.main.async {
+            showDragDropPRSheet = true
+        }
+
+        return true
     }
 
     private func performCheckout() async {
@@ -189,7 +248,7 @@ struct SidebarBranchRow: View {
             await appState.refresh()
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: appState.currentRepository?.path)
         } catch {
-            print("Checkout failed: \(error)")
+            // Checkout failed silently
         }
     }
 
@@ -213,15 +272,11 @@ struct SidebarBranchRow: View {
 
             // 3. Pop stash if we stashed something
             if didStash {
-                let popResult = await shell.execute(
+                _ = await shell.execute(
                     "git",
                     arguments: ["stash", "pop"],
                     workingDirectory: path
                 )
-
-                if !popResult.isSuccess {
-                    print("Stash pop failed - changes remain in stash")
-                }
             }
 
             // 4. Refresh UI to update graph and branch indicator
@@ -236,7 +291,7 @@ struct SidebarBranchRow: View {
                     workingDirectory: path
                 )
             }
-            print("Checkout failed: \(error)")
+            // Checkout failed silently
         }
     }
 
@@ -303,12 +358,10 @@ struct SidebarBranchRow: View {
                 number: pr.number,
                 mergeMethod: method
             )
-            // Reload PRs after merge
             loadBranchPRs()
-            // Refresh git status
             try? await appState.gitService.refresh()
         } catch {
-            print("Failed to merge PR: \(error)")
+            // Merge PR failed silently
         }
     }
 }
@@ -561,3 +614,4 @@ struct SidebarRecentRepoRow: View {
         }
     }
 }
+

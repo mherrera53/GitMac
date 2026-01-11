@@ -1,9 +1,4 @@
 import Foundation
-import os.signpost
-
-// MARK: - Performance Logging
-
-private let gitLog = OSLog(subsystem: "com.gitmac", category: "git")
 
 /// Main wrapper for Git operations
 /// Uses git CLI commands as the primary backend for reliability
@@ -18,33 +13,13 @@ actor GitEngine {
 
     /// Check if a directory is a Git repository
     func isRepository(at path: String) async -> Bool {
-        // First check if path exists
-        guard FileManager.default.fileExists(atPath: path) else {
-            print("⚠️ Path does not exist: \(path)")
-            return false
-        }
-
-        // Check if .git directory exists
-        let gitPath = (path as NSString).appendingPathComponent(".git")
-        let gitExists = FileManager.default.fileExists(atPath: gitPath)
-
-        if !gitExists {
-            print("⚠️ .git directory not found at: \(path)")
-        }
+        guard FileManager.default.fileExists(atPath: path) else { return false }
 
         let result = await shellExecutor.execute(
             "git",
             arguments: ["rev-parse", "--git-dir"],
             workingDirectory: path
         )
-
-        if result.exitCode != 0 {
-            print("⚠️ git rev-parse failed at: \(path)")
-            print("   stdout: \(result.stdout)")
-            print("   stderr: \(result.stderr)")
-            print("   exitCode: \(result.exitCode)")
-        }
-
         return result.exitCode == 0
     }
 
@@ -435,14 +410,6 @@ actor GitEngine {
         let stagedOutput = await stagedStats.stdout
         let unstagedDiffStats = parseDiffStats(unstagedOutput)
         let stagedDiffStats = parseDiffStats(stagedOutput)
-
-        // Debug logging
-        if !unstagedDiffStats.isEmpty || !stagedDiffStats.isEmpty {
-            print("📊 Diff stats - Unstaged: \(unstagedDiffStats.count) files, Staged: \(stagedDiffStats.count) files")
-            for (path, stats) in unstagedDiffStats.prefix(3) {
-                print("   📄 \(path): +\(stats.0) -\(stats.1)")
-            }
-        }
 
         var status = RepositoryStatus()
 
@@ -1515,10 +1482,6 @@ actor GitEngine {
     /// Get repository status using porcelain v2 format with NUL separators
     /// More robust with special characters in filenames and includes branch tracking info
     func getStatusV2(at path: String) async throws -> RepositoryStatus {
-        let signpostID = OSSignpostID(log: gitLog)
-        os_signpost(.begin, log: gitLog, name: "git.status.v2", signpostID: signpostID)
-        defer { os_signpost(.end, log: gitLog, name: "git.status.v2", signpostID: signpostID) }
-
         let result = await shellExecutor.execute(
             "git",
             arguments: [
@@ -1655,10 +1618,6 @@ actor GitEngine {
         limit: Int = 100,
         skip: Int = 0
     ) async throws -> [Commit] {
-        let signpostID = OSSignpostID(log: gitLog)
-        os_signpost(.begin, log: gitLog, name: "git.commits.v2", signpostID: signpostID)
-        defer { os_signpost(.end, log: gitLog, name: "git.commits.v2", signpostID: signpostID) }
-
         // Use %x00 as field separator (NUL byte) and %x01 as record separator
         // Format: sha, parents, author name, author email, author date, committer name, committer email, committer date, subject
         var args = [
@@ -1777,10 +1736,6 @@ actor GitEngine {
 
     /// Get files changed in a commit with unified parsing (single command where possible)
     func getCommitFilesV2(sha: String, at path: String) async throws -> [CommitFile] {
-        let signpostID = OSSignpostID(log: gitLog)
-        os_signpost(.begin, log: gitLog, name: "git.commit-files.v2", signpostID: signpostID)
-        defer { os_signpost(.end, log: gitLog, name: "git.commit-files.v2", signpostID: signpostID) }
-
         // Run both commands in parallel
         async let statusTask = shellExecutor.execute(
             "git",
@@ -1856,10 +1811,6 @@ actor GitEngine {
 
     /// Get branches using for-each-ref with NUL separators for robustness
     func getBranchesV2(at path: String) async throws -> [Branch] {
-        let signpostID = OSSignpostID(log: gitLog)
-        os_signpost(.begin, log: gitLog, name: "git.branches.v2", signpostID: signpostID)
-        defer { os_signpost(.end, log: gitLog, name: "git.branches.v2", signpostID: signpostID) }
-
         let result = await shellExecutor.execute(
             "git",
             arguments: [

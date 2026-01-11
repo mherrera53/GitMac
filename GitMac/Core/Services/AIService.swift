@@ -121,24 +121,25 @@ actor AIService {
         return currentModel
     }
 
-    /// Load saved preferences from keychain or UserDefaults
+    /// Load saved preferences from UserDefaults (primary) or keychain (legacy fallback)
     private func loadPreferencesIfNeeded() async {
         guard !preferencesLoaded else { return }
         preferencesLoaded = true
 
-        // Try to load saved preferences from keychain first
-        if let prefs = await keychainManager.getPreferredAIProvider(),
-           let provider = AIProvider(rawValue: prefs.provider.rawValue) {
-            currentProvider = provider
-            currentModel = prefs.model
-            return
-        }
-
-        // Check UserDefaults (used for Ollama)
+        // Check UserDefaults FIRST - this is the canonical source
+        // (also supports Ollama which doesn't use keychain)
         if let providerStr = UserDefaults.standard.string(forKey: "ai.preferredProvider"),
            let provider = AIProvider(rawValue: providerStr) {
             currentProvider = provider
             currentModel = UserDefaults.standard.string(forKey: "ai.preferredModel") ?? provider.models.first?.id ?? currentModel
+            return
+        }
+
+        // Fallback to keychain (legacy support)
+        if let prefs = await keychainManager.getPreferredAIProvider(),
+           let provider = AIProvider(rawValue: prefs.provider.rawValue) {
+            currentProvider = provider
+            currentModel = prefs.model
             return
         }
 
@@ -149,6 +150,35 @@ actor AIService {
                 currentModel = provider.models.first?.id ?? currentModel
                 break
             }
+        }
+    }
+
+    /// Test connection to Ollama server
+    func testOllamaConnection() async -> (success: Bool, message: String) {
+        guard let url = URL(string: "\(Self.ollamaBaseURL)/api/tags") else {
+            return (false, "Invalid URL")
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                return (false, "Invalid response")
+            }
+
+            if httpResponse.statusCode == 200 {
+                // Parse available models
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let models = json["models"] as? [[String: Any]] {
+                    let modelNames = models.compactMap { $0["name"] as? String }
+                    return (true, "Connected! \(modelNames.count) model(s) available: \(modelNames.prefix(3).joined(separator: ", "))\(modelNames.count > 3 ? "..." : "")")
+                }
+                return (true, "Connected to Ollama")
+            } else {
+                return (false, "HTTP \(httpResponse.statusCode)")
+            }
+        } catch {
+            return (false, "Connection failed: \(error.localizedDescription)")
         }
     }
 
@@ -247,6 +277,48 @@ actor AIService {
             }
         }
         return providers
+    }
+
+    /// Find the best matching Ollama model from available models
+    /// Handles cases like: deepseek-coder-v2 -> deepseek-coder:6.7b
+    private func findBestModelMatch(requested: String, available: [AIModel]) -> String {
+        // Exact match
+        if let exact = available.first(where: { $0.id == requested }) {
+            return exact.id
+        }
+
+        // Match with tag suffix (llama3.2 matches llama3.2:latest)
+        if let withTag = available.first(where: { $0.id.hasPrefix(requested + ":") }) {
+            return withTag.id
+        }
+
+        // Extract base name without version suffix (-v2, -v3, etc.) and tag
+        let requestedBase = requested
+            .replacingOccurrences(of: #"-v\d+$"#, with: "", options: .regularExpression)
+            .components(separatedBy: ":").first ?? requested
+
+        // Try to match base name
+        if let baseMatch = available.first(where: { model in
+            let availableBase = model.id
+                .replacingOccurrences(of: #"-v\d+$"#, with: "", options: .regularExpression)
+                .components(separatedBy: ":").first ?? model.id
+            return availableBase == requestedBase ||
+                   availableBase.contains(requestedBase) ||
+                   requestedBase.contains(availableBase)
+        }) {
+            return baseMatch.id
+        }
+
+        // Fuzzy match - look for common keywords
+        let keywords = requestedBase.components(separatedBy: "-")
+        for keyword in keywords where keyword.count > 3 {
+            if let fuzzyMatch = available.first(where: { $0.id.lowercased().contains(keyword.lowercased()) }) {
+                return fuzzyMatch.id
+            }
+        }
+
+        // Fallback to first available
+        return available.first?.id ?? requested
     }
 
     // MARK: - Commit Message Generation
@@ -601,7 +673,13 @@ actor AIService {
         request.timeoutInterval = 30
 
         // Use configured model or default
-        let model = currentModel.isEmpty ? "llama3.2" : currentModel
+        var model = currentModel.isEmpty ? "llama3.2" : currentModel
+
+        // Validate model exists and find best match
+        let availableModels = await fetchOllamaModels()
+        if !availableModels.isEmpty {
+            model = findBestModelMatch(requested: model, available: availableModels)
+        }
 
         let body: [String: Any] = [
             "model": model,
@@ -620,7 +698,17 @@ actor AIService {
             throw AIError.connectionError("Invalid response from Ollama")
         }
 
+        if httpResponse.statusCode == 404 {
+            let modelNames = availableModels.map { $0.id }.joined(separator: ", ")
+            throw AIError.connectionError("Model '\(model)' not found. Available models: \(modelNames.isEmpty ? "none - run 'ollama pull llama3.2'" : modelNames)")
+        }
+
         if httpResponse.statusCode != 200 {
+            // Try to parse error message from response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let error = json["error"] as? String {
+                throw AIError.connectionError("Ollama error: \(error)")
+            }
             throw AIError.connectionError("Ollama returned status \(httpResponse.statusCode). Make sure Ollama is running.")
         }
 
@@ -1043,7 +1131,14 @@ actor AIService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 60 // Longer timeout for full messages
 
-        let model = currentModel.isEmpty ? "llama3.2" : currentModel
+        // Use configured model or default
+        var model = currentModel.isEmpty ? "llama3.2" : currentModel
+
+        // Validate model exists and find best match
+        let availableModels = await fetchOllamaModels()
+        if !availableModels.isEmpty {
+            model = findBestModelMatch(requested: model, available: availableModels)
+        }
 
         let body: [String: Any] = [
             "model": model,
@@ -1062,7 +1157,17 @@ actor AIService {
             throw AIError.connectionError("Invalid response from Ollama")
         }
 
+        if httpResponse.statusCode == 404 {
+            let modelNames = availableModels.map { $0.id }.joined(separator: ", ")
+            throw AIError.connectionError("Model '\(model)' not found. Available models: \(modelNames.isEmpty ? "none - run 'ollama pull llama3.2'" : modelNames)")
+        }
+
         if httpResponse.statusCode != 200 {
+            // Try to parse error message from response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let error = json["error"] as? String {
+                throw AIError.connectionError("Ollama error: \(error)")
+            }
             throw AIError.connectionError("Ollama returned status \(httpResponse.statusCode). Make sure Ollama is running.")
         }
 

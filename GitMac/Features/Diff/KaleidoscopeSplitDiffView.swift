@@ -23,14 +23,11 @@ struct KaleidoscopeSplitDiffView: View {
     @Binding var minimapScrollTrigger: UUID
 
     @ObservedObject private var themeManager = ThemeManager.shared
-    
-    // Virtualization state
-    @State private var visibleRange: Range<Int> = 0..<50 // Initialize with first 50 items visible
-    
+
     // Scroll state management
     @State private var lastExternalScrollOffset: CGFloat = -1
     @State private var isHandlingMinimapClick = false
-    
+
     @State private var leftScrollOffset: CGFloat = 0
     @State private var rightScrollOffset: CGFloat = 0
     @State private var fluidContentVersion: Int = 0
@@ -38,6 +35,15 @@ struct KaleidoscopeSplitDiffView: View {
     // Layout Constants
     private let rowHeight: CGFloat = 24
     private let gutterWidth: CGFloat = 60
+
+    // Computed visible range - no state updates needed
+    private var visibleRange: Range<Int> {
+        guard !pairedLines.isEmpty else { return 0..<0 }
+        let buffer = max(10, Int(viewportHeight / rowHeight))
+        let startRow = max(0, Int(scrollOffset / rowHeight) - buffer)
+        let endRow = min(pairedLines.count, Int((scrollOffset + viewportHeight) / rowHeight) + buffer)
+        return startRow..<endRow
+    }
 
 
 
@@ -153,22 +159,20 @@ struct KaleidoscopeSplitDiffView: View {
                                 viewWidth: geometry.size.width,
                                 gutterWidth: gutterWidth,
                                 panelOverlap: overlap,
-                                visibleRange: visibleRange
+                                visibleRange: visibleRange,
+                                themeColors: themeManager.colors
                             )
                             .frame(width: geometry.size.width, height: CGFloat(pairedLines.count) * rowHeight, alignment: .topLeading)
                             .allowsHitTesting(false)
                         }
                     }
                 }
-                .onAppear {
-                    updateContentHeight()
-                    updateVisibleRange(offset: scrollOffset, viewport: viewportHeight)
-                }
-                .onChange(of: pairedLines.count) { _, _ in
-                    updateContentHeight()
-                }
-                .onChange(of: scrollOffset) { _, newValue in
-                    updateVisibleRange(offset: newValue, viewport: viewportHeight)
+                .task(id: pairedLines.count) {
+                    // Update content height for minimap sync
+                    let calculatedHeight = CGFloat(pairedLines.count) * rowHeight
+                    if abs(contentHeight - calculatedHeight) > 1 {
+                        contentHeight = calculatedHeight
+                    }
                 }
             } else {
                 Color.clear
@@ -219,28 +223,6 @@ struct KaleidoscopeSplitDiffView: View {
     }
     
     // MARK: - Helpers
-    
-    private func updateContentHeight() {
-        let calculatedHeight = CGFloat(pairedLines.count) * rowHeight
-        if contentHeight != calculatedHeight {
-            // Update binding so parent knows accurate height for minimap
-            contentHeight = calculatedHeight
-        }
-        // Also update visible range
-        updateVisibleRange(offset: scrollOffset, viewport: viewportHeight)
-    }
-
-    private func updateVisibleRange(offset: CGFloat, viewport: CGFloat) {
-        guard !pairedLines.isEmpty else { return }
-
-        let buffer = max(10, Int(viewport / rowHeight)) // Dynamic buffer based on viewport height
-        let startRow = max(0, Int(offset / rowHeight) - buffer)
-        let endRow = min(pairedLines.count, Int((offset + viewport) / rowHeight) + buffer)
-        
-        if visibleRange.lowerBound != startRow || visibleRange.upperBound != endRow {
-            visibleRange = startRow..<endRow
-        }
-    }
 
     private func drawConnectionLines(
         context: GraphicsContext,

@@ -9,6 +9,8 @@ struct AISettingsView: View {
     @State private var isLoading = false
     @State private var successMessage: String?
     @State private var ollamaURL: String = AIService.ollamaBaseURL
+    @State private var ollamaTestResult: (success: Bool, message: String)?
+    @State private var isTestingConnection = false
 
     private let aiService = AIService()
 
@@ -73,10 +75,26 @@ struct AISettingsView: View {
 
                                     Spacer()
 
-                                    DSButton("Test Connection", variant: .ghost, size: .sm) {
+                                    DSButton(isTestingConnection ? "Testing..." : "Test Connection", variant: .ghost, size: .sm, isDisabled: isTestingConnection) {
+                                        isTestingConnection = true
                                         AIService.ollamaBaseURL = ollamaURL
+                                        let result = await aiService.testOllamaConnection()
+                                        ollamaTestResult = result
                                         await loadConfiguredProviders()
+                                        isTestingConnection = false
                                     }
+                                }
+
+                                // Show test result
+                                if let result = ollamaTestResult {
+                                    HStack {
+                                        Image(systemName: result.success ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                            .foregroundColor(result.success ? AppTheme.success : AppTheme.error)
+                                        Text(result.message)
+                                            .font(DesignTokens.Typography.caption)
+                                            .foregroundColor(result.success ? AppTheme.success : AppTheme.error)
+                                    }
+                                    .padding(.top, 4)
                                 }
                             }
                         } else {

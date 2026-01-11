@@ -29,13 +29,8 @@ class BottomPanelManager: ObservableObject {
     // MARK: - Tab Management
 
     func openTab(type: BottomPanelType, customTitle: String? = nil) {
-        NSLog("🟢 [BottomPanel] openTab called for type: \(type.rawValue)")
-        NSLog("🟢 [BottomPanel] Current openTabs count: \(openTabs.count)")
-        NSLog("🟢 [BottomPanel] isPanelVisible: \(isPanelVisible)")
-
         // Si ya existe un tab de este tipo (excepto Terminal), seleccionarlo
         if type != .terminal, let existingTab = openTabs.first(where: { $0.type == type }) {
-            NSLog("🟡 [BottomPanel] Tab already exists, selecting it")
             selectTab(existingTab.id)
             if !isPanelVisible {
                 isPanelVisible = true
@@ -48,7 +43,6 @@ class BottomPanelManager: ObservableObject {
         openTabs.append(newTab)
         activeTabId = newTab.id
         isPanelVisible = true
-        NSLog("🟢 [BottomPanel] Created new tab. openTabs count: \(openTabs.count), isPanelVisible: \(isPanelVisible)")
         saveState()
     }
 

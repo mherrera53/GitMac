@@ -105,11 +105,11 @@ struct BranchListView: View {
         }
         .sheet(isPresented: $showPRSheet) {
             if let headBranch = draggedBranch, let baseBranch = targetBranch {
-                CreatePRFromDragDropSheet(
-                    headBranch: headBranch.name,
-                    baseBranch: baseBranch.name,
-                    repository: appState.currentRepository
+                CreatePullRequestSheet(
+                    branch: headBranch,
+                    defaultBaseBranch: baseBranch.name
                 )
+                .environmentObject(appState)
             }
         }
         .task {
@@ -197,47 +197,32 @@ struct BranchListView: View {
 
     private var branchListContent: some View {
         ScrollView {
-            VStack(spacing: 0) {
-                // Local branches section
-                localBranchesSectionHeader
-
-                if localBranchesExpanded {
-                    DSVirtualizedList(items: filteredLocalBranches) { branch in
-                        branchRowView(for: branch)
-                    }
-                    .estimatedItemHeight(44)
-                    .bufferSize(10)
-                    .frame(height: CGFloat(filteredLocalBranches.count * 44))
-                }
-
-                // Remote branches section
-                remoteBranchesSectionHeader
-
-                if remoteBranchesExpanded {
-                    ForEach(groupedRemoteBranches.keys.sorted(), id: \.self) { remote in
-                        remoteGroupView(for: remote)
-                    }
+            LazyVStack(spacing: 0) {
+                // All branches in unified list - local first, then remotes
+                ForEach(allBranches) { branch in
+                    branchRowView(for: branch)
                 }
             }
         }
     }
 
-    private var localBranchesSectionHeader: some View {
-        SectionHeader(
-            title: "Local",
-            count: filteredLocalBranches.count,
-            icon: "arrow.triangle.branch",
-            isExpanded: $localBranchesExpanded
-        )
-    }
+    /// Combined list: local branches first (HEAD at top), then remote branches
+    private var allBranches: [Branch] {
+        var result: [Branch] = []
 
-    private var remoteBranchesSectionHeader: some View {
-        SectionHeader(
-            title: "Remote",
-            count: filteredRemoteBranches.count,
-            icon: "network",
-            isExpanded: $remoteBranchesExpanded
-        )
+        // Add local branches (HEAD first)
+        let locals = filteredLocalBranches.sorted { lhs, rhs in
+            if lhs.isHead { return true }
+            if rhs.isHead { return false }
+            return lhs.name < rhs.name
+        }
+        result.append(contentsOf: locals)
+
+        // Add remote branches (grouped by remote, sorted)
+        let remotes = filteredRemoteBranches.sorted { $0.name < $1.name }
+        result.append(contentsOf: remotes)
+
+        return result
     }
 
 
@@ -247,18 +232,25 @@ struct BranchListView: View {
                 branch: branch,
                 isSelected: selectedBranch?.id == branch.id,
                 onSelect: { selectedBranch = branch },
-                onCheckout: { Task { await viewModel.checkout(branch) } },
-                onMerge: {
+                onCheckout: {
+                    // Use appropriate checkout for local vs remote
+                    if branch.isRemote {
+                        Task { await viewModel.checkoutRemote(branch) }
+                    } else {
+                        Task { await viewModel.checkout(branch) }
+                    }
+                },
+                onMerge: branch.isRemote ? nil : {
                     selectedBranch = branch
                     showMergeSheet = true
                 },
-                onDelete: {
+                onDelete: branch.isRemote ? nil : {
                     selectedBranch = branch
                     showDeleteAlert = true
                 },
-                onPush: { Task { await viewModel.push(branch) } },
-                onPull: { Task { await viewModel.pull(branch) } },
-                onRebase: {
+                onPush: branch.isRemote ? nil : { Task { await viewModel.push(branch) } },
+                onPull: branch.isRemote ? nil : { Task { await viewModel.pull(branch) } },
+                onRebase: branch.isRemote ? nil : {
                     selectedBranch = branch
                     showRebaseSheet = true
                 },
@@ -332,8 +324,7 @@ struct BranchListView: View {
             do {
                 try await viewModel.gitService.merge(branch: dragged.name)
             } catch {
-                // Error handling - could show an error alert
-                print("Merge failed: \(error)")
+                // Merge failed - error handled elsewhere
             }
 
             // Clear the state
@@ -353,8 +344,7 @@ struct BranchListView: View {
             do {
                 try await viewModel.gitService.rebase(onto: dragged.name)
             } catch {
-                // Error handling - could show an error alert
-                print("Rebase failed: \(error)")
+                // Rebase failed - error handled elsewhere
             }
 
             // Clear the state
@@ -369,190 +359,6 @@ struct BranchListView: View {
     }
 }
 
-// MARK: - Create PR from Drag & Drop
-
-struct CreatePRFromDragDropSheet: View {
-    let headBranch: String
-    let baseBranch: String
-    let repository: Repository?
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var title = ""
-    @State private var prBody = ""
-    @State private var isDraft = false
-    @State private var isGenerating = false
-    @State private var selectedReviewers: Set<String> = []
-    @State private var selectedLabels: Set<String> = []
-    @State private var availableReviewers: [GitHubUser] = []
-    @State private var availableLabels: [GitHubLabel] = []
-
-    private let aiService = AIService()
-
-    var body: some View {
-        VStack(spacing: DesignTokens.Spacing.lg) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                    Text("Create Pull Request")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-
-                    HStack(spacing: DesignTokens.Spacing.sm) {
-                        Text(headBranch)
-                            .font(DesignTokens.Typography.caption)
-                            .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
-                            .padding(.vertical, DesignTokens.Spacing.xxs)
-                            .background(AppTheme.info.opacity(0.2))
-                            .foregroundColor(AppTheme.accent)
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
-
-                        Image(systemName: "arrow.right")
-                            .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textPrimary)
-
-                        Text(baseBranch)
-                            .font(DesignTokens.Typography.caption)
-                            .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
-                            .padding(.vertical, DesignTokens.Spacing.xxs)
-                            .background(AppTheme.success.opacity(0.2))
-                            .foregroundColor(AppTheme.success)
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
-                    }
-                }
-
-                Spacer()
-
-                DSButton(variant: .primary, size: .md, isDisabled: isGenerating) {
-                    await generateWithAI()
-                } label: {
-                    if isGenerating {
-                        Text("Generating...")
-                    } else {
-                        HStack {
-                            Image(systemName: "sparkles")
-                            Text("Generate with AI")
-                        }
-                    }
-                }
-            }
-
-            ScrollView {
-                VStack(spacing: DesignTokens.Spacing.lg) {
-                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                        Text("Title").font(DesignTokens.Typography.caption).foregroundColor(AppTheme.textPrimary)
-                        DSTextField(placeholder: "Enter PR title", text: $title)
-                    }
-
-                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                        Text("Description").font(DesignTokens.Typography.caption).foregroundColor(AppTheme.textPrimary)
-                        DSTextEditor(
-                            placeholder: "Enter PR description...",
-                            text: $prBody,
-                            minHeight: 200
-                        )
-                    }
-
-                    DSToggle("Create as draft", isOn: $isDraft, style: .checkbox)
-                }
-                .padding(.horizontal)
-            }
-
-            HStack {
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-
-                Spacer()
-
-                Button("Create Pull Request") {
-                    Task {
-                        await createPR()
-                        dismiss()
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(title.isEmpty || isGenerating)
-                .keyboardShortcut(.defaultAction)
-            }
-        }
-        .padding()
-        .frame(width: 600, height: 550)
-        .task {
-            await loadMetadata()
-        }
-    }
-
-    private func generateWithAI() async {
-        isGenerating = true
-        do {
-            guard repository?.path != nil else { return }
-            let gitService = GitService()
-            let diff = try await gitService.getDiff(from: baseBranch, to: headBranch)
-            let commits = try await gitService.getCommits(branch: headBranch, limit: 20)
-
-            async let generatedTitle = aiService.generatePRTitle(commits: commits, diff: diff)
-            async let generatedDescription = aiService.generatePRDescription(
-                diff: diff,
-                commits: commits,
-                template: nil
-            )
-
-            title = try await generatedTitle
-            prBody = try await generatedDescription
-        } catch {
-            print("Failed to generate: \(error)")
-        }
-        isGenerating = false
-    }
-
-    private func createPR() async {
-        guard let repo = repository,
-              let remote = repo.remotes.first(where: { $0.isGitHub }),
-              let ownerRepo = remote.ownerAndRepo else { return }
-
-        do {
-            let githubService = GitHubService()
-            let newPR = try await githubService.createPullRequest(
-                owner: ownerRepo.owner,
-                repo: ownerRepo.repo,
-                title: title,
-                body: prBody,
-                head: headBranch,
-                base: baseBranch,
-                draft: isDraft
-            )
-
-            NotificationManager.shared.success(
-                "PR #\(newPR.number) created",
-                detail: title
-            )
-        } catch {
-            NotificationManager.shared.error(
-                "Failed to create PR",
-                detail: error.localizedDescription
-            )
-        }
-    }
-
-    private func loadMetadata() async {
-        guard let repo = repository,
-              let remote = repo.remotes.first(where: { $0.isGitHub }),
-              let ownerRepo = remote.ownerAndRepo else { return }
-
-        do {
-            let githubService = GitHubService()
-            availableReviewers = try await githubService.getCollaborators(
-                owner: ownerRepo.owner,
-                repo: ownerRepo.repo
-            )
-            availableLabels = try await githubService.getLabels(
-                owner: ownerRepo.owner,
-                repo: ownerRepo.repo
-            )
-        } catch {
-            print("Failed to load metadata: \(error)")
-        }
-    }
-}
 
 // MARK: - View Model
 
@@ -572,11 +378,6 @@ class BranchListViewModel: ObservableObject {
             return lhs.name < rhs.name
         }
         remoteBranches = repo.remoteBranches.sorted { $0.name < $1.name }
-
-        // Debug: log branch counts
-        print("🔍 Loaded \(localBranches.count) local branches")
-        print("🌐 Loaded \(remoteBranches.count) remote branches:")
-        remoteBranches.forEach { print("  - \($0.name)") }
     }
 
     @Published var uncommittedFiles: [String] = []
@@ -584,14 +385,10 @@ class BranchListViewModel: ObservableObject {
     @Published var pendingCheckoutBranch: Branch?
 
     func checkout(_ branch: Branch) async {
-        NSLog("🔄 Attempting checkout to branch: \(branch.name)")
-
         // Check for uncommitted changes first
         let changes = await checkUncommittedChanges()
 
         if !changes.isEmpty {
-            NSLog("⚠️ Found \(changes.count) uncommitted changes")
-
             // Show warning with file list
             await MainActor.run {
                 pendingCheckoutBranch = branch
@@ -608,7 +405,6 @@ class BranchListViewModel: ObservableObject {
                 detail: "Files:\n\(fileList)\(moreFiles)\n\nStash changes to proceed with checkout?"
             )
         } else {
-            NSLog("✅ No uncommitted changes, proceeding with checkout")
             await performCheckout(branch.name)
         }
     }
@@ -1095,6 +891,7 @@ struct RebaseSheet: View {
 
 struct CreatePullRequestSheet: View {
     let branch: Branch
+    var defaultBaseBranch: String? = nil  // Optional pre-set base branch (for drag-drop)
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
@@ -1103,7 +900,11 @@ struct CreatePullRequestSheet: View {
     @State private var baseBranch: String? = "main"
     @State private var isDraft = false
     @State private var isCreating = false
+    @State private var isGeneratingAI = false
     @State private var error: String?
+
+    private let aiService = AIService.shared
+    private let gitEngine = GitEngine()
 
     var body: some View {
         VStack(spacing: DesignTokens.Spacing.lg) {
@@ -1130,17 +931,55 @@ struct CreatePullRequestSheet: View {
                         Text("To")
                             .font(DesignTokens.Typography.caption)
                             .foregroundColor(AppTheme.textPrimary)
-                        DSPicker(
-                            items: ["main", "master", "develop"],
-                            selection: $baseBranch
-                        )
+                        if defaultBaseBranch != nil {
+                            // Fixed base branch from drag-drop
+                            Text(baseBranch ?? "")
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(AppTheme.success.opacity(0.15))
+                                .foregroundColor(AppTheme.success)
+                                .cornerRadius(4)
+                        } else {
+                            // Selectable base branch from context menu
+                            DSPicker(
+                                items: ["main", "master", "develop"],
+                                selection: $baseBranch
+                            )
+                        }
                     }
                 }
 
                 DSTextField(placeholder: "Title", text: $title)
 
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                    Text("Description")
+                    HStack {
+                        Text("Description")
+                        Spacer()
+                        Button {
+                            Task { await generateWithAI() }
+                        } label: {
+                            HStack(spacing: 4) {
+                                if isGeneratingAI {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                        .frame(width: 14, height: 14)
+                                } else {
+                                    Image(systemName: "sparkles")
+                                        .font(.system(size: 12))
+                                }
+                                Text(isGeneratingAI ? "Generating..." : "Generate with AI")
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .foregroundColor(AppTheme.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(AppTheme.accent.opacity(0.1))
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isGeneratingAI)
+                    }
                     DSTextEditor(
                         placeholder: "Enter PR description...",
                         text: $prBody,
@@ -1179,6 +1018,11 @@ struct CreatePullRequestSheet: View {
         .padding()
         .frame(width: 500, height: 450)
         .onAppear {
+            // Set base branch from default if provided (drag-drop case)
+            if let defaultBase = defaultBaseBranch {
+                baseBranch = defaultBase
+            }
+
             // Default title from branch name
             let branchName = branch.name
                 .replacingOccurrences(of: "feature/", with: "")
@@ -1209,20 +1053,33 @@ struct CreatePullRequestSheet: View {
                 return
             }
 
+            // Strip remote prefix from branch names (e.g., "origin/master" -> "master")
+            let cleanHead = branch.name.replacingOccurrences(of: #"^origin/"#, with: "", options: .regularExpression)
+            let cleanBase = (baseBranch ?? "main").replacingOccurrences(of: #"^origin/"#, with: "", options: .regularExpression)
+
             let githubService = GitHubService()
-            _ = try await githubService.createPullRequest(
+            let newPR = try await githubService.createPullRequest(
                 owner: owner,
                 repo: repoName,
                 title: title,
                 body: prBody.isEmpty ? nil : prBody,
-                head: branch.name,
-                base: baseBranch ?? "main",
+                head: cleanHead,
+                base: cleanBase,
                 draft: isDraft
+            )
+
+            NotificationManager.shared.success(
+                "PR #\(newPR.number) created",
+                detail: title
             )
 
             dismiss()
         } catch {
-            self.self.error = error.localizedDescription
+            NotificationManager.shared.error(
+                "Failed to create PR",
+                detail: error.localizedDescription
+            )
+            self.error = error.localizedDescription
         }
 
         isCreating = false
@@ -1241,6 +1098,92 @@ struct CreatePullRequestSheet: View {
         guard parts.count >= 2 else { return ("", "") }
 
         return (parts[0], parts[1])
+    }
+
+    private func generateWithAI() async {
+        guard let repo = appState.currentRepository else { return }
+
+        isGeneratingAI = true
+        error = nil
+
+        do {
+            // Determine the base branch - use selection or detect default
+            let base: String
+            if let selected = baseBranch, !selected.isEmpty {
+                base = selected
+            } else {
+                // Try to detect default branch
+                base = await detectDefaultBranch(at: repo.path) ?? "main"
+            }
+
+            // Get diff using merge-base for accurate comparison
+            let diff: String
+            let commits: [Commit]
+
+            do {
+                // Get diff between base and current branch
+                diff = try await gitEngine.getDiff(
+                    from: base,
+                    to: branch.name,
+                    at: repo.path
+                )
+            } catch {
+                // Fallback: get unstaged diff
+                diff = try await gitEngine.getDiff(for: nil, staged: false, at: repo.path)
+            }
+
+            do {
+                // Get commits unique to this branch
+                commits = try await gitEngine.getCommits(
+                    at: repo.path,
+                    branch: "\(base)..\(branch.name)",
+                    limit: 10
+                )
+            } catch {
+                // Fallback: get recent commits on current branch
+                commits = try await gitEngine.getCommits(
+                    at: repo.path,
+                    branch: branch.name,
+                    limit: 10
+                )
+            }
+
+            // Generate title if empty
+            if title.isEmpty && !commits.isEmpty {
+                let generatedTitle = try await aiService.generatePRTitle(
+                    commits: commits,
+                    diff: diff
+                )
+                title = generatedTitle
+            }
+
+            // Generate description
+            let generatedBody = try await aiService.generatePRDescription(
+                diff: diff,
+                commits: commits
+            )
+            prBody = generatedBody
+
+        } catch {
+            self.error = "AI generation failed: \(error.localizedDescription)"
+        }
+
+        isGeneratingAI = false
+    }
+
+    private func detectDefaultBranch(at path: String) async -> String? {
+        // Check common default branch names
+        for candidate in ["main", "master", "develop"] {
+            let result = await ShellExecutor().execute(
+                "git",
+                arguments: ["rev-parse", "--verify", candidate],
+                workingDirectory: path
+            )
+            if result.exitCode == 0 {
+                return candidate
+            }
+        }
+        return nil
     }
 }
 

@@ -10,8 +10,8 @@ actor AvatarService {
     static let shared = AvatarService()
 
     // MARK: - Cache Configuration
-    private static let avatarCacheLimit = 200    // Max 200 avatar URLs
-    private static let usernameCacheLimit = 500  // Max 500 GitHub usernames
+    private static let avatarCacheLimit = 100    // Max 100 avatar URLs (reduced for memory)
+    private static let usernameCacheLimit = 200  // Max 200 GitHub usernames (reduced for memory)
 
     // Bounded in-memory cache with LRU eviction
     private var avatarCache: [String: URL] = [:]
@@ -184,7 +184,6 @@ actor AvatarService {
         let normalizedEmail = email.lowercased().trimmingCharacters(in: .whitespaces)
         let cacheKey = normalizedEmail.md5Hash
         avatarCache[cacheKey] = url
-        NSLog("💾 Cached avatar for \(email): \(url)")
     }
 
     /// Clear all cached avatars
@@ -263,19 +262,10 @@ actor AvatarService {
     /// Load commit authors from a GitHub repository
     func loadRepoAuthors(owner: String, repo: String, token: String) async {
         let repoKey = "\(owner)/\(repo)"
-        guard !repoAuthorsCacheLoaded.contains(repoKey) else {
-            NSLog("⏭️ Avatar cache already loaded for \(repoKey)")
-            return
-        }
+        guard !repoAuthorsCacheLoaded.contains(repoKey) else { return }
         repoAuthorsCacheLoaded.insert(repoKey)
 
-        // Fetch recent commits to get author avatars
-        guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/commits?per_page=100") else {
-            NSLog("❌ Invalid GitHub URL for \(owner)/\(repo)")
-            return
-        }
-
-        NSLog("🔍 Fetching commits from GitHub API: \(owner)/\(repo)")
+        guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/commits?per_page=100") else { return }
 
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -284,34 +274,20 @@ actor AvatarService {
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
 
-            if let httpResponse = response as? HTTPURLResponse {
-                NSLog("📡 GitHub API response: \(httpResponse.statusCode)")
-
-                if httpResponse.statusCode != 200 {
-                    if let errorBody = String(data: data, encoding: .utf8) {
-                        NSLog("❌ GitHub API error: \(errorBody)")
-                    }
-                    return
-                }
-            }
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else { return }
 
             let commits = try JSONDecoder().decode([AvatarGitHubCommitResponse].self, from: data)
-            NSLog("✅ Decoded \(commits.count) commits from GitHub")
 
-            var loadedCount = 0
             for commit in commits {
                 if let authorEmail = commit.commit.author?.email?.lowercased(),
                    let avatarUrl = commit.author?.avatarUrl,
                    let url = URL(string: avatarUrl) {
                     repoAuthorsCache[authorEmail] = url
-                    loadedCount += 1
-                    NSLog("  📧 \(authorEmail) → \(avatarUrl)")
                 }
             }
-
-            NSLog("✅ Loaded \(loadedCount) author avatars into cache")
         } catch {
-            NSLog("❌ Failed to load repo authors: \(error.localizedDescription)")
+            // Silently fail - avatars will use fallback
         }
     }
 

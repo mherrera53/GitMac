@@ -17,54 +17,38 @@ class ThemeManager: ObservableObject {
     private let customColorsKey = "customColors"
     
     private init() {
-        NSLog("🔧 [ThemeManager] Initializing ThemeManager")
         loadSavedTheme()
         applyTheme()
-        NSLog("🔧 [ThemeManager] Initialization complete")
     }
     
     // MARK: - Theme Application
     
     func setTheme(_ theme: Theme) {
-        NSLog("🎨 [ThemeManager] setTheme called with: \(theme.rawValue)")
         currentTheme = theme
         saveTheme()
         applyTheme()
-
-        // Notify all windows
         NotificationCenter.default.post(name: .themeDidChange, object: theme)
-        NSLog("📢 [ThemeManager] Theme change notification posted")
     }
     
     func applyTheme() {
-        NSLog("🎭 [ThemeManager] applyTheme() called for theme: \(currentTheme.rawValue)")
-
         switch currentTheme {
         case .system:
             appearance = nil
             NSApp.appearance = nil
-
         case .light:
             appearance = NSAppearance(named: .aqua)
             NSApp.appearance = appearance
-
         case .dark:
             appearance = NSAppearance(named: .darkAqua)
             NSApp.appearance = appearance
-
         case .custom:
-            // Custom theme uses system appearance but custom colors
             appearance = nil
             NSApp.appearance = nil
         }
 
-        // Apply to all windows
         for window in NSApp.windows {
             window.appearance = appearance
-            NSLog("🪟 [ThemeManager] Applied theme to window: \(window.title)")
         }
-
-        NSLog("✨ [ThemeManager] Theme applied successfully")
     }
     
     // MARK: - Custom Colors
@@ -88,30 +72,13 @@ class ThemeManager: ObservableObject {
     
     private func saveTheme() {
         defaults.set(currentTheme.rawValue, forKey: themeKey)
-        defaults.synchronize()
-        NSLog("💾 [ThemeManager] Theme saved to UserDefaults: \(currentTheme.rawValue)")
-        print("💾 Theme saved to UserDefaults: \(currentTheme)")
-
-        // Verify it was saved
-        if let saved = defaults.string(forKey: themeKey) {
-            NSLog("✓ [ThemeManager] Verified saved theme: \(saved)")
-        } else {
-            NSLog("✗ [ThemeManager] Failed to save theme!")
-        }
     }
     
     private func loadSavedTheme() {
-        NSLog("🔍 [ThemeManager] Loading saved theme from key: \(themeKey)")
         if let themeRaw = defaults.string(forKey: themeKey),
            let theme = Theme(rawValue: themeRaw) {
             currentTheme = theme
-            NSLog("✅ [ThemeManager] Theme loaded from UserDefaults: \(theme.rawValue)")
-            print("✅ Theme loaded from UserDefaults: \(theme)")
-        } else {
-            NSLog("⚠️ [ThemeManager] No saved theme found, using default: \(currentTheme.rawValue)")
-            print("⚠️ No saved theme found, using default: \(currentTheme)")
         }
-
         loadCustomColors()
     }
     
@@ -206,16 +173,10 @@ class ThemeManager: ObservableObject {
 
             savePanel.begin { response in
                 guard response == .OK, let url = savePanel.url else { return }
-
-                do {
-                    try json.write(to: url, atomically: true, encoding: .utf8)
-                    print("✅ Theme exported successfully to: \(url.path)")
-                } catch {
-                    print("❌ Failed to write theme file: \(error)")
-                }
+                try? json.write(to: url, atomically: true, encoding: .utf8)
             }
         } catch {
-            print("❌ Failed to export theme: \(error)")
+            // Export failed silently
         }
     }
 
@@ -228,13 +189,8 @@ class ThemeManager: ObservableObject {
 
         openPanel.begin { response in
             guard response == .OK, let url = openPanel.urls.first else { return }
-
-            do {
-                let json = try String(contentsOf: url, encoding: .utf8)
-                try self.importThemeFromJSON(json)
-                print("✅ Theme imported successfully from: \(url.path)")
-            } catch {
-                print("❌ Failed to import theme: \(error)")
+            if let json = try? String(contentsOf: url, encoding: .utf8) {
+                try? self.importThemeFromJSON(json)
             }
         }
     }

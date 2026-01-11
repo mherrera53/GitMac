@@ -15,7 +15,15 @@ struct KaleidoscopeUnifiedView: View {
 
     @ObservedObject private var themeManager = ThemeManager.shared
 
-    @State private var visibleRange: Range<Int> = 0..<50
+    // Computed visible range - no state updates needed
+    private var visibleRange: Range<Int> {
+        guard !unifiedLines.isEmpty else { return 0..<0 }
+        let rowHeight: CGFloat = 24
+        let buffer = 24
+        let startRow = max(0, Int(scrollOffset / rowHeight) - buffer)
+        let endRow = min(unifiedLines.count, Int((scrollOffset + viewportHeight) / rowHeight) + buffer)
+        return startRow..<endRow
+    }
 
 private struct KaleidoscopeUnifiedScrollContainer<Content: View>: NSViewRepresentable {
     @Binding var scrollOffset: CGFloat
@@ -176,30 +184,12 @@ private struct KaleidoscopeUnifiedScrollContainer<Content: View>: NSViewRepresen
                     .frame(height: bottomSpacerHeight)
             }
         }
-        .onAppear {
-            updateContentHeight()
-            updateVisibleRange(offset: scrollOffset, viewport: viewportHeight)
-        }
-        .onChange(of: scrollOffset) { _, newValue in
-            updateVisibleRange(offset: newValue, viewport: viewportHeight)
-        }
-    }
-
-    private func updateContentHeight() {
-        let height = CGFloat(unifiedLines.count) * 24
-        if contentHeight != height {
-            contentHeight = height
-        }
-    }
-
-    private func updateVisibleRange(offset: CGFloat, viewport: CGFloat) {
-        guard !unifiedLines.isEmpty else { return }
-        let rowHeight: CGFloat = 24
-        let buffer = 24
-        let startRow = max(0, Int(offset / rowHeight) - buffer)
-        let endRow = min(unifiedLines.count, Int((offset + viewport) / rowHeight) + buffer)
-        if visibleRange.lowerBound != startRow || visibleRange.upperBound != endRow {
-            visibleRange = startRow..<endRow
+        .task(id: unifiedLines.count) {
+            // Update content height for minimap sync
+            let calculatedHeight = CGFloat(unifiedLines.count) * 24
+            if abs(contentHeight - calculatedHeight) > 1 {
+                contentHeight = calculatedHeight
+            }
         }
     }
 }

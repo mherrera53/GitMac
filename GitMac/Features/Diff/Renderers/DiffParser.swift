@@ -102,7 +102,6 @@ struct DiffParser {
 
                 // Parse hunk header: @@ -oldStart,oldLines +newStart,newLines @@
                 let pattern = #"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@.*"#
-                print("DEBUG: Parsing hunk header: \(line)")
                 if let regex = try? NSRegularExpression(pattern: pattern),
                    let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) {
 
@@ -115,11 +114,8 @@ struct DiffParser {
 
                     oldLineNum = oldStart
                     newLineNum = newStart
-                    print("DEBUG: Hunk parsed successfully. Start: \(newStart)")
 
                     currentHunk = (header: line, oldStart: oldStart, oldLines: oldLines, newStart: newStart, newLines: newLines, lines: [])
-                } else {
-                    print("DEBUG: Failed to parse hunk header regex for: \(line)")
                 }
             } else if currentHunk != nil {
                 let type: DiffLineType

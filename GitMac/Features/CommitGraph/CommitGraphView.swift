@@ -1,7 +1,51 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 // BranchPanelView, BranchSection, BranchPanelRow, and GraphMinimapView are now
 // defined in Components/ folder - do not redefine here
+
+// MARK: - Commit Transferable (for drag & drop)
+
+/// Transferable representation of a commit for drag & drop operations
+struct CommitTransferable: Transferable, Codable {
+    let sha: String
+    let message: String
+    let author: String
+    let branchName: String?
+
+    init(commit: Commit, branchName: String? = nil) {
+        self.sha = commit.sha
+        self.message = commit.message
+        self.author = commit.author
+        self.branchName = branchName
+    }
+
+    static var transferRepresentation: some TransferRepresentation {
+        CodableRepresentation(contentType: .commitData)
+    }
+}
+
+extension UTType {
+    static let commitData = UTType(exportedAs: "com.gitmac.commit")
+    static let branchData = UTType(exportedAs: "com.gitmac.branch")
+}
+
+/// Transferable representation of a branch for drag & drop PR creation
+struct BranchTransferable: Transferable, Codable {
+    let name: String
+    let isHead: Bool
+    let targetSHA: String?
+
+    init(name: String, isHead: Bool = false, targetSHA: String? = nil) {
+        self.name = name
+        self.isHead = isHead
+        self.targetSHA = targetSHA
+    }
+
+    static var transferRepresentation: some TransferRepresentation {
+        CodableRepresentation(contentType: .branchData)
+    }
+}
 
 // MARK: - Ghost Branches (integrated from GhostBranchesOverlay.swift)
 
@@ -342,6 +386,11 @@ struct CommitGraphView: View {
     @State private var selectedFileDiff: FileDiff? = nil
     @State private var dismissedOperationIds: Set<UUID> = []
 
+    // PR creation from drag & drop
+    @State private var showPRSheet = false
+    @State private var prHeadBranch: String = ""
+    @State private var prBaseBranch: String = ""
+
     private func isDismissedOperation(_ operation: RemoteOperation) -> Bool {
         dismissedOperationIds.contains(operation.id)
     }
@@ -474,8 +523,21 @@ struct CommitGraphView: View {
         .onReceive(NotificationCenter.default.publisher(for: .remoteOperationCompleted)) { _ in
             // Force refresh when operation completes
         }
+        .sheet(isPresented: $showPRSheet) {
+            if !prHeadBranch.isEmpty && !prBaseBranch.isEmpty {
+                // Find or create the head branch object
+                let headBranchObj = appState.currentRepository?.branches.first { $0.name == prHeadBranch }
+                    ?? Branch(name: prHeadBranch, fullName: "refs/heads/\(prHeadBranch)", isRemote: false, targetSHA: "")
+
+                CreatePullRequestSheet(
+                    branch: headBranchObj,
+                    defaultBaseBranch: prBaseBranch
+                )
+                .environmentObject(appState)
+            }
+        }
     }
-    
+
     private var lastOperationForCurrentBranch: RemoteOperation? {
         guard let branch = appState.currentRepository?.currentBranch?.name else { return nil }
         return tracker.getLastOperation(for: branch)
@@ -848,20 +910,20 @@ struct CommitGraphView: View {
     }
 
     private var graphScrollView: some View {
-        // Phase 1: Use DSVirtualizedList for 60fps with 10,000+ items
         DSVirtualizedList(items: vm.timelineItems) { item in
             itemView(for: item)
         }
         .estimatedItemHeight(settings.rowHeight)
         .bufferSize(20)
+        .onReachEnd {
+            if vm.hasMore && !vm.isLoading {
+                Task { await vm.loadMore() }
+            }
+        }
     }
 
     @ViewBuilder
     private func itemView(for item: TimelineItem) -> some View {
-        // Calculate index for load more trigger
-        let itemIndex = vm.timelineItems.firstIndex(where: { $0.id == item.id }) ?? 0
-        let isNearEnd = itemIndex >= vm.timelineItems.count - 10
-
         switch item {
         case .uncommitted(let staged, let unstaged):
             UncommittedChangesRow(
@@ -883,6 +945,12 @@ struct CommitGraphView: View {
                     settings: settings,
                     onHoverBranch: { branch in
                         hoveredBranch = branch
+                    },
+                    onDropBranch: { targetBranch, droppedBranch in
+                        // When a branch is dropped on another, show PR creation
+                        prHeadBranch = droppedBranch.name
+                        prBaseBranch = targetBranch
+                        showPRSheet = true
                     }
                 )
                 .withGhostBranches(
@@ -895,14 +963,10 @@ struct CommitGraphView: View {
                 .onTapGesture {
                     handleSelection(item: item)
                 }
-                .onAppear {
-                    if isNearEnd && vm.hasMore && !vm.isLoading {
-                        Task { await vm.loadMore() }
-                    }
-                }
+                .draggable(CommitTransferable(commit: node.commit))
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Commit \(node.commit.shortSha) by \(node.commit.author): \(node.commit.summary)")
-                .accessibilityHint("Double tap to view details, context click for more actions")
+                .accessibilityHint("Double tap to view details, drag branch to create PR, context click for more actions")
             }
         case .stash(let stashNode):
             if settings.showStashes {
@@ -914,11 +978,6 @@ struct CommitGraphView: View {
                 .onHover { h in hoveredId = h ? stashNode.id : nil }
                 .onTapGesture {
                     handleSelection(item: item)
-                }
-                .onAppear {
-                    if isNearEnd && vm.hasMore && !vm.isLoading {
-                        Task { await vm.loadMore() }
-                    }
                 }
             }
         }
@@ -1273,14 +1332,17 @@ struct BranchBadge: View {
     let color: Color
     let isHead: Bool
     let isTag: Bool
+    var onDropBranch: ((BranchTransferable) -> Void)? = nil
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovered = false
+    @State private var isDragTargeted = false
 
-    init(name: String, color: Color, isHead: Bool = false, isTag: Bool = false) {
+    init(name: String, color: Color, isHead: Bool = false, isTag: Bool = false, onDropBranch: ((BranchTransferable) -> Void)? = nil) {
         self.name = name
         self.color = color
         self.isHead = isHead
         self.isTag = isTag
+        self.onDropBranch = onDropBranch
     }
 
     var body: some View {
@@ -1294,16 +1356,24 @@ struct BranchBadge: View {
                 .font(DesignTokens.Typography.caption2)
                 .fontWeight(isHead ? .semibold : .regular)
                 .lineLimit(1)
-                .foregroundColor(textColor) // Use adaptive text color
+                .foregroundColor(textColor)
         }
         .padding(.horizontal, DesignTokens.Spacing.xs + 2)
         .padding(.vertical, DesignTokens.Spacing.xxs + 1)
-        .background(color.opacity(colorScheme == .dark ? 0.2 : 0.12))
+        .background(isDragTargeted ? AppTheme.accent.opacity(0.3) : color.opacity(colorScheme == .dark ? 0.2 : 0.12))
         .cornerRadius(4)
         .overlay(
             RoundedRectangle(cornerRadius: 4)
-                .strokeBorder(color.opacity(0.4), lineWidth: 0.5)
+                .strokeBorder(isDragTargeted ? AppTheme.accent : color.opacity(0.4), lineWidth: isDragTargeted ? 2 : 0.5)
         )
+        .draggable(BranchTransferable(name: name, isHead: isHead))
+        .dropDestination(for: BranchTransferable.self) { items, _ in
+            guard let dropped = items.first, dropped.name != name else { return false }
+            onDropBranch?(dropped)
+            return true
+        } isTargeted: { targeted in
+            isDragTargeted = targeted
+        }
     }
 
     /// Adaptive text color - darker in light mode for better contrast
@@ -1341,6 +1411,7 @@ struct GraphRow: View {
     let isHovered: Bool
     let settings: GraphSettings
     let onHoverBranch: ((String?) -> Void)?
+    var onDropBranch: ((String, BranchTransferable) -> Void)? = nil
 
     private var H: CGFloat { settings.rowHeight }
     private var W: CGFloat { 26 }  // Lane spacing
@@ -1348,8 +1419,6 @@ struct GraphRow: View {
     private var LW: CGFloat { 2 }  // Line width
 
     var body: some View {
-        // let theme = Color.Theme(themeManager.colors) // Removed
-
         return HStack(spacing: 0) {
             // Branch label with badge
             if settings.showBranchColumn {
@@ -1359,7 +1428,10 @@ struct GraphRow: View {
                             name: label,
                             color: color(node.lane),
                             isHead: label == "main" || label == "master",
-                            isTag: label.hasPrefix("v") || label.contains(".")
+                            isTag: label.hasPrefix("v") || label.contains("."),
+                            onDropBranch: { dropped in
+                                onDropBranch?(label, dropped)
+                            }
                         )
                     }
                     Spacer()
@@ -1626,7 +1698,7 @@ class GraphViewModel: ObservableObject {
                 await self.loadAvatarsFromGitHub(at: p)
             }
         } catch {
-            print("Error loading graph: \(error)")
+            // Loading failed silently
         }
         isLoading = false
     }
@@ -1637,45 +1709,28 @@ class GraphViewModel: ObservableObject {
         let token = try? await KeychainManager.shared.getGitHubToken()
 
         do {
-            // Get remotes to find origin URL
             let remotes = try await engine.getRemotes(at: repoPath)
             guard let originRemote = remotes.first(where: { $0.name == "origin" }),
                   let (owner, repo) = extractGitHubOwnerRepo(from: originRemote.fetchURL) else {
-                NSLog("⚠️ Not a GitHub repository or no origin remote, skipping avatar loading")
                 await preloadAvatarsForCommits(token: token)
                 return
             }
 
-            NSLog("📥 Loading avatars by commit SHA from: \(owner)/\(repo)")
-
-            // Load avatars by commit SHA (not email)
             if let token = token {
                 await loadAvatarsBySHA(owner: owner, repo: repo, token: token)
-            } else {
-                NSLog("⚠️ No GitHub token - using fallback avatars")
             }
-
-            // Preload remaining with email fallback
             await preloadAvatarsForCommits(token: token)
-
-            NSLog("✅ Avatar loading completed")
         } catch {
-            NSLog("⚠️ Could not load GitHub avatars: \(error.localizedDescription)")
             await preloadAvatarsForCommits(token: nil)
         }
     }
 
     /// Load avatars by fetching commits from GitHub API using their SHA
     private func loadAvatarsBySHA(owner: String, repo: String, token: String) async {
-        NSLog("🔍 Loading avatars by SHA for \(commits.count) commits")
-
-        // Process commits in batches to avoid rate limits
         let batchSize = 20
         for (index, commit) in commits.enumerated() {
-            // Rate limit: max 20 at a time
             if index > 0 && index % batchSize == 0 {
-                NSLog("⏸️ Processed \(index)/\(commits.count) commits, pausing...")
-                try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second pause
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
 
             guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/commits/\(commit.sha)") else {
@@ -1688,29 +1743,18 @@ class GraphViewModel: ObservableObject {
 
             do {
                 let (data, response) = try await URLSession.shared.data(for: request)
-
-                guard let httpResponse = response as? HTTPURLResponse,
-                      httpResponse.statusCode == 200 else {
-                    continue
-                }
+                guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { continue }
 
                 if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let author = json["author"] as? [String: Any],
-                   let avatarUrl = author["avatar_url"] as? String {
-                    let email = commit.authorEmail.lowercased()
-
-                    // Cache by email for future lookups
-                    if let url = URL(string: avatarUrl) {
-                        await AvatarService.shared.cacheAvatar(url: url, for: email)
-                        NSLog("  ✅ \(commit.sha.prefix(7)) → \(commit.author): \(avatarUrl)")
-                    }
+                   let avatarUrl = author["avatar_url"] as? String,
+                   let url = URL(string: avatarUrl) {
+                    await AvatarService.shared.cacheAvatar(url: url, for: commit.authorEmail.lowercased())
                 }
             } catch {
-                NSLog("  ⚠️ Failed to fetch commit \(commit.sha.prefix(7)): \(error)")
+                // Continue silently on error
             }
         }
-
-        NSLog("✅ Loaded avatars for commits via SHA")
     }
 
     /// Preload avatars for all unique commit author emails
@@ -1755,10 +1799,9 @@ class GraphViewModel: ObservableObject {
             let newNodes = await buildNodes()
             nodes = newNodes
 
-            // Rebuild merged timeline
             buildTimeline()
         } catch {
-            print("Error loading more: \(error)")
+            // Loading more failed silently
         }
         isLoading = false
     }
@@ -1781,11 +1824,10 @@ class GraphViewModel: ObservableObject {
                 unstagedCount = newUnstagedCount
                 hasUncommittedChanges = newHasChanges
 
-                // Rebuild timeline to update WIP row (but don't reload commits)
                 buildTimeline()
             }
         } catch {
-            print("Error refreshing status: \(error)")
+            // Refresh status failed silently
         }
     }
 

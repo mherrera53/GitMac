@@ -24,18 +24,39 @@ struct DSVirtualizedList<Item: Identifiable, Content: View>: View {
     /// Spacing entre items
     var spacing: CGFloat = DesignTokens.Spacing.xs
 
+    /// Callback when reaching near end of list
+    var onReachEnd: (() -> Void)?
+
+    /// Number of items from end to trigger onReachEnd
+    var endThreshold: Int = 10
+
     @State private var scrollPosition: CGFloat = 0
+    @State private var hasTriggeredEnd = false
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: spacing) {
-                ForEach(items) { item in
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                     content(item)
                         .frame(minHeight: estimatedItemHeight)
+                        .onAppear {
+                            checkEndReached(index: index)
+                        }
                 }
             }
             .padding(.horizontal, DesignTokens.Spacing.md)
         }
+        .onChange(of: items.count) { _, _ in
+            hasTriggeredEnd = false
+        }
+    }
+
+    private func checkEndReached(index: Int) {
+        guard !hasTriggeredEnd,
+              items.count > endThreshold,
+              index >= items.count - endThreshold else { return }
+        hasTriggeredEnd = true
+        onReachEnd?()
     }
 }
 
@@ -152,6 +173,20 @@ extension DSVirtualizedList {
     func spacing(_ spacing: CGFloat) -> Self {
         var copy = self
         copy.spacing = spacing
+        return copy
+    }
+
+    /// Callback when reaching near end of list (for infinite scroll)
+    func onReachEnd(_ action: @escaping () -> Void) -> Self {
+        var copy = self
+        copy.onReachEnd = action
+        return copy
+    }
+
+    /// Configure threshold for triggering onReachEnd
+    func endThreshold(_ threshold: Int) -> Self {
+        var copy = self
+        copy.endThreshold = threshold
         return copy
     }
 }

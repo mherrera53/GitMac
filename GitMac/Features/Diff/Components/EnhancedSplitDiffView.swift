@@ -112,8 +112,7 @@ struct EnhancedSplitDiffView: View {
     }
 
     private func discardSelectedLines(_ lines: [DiffLine]) {
-        // Implement discard logic using PatchManipulator
-        print("Discarding \(lines.count) selected lines")
+        // TODO: Implement discard logic using PatchManipulator
     }
 }
 

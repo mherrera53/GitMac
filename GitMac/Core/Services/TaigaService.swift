@@ -134,17 +134,7 @@ actor TaigaService {
         var request = URLRequest(url: URL(string: urlString)!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-        let (data, response) = try await session.data(for: request)
-
-        // Debug logging
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📋 Taiga User Stories - URL: \(urlString)")
-            print("📋 Taiga User Stories - Status: \(httpResponse.statusCode)")
-            if let jsonString = String(data: data, encoding: .utf8) {
-                print("📋 Taiga User Stories - Response: \(jsonString.prefix(500))")
-            }
-        }
-
+        let (data, _) = try await session.data(for: request)
         return try JSONDecoder().decode([TaigaUserStory].self, from: data)
     }
 

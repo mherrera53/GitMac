@@ -1220,7 +1220,6 @@
 				273DB06557D32B01CB61BEE5 /* MemoryPressureHandler.swift */,
 				CCDBE3D0C01B79C8DA32D290 /* SyntaxHighlighter.swift */,
 				0154FE34793BBE67B322FBCD /* IntegrationHelpers.swift */,
-				273DB06557D32B01CB61BEE5 /* MemoryPressureHandler.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
