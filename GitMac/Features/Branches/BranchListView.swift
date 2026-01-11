@@ -133,7 +133,13 @@ struct BranchListView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .branchPRsDidUpdate)) { _ in
-            // Force view refresh when PR data updates (handled automatically by @ObservedObject)
+            // Force view refresh when PR data updates
+            // Trigger cache update to force SwiftUI re-render
+            updateFilterCache()
+        }
+        .onChange(of: prTracker.branchPRs.count) { _, _ in
+            // Also react to PR count changes for immediate UI update
+            updateFilterCache()
         }
         // Phase 0.2: Cache updates for performance
         .onChange(of: searchText) { _, newValue in
@@ -235,7 +241,10 @@ struct BranchListView: View {
 
 
     private func branchRowView(for branch: Branch) -> some View {
-        Group {
+        // Get PR for this branch (if any)
+        let pr = prTracker.getPR(for: branch.name)
+
+        return Group {
             BranchRow(
                 branch: branch,
                 isSelected: selectedBranch?.id == branch.id,
@@ -263,26 +272,28 @@ struct BranchListView: View {
                     showRebaseSheet = true
                 },
                 // PR integration
-                pullRequest: prTracker.getPR(for: branch.name),
+                pullRequest: pr,
                 onCreatePR: branch.isRemote ? nil : {
                     selectedBranch = branch
                     showPRSheet = true
                 },
-                onViewPR: { pr in
+                onViewPR: { prItem in
                     // Open PR in browser
-                    if let url = URL(string: pr.htmlUrl) {
+                    if let url = URL(string: prItem.htmlUrl) {
                         NSWorkspace.shared.open(url)
                     }
                 },
-                onMergePR: { pr, method in
+                onMergePR: { prItem, method in
                     Task {
-                        try? await prTracker.mergePR(pr, method: method)
+                        try? await prTracker.mergePR(prItem, method: method)
                     }
                 },
                 onBranchDropped: { droppedBranch in
                     handleBranchDrop(dragged: droppedBranch, onto: branch)
                 }
             )
+            // Force re-render when PR state changes for this branch
+            .id("\(branch.id)-\(pr?.number ?? 0)")
         }
     }
 
