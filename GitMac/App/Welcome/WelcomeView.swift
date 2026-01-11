@@ -13,6 +13,7 @@ import SwiftUI
 struct AppIconView: View {
     let size: CGFloat
     @State private var appIcon: NSImage?
+    @State private var retryCount = 0
 
     var body: some View {
         Group {
@@ -24,7 +25,7 @@ struct AppIconView: View {
                     .frame(width: size, height: size)
                     .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
             } else {
-                // Fallback with gradient
+                // Fallback with gradient while loading
                 RoundedRectangle(cornerRadius: size * 0.2)
                     .fill(
                         LinearGradient(
@@ -42,43 +43,74 @@ struct AppIconView: View {
                     .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
             }
         }
-        .onAppear {
-            loadIcon()
+        .task {
+            await loadIconAsync()
         }
     }
 
-    private func loadIcon() {
+    @MainActor
+    private func loadIconAsync() async {
+        // Try multiple times with delay (icon might not be ready immediately in Xcode)
+        for attempt in 0..<3 {
+            if let icon = getAppIcon() {
+                appIcon = icon
+                return
+            }
+
+            // Wait a bit before retrying
+            if attempt < 2 {
+                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+            }
+        }
+    }
+
+    private func getAppIcon() -> NSImage? {
         // Method 1: Get from NSApp (most reliable for running app)
-        if let icon = NSApp.applicationIconImage, icon.size.width > 0 {
-            appIcon = icon
-            return
+        if let icon = NSApp.applicationIconImage {
+            // Check if it's a real icon (not the generic app icon)
+            if icon.size.width >= 32 {
+                return icon
+            }
         }
 
-        // Method 2: Load from bundle Resources
+        // Method 2: NSWorkspace icon (always returns something)
+        let workspaceIcon = NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath)
+        if workspaceIcon.size.width >= 32 {
+            return workspaceIcon
+        }
+
+        // Method 3: NSImage.applicationIconName
+        if let icon = NSImage(named: NSImage.applicationIconName) {
+            if icon.size.width >= 32 {
+                return icon
+            }
+        }
+
+        // Method 4: Load from asset catalog
+        if let icon = NSImage(named: "AppIcon") {
+            return icon
+        }
+
+        // Method 5: Try loading from bundle resources
         if let resourcePath = Bundle.main.resourcePath {
-            let icnsPath = (resourcePath as NSString).appendingPathComponent("AppIcon.icns")
-            if let icon = NSImage(contentsOfFile: icnsPath) {
-                appIcon = icon
-                return
+            // Try different possible names
+            for filename in ["AppIcon.icns", "AppIcon.png", "Icon.icns"] {
+                let path = (resourcePath as NSString).appendingPathComponent(filename)
+                if let icon = NSImage(contentsOfFile: path) {
+                    return icon
+                }
             }
         }
 
-        // Method 3: Try bundle URL
-        if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
-           let icon = NSImage(contentsOf: iconURL) {
-            appIcon = icon
-            return
-        }
-
-        // Method 4: Get from Info.plist CFBundleIconFile
-        if let iconName = Bundle.main.object(forInfoDictionaryKey: "CFBundleIconFile") as? String {
-            let name = iconName.hasSuffix(".icns") ? String(iconName.dropLast(5)) : iconName
-            if let iconURL = Bundle.main.url(forResource: name, withExtension: "icns"),
+        // Method 6: Try bundle URL with different extensions
+        for ext in ["icns", "png", "pdf"] {
+            if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: ext),
                let icon = NSImage(contentsOf: iconURL) {
-                appIcon = icon
-                return
+                return icon
             }
         }
+
+        return nil
     }
 }
 
@@ -90,6 +122,7 @@ struct WelcomeView: View {
     @EnvironmentObject var recentReposManager: RecentRepositoriesManager
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var themeManager: ThemeManager
+    @State private var refreshTrigger = UUID()
 
     var body: some View {
         HStack(spacing: 0) {
@@ -153,8 +186,14 @@ struct WelcomeView: View {
             .frame(width: 320)
             .background(AppTheme.backgroundSecondary)
         }
-        // Force re-render when theme changes
-        .id(themeManager.currentTheme)
+        // Force re-render when theme changes via multiple triggers
+        .id("\(themeManager.currentTheme.rawValue)-\(refreshTrigger)")
+        .onReceive(NotificationCenter.default.publisher(for: .themeDidChange)) { _ in
+            // Force view refresh when theme changes
+            refreshTrigger = UUID()
+        }
+        .preferredColorScheme(themeManager.currentTheme == .light ? .light :
+                              themeManager.currentTheme == .dark ? .dark : nil)
     }
 }
 
