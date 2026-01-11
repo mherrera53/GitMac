@@ -100,7 +100,8 @@ struct RepositoryTab: Identifiable, Equatable {
     var selectedStash: Stash?
 
     static func == (lhs: RepositoryTab, rhs: RepositoryTab) -> Bool {
-        lhs.id == rhs.id
+        // Include repository comparison so SwiftUI detects branch changes
+        lhs.id == rhs.id && lhs.repository == rhs.repository
     }
 }
 

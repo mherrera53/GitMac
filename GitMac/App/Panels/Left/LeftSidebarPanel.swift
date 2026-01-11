@@ -13,6 +13,7 @@ struct LeftSidebarPanel: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedNavigator: SidebarNavigator = .branches
     @State private var branchSearchText = ""
+    @State private var refreshTrigger = UUID()  // Forces view rebuild on refresh
 
     var body: some View {
         VStack(spacing: 0) {
@@ -59,6 +60,7 @@ struct LeftSidebarPanel: View {
             }
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)
+            .id(refreshTrigger)  // Force rebuild when repository refreshes
         }
         .onReceive(NotificationCenter.default.publisher(for: .showRepositories)) { _ in selectedNavigator = .repositories }
         .onReceive(NotificationCenter.default.publisher(for: .showBranches)) { _ in selectedNavigator = .branches }
@@ -66,6 +68,10 @@ struct LeftSidebarPanel: View {
         .onReceive(NotificationCenter.default.publisher(for: .showStashes)) { _ in selectedNavigator = .stashes }
         .onReceive(NotificationCenter.default.publisher(for: .showTags)) { _ in selectedNavigator = .tags }
         .onReceive(NotificationCenter.default.publisher(for: .showWorktrees)) { _ in selectedNavigator = .worktrees }
+        .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { _ in
+            // Force rebuild of branch list when repository refreshes
+            refreshTrigger = UUID()
+        }
     }
 
     @ViewBuilder
