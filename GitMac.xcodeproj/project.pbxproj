@@ -361,7 +361,7 @@
 		FC63DEDA367E365A790DEFF2 /* TreeExpansionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60149B22A9C3833A45E1138 /* TreeExpansionState.swift */; };
 		FCCC056A77275438CF6C3030 /* OperationProgressOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05D35666EBED293412AD3325 /* OperationProgressOverlay.swift */; };
 		FCE7733F5EE79F6938CF6652 /* DSSearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 309335EA370B8E36FD9B9860 /* DSSearchBar.swift */; };
-		FDF91B1CF541572D0D9BE042 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 630E0C3309F413DC5C72D778 /* WelcomeView.swift */; };
+		WELCOME01BUILD0000000001 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WELCOME01FILE00000000001 /* WelcomeView.swift */; };
 		FE93CAC0A8120FDFAE04609A /* ConflictPreventionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE362A1585EF74F0F8CD5300 /* ConflictPreventionService.swift */; };
 		FED0784BE2D7966EF4DC830E /* CenterPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECF47093BEBDD1408A3C68E6 /* CenterPanel.swift */; };
 		PKG001 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = DEP001 /* KeychainAccess */; };
@@ -524,7 +524,6 @@
 		611701D71659694B52140952 /* GenericFileTreeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GenericFileTreeView.swift; path = Components/FileTree/GenericFileTreeView.swift; sourceTree = "<group>"; };
 		6117B76D20F187270457CD67 /* SectionHeader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SectionHeader.swift; path = ../Components/Layout/SectionHeader.swift; sourceTree = "<group>"; };
 		625A6458860C14BBBAFB1A1F /* GitHooksComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GitHooksComponents.swift; path = GitMac/App/Panels/Left/GitHooksComponents.swift; sourceTree = SOURCE_ROOT; };
-		630E0C3309F413DC5C72D778 /* WelcomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WelcomeView.swift; path = App/Components/WelcomeView.swift; sourceTree = "<group>"; };
 		63D9F13789EF1312E75BA19B /* JiraPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = JiraPanel.swift; path = Features/Jira/JiraPanel.swift; sourceTree = "<group>"; };
 		64D7DD67F634F228B2BA0CEE /* StoreManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StoreManager.swift; path = Core/StoreKit/StoreManager.swift; sourceTree = "<group>"; };
 		66B057DE0EB0A466E9E33BC9 /* RightStagingPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RightStagingPanel.swift; path = ../App/Panels/Right/RightStagingPanel.swift; sourceTree = "<group>"; };
@@ -728,6 +727,7 @@
 		E5D39602F9B9FA2983FFA4B5 /* Branch.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Branch.swift; path = Core/Git/Branch.swift; sourceTree = "<group>"; };
 		E60149B22A9C3833A45E1138 /* TreeExpansionState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TreeExpansionState.swift; path = Components/FileTree/TreeExpansionState.swift; sourceTree = "<group>"; };
 		E68762388E84A0E1E76D28A8 /* DiffStatsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DiffStatsView.swift; path = Components/Diff/DiffStatsView.swift; sourceTree = "<group>"; };
+		WELCOME01FILE00000000001 /* WelcomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WelcomeView.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		E6FDEA200BE2DF21B853FDFC /* RecentRepositoriesList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecentRepositoriesList.swift; sourceTree = "<group>"; };
 		E729B4D59A2644F69C62C147 /* CICDComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CICDComponents.swift; path = GitMac/App/Panels/Left/CICDComponents.swift; sourceTree = SOURCE_ROOT; };
 		E74448138294C0683E8713C8 /* CodeReviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CodeReviewService.swift; path = GitMac/Features/CodeReview/CodeReviewService.swift; sourceTree = SOURCE_ROOT; };
@@ -1508,7 +1508,6 @@
 				CED81242689EF445019AB70B /* SidebarSection.swift */,
 				05D35666EBED293412AD3325 /* OperationProgressOverlay.swift */,
 				31850924BB032CD7AAE897D5 /* ActionButton.swift */,
-				630E0C3309F413DC5C72D778 /* WelcomeView.swift */,
 			);
 			name = Components;
 			sourceTree = "<group>";
@@ -1684,9 +1683,10 @@
 		A779073E6636D2C37CBA8DF6 /* Welcome */ = {
 			isa = PBXGroup;
 			children = (
+				WELCOME01FILE00000000001 /* WelcomeView.swift */,
 			);
 			name = Welcome;
-			path = Welcome;
+			path = App/Welcome;
 			sourceTree = "<group>";
 		};
 		A7CEEDE185B2D04F6AEE9A50 /* GitHub */ = {
@@ -2629,7 +2629,7 @@
 				6C0AC788C2EAD1379BADBDBC /* DiffCache.swift in Sources */,
 				C9EDED5484F7DFC999A9FA26 /* DiffStatusBar.swift in Sources */,
 				724B0CAB7823EA602CFC7EEE /* DiffSearchAndNavigation.swift in Sources */,
-				FDF91B1CF541572D0D9BE042 /* WelcomeView.swift in Sources */,
+				WELCOME01BUILD0000000001 /* WelcomeView.swift in Sources */,
 				C595ED8C3BDD36D4ECBBA1DB /* StagingFile.swift in Sources */,
 				BD4379DD0E129C03F2CCC223 /* TerminalPanel.swift in Sources */,
 				FED0784BE2D7966EF4DC830E /* CenterPanel.swift in Sources */,

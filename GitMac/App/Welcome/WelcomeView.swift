@@ -65,35 +65,38 @@ struct AppIconView: View {
     }
 
     private func getAppIcon() -> NSImage? {
-        // Method 1: Get from NSApp (most reliable for running app)
+        // Method 1: Load from dedicated WelcomeIcon asset (most reliable)
+        if let icon = NSImage(named: "WelcomeIcon") {
+            return icon
+        }
+
+        // Method 2: Get from NSApp (reliable for running app)
         if let icon = NSApp.applicationIconImage {
-            // Check if it's a real icon (not the generic app icon)
             if icon.size.width >= 32 {
                 return icon
             }
         }
 
-        // Method 2: NSWorkspace icon (always returns something)
+        // Method 3: NSWorkspace icon (always returns something)
         let workspaceIcon = NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath)
         if workspaceIcon.size.width >= 32 {
             return workspaceIcon
         }
 
-        // Method 3: NSImage.applicationIconName
+        // Method 4: NSImage.applicationIconName
         if let icon = NSImage(named: NSImage.applicationIconName) {
             if icon.size.width >= 32 {
                 return icon
             }
         }
 
-        // Method 4: Load from asset catalog
+        // Method 5: Load from asset catalog
         if let icon = NSImage(named: "AppIcon") {
             return icon
         }
 
-        // Method 5: Try loading from bundle resources
+        // Method 6: Try loading from bundle resources
         if let resourcePath = Bundle.main.resourcePath {
-            // Try different possible names
             for filename in ["AppIcon.icns", "AppIcon.png", "Icon.icns"] {
                 let path = (resourcePath as NSString).appendingPathComponent(filename)
                 if let icon = NSImage(contentsOfFile: path) {
@@ -102,7 +105,7 @@ struct AppIconView: View {
             }
         }
 
-        // Method 6: Try bundle URL with different extensions
+        // Method 7: Try bundle URL with different extensions
         for ext in ["icns", "png", "pdf"] {
             if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: ext),
                let icon = NSImage(contentsOf: iconURL) {

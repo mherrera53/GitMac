@@ -1053,7 +1053,7 @@ struct OptimizedSplitDiffView: View {
 
             let selectedPairs = pairs.filter { selectedPairIds.contains($0.id) }
 
-            for (hunkIndex, hunk) in hunks.enumerated() {
+            for (_, hunk) in hunks.enumerated() {
                 for (lineIndex, line) in hunk.lines.enumerated() {
                     // Check if this line matches any selected pair
                     let isPairSelected = selectedPairs.contains { pair in
@@ -1098,7 +1098,7 @@ struct OptimizedSplitDiffView: View {
 
             let selectedPairs = pairs.filter { selectedPairIds.contains($0.id) }
 
-            for (hunkIndex, hunk) in hunks.enumerated() {
+            for (_, hunk) in hunks.enumerated() {
                 for (lineIndex, line) in hunk.lines.enumerated() {
                     let isPairSelected = selectedPairs.contains { pair in
                         (pair.left == line && line.type == .deletion) ||
@@ -1596,7 +1596,7 @@ struct OptimizedInlineDiffView: View {
                         ForEach(Array(allLines.enumerated()), id: \.element.id) { index, item in
                             if let header = item.hunkHeader {
                                 FastHunkHeader(header: header)
-                            } else if let line = item.line {
+                            } else if item.line != nil {
                                 SelectableInlineLineRow(
                                     item: item,
                                     index: index,
