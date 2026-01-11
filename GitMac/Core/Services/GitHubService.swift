@@ -544,11 +544,38 @@ actor GitHubService {
     }
 
     private func parseError(_ data: Data) -> String {
-        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let message = json["message"] as? String {
-            return message
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return String(data: data, encoding: .utf8) ?? "Unknown error"
         }
-        return String(data: data, encoding: .utf8) ?? "Unknown error"
+
+        var message = json["message"] as? String ?? "Unknown error"
+
+        // GitHub validation errors include an "errors" array with details
+        if let errors = json["errors"] as? [[String: Any]] {
+            let errorMessages = errors.compactMap { error -> String? in
+                // Try to get the most specific error message
+                if let errorMessage = error["message"] as? String {
+                    return errorMessage
+                }
+                if let resource = error["resource"] as? String,
+                   let field = error["field"] as? String,
+                   let code = error["code"] as? String {
+                    return "\(resource).\(field): \(code)"
+                }
+                return nil
+            }
+            if !errorMessages.isEmpty {
+                message = errorMessages.joined(separator: "; ")
+            }
+        }
+
+        // Check for documentation_url which often contains helpful info
+        if let docUrl = json["documentation_url"] as? String,
+           docUrl.contains("already_exists") {
+            message = "A pull request already exists for this branch"
+        }
+
+        return message
     }
 
     // MARK: - Rate Limit Info
