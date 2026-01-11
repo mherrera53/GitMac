@@ -294,6 +294,13 @@ class PRListViewModel: ObservableObject {
                 "PR #\(newPR.number) created",
                 detail: title
             )
+
+            // Refresh PR tracker immediately so branch context menu updates
+            await BranchPRTracker.shared.refresh()
+
+            // Notify other views
+            NotificationCenter.default.post(name: .pullRequestCreated, object: newPR)
+
             await loadPullRequests()
         } catch {
             self.error = error.localizedDescription

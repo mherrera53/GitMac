@@ -1161,6 +1161,9 @@ struct CreatePullRequestSheet: View {
                 detail: title
             )
 
+            // Refresh PR tracker immediately so branch context menu updates
+            await BranchPRTracker.shared.refresh()
+
             // Post notification to refresh PR data across the app
             NotificationCenter.default.post(name: .pullRequestCreated, object: newPR)
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: repo.path)
