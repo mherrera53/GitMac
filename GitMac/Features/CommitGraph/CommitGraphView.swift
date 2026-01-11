@@ -525,7 +525,22 @@ struct CommitGraphView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .remoteOperationCompleted)) { _ in
-            // Force refresh when operation completes
+            // Full reload when remote operation completes (push/pull/fetch)
+            if let path = appState.currentRepository?.path {
+                Task { await vm.load(at: path) }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .gitHubOperationCompleted)) { _ in
+            // Full reload when any GitHub operation completes
+            if let path = appState.currentRepository?.path {
+                Task { await vm.load(at: path) }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .branchDidCheckout)) { _ in
+            // Full reload when branch changes
+            if let path = appState.currentRepository?.path {
+                Task { await vm.load(at: path) }
+            }
         }
         .sheet(isPresented: $showPRSheet) {
             if !prHeadBranch.isEmpty && !prBaseBranch.isEmpty {

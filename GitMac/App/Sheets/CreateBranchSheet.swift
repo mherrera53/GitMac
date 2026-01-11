@@ -21,6 +21,14 @@ struct CreateBranchSheet: View {
         appState.currentRepository?.branches ?? []
     }
 
+    var currentBranchName: String {
+        appState.currentRepository?.currentBranch?.name ?? "HEAD"
+    }
+
+    var repoName: String {
+        appState.currentRepository?.name ?? "Unknown"
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -40,6 +48,34 @@ struct CreateBranchSheet: View {
             }
             .padding(16)
             .background(AppTheme.backgroundSecondary)
+
+            // Repository context info
+            HStack(spacing: 12) {
+                // Repository
+                HStack(spacing: 4) {
+                    Image(systemName: "folder.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(AppTheme.accent)
+                    Text(repoName)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(AppTheme.textPrimary)
+                }
+
+                // Current branch
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.triangle.branch")
+                        .font(.system(size: 10))
+                        .foregroundColor(AppTheme.success)
+                    Text(currentBranchName)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(AppTheme.textPrimary)
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(AppTheme.backgroundTertiary.opacity(0.5))
 
             Rectangle().fill(AppTheme.border).frame(height: 1)
 
@@ -125,22 +161,36 @@ struct CreateBranchSheet: View {
             }
             .padding(16)
         }
-        .frame(width: 380, height: 320)
+        .frame(width: 380, height: 350)
         .background(AppTheme.backgroundSecondary)
     }
 
     private func createBranch() {
+        guard let repoPath = appState.currentRepository?.path else {
+            errorMessage = "No repository selected"
+            return
+        }
+
         isCreating = true
         errorMessage = nil
 
         Task {
             do {
-                _ = try await appState.gitService.createBranch(
+                let engine = GitEngine()
+                _ = try await engine.createBranch(
                     named: branchName,
                     from: baseBranch,
-                    checkout: checkoutAfterCreate
+                    checkout: checkoutAfterCreate,
+                    at: repoPath
                 )
                 await appState.refresh()
+
+                // Post notifications for UI sync
+                if checkoutAfterCreate {
+                    NotificationCenter.default.post(name: .branchDidCheckout, object: branchName)
+                }
+                NotificationCenter.default.post(name: .repositoryDidRefresh, object: repoPath)
+
                 await MainActor.run {
                     isPresented = false
                 }

@@ -24,6 +24,12 @@ struct BranchRow: View {
     var onPull: (() async -> Void)? = nil
     var onRebase: (() async -> Void)? = nil
 
+    // PR actions
+    var pullRequest: GitHubPullRequest? = nil
+    var onCreatePR: (() -> Void)? = nil
+    var onViewPR: ((GitHubPullRequest) -> Void)? = nil
+    var onMergePR: ((GitHubPullRequest, MergeMethod) -> Void)? = nil
+
     // Drag and drop
     var onBranchDropped: ((Branch) -> Void)? = nil
 
@@ -116,23 +122,40 @@ struct BranchRow: View {
             .frame(width: 16)
 
         // Branch name and info
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: 4) {
                 Text(branch.name)
                     .lineLimit(1)
+                    .truncationMode(.middle)
                     .fontWeight(branch.isCurrent ? .semibold : .regular)
+                    .font(.system(size: 11))
 
                 if showCurrentIndicator && branch.isCurrent {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.caption)
                         .foregroundColor(AppTheme.success)
                 }
+
+                // PR badge
+                if let pr = pullRequest {
+                    HStack(spacing: 3) {
+                        Image(systemName: pr.draft ? "doc.text" : "arrow.triangle.pull")
+                            .font(.system(size: 9))
+                        Text("#\(pr.number)")
+                            .font(.system(size: 10, weight: .medium).monospacedDigit())
+                    }
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(prBadgeColor(for: pr).opacity(0.2))
+                    .foregroundColor(prBadgeColor(for: pr))
+                    .cornerRadius(4)
+                }
             }
 
             if showUpstream, let upstream = branch.upstream {
                 Text("↑ " + upstream.name)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundColor(AppTheme.textSecondary)
                     .lineLimit(1)
             }
         }
@@ -164,6 +187,15 @@ struct BranchRow: View {
                     .foregroundColor(AppTheme.warning)
                 }
             }
+        }
+    }
+
+    private func prBadgeColor(for pr: GitHubPullRequest) -> Color {
+        if pr.draft { return AppTheme.textSecondary }
+        switch pr.state {
+        case "open": return AppTheme.success
+        case "closed": return AppTheme.error
+        default: return AppTheme.accentPurple
         }
     }
 
@@ -211,6 +243,59 @@ struct BranchRow: View {
                     Task { await pull() }
                 } label: {
                     Label("Pull", systemImage: "arrow.down.doc")
+                }
+            }
+        }
+
+        // PR Section
+        if !branch.isRemote {
+            Divider()
+
+            if let pr = pullRequest {
+                // Has an open PR
+                Button {
+                    onViewPR?(pr)
+                } label: {
+                    Label("View PR #\(pr.number)", systemImage: "arrow.triangle.pull")
+                }
+
+                if pr.state == "open", let url = URL(string: pr.htmlUrl) {
+                    Button {
+                        NSWorkspace.shared.open(url)
+                    } label: {
+                        Label("Open in GitHub", systemImage: "safari")
+                    }
+                }
+
+                if pr.state == "open" && !pr.draft {
+                    Menu {
+                        Button {
+                            onMergePR?(pr, .merge)
+                        } label: {
+                            Label("Create merge commit", systemImage: "arrow.triangle.merge")
+                        }
+
+                        Button {
+                            onMergePR?(pr, .squash)
+                        } label: {
+                            Label("Squash and merge", systemImage: "square.stack.3d.up")
+                        }
+
+                        Button {
+                            onMergePR?(pr, .rebase)
+                        } label: {
+                            Label("Rebase and merge", systemImage: "arrow.triangle.branch")
+                        }
+                    } label: {
+                        Label("Merge PR #\(pr.number)", systemImage: "checkmark.circle")
+                    }
+                }
+            } else if let createPR = onCreatePR {
+                // No PR - show create option
+                Button {
+                    createPR()
+                } label: {
+                    Label("Create Pull Request", systemImage: "plus.circle")
                 }
             }
         }

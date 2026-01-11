@@ -313,13 +313,19 @@ struct MainLayout: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             
             // Bottom Panel (Terminal/Logs) - Resizable
-            if bottomPanelManager.isPanelVisible {
-                 UnifiedBottomPanel(panelManager: bottomPanelManager)
-                     .frame(height: bottomPanelManager.panelHeight)
-                     .transition(.move(edge: .bottom))
-                     // Force recreation of the panel when repository changes to ensure
-                     // correct context (Terminal sessions, Integration tabs, etc.)
-                     .id(appState.currentRepository?.id.uuidString ?? "no-repo")
+            // Always show UnifiedBottomPanel - it handles both collapsed (28px tab bar) and expanded states
+            // When fully hidden (no tabs), show minimal CollapsedBottomPanelBar
+            if bottomPanelManager.openTabs.isEmpty && !bottomPanelManager.isPanelVisible {
+                // No tabs open and panel hidden - show minimal bar to open terminal
+                CollapsedBottomPanelBar(panelManager: bottomPanelManager)
+            } else {
+                // Has tabs or panel is visible - show full UnifiedBottomPanel
+                // UnifiedBottomPanel handles its own height (28px collapsed, panelHeight expanded)
+                UnifiedBottomPanel(panelManager: bottomPanelManager)
+                    .transition(.move(edge: .bottom))
+                    // Force recreation of the panel when repository changes to ensure
+                    // correct context (Terminal sessions, Integration tabs, etc.)
+                    .id(appState.currentRepository?.id.uuidString ?? "no-repo")
             }
         }
         .contextMenu { toolbarConfigurationMenu }
@@ -540,5 +546,71 @@ struct MainLayout: View {
             // Clear diff when switching repositories
             selectedFileDiff = nil
         }
+    }
+}
+
+// MARK: - Collapsed Bottom Panel Bar
+/// Minimal bar shown when bottom panel is hidden - click to expand
+struct CollapsedBottomPanelBar: View {
+    @ObservedObject var panelManager: BottomPanelManager
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            // Drag handle indicator
+            Image(systemName: "chevron.up")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundColor(AppTheme.textMuted)
+
+            // Show open tabs icons
+            if !panelManager.openTabs.isEmpty {
+                ForEach(panelManager.openTabs.prefix(4)) { tab in
+                    Image(systemName: tab.type.icon)
+                        .font(.system(size: 9))
+                        .foregroundColor(panelManager.activeTabId == tab.id ? AppTheme.accent : AppTheme.textMuted)
+                }
+                if panelManager.openTabs.count > 4 {
+                    Text("+\(panelManager.openTabs.count - 4)")
+                        .font(.system(size: 9))
+                        .foregroundColor(AppTheme.textMuted)
+                }
+            } else {
+                Text("Terminal")
+                    .font(.system(size: 10))
+                    .foregroundColor(AppTheme.textMuted)
+            }
+
+            Spacer()
+
+            // Quick action buttons
+            Button {
+                panelManager.openTab(type: .terminal)
+            } label: {
+                Image(systemName: "terminal")
+                    .font(.system(size: 9))
+                    .foregroundColor(AppTheme.textMuted)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 22)
+        .background(isHovered ? AppTheme.hover : AppTheme.backgroundSecondary)
+        .overlay(
+            Rectangle()
+                .fill(AppTheme.border)
+                .frame(height: 1),
+            alignment: .top
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.spring(response: 0.3)) {
+                if panelManager.openTabs.isEmpty {
+                    panelManager.openTab(type: .terminal)
+                } else {
+                    panelManager.isPanelVisible = true
+                }
+            }
+        }
+        .onHover { isHovered = $0 }
     }
 }

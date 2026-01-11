@@ -15,24 +15,26 @@ struct RepositoryTabsView: View {
     }
     
     // Organize tabs into groups while maintaining order
+    // Uses stable IDs to prevent SwiftUI re-render issues causing duplicate tabs
     private var groupedTabs: [TabGroup] {
         var groups: [TabGroup] = []
         var currentTabs: [RepositoryTab] = []
         var currentGroupId: String? = nil
         var currentGroupName: String? = nil
         var currentGroupColor: String? = nil
-        
+
         for tab in appState.openTabs {
             let tabGroups = groupsService.getGroupsForRepo(tab.repository.path)
             let firstGroup = tabGroups.first
             let groupId = firstGroup?.id ?? "ungrouped"
-            
+
             if currentGroupId != groupId {
-                // Save previous group
-                if !currentTabs.isEmpty {
-                    groups.append(TabGroup(id: UUID().uuidString, name: currentGroupName, color: currentGroupColor, tabs: currentTabs))
+                // Save previous group with stable ID based on first tab's ID
+                if !currentTabs.isEmpty, let firstTab = currentTabs.first {
+                    let stableId = "\(currentGroupId ?? "ungrouped")-\(firstTab.id.uuidString)"
+                    groups.append(TabGroup(id: stableId, name: currentGroupName, color: currentGroupColor, tabs: currentTabs))
                 }
-                
+
                 // Start new group
                 currentGroupId = groupId
                 currentGroupName = firstGroup?.name
@@ -42,12 +44,13 @@ struct RepositoryTabsView: View {
                 currentTabs.append(tab)
             }
         }
-        
-        // Append last group
-        if !currentTabs.isEmpty {
-            groups.append(TabGroup(id: UUID().uuidString, name: currentGroupName, color: currentGroupColor, tabs: currentTabs))
+
+        // Append last group with stable ID
+        if !currentTabs.isEmpty, let firstTab = currentTabs.first {
+            let stableId = "\(currentGroupId ?? "ungrouped")-\(firstTab.id.uuidString)"
+            groups.append(TabGroup(id: stableId, name: currentGroupName, color: currentGroupColor, tabs: currentTabs))
         }
-        
+
         return groups
     }
 

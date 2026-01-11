@@ -293,6 +293,8 @@
 		D31155F217037D5B7777EED0 /* LinearContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A72B4B428ACA0A1D3C01558D /* LinearContentView.swift */; };
 		D36FC421805A89519D5C8731 /* ResetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E42F45A779174FB0192AA60 /* ResetView.swift */; };
 		D37C7945444AF7F89EE1F35A /* GitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9B988D57B4EBA758747115 /* GitService.swift */; };
+		BRANCHPR0001BUILD000000001 /* BranchPRTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = BRANCHPR0001FILE0000000001 /* BranchPRTracker.swift */; };
+		GHSYNCMG0001BUILD000000001 /* GitHubSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = GHSYNCMG0001FILE0000000001 /* GitHubSyncManager.swift */; };
 		D49227F9CCA29A4F6DC6129E /* DiffToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8EC18843562D7D622FA0E10 /* DiffToolbar.swift */; };
 		D4C8907702C129E8CBFB0870 /* DSPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96298B0967612ED6114D608E /* DSPanel.swift */; };
 		D586D60CC063E011026505D0 /* TaigaTicketsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32798DDE1B043BCB72AFEDC5 /* TaigaTicketsPanel.swift */; };
@@ -419,6 +421,8 @@
 		1BE7FD2660507EDB36634450 /* RemoteOperationTracker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Core/Services/RemoteOperationTracker.swift; sourceTree = SOURCE_ROOT; };
 		1C7B6E6EE3D71DBE737B4C1D /* DiffLineRenderers.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DiffLineRenderers.swift; path = ../Features/Diff/Renderers/DiffLineRenderers.swift; sourceTree = "<group>"; };
 		1D9B988D57B4EBA758747115 /* GitService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GitService.swift; path = Core/Services/GitService.swift; sourceTree = "<group>"; };
+		BRANCHPR0001FILE0000000001 /* BranchPRTracker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BranchPRTracker.swift; path = Core/Services/BranchPRTracker.swift; sourceTree = "<group>"; };
+		GHSYNCMG0001FILE0000000001 /* GitHubSyncManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GitHubSyncManager.swift; path = Core/Services/GitHubSyncManager.swift; sourceTree = "<group>"; };
 		1E722C9BE39DB145F515EE7A /* AWSCodeBuildService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Features/CICD/AWSCodeBuildService.swift; sourceTree = SOURCE_ROOT; };
 		1F038DA5BD2F2882EEDC31EA /* DiffOptions.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DiffOptions.swift; path = ../Features/Diff/DiffOptions.swift; sourceTree = "<group>"; };
 		202778629A618B9E881C961C /* DiffMinimap.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DiffMinimap.swift; path = ../Features/Diff/Renderers/DiffMinimap.swift; sourceTree = "<group>"; };
@@ -1649,6 +1653,8 @@
 				1D9B988D57B4EBA758747115 /* GitService.swift */,
 				99AA1FB5A8306B98A36E3C86 /* AIService.swift */,
 				E284BF9CDF10EDB4C57C2244 /* GitHubService.swift */,
+				BRANCHPR0001FILE0000000001 /* BranchPRTracker.swift */,
+				GHSYNCMG0001FILE0000000001 /* GitHubSyncManager.swift */,
 				B04DFEA202E551F0C5CE9419 /* WorkspaceSettings.swift */,
 				F7B82AC93A83839A10C7CDCC /* MicrosoftPlannerService.swift */,
 				68995E0B81A9B7E42741AE47 /* GitSubmoduleService.swift */,
@@ -2439,6 +2445,8 @@
 				338609A9890C174FAC467CA4 /* GitSubmodule.swift in Sources */,
 				16FE878B5150049FCF623EDD /* GitHooksService.swift in Sources */,
 				D37C7945444AF7F89EE1F35A /* GitService.swift in Sources */,
+				BRANCHPR0001BUILD000000001 /* BranchPRTracker.swift in Sources */,
+				GHSYNCMG0001BUILD000000001 /* GitHubSyncManager.swift in Sources */,
 				E31D0AE2FBC3898B195BDCC4 /* AIService.swift in Sources */,
 				F33F3ED30023FB4F63F59B08 /* GitHubService.swift in Sources */,
 				42EE92CC8919B6BC223491BA /* WorkspaceSettings.swift in Sources */,

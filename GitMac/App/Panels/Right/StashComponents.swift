@@ -29,9 +29,11 @@ class StashDetailViewModel: ObservableObject {
 
     func getDiff(for file: StashFile, stash: Stash, at path: String) async -> FileDiff? {
         let shell = ShellExecutor()
+        // Use git diff between stash parent and stash for specific file
+        // Syntax: git diff stash@{n}^ stash@{n} -- file.path
         let result = await shell.execute(
             "git",
-            arguments: ["stash", "show", "-p", stash.reference, "--", file.path],
+            arguments: ["diff", "\(stash.reference)^", stash.reference, "--", file.path],
             workingDirectory: path
         )
 
