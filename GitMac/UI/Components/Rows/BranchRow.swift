@@ -35,17 +35,19 @@ struct BranchRow: View {
             isSelected: isSelected,
             style: style,
             actions: buildActions(),
-            contextMenu: contextMenu,
+            contextMenu: { AnyView(branchContextMenu) },
             onSelect: onSelect
         ) {
             branchContent
         }
-        .onTapGesture(count: 2) {
-            // Double-click to checkout (if not already current)
-            if !branch.isCurrent, let checkout = onCheckout {
-                Task { await checkout() }
+        .simultaneousGesture(
+            TapGesture(count: 2).onEnded {
+                // Double-click to checkout (if not already current)
+                if !branch.isCurrent, let checkout = onCheckout {
+                    Task { await checkout() }
+                }
             }
-        }
+        )
         .draggable(branch.name) {
             // Drag preview
             HStack(spacing: 8) {
@@ -182,6 +184,61 @@ struct BranchRow: View {
             return AppTheme.success
         } else {
             return AppTheme.accent
+        }
+    }
+
+    @ViewBuilder
+    private var branchContextMenu: some View {
+        if !branch.isCurrent, let checkout = onCheckout {
+            Button {
+                Task { await checkout() }
+            } label: {
+                Label("Checkout", systemImage: "arrow.uturn.backward")
+            }
+        }
+
+        if !branch.isRemote {
+            if let push = onPush {
+                Button {
+                    Task { await push() }
+                } label: {
+                    Label("Push", systemImage: "arrow.up.doc")
+                }
+            }
+
+            if let pull = onPull {
+                Button {
+                    Task { await pull() }
+                } label: {
+                    Label("Pull", systemImage: "arrow.down.doc")
+                }
+            }
+        }
+
+        if let merge = onMerge {
+            Divider()
+            Button {
+                Task { await merge() }
+            } label: {
+                Label("Merge into current", systemImage: "arrow.triangle.merge")
+            }
+        }
+
+        if let rebase = onRebase {
+            Button {
+                Task { await rebase() }
+            } label: {
+                Label("Rebase onto current", systemImage: "arrow.triangle.swap")
+            }
+        }
+
+        if !branch.isCurrent, let delete = onDelete {
+            Divider()
+            Button(role: .destructive) {
+                Task { await delete() }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
         }
     }
 

@@ -101,6 +101,9 @@ struct PRListView: View {
                 await viewModel.loadPullRequests(state: filterState)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .pullRequestCreated)) { _ in
+            Task { await viewModel.loadPullRequests(state: filterState) }
+        }
     }
 }
 

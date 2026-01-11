@@ -83,46 +83,25 @@ struct KaleidoscopeDiffView: View {
                         .frame(width: 1)
                 }
 
-                // Diff view (main area)
                 // Diff view (main area) with Minimap Overlay
                 ZStack(alignment: .trailing) {
                     if let file = selectedFile {
                         let currentHunks = swappedAB ? swapHunks(file.hunks) : file.hunks
-                        
-                        if viewMode == .unified {
-                            let unifiedLines = KaleidoscopePairingEngine.calculateUnifiedLines(from: currentHunks)
-                            diffContentView(for: file, pairedLines: [], unifiedLines: unifiedLines)
-                                .frame(maxWidth: .infinity)
-                            
-                            if showMinimap {
-                                KaleidoscopeMinimapWrapper(
-                                    rows: minimapRows(from: unifiedLines),
-                                    scrollOffset: $scrollOffset,
-                                    viewportHeight: $viewportHeight,
-                                    contentHeight: $contentHeight,
-                                    minimapScrollTriggerAction: { minimapScrollTrigger = UUID() }
-                                )
-                                .frame(width: 80)
-                                .padding(.trailing, 4)
-                                .padding(.vertical, 4)
-                            }
-                        } else {
-                            let pairedLines = KaleidoscopePairingEngine.calculatePairs(from: currentHunks)
-                            diffContentView(for: file, pairedLines: pairedLines, unifiedLines: [])
-                                .frame(maxWidth: .infinity)
-                            
-                            if showMinimap {
-                                KaleidoscopeMinimapWrapper(
-                                    rows: minimapRows(from: pairedLines),
-                                    scrollOffset: $scrollOffset,
-                                    viewportHeight: $viewportHeight,
-                                    contentHeight: $contentHeight,
-                                    minimapScrollTriggerAction: { minimapScrollTrigger = UUID() }
-                                )
-                                .frame(width: 80)
-                                .padding(.trailing, 4)
-                                .padding(.vertical, 4)
-                            }
+                        let pairedLines = KaleidoscopePairingEngine.calculatePairs(from: currentHunks)
+                        diffContentView(for: file, pairedLines: pairedLines)
+                            .frame(maxWidth: .infinity)
+
+                        if showMinimap {
+                            KaleidoscopeMinimapWrapper(
+                                rows: minimapRows(from: pairedLines),
+                                scrollOffset: $scrollOffset,
+                                viewportHeight: $viewportHeight,
+                                contentHeight: $contentHeight,
+                                minimapScrollTriggerAction: { minimapScrollTrigger = UUID() }
+                            )
+                            .frame(width: 80)
+                            .padding(.trailing, 4)
+                            .padding(.vertical, 4)
                         }
                     } else {
                         emptyStateView
@@ -192,14 +171,7 @@ struct KaleidoscopeDiffView: View {
     private func recalculateContentHeight() {
         guard let file = selectedFile else { return }
         let hunks = swappedAB ? swapHunks(file.hunks) : file.hunks
-        
-        let lineCount: Int
-        if viewMode == .unified {
-            lineCount = KaleidoscopePairingEngine.calculateUnifiedLines(from: hunks).count
-        } else {
-            lineCount = KaleidoscopePairingEngine.calculatePairs(from: hunks).count
-        }
-        
+        let lineCount = KaleidoscopePairingEngine.calculatePairs(from: hunks).count
         contentHeight = CGFloat(lineCount) * 24
     }
 
@@ -350,7 +322,7 @@ struct KaleidoscopeDiffView: View {
     }
 
     @ViewBuilder
-    private func diffContentView(for file: FileDiff, pairedLines: [DiffPairWithConnection], unifiedLines: [UnifiedLine]) -> some View {
+    private func diffContentView(for file: FileDiff, pairedLines: [DiffPairWithConnection]) -> some View {
         let hunks = swappedAB ? swapHunks(file.hunks) : file.hunks
         let hunksById = Dictionary(uniqueKeysWithValues: hunks.map { ($0.id, $0) })
 
@@ -384,7 +356,7 @@ struct KaleidoscopeDiffView: View {
                     contentHeight: $contentHeight
                 )
             case .preview:
-                // Markdown preview
+                // Smart preview - Markdown with Mermaid support, plain text for others
                 if let file = selectedFile {
                     let previewContent: String = {
                         var lines: [String] = []
@@ -400,7 +372,15 @@ struct KaleidoscopeDiffView: View {
                         }
                         return lines.joined(separator: "\n")
                     }()
-                    MarkdownView(content: previewContent, fileName: file.displayPath)
+
+                    let ext = (file.displayPath as NSString).pathExtension.lowercased()
+                    let isMarkdown = ext == "md" || ext == "markdown"
+
+                    if isMarkdown {
+                        MarkdownView(content: previewContent, fileName: file.displayPath)
+                    } else {
+                        PlainTextPreviewView(content: previewContent, fileName: file.displayPath)
+                    }
                 }
             case .blocks:
                 KaleidoscopeSplitDiffView(
@@ -417,34 +397,6 @@ struct KaleidoscopeDiffView: View {
                     contentHeight: $contentHeight,
                     minimapScrollTrigger: $minimapScrollTrigger
                 )
-            
-            case .fluid:
-                KaleidoscopeSplitDiffView(
-                    pairedLines: pairedLines,
-                    filePath: file.newPath,
-                    hunksById: hunksById,
-                    repoPath: repoPath,
-                    allowPatchActions: !swappedAB,
-                    showLineNumbers: showLineNumbers,
-                    showConnectionLines: false,
-                    isFluidMode: true,
-                    scrollOffset: $scrollOffset,
-                    viewportHeight: $viewportHeight,
-                    contentHeight: $contentHeight,
-                    minimapScrollTrigger: $minimapScrollTrigger
-                )
-
-        case .unified:
-            // True Unified view with A/B labels in margin
-            let unifiedLines = KaleidoscopePairingEngine.calculateUnifiedLines(from: hunks)
-            KaleidoscopeUnifiedView(
-                unifiedLines: unifiedLines,
-                showLineNumbers: showLineNumbers,
-                scrollOffset: $scrollOffset,
-                viewportHeight: $viewportHeight,
-                contentHeight: $contentHeight,
-                minimapScrollTrigger: $minimapScrollTrigger
-            )
         }
     }
 
@@ -463,19 +415,6 @@ struct KaleidoscopeDiffView: View {
                 }
             }
             return MinimapRow(id: pair.id, color: color, isHeader: pair.hunkHeader != nil)
-        }
-    }
-
-    private func minimapRows(from unifiedLines: [UnifiedLine]) -> [MinimapRow] {
-        let theme = Color.Theme(themeManager.colors)
-        return unifiedLines.map { line in
-            let color: Color = switch line.type {
-            case .addition: theme.diffAddition
-            case .deletion: theme.diffDeletion
-            case .hunkHeader: theme.accent.opacity(0.4)
-            case .context: Color.clear
-            }
-            return MinimapRow(id: line.id, color: color, isHeader: line.type == .hunkHeader)
         }
     }
 
@@ -738,15 +677,18 @@ enum UnifiedSide {
 }
 
 struct UnifiedLine: Identifiable {
-    let id: Int
+    let id: UUID
     let content: String
     let type: DiffLineType
     let side: UnifiedSide
     let oldLineNumber: Int?
     let newLineNumber: Int?
     let pairedContent: String?
-    
-    init(id: Int, content: String, type: DiffLineType, side: UnifiedSide, oldLineNumber: Int?, newLineNumber: Int?, pairedContent: String?) {
+    // For staging operations
+    let hunkIndex: Int?
+    let lineIndexInHunk: Int?
+
+    init(id: UUID = UUID(), content: String, type: DiffLineType, side: UnifiedSide, oldLineNumber: Int?, newLineNumber: Int?, pairedContent: String?, hunkIndex: Int? = nil, lineIndexInHunk: Int? = nil) {
         self.id = id
         self.content = content
         self.type = type
@@ -754,60 +696,56 @@ struct UnifiedLine: Identifiable {
         self.oldLineNumber = oldLineNumber
         self.newLineNumber = newLineNumber
         self.pairedContent = pairedContent
+        self.hunkIndex = hunkIndex
+        self.lineIndexInHunk = lineIndexInHunk
     }
 }
 
 extension KaleidoscopePairingEngine {
     static func calculateUnifiedLines(from hunks: [DiffHunk]) -> [UnifiedLine] {
         var lines: [UnifiedLine] = []
-        var lineId = 0
 
-        for hunk in hunks {
-            lineId += 1
+        for (hunkIndex, hunk) in hunks.enumerated() {
             lines.append(UnifiedLine(
-                id: lineId,
                 content: hunk.header,
                 type: .hunkHeader,
                 side: .both,
                 oldLineNumber: nil,
                 newLineNumber: nil,
-                pairedContent: nil
+                pairedContent: nil,
+                hunkIndex: hunkIndex,
+                lineIndexInHunk: nil
             ))
 
-            var i = 0
             let hunkLines = hunk.lines
-            while i < hunkLines.count {
-                let line = hunkLines[i]
-                lineId += 1
-                
+            for (lineIndex, line) in hunkLines.enumerated() {
                 let side: UnifiedSide
                 var pairedContent: String? = nil
-                
+
                 if line.type == .deletion {
                     side = .a
-                    if i + 1 < hunkLines.count && hunkLines[i + 1].type == .addition {
-                        pairedContent = hunkLines[i + 1].content
+                    if lineIndex + 1 < hunkLines.count && hunkLines[lineIndex + 1].type == .addition {
+                        pairedContent = hunkLines[lineIndex + 1].content
                     }
                 } else if line.type == .addition {
                     side = .b
-                    if i > 0 && hunkLines[i - 1].type == .deletion {
-                        pairedContent = hunkLines[i - 1].content
+                    if lineIndex > 0 && hunkLines[lineIndex - 1].type == .deletion {
+                        pairedContent = hunkLines[lineIndex - 1].content
                     }
                 } else {
                     side = .both
                 }
 
                 lines.append(UnifiedLine(
-                    id: lineId,
                     content: line.content,
                     type: line.type,
                     side: side,
                     oldLineNumber: line.oldLineNumber,
                     newLineNumber: line.newLineNumber,
-                    pairedContent: pairedContent
+                    pairedContent: pairedContent,
+                    hunkIndex: hunkIndex,
+                    lineIndexInHunk: lineIndex
                 ))
-                
-                i += 1
             }
         }
         return lines
@@ -999,8 +937,6 @@ enum KaleidoscopeViewMode: String, CaseIterable {
     case hunk = "Hunk"
     case preview = "Preview"
     case blocks = "Blocks"    // Kaleidoscope split with connection lines
-    case fluid = "Fluid"      // Kaleidoscope split continuous line numbers
-    case unified = "Unified"  // Kaleidoscope unified with A/B labels
 
     var icon: String {
         switch self {
@@ -1009,15 +945,13 @@ enum KaleidoscopeViewMode: String, CaseIterable {
         case .hunk: return "text.alignleft"
         case .preview: return "eye"
         case .blocks: return "square.split.2x1.fill"
-        case .fluid: return "square.split.2x1"
-        case .unified: return "rectangle.stack.fill"
         }
     }
-    
+
     /// Check if this is a Kaleidoscope-specific mode
     var isKaleidoscopeSpecific: Bool {
         switch self {
-        case .blocks, .fluid, .unified:
+        case .blocks:
             return true
         default:
             return false

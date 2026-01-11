@@ -535,6 +535,10 @@ class BranchListViewModel: ObservableObject {
         isLoading = true
         do {
             _ = try await gitService.createBranch(named: name, from: from, checkout: checkout)
+
+            // Refresh repository state and notify UI
+            try await gitService.refresh()
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
         } catch {
             self.self.error = error.localizedDescription
         }
@@ -545,6 +549,10 @@ class BranchListViewModel: ObservableObject {
         isLoading = true
         do {
             try await gitService.deleteBranch(named: branch.name, force: force)
+
+            // Refresh repository state and notify UI
+            try await gitService.refresh()
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
         } catch {
             self.self.error = error.localizedDescription
         }
@@ -556,6 +564,10 @@ class BranchListViewModel: ObservableObject {
         isLoading = true
         do {
             try await gitService.merge(branch: branch.name, noFastForward: noFastForward)
+
+            // Refresh repository state and notify UI
+            try await gitService.refresh()
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
 
             // Track successful merge
             RemoteOperationTracker.shared.recordMerge(
@@ -581,6 +593,10 @@ class BranchListViewModel: ObservableObject {
         isLoading = true
         do {
             try await gitService.rebase(onto: branch.name)
+
+            // Refresh repository state and notify UI
+            try await gitService.refresh()
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
         } catch {
             self.self.error = error.localizedDescription
         }
@@ -592,6 +608,11 @@ class BranchListViewModel: ObservableObject {
         do {
             if branch.isHead {
                 try await gitService.push()
+
+                // Refresh repository state and notify UI
+                try await gitService.refresh()
+                NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
+
                 NotificationManager.shared.success(
                     "Pushed '\(branch.name)'",
                     detail: "Changes pushed to remote"
@@ -645,6 +666,11 @@ class BranchListViewModel: ObservableObject {
         do {
             if branch.isHead {
                 try await gitService.pull()
+
+                // Refresh repository state and notify UI
+                try await gitService.refresh()
+                NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
+
                 NotificationManager.shared.success(
                     "Pulled '\(branch.name)'",
                     detail: "Updated from remote"
@@ -1073,6 +1099,10 @@ struct CreatePullRequestSheet: View {
                 detail: title
             )
 
+            // Post notification to refresh PR data across the app
+            NotificationCenter.default.post(name: .pullRequestCreated, object: newPR)
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: repo.path)
+
             dismiss()
         } catch {
             NotificationManager.shared.error(
@@ -1189,4 +1219,5 @@ struct CreatePullRequestSheet: View {
 
 extension Notification.Name {
     static let renameBranch = Notification.Name("renameBranch")
+    static let pullRequestCreated = Notification.Name("pullRequestCreated")
 }

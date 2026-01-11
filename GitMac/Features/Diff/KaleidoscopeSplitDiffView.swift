@@ -17,7 +17,7 @@ struct KaleidoscopeSplitDiffView: View {
     var isFluidMode: Bool = false
     @Binding var scrollOffset: CGFloat
     @Binding var viewportHeight: CGFloat
-    
+
     // Content Height is now derived from pairedLines, but we bind it to report back to parent/minimap
     @Binding var contentHeight: CGFloat
     @Binding var minimapScrollTrigger: UUID
@@ -31,6 +31,12 @@ struct KaleidoscopeSplitDiffView: View {
     @State private var leftScrollOffset: CGFloat = 0
     @State private var rightScrollOffset: CGFloat = 0
     @State private var fluidContentVersion: Int = 0
+
+    // Line selection state for multi-line staging/discarding
+    @State private var selectedLineIds: Set<UUID> = []
+    @State private var lastSelectedLineId: UUID? = nil
+    @State private var isStaging = false
+    @State private var isDiscarding = false
 
     // Layout Constants
     private let rowHeight: CGFloat = 24
@@ -52,13 +58,30 @@ struct KaleidoscopeSplitDiffView: View {
             let theme = Color.Theme(themeManager.colors)
             let panelWidth = max(0, (geometry.size.width - gutterWidth) / 2)
             let overlap = min(240, max(18, panelWidth * 0.24))
-            
-            if isFluidMode {
-                fluidModeView(geometry: geometry, theme: theme, panelWidth: panelWidth, overlap: overlap)
-            } else {
-                blockModeView(geometry: geometry, theme: theme, panelWidth: panelWidth, overlap: overlap)
+
+            ZStack(alignment: .bottom) {
+                if isFluidMode {
+                    fluidModeView(geometry: geometry, theme: theme, panelWidth: panelWidth, overlap: overlap)
+                } else {
+                    blockModeView(geometry: geometry, theme: theme, panelWidth: panelWidth, overlap: overlap)
+                }
+
+                // Floating action bar when lines are selected
+                if !selectedLineIds.isEmpty && allowPatchActions {
+                    DiffSelectionActionBar(
+                        selectedCount: selectedLineIds.count,
+                        isStaging: isStaging,
+                        isDiscarding: isDiscarding,
+                        onStage: stageSelectedLines,
+                        onDiscard: discardSelectedLines,
+                        onClearSelection: { selectedLineIds.removeAll() }
+                    )
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .padding(.bottom, 16)
+                }
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: selectedLineIds.isEmpty)
     }
     
     @ViewBuilder
@@ -89,6 +112,7 @@ struct KaleidoscopeSplitDiffView: View {
                             ForEach(safeRange, id: \.self) { index in
                                 let pair = pairedLines[index]
                                 HStack(spacing: 0) {
+                                    // Left side
                                     Group {
                                         if let header = pair.hunkHeader {
                                             KaleidoscopeHunkHeader(
@@ -97,14 +121,13 @@ struct KaleidoscopeSplitDiffView: View {
                                                 onDiscardHunk: discardHunkAction(for: pair)
                                             )
                                         } else if let line = pair.left {
-                                            KaleidoscopeDiffLine(
+                                            SelectableDiffLine(
                                                 line: line,
                                                 side: .left,
                                                 showLineNumber: showLineNumbers,
-                                                pairedLine: pair.right
-                                            )
-                                            .diffLineContextMenuWithActions(
-                                                line: line,
+                                                pairedLine: pair.right,
+                                                isSelected: selectedLineIds.contains(line.id),
+                                                onSelect: { handleLineSelection(line: line, pair: pair, index: index) },
                                                 onStageLine: stageLineAction(for: pair, side: .left),
                                                 onDiscardLine: discardLineAction(for: pair, side: .left)
                                             )
@@ -117,6 +140,7 @@ struct KaleidoscopeSplitDiffView: View {
                                     KaleidoscopeGutterView()
                                         .frame(width: gutterWidth)
 
+                                    // Right side
                                     Group {
                                         if let header = pair.hunkHeader {
                                             KaleidoscopeHunkHeader(
@@ -125,14 +149,13 @@ struct KaleidoscopeSplitDiffView: View {
                                                 onDiscardHunk: discardHunkAction(for: pair)
                                             )
                                         } else if let line = pair.right {
-                                            KaleidoscopeDiffLine(
+                                            SelectableDiffLine(
                                                 line: line,
                                                 side: .right,
                                                 showLineNumber: showLineNumbers,
-                                                pairedLine: pair.left
-                                            )
-                                            .diffLineContextMenuWithActions(
-                                                line: line,
+                                                pairedLine: pair.left,
+                                                isSelected: selectedLineIds.contains(line.id),
+                                                onSelect: { handleLineSelection(line: line, pair: pair, index: index) },
                                                 onStageLine: stageLineAction(for: pair, side: .right),
                                                 onDiscardLine: discardLineAction(for: pair, side: .right)
                                             )
@@ -386,6 +409,146 @@ struct KaleidoscopeSplitDiffView: View {
                     NotificationManager.shared.success("Discarded hunk")
                 } catch {
                     NotificationManager.shared.error("Failed to discard hunk", detail: String(describing: error))
+                }
+            }
+        }
+    }
+
+    // MARK: - Line Selection Handling
+
+    private func handleLineSelection(line: DiffLine, pair: DiffPairWithConnection, index: Int) {
+        // Only allow selecting addition/deletion lines, not context
+        guard line.type == .addition || line.type == .deletion else { return }
+
+        let isShiftPressed = NSEvent.modifierFlags.contains(.shift)
+        let isCommandPressed = NSEvent.modifierFlags.contains(.command)
+
+        if isShiftPressed, let lastId = lastSelectedLineId {
+            // Range selection: select all lines between last and current
+            if let lastIndex = pairedLines.firstIndex(where: { pair in
+                (pair.left?.id == lastId) || (pair.right?.id == lastId)
+            }) {
+                let rangeStart = min(lastIndex, index)
+                let rangeEnd = max(lastIndex, index)
+
+                for i in rangeStart...rangeEnd {
+                    let p = pairedLines[i]
+                    if let left = p.left, (left.type == .addition || left.type == .deletion) {
+                        selectedLineIds.insert(left.id)
+                    }
+                    if let right = p.right, (right.type == .addition || right.type == .deletion) {
+                        selectedLineIds.insert(right.id)
+                    }
+                }
+            }
+        } else if isCommandPressed {
+            // Toggle selection
+            if selectedLineIds.contains(line.id) {
+                selectedLineIds.remove(line.id)
+            } else {
+                selectedLineIds.insert(line.id)
+            }
+        } else {
+            // Single selection - clear others
+            selectedLineIds = [line.id]
+        }
+
+        lastSelectedLineId = line.id
+    }
+
+    private func stageSelectedLines() {
+        guard !selectedLineIds.isEmpty, let repoPath else { return }
+
+        isStaging = true
+        Task {
+            let service = GitService()
+            service.currentRepository = Repository(path: repoPath)
+
+            var stagedCount = 0
+            var errors: [String] = []
+
+            // Group selected lines by hunk for efficient staging
+            for pair in pairedLines {
+                guard let hunkId = pair.hunkId, let hunk = hunksById[hunkId] else { continue }
+
+                // Check left side
+                if let line = pair.left, selectedLineIds.contains(line.id), let lineIndex = pair.leftLineIndexInHunk {
+                    do {
+                        try await service.stageLine(filePath: filePath, hunk: hunk, lineIndex: lineIndex)
+                        stagedCount += 1
+                    } catch {
+                        errors.append(String(describing: error))
+                    }
+                }
+
+                // Check right side
+                if let line = pair.right, selectedLineIds.contains(line.id), let lineIndex = pair.rightLineIndexInHunk {
+                    do {
+                        try await service.stageLine(filePath: filePath, hunk: hunk, lineIndex: lineIndex)
+                        stagedCount += 1
+                    } catch {
+                        errors.append(String(describing: error))
+                    }
+                }
+            }
+
+            await MainActor.run {
+                isStaging = false
+                selectedLineIds.removeAll()
+
+                if errors.isEmpty {
+                    NotificationManager.shared.success("Staged \(stagedCount) line(s)")
+                } else {
+                    NotificationManager.shared.error("Staged \(stagedCount) lines with \(errors.count) error(s)")
+                }
+            }
+        }
+    }
+
+    private func discardSelectedLines() {
+        guard !selectedLineIds.isEmpty, let repoPath else { return }
+
+        isDiscarding = true
+        Task {
+            let service = GitService()
+            service.currentRepository = Repository(path: repoPath)
+
+            var discardedCount = 0
+            var errors: [String] = []
+
+            // Group selected lines by hunk for efficient discarding
+            for pair in pairedLines {
+                guard let hunkId = pair.hunkId, let hunk = hunksById[hunkId] else { continue }
+
+                // Check left side
+                if let line = pair.left, selectedLineIds.contains(line.id), let lineIndex = pair.leftLineIndexInHunk {
+                    do {
+                        try await service.discardLine(filePath: filePath, hunk: hunk, lineIndex: lineIndex)
+                        discardedCount += 1
+                    } catch {
+                        errors.append(String(describing: error))
+                    }
+                }
+
+                // Check right side
+                if let line = pair.right, selectedLineIds.contains(line.id), let lineIndex = pair.rightLineIndexInHunk {
+                    do {
+                        try await service.discardLine(filePath: filePath, hunk: hunk, lineIndex: lineIndex)
+                        discardedCount += 1
+                    } catch {
+                        errors.append(String(describing: error))
+                    }
+                }
+            }
+
+            await MainActor.run {
+                isDiscarding = false
+                selectedLineIds.removeAll()
+
+                if errors.isEmpty {
+                    NotificationManager.shared.success("Discarded \(discardedCount) line(s)")
+                } else {
+                    NotificationManager.shared.error("Discarded \(discardedCount) lines with \(errors.count) error(s)")
                 }
             }
         }
@@ -680,6 +843,7 @@ struct KaleidoscopeHunkHeader: View {
     var onStageHunk: (() -> Void)? = nil
     var onDiscardHunk: (() -> Void)? = nil
     @ObservedObject private var themeManager = ThemeManager.shared
+    @State private var isHovered = false
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -691,11 +855,42 @@ struct KaleidoscopeHunkHeader: View {
             Text(header)
                 .font(DesignTokens.Typography.commitHash)
                 .foregroundColor(theme.accent)
+
+            Spacer()
+
+            // Hover action buttons with instant tooltips
+            if isHovered {
+                HStack(spacing: 4) {
+                    if let onStageHunk {
+                        HunkActionButton(
+                            icon: "plus.circle.fill",
+                            tooltip: "Stage Hunk",
+                            color: AppTheme.success,
+                            action: onStageHunk
+                        )
+                    }
+
+                    if let onDiscardHunk {
+                        HunkActionButton(
+                            icon: "trash.fill",
+                            tooltip: "Discard Hunk",
+                            color: AppTheme.error,
+                            action: onDiscardHunk
+                        )
+                    }
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: 24)
         .padding(.horizontal, DesignTokens.Spacing.md)
         .background(theme.accent.opacity(0.08))
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
+        }
         .contextMenu {
             if let onStageHunk {
                 Button {
@@ -713,6 +908,273 @@ struct KaleidoscopeHunkHeader: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Hunk Action Button with Instant Tooltip
+
+struct HunkActionButton: View {
+    let icon: String
+    let tooltip: String
+    let color: Color
+    let action: () -> Void
+
+    @State private var isHovered = false
+    @State private var showTooltip = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(isHovered ? color : color.opacity(0.7))
+                .frame(width: 22, height: 22)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(isHovered ? color.opacity(0.15) : Color.clear)
+                )
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovered = hovering
+            withAnimation(.easeOut(duration: 0.1)) {
+                showTooltip = hovering
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if showTooltip {
+                Text(tooltip)
+                    .font(.system(size: 11))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.black.opacity(0.85))
+                    )
+                    .fixedSize()
+                    .offset(y: 26)
+                    .zIndex(1000)
+            }
+        }
+    }
+}
+
+// MARK: - Selectable Diff Line (wraps KaleidoscopeDiffLine with selection)
+
+struct SelectableDiffLine: View {
+    let line: DiffLine
+    let side: DiffSide
+    let showLineNumber: Bool
+    let pairedLine: DiffLine?
+    let isSelected: Bool
+    let onSelect: () -> Void
+    var onStageLine: (() -> Void)? = nil
+    var onDiscardLine: (() -> Void)? = nil
+
+    @State private var isHovered = false
+
+    private var isSelectable: Bool {
+        line.type == .addition || line.type == .deletion
+    }
+
+    var body: some View {
+        KaleidoscopeDiffLine(
+            line: line,
+            side: side,
+            showLineNumber: showLineNumber,
+            pairedLine: pairedLine
+        )
+        .background(
+            Group {
+                if isSelected {
+                    AppTheme.accent.opacity(0.25)
+                } else if isHovered && isSelectable {
+                    AppTheme.accent.opacity(0.08)
+                } else {
+                    Color.clear
+                }
+            }
+        )
+        .overlay(alignment: .leading) {
+            if isSelected {
+                Rectangle()
+                    .fill(AppTheme.accent)
+                    .frame(width: 3)
+            }
+        }
+        .contentShape(Rectangle())
+        .onHover { isHovered = $0 }
+        .onTapGesture {
+            if isSelectable {
+                onSelect()
+            }
+        }
+        .diffLineContextMenuWithActions(
+            line: line,
+            onStageLine: onStageLine,
+            onDiscardLine: onDiscardLine
+        )
+    }
+}
+
+// MARK: - Diff Selection Action Bar (floating bar when lines are selected)
+
+struct DiffSelectionActionBar: View {
+    let selectedCount: Int
+    let isStaging: Bool
+    let isDiscarding: Bool
+    let onStage: () -> Void
+    let onDiscard: () -> Void
+    let onClearSelection: () -> Void
+
+    @State private var stageHovered = false
+    @State private var discardHovered = false
+    @State private var clearHovered = false
+    @State private var showStageTooltip = false
+    @State private var showDiscardTooltip = false
+    @State private var showClearTooltip = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Selection count
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(AppTheme.accent)
+                Text("\(selectedCount) line\(selectedCount == 1 ? "" : "s") selected")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppTheme.textPrimary)
+            }
+
+            Divider()
+                .frame(height: 20)
+
+            // Stage button
+            Button(action: onStage) {
+                HStack(spacing: 4) {
+                    if isStaging {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                            .frame(width: 14, height: 14)
+                    } else {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 14))
+                    }
+                    Text("Stage")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(stageHovered ? AppTheme.success : AppTheme.success.opacity(0.9))
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(isStaging || isDiscarding)
+            .onHover { hovering in
+                stageHovered = hovering
+                withAnimation(.easeOut(duration: 0.1)) {
+                    showStageTooltip = hovering
+                }
+            }
+            .overlay(alignment: .top) {
+                if showStageTooltip {
+                    Text("Stage selected lines (⌘+S)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.85)))
+                        .fixedSize()
+                        .offset(y: -32)
+                        .zIndex(1000)
+                }
+            }
+
+            // Discard button
+            Button(action: onDiscard) {
+                HStack(spacing: 4) {
+                    if isDiscarding {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                            .frame(width: 14, height: 14)
+                    } else {
+                        Image(systemName: "trash.fill")
+                            .font(.system(size: 14))
+                    }
+                    Text("Discard")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(discardHovered ? AppTheme.error : AppTheme.error.opacity(0.9))
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(isStaging || isDiscarding)
+            .onHover { hovering in
+                discardHovered = hovering
+                withAnimation(.easeOut(duration: 0.1)) {
+                    showDiscardTooltip = hovering
+                }
+            }
+            .overlay(alignment: .top) {
+                if showDiscardTooltip {
+                    Text("Discard selected lines (⌘+D)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.85)))
+                        .fixedSize()
+                        .offset(y: -32)
+                        .zIndex(1000)
+                }
+            }
+
+            // Clear selection button
+            Button(action: onClearSelection) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(clearHovered ? AppTheme.textPrimary : AppTheme.textMuted)
+            }
+            .buttonStyle(.plain)
+            .onHover { hovering in
+                clearHovered = hovering
+                withAnimation(.easeOut(duration: 0.1)) {
+                    showClearTooltip = hovering
+                }
+            }
+            .overlay(alignment: .top) {
+                if showClearTooltip {
+                    Text("Clear selection (Esc)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.85)))
+                        .fixedSize()
+                        .offset(y: -32)
+                        .zIndex(1000)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(.ultraThinMaterial)
+                .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(AppTheme.border, lineWidth: 1)
+        )
     }
 }
 

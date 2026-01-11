@@ -642,6 +642,141 @@ struct RichMarkdownView: NSViewRepresentable {
     }
 }
 
+// MARK: - Preview Sheet
+
+/// Modal sheet for previewing files (Markdown with Mermaid, images, or plain text)
+struct PreviewSheet: View {
+    let content: String
+    let fileName: String
+    let isMarkdown: Bool
+    let isImage: Bool
+    var imagePath: URL? = nil
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Image(systemName: isImage ? "photo" : (isMarkdown ? "doc.richtext" : "doc.text"))
+                    .foregroundColor(.accentColor)
+                Text("Preview: \(fileName)")
+                    .font(.headline)
+
+                if isMarkdown {
+                    Text("MARKDOWN")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.accentColor.opacity(0.2))
+                        .cornerRadius(4)
+                }
+
+                Spacer()
+
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding()
+            .background(Color(nsColor: .windowBackgroundColor))
+
+            Divider()
+
+            // Content
+            if isImage, let path = imagePath {
+                ImagePreviewInSheet(imageURL: path)
+            } else if isMarkdown {
+                MarkdownView(content: content, fileName: fileName)
+            } else {
+                PlainTextPreviewView(content: content, fileName: nil) // fileName already in header
+            }
+        }
+        .frame(minWidth: 800, minHeight: 600)
+    }
+}
+
+/// Simple image preview for the sheet
+private struct ImagePreviewInSheet: View {
+    let imageURL: URL
+    @State private var image: NSImage?
+
+    var body: some View {
+        Group {
+            if let image = image {
+                ScrollView([.horizontal, .vertical]) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            } else {
+                ProgressView("Loading image...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .task {
+            image = NSImage(contentsOf: imageURL)
+        }
+    }
+}
+
+// MARK: - Plain Text Preview View
+
+/// Simple plain text viewer for non-markdown files
+/// Used when Preview mode is selected for files that aren't markdown or images
+struct PlainTextPreviewView: View {
+    let content: String
+    let fileName: String?
+
+    init(content: String, fileName: String? = nil) {
+        self.content = content
+        self.fileName = fileName
+    }
+
+    private var lineCount: Int {
+        content.components(separatedBy: "\n").count
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // File header
+            if let name = fileName {
+                HStack {
+                    Image(systemName: "doc.text")
+                        .foregroundColor(AppTheme.textPrimary)
+                    Text(name)
+                        .font(.system(.body, design: .monospaced))
+                        .fontWeight(.medium)
+                    Spacer()
+                    Text("\(lineCount) lines")
+                        .font(.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+                }
+                .padding(.horizontal, DesignTokens.Spacing.lg)
+                .padding(.vertical, DesignTokens.Spacing.sm + 2)
+                .background(DesignTokens.Colors.controlBackground)
+                Divider()
+            }
+
+            // Content
+            ScrollView {
+                Text(content)
+                    .font(.system(size: 13, design: .monospaced))
+                    .foregroundColor(AppTheme.textPrimary)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(DesignTokens.Spacing.lg)
+            }
+        }
+    }
+}
+
 // MARK: - Preview
 
 #if DEBUG

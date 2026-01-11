@@ -463,14 +463,51 @@ class LegacyStagingViewModel: ObservableObject {
         }
     }
 
+    /// Image file extensions
+    private static let imageExtensions = Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "tiff", "ico", "svg", "heic", "heif"])
+
+    /// Check if file is an image based on extension
+    private func isImageFile(_ path: String) -> Bool {
+        let ext = (path as NSString).pathExtension.lowercased()
+        return Self.imageExtensions.contains(ext)
+    }
+
     func getDiff(for file: StagingFile, at path: String) async -> FileDiff? {
         // For untracked files, show file content as new additions
         if file.status == .untracked {
             return await getUntrackedFileDiff(for: file, at: path)
         }
 
+        // Check if file is an image - return binary FileDiff for image preview
+        if isImageFile(file.path) {
+            return FileDiff(
+                oldPath: file.path,
+                newPath: file.path,
+                status: file.status == .deleted ? .deleted : .modified,
+                hunks: [],
+                isBinary: true,
+                additions: 0,
+                deletions: 0
+            )
+        }
+
         do {
             let diffString = try await engine.getDiff(for: file.path, staged: file.isStaged, at: path)
+
+            // Check if git reports this as a binary file (exact pattern: "Binary files ... differ")
+            // Git outputs: "Binary files a/path and b/path differ"
+            if diffString.hasPrefix("Binary files ") && diffString.contains(" differ\n") {
+                return FileDiff(
+                    oldPath: file.path,
+                    newPath: file.path,
+                    status: file.status == .deleted ? .deleted : .modified,
+                    hunks: [],
+                    isBinary: true,
+                    additions: 0,
+                    deletions: 0
+                )
+            }
+
             // Use async parser to avoid UI freeze on large files
             let diffs = await DiffParser.parseAsync(diffString)
             return diffs.first
@@ -482,6 +519,19 @@ class LegacyStagingViewModel: ObservableObject {
 
     private func getUntrackedFileDiff(for file: StagingFile, at repoPath: String) async -> FileDiff? {
         let fullPath = (repoPath as NSString).appendingPathComponent(file.path)
+
+        // Check if file is an image - return binary FileDiff for image preview
+        if isImageFile(file.path) {
+            return FileDiff(
+                oldPath: "/dev/null",
+                newPath: file.path,
+                status: .untracked,
+                hunks: [],
+                isBinary: true,
+                additions: 0,
+                deletions: 0
+            )
+        }
 
         // Read file content
         guard let content = try? String(contentsOfFile: fullPath, encoding: .utf8) else {

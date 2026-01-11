@@ -41,7 +41,6 @@
 		1AC1766730959255403C4EA2 /* DSToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAAD36D44E199613FD60C7B2 /* DSToggle.swift */; };
 		1B17CEEE0F5A96D79AE531C6 /* ListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F045ABAFE63E9A78313271A /* ListRow.swift */; };
 		1B3AC04978A2FEFCB03188A5 /* StagingComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA39C01D990E7F7EFCCDFE23 /* StagingComponents.swift */; };
-		1B8CE0E16F3B54417620B0C3 /* FluidConnectionRibbonsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E115A53C73AAFDB634EF7C /* FluidConnectionRibbonsView.swift */; };
 		1BB7E872B52459C8C2FC36AF /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741C54327F7D0A9ED06C024F /* AppTheme.swift */; };
 		1C46F1BA5158A592D442F839 /* DiffParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8FB12219D2488819C343911 /* DiffParser.swift */; };
 		1D63613571170159A5704573 /* ExternalToolsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47CB34938E677983AF18543E /* ExternalToolsManager.swift */; };
@@ -320,7 +319,6 @@
 		E2DC6F1F800CEDEAB6143D2C /* PushFetchButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A83152F6E2CD6F4E437C5C3 /* PushFetchButtons.swift */; };
 		E2DE9809294499F69934ED13 /* SyntaxHighlighter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCDBE3D0C01B79C8DA32D290 /* SyntaxHighlighter.swift */; };
 		E31D0AE2FBC3898B195BDCC4 /* AIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99AA1FB5A8306B98A36E3C86 /* AIService.swift */; };
-		E383DC04F92DA4511A25945B /* KaleidoscopeUnifiedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA4EEC4FE1E4989D540D97C /* KaleidoscopeUnifiedView.swift */; };
 		E39B3EC735C63758C8855612 /* RepoGroupsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADEC0281C1B6ECA4E3B07D30 /* RepoGroupsService.swift */; };
 		E3F494D2DF37C541988BE1FD /* DSSpinner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C38069C386D2444ADE094A5 /* DSSpinner.swift */; };
 		E40DFD849A489D0953DE0899 /* SecretRedactionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80BED603E9B131C466C78CE5 /* SecretRedactionService.swift */; };
@@ -363,11 +361,13 @@
 		FC63DEDA367E365A790DEFF2 /* TreeExpansionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60149B22A9C3833A45E1138 /* TreeExpansionState.swift */; };
 		FCCC056A77275438CF6C3030 /* OperationProgressOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05D35666EBED293412AD3325 /* OperationProgressOverlay.swift */; };
 		FCE7733F5EE79F6938CF6652 /* DSSearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 309335EA370B8E36FD9B9860 /* DSSearchBar.swift */; };
-		FDF91B1CF541572D0D9BE042 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 630E0C3309F413DC5C72D778 /* WelcomeView.swift */; };
+		WELCOME01BUILD0000000001 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WELCOME01FILE00000000001 /* WelcomeView.swift */; };
 		FE93CAC0A8120FDFAE04609A /* ConflictPreventionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE362A1585EF74F0F8CD5300 /* ConflictPreventionService.swift */; };
 		FED0784BE2D7966EF4DC830E /* CenterPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECF47093BEBDD1408A3C68E6 /* CenterPanel.swift */; };
 		PKG001 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = DEP001 /* KeychainAccess */; };
 		PKG002 /* Splash in Frameworks */ = {isa = PBXBuildFile; productRef = DEP002 /* Splash */; };
+		PKG003 /* CodeEditSourceEditor in Frameworks */ = {isa = PBXBuildFile; productRef = DEP003 /* CodeEditSourceEditor */; };
+		CEVF01 /* CodeEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEVR01 /* CodeEditorView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -524,7 +524,6 @@
 		611701D71659694B52140952 /* GenericFileTreeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GenericFileTreeView.swift; path = Components/FileTree/GenericFileTreeView.swift; sourceTree = "<group>"; };
 		6117B76D20F187270457CD67 /* SectionHeader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SectionHeader.swift; path = ../Components/Layout/SectionHeader.swift; sourceTree = "<group>"; };
 		625A6458860C14BBBAFB1A1F /* GitHooksComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GitHooksComponents.swift; path = GitMac/App/Panels/Left/GitHooksComponents.swift; sourceTree = SOURCE_ROOT; };
-		630E0C3309F413DC5C72D778 /* WelcomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WelcomeView.swift; path = App/Components/WelcomeView.swift; sourceTree = "<group>"; };
 		63D9F13789EF1312E75BA19B /* JiraPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = JiraPanel.swift; path = Features/Jira/JiraPanel.swift; sourceTree = "<group>"; };
 		64D7DD67F634F228B2BA0CEE /* StoreManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StoreManager.swift; path = Core/StoreKit/StoreManager.swift; sourceTree = "<group>"; };
 		66B057DE0EB0A466E9E33BC9 /* RightStagingPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RightStagingPanel.swift; path = ../App/Panels/Right/RightStagingPanel.swift; sourceTree = "<group>"; };
@@ -620,14 +619,12 @@
 		A72B4B428ACA0A1D3C01558D /* LinearContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LinearContentView.swift; path = Features/Linear/LinearContentView.swift; sourceTree = "<group>"; };
 		A78C8CA3402C6DF0DB467BE0 /* SubscriptionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SubscriptionView.swift; path = ../Features/Settings/SubscriptionView.swift; sourceTree = "<group>"; };
 		A7A72EC9847E8539DA57C4CE /* DSHeader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Molecules/Display/DSHeader.swift; sourceTree = SOURCE_ROOT; };
-		A7E115A53C73AAFDB634EF7C /* FluidConnectionRibbonsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FluidConnectionRibbonsView.swift; path = ../Features/Diff/FluidConnectionRibbonsView.swift; sourceTree = "<group>"; };
 		A8BFECF7549F727776FCA676 /* DSDraggableList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DSDraggableList.swift; path = Organisms/Lists/DSDraggableList.swift; sourceTree = "<group>"; };
 		A9429CC1284A41A1A5A7741F /* NotificationManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Core/Services/NotificationManager.swift; sourceTree = SOURCE_ROOT; };
 		A9AD8F4D449606E5E5A4A2EC /* FileTypeIcon.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FileTypeIcon.swift; path = Components/Icons/FileTypeIcon.swift; sourceTree = "<group>"; };
 		AA1C6958688FFE9EDBCC16D0 /* CICDComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CICDComponents.swift; sourceTree = "<group>"; };
 		AA39C01D990E7F7EFCCDFE23 /* StagingComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StagingComponents.swift; path = GitMac/App/Panels/Right/StagingComponents.swift; sourceTree = SOURCE_ROOT; };
 		AA7B4BEC591DFBFD7420A56D /* FileBrowserView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Features/FileViewer/FileBrowserView.swift; sourceTree = SOURCE_ROOT; };
-		AAA4EEC4FE1E4989D540D97C /* KaleidoscopeUnifiedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KaleidoscopeUnifiedView.swift; path = ../Features/Diff/KaleidoscopeUnifiedView.swift; sourceTree = "<group>"; };
 		ABAB2827F401F387B51BC038 /* FileListSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FileListSection.swift; path = ../Components/Layout/FileListSection.swift; sourceTree = "<group>"; };
 		AC9431972EE97AF100A59026 /* IMPLEMENTATION_ROADMAP.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = IMPLEMENTATION_ROADMAP.md; sourceTree = "<group>"; };
 		AC9431A32EE97D6000A59026 /* BUILD_FIX.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = BUILD_FIX.md; sourceTree = "<group>"; };
@@ -730,6 +727,7 @@
 		E5D39602F9B9FA2983FFA4B5 /* Branch.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Branch.swift; path = Core/Git/Branch.swift; sourceTree = "<group>"; };
 		E60149B22A9C3833A45E1138 /* TreeExpansionState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TreeExpansionState.swift; path = Components/FileTree/TreeExpansionState.swift; sourceTree = "<group>"; };
 		E68762388E84A0E1E76D28A8 /* DiffStatsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DiffStatsView.swift; path = Components/Diff/DiffStatsView.swift; sourceTree = "<group>"; };
+		WELCOME01FILE00000000001 /* WelcomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WelcomeView.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		E6FDEA200BE2DF21B853FDFC /* RecentRepositoriesList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecentRepositoriesList.swift; sourceTree = "<group>"; };
 		E729B4D59A2644F69C62C147 /* CICDComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CICDComponents.swift; path = GitMac/App/Panels/Left/CICDComponents.swift; sourceTree = SOURCE_ROOT; };
 		E74448138294C0683E8713C8 /* CodeReviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CodeReviewService.swift; path = GitMac/Features/CodeReview/CodeReviewService.swift; sourceTree = SOURCE_ROOT; };
@@ -764,6 +762,7 @@
 		INFO01 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		PROD01 /* GitMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GitMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		RES001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		CEVR01 /* CodeEditorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CodeEditorView.swift; path = GitMac/Features/Editor/CodeEditorView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1509,7 +1508,6 @@
 				CED81242689EF445019AB70B /* SidebarSection.swift */,
 				05D35666EBED293412AD3325 /* OperationProgressOverlay.swift */,
 				31850924BB032CD7AAE897D5 /* ActionButton.swift */,
-				630E0C3309F413DC5C72D778 /* WelcomeView.swift */,
 			);
 			name = Components;
 			sourceTree = "<group>";
@@ -1685,9 +1683,10 @@
 		A779073E6636D2C37CBA8DF6 /* Welcome */ = {
 			isa = PBXGroup;
 			children = (
+				WELCOME01FILE00000000001 /* WelcomeView.swift */,
 			);
 			name = Welcome;
-			path = Welcome;
+			path = App/Welcome;
 			sourceTree = "<group>";
 		};
 		A7CEEDE185B2D04F6AEE9A50 /* GitHub */ = {
@@ -1863,9 +1862,7 @@
 				C8A9F580892364D6F487D3D4 /* KaleidoscopeSplitDiffView.swift */,
 				C0A3477C5429FE5F172621B6 /* TiledDiffView.swift */,
 				B22461AAF391C4D4E7B598E2 /* KaleidoscopeFileList.swift */,
-				AAA4EEC4FE1E4989D540D97C /* KaleidoscopeUnifiedView.swift */,
 				1F038DA5BD2F2882EEDC31EA /* DiffOptions.swift */,
-				A7E115A53C73AAFDB634EF7C /* FluidConnectionRibbonsView.swift */,
 				FC7110872A0069C25C89D7CF /* DiffPreferences.swift */,
 				B0F7D30FD32DB6AC065F6149 /* WordLevelDiff.swift */,
 				B8E11127F294B1C3EB7DA927 /* DiffView.swift */,
@@ -2237,6 +2234,7 @@
 				DEP001 /* KeychainAccess */,
 				DEP002 /* Splash */,
 				AC28C30A2F08591500A86A78 /* DifferenceKit */,
+				DEP003 /* CodeEditSourceEditor */,
 			);
 			productName = GitMac;
 			productReference = PROD01 /* GitMac.app */;
@@ -2270,6 +2268,7 @@
 				PKR001 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
 				PKR002 /* XCRemoteSwiftPackageReference "Splash" */,
 				AC28C3092F08591500A86A78 /* XCRemoteSwiftPackageReference "DifferenceKit" */,
+				PKR003 /* XCRemoteSwiftPackageReference "CodeEditSourceEditor" */,
 			);
 			productRefGroup = GRP002 /* Products */;
 			projectDirPath = "";
@@ -2559,8 +2558,6 @@
 				BEEC4A2DB5D5582D8B492BA0 /* KaleidoscopeSplitDiffView.swift in Sources */,
 				829F68FEF62B134675571C23 /* TiledDiffView.swift in Sources */,
 				DA9E7B526F5E3A719D2000E2 /* KaleidoscopeFileList.swift in Sources */,
-				E383DC04F92DA4511A25945B /* KaleidoscopeUnifiedView.swift in Sources */,
-				1B8CE0E16F3B54417620B0C3 /* FluidConnectionRibbonsView.swift in Sources */,
 				9378DD8648BED068B9C9095A /* WordLevelDiff.swift in Sources */,
 				05C72084337EFE72DF6DAA39 /* DiffView.swift in Sources */,
 				7D301ECE89E70C8DE39AB5C9 /* AlignedDiffView.swift in Sources */,
@@ -2632,7 +2629,7 @@
 				6C0AC788C2EAD1379BADBDBC /* DiffCache.swift in Sources */,
 				C9EDED5484F7DFC999A9FA26 /* DiffStatusBar.swift in Sources */,
 				724B0CAB7823EA602CFC7EEE /* DiffSearchAndNavigation.swift in Sources */,
-				FDF91B1CF541572D0D9BE042 /* WelcomeView.swift in Sources */,
+				WELCOME01BUILD0000000001 /* WelcomeView.swift in Sources */,
 				C595ED8C3BDD36D4ECBBA1DB /* StagingFile.swift in Sources */,
 				BD4379DD0E129C03F2CCC223 /* TerminalPanel.swift in Sources */,
 				FED0784BE2D7966EF4DC830E /* CenterPanel.swift in Sources */,
@@ -2653,6 +2650,7 @@
 				1B3AC04978A2FEFCB03188A5 /* StagingComponents.swift in Sources */,
 				FAE9C67E11FEF853B37CD1B2 /* JiraPanel.swift in Sources */,
 				3A1FBB575237C360F6C5A416 /* MemoryPressureHandler.swift in Sources */,
+				CEVF01 /* CodeEditorView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2958,6 +2956,14 @@
 				minimumVersion = 0.16.0;
 			};
 		};
+		PKR003 /* XCRemoteSwiftPackageReference "CodeEditSourceEditor" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/CodeEditApp/CodeEditSourceEditor.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -2975,6 +2981,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = PKR002 /* XCRemoteSwiftPackageReference "Splash" */;
 			productName = Splash;
+		};
+		DEP003 /* CodeEditSourceEditor */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PKR003 /* XCRemoteSwiftPackageReference "CodeEditSourceEditor" */;
+			productName = CodeEditSourceEditor;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

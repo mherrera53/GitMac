@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 // MARK: - Diff View Mode
 
@@ -8,8 +9,6 @@ enum DiffViewMode: String, CaseIterable {
     case hunk = "Hunk"
     case preview = "Preview"
     case kaleidoscopeBlocks = "Blocks"     // Kaleidoscope split with connection lines
-    case kaleidoscopeFluid = "Fluid"       // Kaleidoscope split (cleaner)
-    case kaleidoscopeUnified = "Unified"   // Kaleidoscope unified with A/B labels
 
     var icon: String {
         switch self {
@@ -18,35 +17,29 @@ enum DiffViewMode: String, CaseIterable {
         case .hunk: return "text.alignleft"
         case .preview: return "eye"
         case .kaleidoscopeBlocks: return "square.split.2x1.fill"
-        case .kaleidoscopeFluid: return "square.split.2x1"
-        case .kaleidoscopeUnified: return "rectangle.stack.fill"
         }
     }
 
-    /// Modes available for regular files
+    /// Modes available for regular files (Blocks first, then standard modes)
+    /// Note: Preview is now a separate modal button, not a view mode
     static var standardModes: [DiffViewMode] {
-        [.split, .inline, .hunk]
+        [.kaleidoscopeBlocks, .split, .inline, .hunk]
     }
 
-    /// Modes available for files supporting preview (Markdown, Images, etc.)
+    /// Modes available for files supporting preview (same as standard now)
     static var previewableModes: [DiffViewMode] {
-        [.split, .inline, .hunk, .preview]
+        [.kaleidoscopeBlocks, .split, .inline, .hunk]
     }
 
-    /// Kaleidoscope-style modes (professional diff viewing)
-    static var kaleidoscopeModes: [DiffViewMode] {
-        [.kaleidoscopeBlocks, .kaleidoscopeFluid, .kaleidoscopeUnified]
-    }
-
-    /// All modes including Kaleidoscope
+    /// All modes for the selector (Preview is now modal, not here)
     static var allModes: [DiffViewMode] {
-        standardModes + kaleidoscopeModes
+        [.kaleidoscopeBlocks, .split, .inline, .hunk]
     }
 
     /// Check if this is a Kaleidoscope mode
     var isKaleidoscopeMode: Bool {
         switch self {
-        case .kaleidoscopeBlocks, .kaleidoscopeFluid, .kaleidoscopeUnified:
+        case .kaleidoscopeBlocks:
             return true
         default:
             return false
@@ -69,8 +62,11 @@ struct DiffToolbar: View {
     @Binding var showMinimap: Bool
     var showHistoryButton: Bool = true
     var showBlameButton: Bool = true
+    var filePath: String? = nil  // Full path for opening file
     var onHistoryTap: (() -> Void)? = nil
     var onBlameTap: (() -> Void)? = nil
+    var onEditTap: (() -> Void)? = nil  // Edit in built-in editor
+    var onPreviewTap: (() -> Void)? = nil  // Preview modal
     var onClose: (() -> Void)? = nil
     var extraActions: [ToolbarAction] = []
 
@@ -81,12 +77,12 @@ struct DiffToolbar: View {
         let action: () -> Void
     }
 
-    /// Available modes based on file type and current mode
+    /// Available modes based on file type
     private var availableModes: [DiffViewMode] {
         if isPreviewable {
-            return DiffViewMode.previewableModes + DiffViewMode.kaleidoscopeModes
+            return DiffViewMode.previewableModes
         }
-        return DiffViewMode.standardModes + DiffViewMode.kaleidoscopeModes
+        return DiffViewMode.standardModes
     }
 
     var body: some View {
@@ -196,6 +192,41 @@ struct DiffToolbar: View {
             .background(AppTheme.backgroundTertiary)
             .cornerRadius(DesignTokens.CornerRadius.md)
 
+            // Preview button - opens preview modal
+            if let onPreview = onPreviewTap {
+                ToolbarButton(
+                    icon: "eye",
+                    isActive: false,
+                    tooltip: "Preview"
+                ) {
+                    onPreview()
+                }
+            }
+
+            // Edit and Open buttons
+            if let path = filePath {
+                // Edit button - opens in built-in editor
+                if let onEdit = onEditTap {
+                    ToolbarButton(
+                        icon: "pencil.and.outline",
+                        isActive: false,
+                        tooltip: "Edit"
+                    ) {
+                        onEdit()
+                    }
+                }
+
+                // Open button - opens file with default Mac app
+                ToolbarButton(
+                    icon: "arrow.up.forward.app",
+                    isActive: false,
+                    tooltip: "Open"
+                ) {
+                    let url = URL(fileURLWithPath: path)
+                    NSWorkspace.shared.open(url)
+                }
+            }
+
             // Close button (if provided)
             if let onClose = onClose {
                 Button(action: onClose) {
@@ -237,8 +268,8 @@ struct ToolbarButton: View {
                 )
         }
         .buttonStyle(.plain)
-        .help(tooltip)
         .onHover { isHovered = $0 }
+        .help(tooltip)
     }
 }
 
@@ -264,8 +295,8 @@ struct DiffModeIconButton: View {
                 )
         }
         .buttonStyle(.plain)
-        .help(mode.rawValue)
         .onHover { isHovered = $0 }
+        .help(mode.rawValue)
     }
 }
 
