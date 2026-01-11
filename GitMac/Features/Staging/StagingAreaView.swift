@@ -2599,10 +2599,10 @@ struct CreatePRSheetFromCommit: View {
     private func generateTitleAndDescription() async {
         isGenerating = true
         do {
-            // Use origin/baseBranch to compare against remote (works even if local branch doesn't exist)
+            // Use origin/baseBranch...HEAD to get diff since branch diverged from base
             let remoteBase = "origin/\(baseBranch)"
-            let diff = try await appState.gitService.getDiff(from: remoteBase, to: headBranch)
-            let commits = try await appState.gitService.getCommits(branch: headBranch, limit: 20)
+            let diff = try await appState.gitService.getDiff(from: remoteBase, to: "HEAD")
+            let commits = try await appState.gitService.getCommits(branch: "HEAD", limit: 20)
 
             // Generate both in parallel
             async let generatedTitle = AIService.shared.generatePRTitle(commits: commits, diff: diff)
