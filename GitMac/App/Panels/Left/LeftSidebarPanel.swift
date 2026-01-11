@@ -66,6 +66,12 @@ struct LeftSidebarPanel: View {
         .onReceive(NotificationCenter.default.publisher(for: .showStashes)) { _ in selectedNavigator = .stashes }
         .onReceive(NotificationCenter.default.publisher(for: .showTags)) { _ in selectedNavigator = .tags }
         .onReceive(NotificationCenter.default.publisher(for: .showWorktrees)) { _ in selectedNavigator = .worktrees }
+        // Configure PR tracker when repository changes
+        .task(id: appState.currentRepository?.path) {
+            if let path = appState.currentRepository?.path {
+                await BranchPRTracker.shared.configure(forRepoAt: path)
+            }
+        }
     }
 
     @ViewBuilder
