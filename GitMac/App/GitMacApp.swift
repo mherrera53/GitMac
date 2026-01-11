@@ -46,12 +46,6 @@ struct GitMacApp: App {
                 window.titleVisibility = .hidden
                 window.title = ""
                 window.appearance = ThemeManager.shared.appearance
-
-                // Set minimum window size - center panel compresses first
-                window.minSize = NSSize(
-                    width: DesignTokens.Layout.Window.minWidth,
-                    height: DesignTokens.Layout.Window.minHeight
-                )
             }
 
             // Ensure the app icon is properly set
@@ -106,7 +100,8 @@ struct RepositoryTab: Identifiable, Equatable {
     var selectedStash: Stash?
 
     static func == (lhs: RepositoryTab, rhs: RepositoryTab) -> Bool {
-        lhs.id == rhs.id
+        // Include repository comparison so SwiftUI detects branch changes
+        lhs.id == rhs.id && lhs.repository == rhs.repository
     }
 }
 

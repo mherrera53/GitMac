@@ -47,7 +47,8 @@ struct Repository: Identifiable, Equatable {
     var commits: [Commit] = []
 
     static func == (lhs: Repository, rhs: Repository) -> Bool {
-        lhs.path == rhs.path
+        // Include currentBranch name so SwiftUI detects checkout changes
+        lhs.path == rhs.path && lhs.currentBranch?.name == rhs.currentBranch?.name
     }
 }
 
