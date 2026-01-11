@@ -24,17 +24,22 @@ struct BranchRow: View {
     var onPull: (() async -> Void)? = nil
     var onRebase: (() async -> Void)? = nil
 
-    // PR actions
-    var pullRequest: GitHubPullRequest? = nil
+    // PR actions - observe tracker directly for reactive updates
+    @ObservedObject private var prTracker = BranchPRTracker.shared
     var onCreatePR: (() -> Void)? = nil
     var onViewPR: ((GitHubPullRequest) -> Void)? = nil
-    var onMergePR: ((GitHubPullRequest, MergeMethod) -> Void)? = nil
+    var onMergePR: ((GitHubPullRequest, MergeMethod) async -> Void)? = nil
 
     // Drag and drop
     var onBranchDropped: ((Branch) -> Void)? = nil
 
     @State private var isDropTarget = false
     @State private var isDragging = false
+
+    /// Get PR directly from tracker (reactive - updates when tracker changes)
+    private var pullRequest: GitHubPullRequest? {
+        prTracker.getPR(for: branch.name)
+    }
 
     var body: some View {
         BaseRow(
@@ -267,22 +272,22 @@ struct BranchRow: View {
                     }
                 }
 
-                if pr.state == "open" && !pr.draft {
+                if pr.state == "open" && !pr.draft, let mergePR = onMergePR {
                     Menu {
                         Button {
-                            onMergePR?(pr, .merge)
+                            Task { await mergePR(pr, .merge) }
                         } label: {
                             Label("Create merge commit", systemImage: "arrow.triangle.merge")
                         }
 
                         Button {
-                            onMergePR?(pr, .squash)
+                            Task { await mergePR(pr, .squash) }
                         } label: {
                             Label("Squash and merge", systemImage: "square.stack.3d.up")
                         }
 
                         Button {
-                            onMergePR?(pr, .rebase)
+                            Task { await mergePR(pr, .rebase) }
                         } label: {
                             Label("Rebase and merge", systemImage: "arrow.triangle.branch")
                         }

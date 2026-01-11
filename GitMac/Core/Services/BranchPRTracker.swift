@@ -98,12 +98,14 @@ class BranchPRTracker: ObservableObject {
 
     /// Get the PR associated with a branch (if any)
     func getPR(for branchName: String) -> GitHubPullRequest? {
-        return branchPRs[branchName]
+        // Clean the branch name (remove "origin/" prefix if present)
+        let cleanName = branchName.replacingOccurrences(of: "origin/", with: "")
+        return branchPRs[cleanName.lowercased()]
     }
 
     /// Check if a branch has an open PR
     func hasPR(for branchName: String) -> Bool {
-        return branchPRs[branchName] != nil
+        return getPR(for: branchName) != nil
     }
 
     /// Refresh PR data from GitHub
@@ -123,16 +125,25 @@ class BranchPRTracker: ObservableObject {
 
             openPRs = prs
 
-            // Build branch -> PR mapping
+            // Build branch -> PR mapping (keep the most recent PR per branch)
             var newBranchPRs: [String: GitHubPullRequest] = [:]
             for pr in prs {
-                // Map by head branch (the source branch of the PR)
-                newBranchPRs[pr.head.ref] = pr
+                let branchKey = pr.head.ref.lowercased()
+                // Keep the PR with the highest number (most recent)
+                if let existing = newBranchPRs[branchKey] {
+                    if pr.number > existing.number {
+                        newBranchPRs[branchKey] = pr
+                    }
+                } else {
+                    newBranchPRs[branchKey] = pr
+                }
             }
             branchPRs = newBranchPRs
 
             // Post notification that PR data was updated
             NotificationCenter.default.post(name: .branchPRsDidUpdate, object: nil)
+
+            print("BranchPRTracker: Loaded \(prs.count) PRs, mapped \(branchPRs.count) branches")
         } catch {
             print("BranchPRTracker: Failed to load PRs: \(error)")
         }
@@ -140,7 +151,7 @@ class BranchPRTracker: ObservableObject {
 
     /// Merge a PR
     func mergePR(_ pr: GitHubPullRequest, method: MergeMethod) async throws {
-        let branchName = pr.head.ref
+        let branchKey = pr.head.ref.lowercased()
 
         // API call waits for response - when it returns, PR is merged
         try await githubService.mergePullRequest(
@@ -151,12 +162,12 @@ class BranchPRTracker: ObservableObject {
         )
 
         // Remove PR from local cache (API confirmed merge)
-        branchPRs.removeValue(forKey: branchName)
+        // This triggers @Published update, which notifies all @ObservedObject observers
+        branchPRs.removeValue(forKey: branchKey)
         openPRs.removeAll { $0.number == pr.number }
 
-        // Post notifications to update UI
+        // Post notifications for other components
         NotificationCenter.default.post(name: .pullRequestMerged, object: pr)
-        NotificationCenter.default.post(name: .branchPRsDidUpdate, object: nil)
         NotificationCenter.default.post(name: .repositoryDidRefresh, object: repoPath)
 
         NotificationManager.shared.success(

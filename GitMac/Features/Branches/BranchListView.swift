@@ -25,9 +25,6 @@ struct BranchListView: View {
     @State private var cachedFilteredRemoteBranches: [Branch] = []
     @State private var cachedGroupedRemoteBranches: [String: [Branch]] = [:]
 
-    // PR update trigger - forces re-render when PR data changes
-    @State private var prRefreshTrigger: UUID = UUID()
-
     var body: some View {
         VStack(spacing: 0) {
             searchHeader
@@ -136,25 +133,11 @@ struct BranchListView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .pullRequestCreated)) { _ in
-            // Immediately refresh when PR is created - force re-render
-            prRefreshTrigger = UUID()
+            // Refresh tracker when PR is created
             Task { await prTracker.refresh() }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .pullRequestMerged)) { _ in
-            // Immediately refresh when PR is merged - force re-render
-            prRefreshTrigger = UUID()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .branchPRsDidUpdate)) { _ in
-            // Force view refresh when PR data updates
-            // Generate new UUID to force all branch rows to re-render
-            prRefreshTrigger = UUID()
-            updateFilterCache()
-        }
-        .onChange(of: prTracker.branchPRs.count) { _, _ in
-            // Also react to PR count changes for immediate UI update
-            prRefreshTrigger = UUID()
-            updateFilterCache()
-        }
+        // Note: BranchRow now observes PRTracker directly via @ObservedObject
+        // so it will automatically update when branchPRs changes
         // Phase 0.2: Cache updates for performance
         .onChange(of: searchText) { _, newValue in
             updateFilterCache()
@@ -255,60 +238,59 @@ struct BranchListView: View {
 
 
     private func branchRowView(for branch: Branch) -> some View {
-        // Get PR for this branch (if any)
-        let pr = prTracker.getPR(for: branch.name)
-
-        return Group {
-            BranchRow(
-                branch: branch,
-                isSelected: selectedBranch?.id == branch.id,
-                onSelect: { selectedBranch = branch },
-                onCheckout: {
-                    // Use appropriate checkout for local vs remote
-                    if branch.isRemote {
-                        Task { await viewModel.checkoutRemote(branch) }
-                    } else {
-                        Task { await viewModel.checkout(branch) }
-                    }
-                },
-                onMerge: branch.isRemote ? nil : {
-                    selectedBranch = branch
-                    showMergeSheet = true
-                },
-                onDelete: branch.isRemote ? nil : {
-                    selectedBranch = branch
-                    showDeleteAlert = true
-                },
-                onPush: branch.isRemote ? nil : { Task { await viewModel.push(branch) } },
-                onPull: branch.isRemote ? nil : { Task { await viewModel.pull(branch) } },
-                onRebase: branch.isRemote ? nil : {
-                    selectedBranch = branch
-                    showRebaseSheet = true
-                },
-                // PR integration
-                pullRequest: pr,
-                onCreatePR: branch.isRemote ? nil : {
-                    selectedBranch = branch
-                    showPRSheet = true
-                },
-                onViewPR: { prItem in
-                    // Open PR in browser
-                    if let url = URL(string: prItem.htmlUrl) {
-                        NSWorkspace.shared.open(url)
-                    }
-                },
-                onMergePR: { prItem, method in
-                    Task {
-                        try? await prTracker.mergePR(prItem, method: method)
-                    }
-                },
-                onBranchDropped: { droppedBranch in
-                    handleBranchDrop(dragged: droppedBranch, onto: branch)
+        // BranchRow now observes PRTracker directly - no need to pass PR as parameter
+        BranchRow(
+            branch: branch,
+            isSelected: selectedBranch?.id == branch.id,
+            onSelect: { selectedBranch = branch },
+            onCheckout: {
+                // Use appropriate checkout for local vs remote
+                if branch.isRemote {
+                    await viewModel.checkoutRemote(branch)
+                } else {
+                    await viewModel.checkout(branch)
                 }
-            )
-            // Force re-render when PR state changes for this branch
-            .id("\(branch.id)-\(pr?.number ?? 0)-\(prRefreshTrigger)")
-        }
+                // Refresh PR tracker after checkout
+                await prTracker.refresh()
+            },
+            onMerge: branch.isRemote ? nil : {
+                selectedBranch = branch
+                showMergeSheet = true
+            },
+            onDelete: branch.isRemote ? nil : {
+                selectedBranch = branch
+                showDeleteAlert = true
+            },
+            onPush: branch.isRemote ? nil : {
+                await viewModel.push(branch)
+                await prTracker.refresh()
+            },
+            onPull: branch.isRemote ? nil : {
+                await viewModel.pull(branch)
+                await prTracker.refresh()
+            },
+            onRebase: branch.isRemote ? nil : {
+                selectedBranch = branch
+                showRebaseSheet = true
+            },
+            // PR actions (BranchRow gets PR from tracker automatically)
+            onCreatePR: branch.isRemote ? nil : {
+                selectedBranch = branch
+                showPRSheet = true
+            },
+            onViewPR: { prItem in
+                // Open PR in browser
+                if let url = URL(string: prItem.htmlUrl) {
+                    NSWorkspace.shared.open(url)
+                }
+            },
+            onMergePR: { prItem, method in
+                try? await prTracker.mergePR(prItem, method: method)
+            },
+            onBranchDropped: { droppedBranch in
+                handleBranchDrop(dragged: droppedBranch, onto: branch)
+            }
+        )
     }
 
     private func remoteGroupView(for remote: String) -> some View {
