@@ -46,7 +46,7 @@ struct BranchListView: View {
         }
         .sheet(isPresented: $showPRSheet) {
             if let branch = selectedBranch {
-                CreatePullRequestSheet(branch: branch)
+                CreatePullRequestSheet(branch: branch, repoPath: viewModel.currentRepoPath)
                     .environmentObject(appState)
             }
         }
@@ -108,7 +108,8 @@ struct BranchListView: View {
             if let headBranch = draggedBranch, let baseBranch = targetBranch {
                 CreatePullRequestSheet(
                     branch: headBranch,
-                    defaultBaseBranch: baseBranch.name
+                    defaultBaseBranch: baseBranch.name,
+                    repoPath: viewModel.currentRepoPath
                 )
                 .environmentObject(appState)
             }
@@ -286,7 +287,14 @@ struct BranchListView: View {
                 }
             },
             onMergePR: { prItem, method in
-                try? await prTracker.mergePR(prItem, method: method)
+                do {
+                    try await prTracker.mergePR(prItem, method: method)
+                } catch {
+                    NotificationManager.shared.error(
+                        "Merge failed",
+                        detail: error.localizedDescription
+                    )
+                }
             },
             onBranchDropped: { droppedBranch in
                 handleBranchDrop(dragged: droppedBranch, onto: branch)
@@ -994,12 +1002,13 @@ struct RebaseSheet: View {
 struct CreatePullRequestSheet: View {
     let branch: Branch
     var defaultBaseBranch: String? = nil  // Optional pre-set base branch (for drag-drop)
+    var repoPath: String? = nil  // Optional: pass repo path directly from active tab
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
     @State private var title = ""
     @State private var prBody = ""
-    @State private var baseBranch: String? = "main"
+    @State private var baseBranch: String? = nil  // Will be set from WorkspaceSettings
     @State private var isDraft = false
     @State private var isCreating = false
     @State private var isGeneratingAI = false
@@ -1007,6 +1016,11 @@ struct CreatePullRequestSheet: View {
 
     private let aiService = AIService.shared
     private let gitEngine = GitEngine()
+
+    /// Get effective repo path - prefer passed repoPath, fallback to appState
+    private var effectiveRepoPath: String? {
+        repoPath ?? appState.currentRepository?.path
+    }
 
     var body: some View {
         VStack(spacing: DesignTokens.Spacing.lg) {
@@ -1120,9 +1134,13 @@ struct CreatePullRequestSheet: View {
         .padding()
         .frame(width: 500, height: 450)
         .onAppear {
-            // Set base branch from default if provided (drag-drop case)
+            // Set base branch: 1) from drag-drop, 2) from WorkspaceSettings, 3) fallback to "main"
             if let defaultBase = defaultBaseBranch {
                 baseBranch = defaultBase
+            } else if let path = effectiveRepoPath {
+                baseBranch = WorkspaceSettingsManager.shared.getMainBranch(for: path)
+            } else {
+                baseBranch = "main"
             }
 
             // Default title from branch name
@@ -1140,8 +1158,16 @@ struct CreatePullRequestSheet: View {
         error = nil
 
         do {
-            guard let repo = appState.currentRepository,
-                  let remoteURL = repo.remotes.first?.fetchURL else {
+            guard let path = effectiveRepoPath else {
+                error = "No repository path"
+                isCreating = false
+                return
+            }
+
+            // Get remote URL from GitEngine
+            let engine = GitEngine()
+            let remotes = try await engine.getRemotes(at: path)
+            guard let remoteURL = remotes.first?.fetchURL else {
                 error = "No remote repository configured"
                 isCreating = false
                 return
@@ -1180,7 +1206,7 @@ struct CreatePullRequestSheet: View {
 
             // Post notification to refresh PR data across the app
             NotificationCenter.default.post(name: .pullRequestCreated, object: newPR)
-            NotificationCenter.default.post(name: .repositoryDidRefresh, object: repo.path)
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
 
             dismiss()
         } catch {
@@ -1210,20 +1236,22 @@ struct CreatePullRequestSheet: View {
     }
 
     private func generateWithAI() async {
-        guard let repo = appState.currentRepository else { return }
+        guard let path = effectiveRepoPath else { return }
 
         isGeneratingAI = true
         error = nil
 
         do {
-            // Determine the base branch - use selection or detect default
+            // Determine the base branch - use selection or from WorkspaceSettings
             let base: String
             if let selected = baseBranch, !selected.isEmpty {
                 base = selected
             } else {
-                // Try to detect default branch
-                base = await detectDefaultBranch(at: repo.path) ?? "main"
+                base = WorkspaceSettingsManager.shared.getMainBranch(for: path)
             }
+
+            // Use origin/base for proper comparison
+            let remoteBase = "origin/\(base)"
 
             // Get diff using merge-base for accurate comparison
             let diff: String
@@ -1232,26 +1260,26 @@ struct CreatePullRequestSheet: View {
             do {
                 // Get diff between base and current branch
                 diff = try await gitEngine.getDiff(
-                    from: base,
+                    from: remoteBase,
                     to: branch.name,
-                    at: repo.path
+                    at: path
                 )
             } catch {
                 // Fallback: get unstaged diff
-                diff = try await gitEngine.getDiff(for: nil, staged: false, at: repo.path)
+                diff = try await gitEngine.getDiff(for: nil, staged: false, at: path)
             }
 
             do {
-                // Get commits unique to this branch
+                // Get commits unique to this branch (not in base)
                 commits = try await gitEngine.getCommits(
-                    at: repo.path,
-                    branch: "\(base)..\(branch.name)",
-                    limit: 10
+                    at: path,
+                    branch: "\(remoteBase)..\(branch.name)",
+                    limit: 50
                 )
             } catch {
                 // Fallback: get recent commits on current branch
                 commits = try await gitEngine.getCommits(
-                    at: repo.path,
+                    at: path,
                     branch: branch.name,
                     limit: 10
                 )
