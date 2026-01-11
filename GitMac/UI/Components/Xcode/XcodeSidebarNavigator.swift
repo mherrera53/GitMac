@@ -48,15 +48,15 @@ enum SidebarNavigator: String, CaseIterable, Identifiable {
     var tooltip: String {
         switch self {
         case .repositories:
-            return "Show Repositories"
+            return "Show Repositories (⌘1)"
         case .branches:
-            return "Show Local Branches"
+            return "Show All Branches (⌘2)"
         case .remote:
-            return "Show Remote Branches"
+            return "Show All Branches"
         case .stashes:
-            return "Show Stashes"
+            return "Show Stashes (⌘3)"
         case .tags:
-            return "Show Tags"
+            return "Show Tags (⌘4)"
         case .worktrees:
             return "Show Worktrees"
         case .submodules:
@@ -64,8 +64,13 @@ enum SidebarNavigator: String, CaseIterable, Identifiable {
         case .hooks:
             return "Show Git Hooks"
         case .cicd:
-            return "Show CI/CD"
+            return "Show CI/CD Pipelines"
         }
+    }
+
+    /// Tabs visible in the navigator bar (remote is hidden since unified with branches)
+    static var visibleCases: [SidebarNavigator] {
+        allCases.filter { $0 != .remote }
     }
 }
 
@@ -121,10 +126,10 @@ struct XcodeSidebarNavigatorBar: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 2) {
-                ForEach(SidebarNavigator.allCases) { navigator in
+                ForEach(SidebarNavigator.visibleCases) { navigator in
                     XcodeSidebarNavigatorButton(
                         navigator: navigator,
-                        isSelected: selectedNavigator == navigator,
+                        isSelected: selectedNavigator == navigator || (navigator == .branches && selectedNavigator == .remote),
                         action: {
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 selectedNavigator = navigator

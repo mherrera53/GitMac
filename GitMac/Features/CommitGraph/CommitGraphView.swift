@@ -1,7 +1,51 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 // BranchPanelView, BranchSection, BranchPanelRow, and GraphMinimapView are now
 // defined in Components/ folder - do not redefine here
+
+// MARK: - Commit Transferable (for drag & drop)
+
+/// Transferable representation of a commit for drag & drop operations
+struct CommitTransferable: Transferable, Codable {
+    let sha: String
+    let message: String
+    let author: String
+    let branchName: String?
+
+    init(commit: Commit, branchName: String? = nil) {
+        self.sha = commit.sha
+        self.message = commit.message
+        self.author = commit.author
+        self.branchName = branchName
+    }
+
+    static var transferRepresentation: some TransferRepresentation {
+        CodableRepresentation(contentType: .commitData)
+    }
+}
+
+extension UTType {
+    static let commitData = UTType(exportedAs: "com.gitmac.commit")
+    static let branchData = UTType(exportedAs: "com.gitmac.branch")
+}
+
+/// Transferable representation of a branch for drag & drop PR creation
+struct BranchTransferable: Transferable, Codable {
+    let name: String
+    let isHead: Bool
+    let targetSHA: String?
+
+    init(name: String, isHead: Bool = false, targetSHA: String? = nil) {
+        self.name = name
+        self.isHead = isHead
+        self.targetSHA = targetSHA
+    }
+
+    static var transferRepresentation: some TransferRepresentation {
+        CodableRepresentation(contentType: .branchData)
+    }
+}
 
 // MARK: - Ghost Branches (integrated from GhostBranchesOverlay.swift)
 
@@ -342,6 +386,11 @@ struct CommitGraphView: View {
     @State private var selectedFileDiff: FileDiff? = nil
     @State private var dismissedOperationIds: Set<UUID> = []
 
+    // PR creation from drag & drop
+    @State private var showPRSheet = false
+    @State private var prHeadBranch: String = ""
+    @State private var prBaseBranch: String = ""
+
     private func isDismissedOperation(_ operation: RemoteOperation) -> Bool {
         dismissedOperationIds.contains(operation.id)
     }
@@ -474,8 +523,21 @@ struct CommitGraphView: View {
         .onReceive(NotificationCenter.default.publisher(for: .remoteOperationCompleted)) { _ in
             // Force refresh when operation completes
         }
+        .sheet(isPresented: $showPRSheet) {
+            if !prHeadBranch.isEmpty && !prBaseBranch.isEmpty {
+                // Find or create the head branch object
+                let headBranchObj = appState.currentRepository?.branches.first { $0.name == prHeadBranch }
+                    ?? Branch(name: prHeadBranch, fullName: "refs/heads/\(prHeadBranch)", isRemote: false, targetSHA: "")
+
+                CreatePullRequestSheet(
+                    branch: headBranchObj,
+                    defaultBaseBranch: prBaseBranch
+                )
+                .environmentObject(appState)
+            }
+        }
     }
-    
+
     private var lastOperationForCurrentBranch: RemoteOperation? {
         guard let branch = appState.currentRepository?.currentBranch?.name else { return nil }
         return tracker.getLastOperation(for: branch)
@@ -883,6 +945,12 @@ struct CommitGraphView: View {
                     settings: settings,
                     onHoverBranch: { branch in
                         hoveredBranch = branch
+                    },
+                    onDropBranch: { targetBranch, droppedBranch in
+                        // When a branch is dropped on another, show PR creation
+                        prHeadBranch = droppedBranch.name
+                        prBaseBranch = targetBranch
+                        showPRSheet = true
                     }
                 )
                 .withGhostBranches(
@@ -895,6 +963,7 @@ struct CommitGraphView: View {
                 .onTapGesture {
                     handleSelection(item: item)
                 }
+                .draggable(CommitTransferable(commit: node.commit))
                 .onAppear {
                     if isNearEnd && vm.hasMore && !vm.isLoading {
                         Task { await vm.loadMore() }
@@ -902,7 +971,7 @@ struct CommitGraphView: View {
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Commit \(node.commit.shortSha) by \(node.commit.author): \(node.commit.summary)")
-                .accessibilityHint("Double tap to view details, context click for more actions")
+                .accessibilityHint("Double tap to view details, drag branch to create PR, context click for more actions")
             }
         case .stash(let stashNode):
             if settings.showStashes {
@@ -1273,14 +1342,17 @@ struct BranchBadge: View {
     let color: Color
     let isHead: Bool
     let isTag: Bool
+    var onDropBranch: ((BranchTransferable) -> Void)? = nil
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovered = false
+    @State private var isDragTargeted = false
 
-    init(name: String, color: Color, isHead: Bool = false, isTag: Bool = false) {
+    init(name: String, color: Color, isHead: Bool = false, isTag: Bool = false, onDropBranch: ((BranchTransferable) -> Void)? = nil) {
         self.name = name
         self.color = color
         self.isHead = isHead
         self.isTag = isTag
+        self.onDropBranch = onDropBranch
     }
 
     var body: some View {
@@ -1294,16 +1366,24 @@ struct BranchBadge: View {
                 .font(DesignTokens.Typography.caption2)
                 .fontWeight(isHead ? .semibold : .regular)
                 .lineLimit(1)
-                .foregroundColor(textColor) // Use adaptive text color
+                .foregroundColor(textColor)
         }
         .padding(.horizontal, DesignTokens.Spacing.xs + 2)
         .padding(.vertical, DesignTokens.Spacing.xxs + 1)
-        .background(color.opacity(colorScheme == .dark ? 0.2 : 0.12))
+        .background(isDragTargeted ? AppTheme.accent.opacity(0.3) : color.opacity(colorScheme == .dark ? 0.2 : 0.12))
         .cornerRadius(4)
         .overlay(
             RoundedRectangle(cornerRadius: 4)
-                .strokeBorder(color.opacity(0.4), lineWidth: 0.5)
+                .strokeBorder(isDragTargeted ? AppTheme.accent : color.opacity(0.4), lineWidth: isDragTargeted ? 2 : 0.5)
         )
+        .draggable(BranchTransferable(name: name, isHead: isHead))
+        .dropDestination(for: BranchTransferable.self) { items, _ in
+            guard let dropped = items.first, dropped.name != name else { return false }
+            onDropBranch?(dropped)
+            return true
+        } isTargeted: { targeted in
+            isDragTargeted = targeted
+        }
     }
 
     /// Adaptive text color - darker in light mode for better contrast
@@ -1341,6 +1421,7 @@ struct GraphRow: View {
     let isHovered: Bool
     let settings: GraphSettings
     let onHoverBranch: ((String?) -> Void)?
+    var onDropBranch: ((String, BranchTransferable) -> Void)? = nil
 
     private var H: CGFloat { settings.rowHeight }
     private var W: CGFloat { 26 }  // Lane spacing
@@ -1348,8 +1429,6 @@ struct GraphRow: View {
     private var LW: CGFloat { 2 }  // Line width
 
     var body: some View {
-        // let theme = Color.Theme(themeManager.colors) // Removed
-
         return HStack(spacing: 0) {
             // Branch label with badge
             if settings.showBranchColumn {
@@ -1359,7 +1438,10 @@ struct GraphRow: View {
                             name: label,
                             color: color(node.lane),
                             isHead: label == "main" || label == "master",
-                            isTag: label.hasPrefix("v") || label.contains(".")
+                            isTag: label.hasPrefix("v") || label.contains("."),
+                            onDropBranch: { dropped in
+                                onDropBranch?(label, dropped)
+                            }
                         )
                     }
                     Spacer()

@@ -1,6 +1,9 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - Branch Row
+
+// Note: UTType.branchData is defined in CommitGraphView.swift
 
 /// Specialized row for displaying git branches
 struct BranchRow: View {
@@ -25,6 +28,7 @@ struct BranchRow: View {
     var onBranchDropped: ((Branch) -> Void)? = nil
 
     @State private var isDropTarget = false
+    @State private var isDragging = false
 
     var body: some View {
         BaseRow(
@@ -42,19 +46,64 @@ struct BranchRow: View {
                 Task { await checkout() }
             }
         }
-        .onDrag {
-            NSItemProvider(object: branch.name as NSString)
+        .draggable(branch.name) {
+            // Drag preview
+            HStack(spacing: 8) {
+                Image(systemName: branchIcon)
+                    .foregroundColor(.white)
+                Text(branch.name)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(AppTheme.accent)
+                    .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
+            )
         }
-        .onDrop(of: [.text], isTargeted: $isDropTarget) { providers in
+        // Accept drops from both String (intra-panel) and BranchTransferable (from CommitGraph)
+        .onDrop(of: [.text, .branchData], isTargeted: Binding(
+            get: { isDropTarget },
+            set: { newValue in
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isDropTarget = newValue
+                }
+            }
+        )) { providers in
             handleDrop(providers: providers)
         }
-        .overlay(
-            isDropTarget ?
+        .background(
+            // Drop target highlight background
             RoundedRectangle(cornerRadius: 6)
-                .stroke(AppTheme.accent, lineWidth: 2)
-                .padding(2)
-            : nil
+                .fill(isDropTarget ? AppTheme.accent.opacity(0.15) : Color.clear)
+                .animation(.easeInOut(duration: 0.15), value: isDropTarget)
         )
+        .overlay(
+            // Drop target border with glow effect
+            Group {
+                if isDropTarget {
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(AppTheme.accent, lineWidth: 2)
+                        .shadow(color: AppTheme.accent.opacity(0.5), radius: 4, x: 0, y: 0)
+                        .padding(1)
+                }
+            }
+        )
+        .overlay(alignment: .top) {
+            // Drop indicator line at top
+            if isDropTarget {
+                Rectangle()
+                    .fill(AppTheme.accent)
+                    .frame(height: 3)
+                    .cornerRadius(1.5)
+                    .padding(.horizontal, 4)
+                    .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .top)))
+            }
+        }
+        .scaleEffect(isDropTarget ? 1.02 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDropTarget)
     }
 
     @ViewBuilder
@@ -197,17 +246,41 @@ struct BranchRow: View {
         return actions
     }
 
+    // MARK: - Drop Handling
+
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
         guard let provider = providers.first else { return false }
 
+        // Try to load as BranchTransferable first (from CommitGraph)
+        if provider.hasItemConformingToTypeIdentifier(UTType.branchData.identifier) {
+            provider.loadDataRepresentation(forTypeIdentifier: UTType.branchData.identifier) { data, error in
+                guard let data = data,
+                      let branchData = try? JSONDecoder().decode(BranchTransferable.self, from: data),
+                      branchData.name != branch.name else {
+                    return
+                }
+
+                let droppedBranch = Branch(
+                    name: branchData.name,
+                    fullName: "refs/heads/\(branchData.name)",
+                    isRemote: false,
+                    targetSHA: branchData.targetSHA ?? ""
+                )
+
+                DispatchQueue.main.async {
+                    onBranchDropped?(droppedBranch)
+                }
+            }
+            return true
+        }
+
+        // Fall back to String (intra-panel drag)
         provider.loadObject(ofClass: NSString.self) { (droppedBranchName, error) in
             guard let droppedName = droppedBranchName as? String,
                   droppedName != branch.name else {
                 return
             }
 
-            // Create a temporary branch object with the dropped name
-            // The actual branch will be resolved in BranchListView
             let droppedBranch = Branch(
                 name: droppedName,
                 fullName: "refs/heads/\(droppedName)",
@@ -223,6 +296,9 @@ struct BranchRow: View {
         return true
     }
 }
+
+// Note: BranchTransferable is defined in CommitGraphView.swift
+// We use it directly for decoding cross-panel drops
 
 // MARK: - Branch Row Data Adapter
 // TODO: Fix RowData conformance to match actual Branch model

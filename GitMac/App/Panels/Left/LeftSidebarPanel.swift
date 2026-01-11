@@ -74,7 +74,8 @@ struct LeftSidebarPanel: View {
         case .repositories:
             RepositoryHierarchicalNavigator()
 
-        case .branches:
+        case .branches, .remote:
+            // Unified branch view - shows both local and remote branches in one list
             // Branch search bar
             if appState.currentRepository != nil {
                 HStack(spacing: 8) {
@@ -96,26 +97,26 @@ struct LeftSidebarPanel: View {
                 }
                 .padding(.horizontal, DesignTokens.Spacing.md)
                 .padding(.vertical, DesignTokens.Spacing.sm)
-                .padding(.horizontal, DesignTokens.Spacing.md)
-                .padding(.vertical, DesignTokens.Spacing.sm)
-                .background(.quaternary) // Use semantic system material/color
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .background(.quaternary)
                 .cornerRadius(DesignTokens.CornerRadius.md)
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.bottom, DesignTokens.Spacing.sm)
             }
 
-            // Local branches
+            // All branches: local first (current at top), then remote
             if let repo = appState.currentRepository {
+                // Local branches
                 let allLocal = repo.branches.filter { !$0.isRemote }
                 let localBranches = branchSearchText.isEmpty ? allLocal : allLocal.filter {
                     $0.name.localizedCaseInsensitiveContains(branchSearchText)
                 }
 
+                // Sort local: main/master first, then current, then alphabetical
                 let mainBranch = localBranches.first { $0.name == "master" || $0.name == "main" }
                 let currentBranch = localBranches.first { $0.isCurrent && $0.name != "master" && $0.name != "main" }
-                let otherBranches = localBranches
+                let otherLocalBranches = localBranches
                     .filter { !$0.isCurrent && $0.name != "master" && $0.name != "main" }
+                    .sorted { $0.name < $1.name }
 
                 if let main = mainBranch {
                     SidebarBranchRow(branch: main)
@@ -125,20 +126,33 @@ struct LeftSidebarPanel: View {
                     SidebarBranchRow(branch: current)
                 }
 
-                ForEach(Array(otherBranches)) { branch in
+                ForEach(otherLocalBranches) { branch in
                     SidebarBranchRow(branch: branch)
                 }
-            }
 
-        case .remote:
-            if let repo = appState.currentRepository {
+                // Remote branches (with cloud icon - handled in SidebarBranchRow)
                 let allRemote = repo.remoteBranches
                 let filteredRemote = branchSearchText.isEmpty ? allRemote : allRemote.filter {
                     $0.name.localizedCaseInsensitiveContains(branchSearchText)
                 }
                 let remoteBranches = filteredRemote.sorted { $0.name < $1.name }
-                ForEach(remoteBranches) { branch in
-                    SidebarBranchRow(branch: branch)
+
+                if !remoteBranches.isEmpty {
+                    // Small divider/header for remotes
+                    HStack {
+                        Text("Remote")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(AppTheme.textMuted)
+                            .textCase(.uppercase)
+                        Spacer()
+                    }
+                    .padding(.horizontal, DesignTokens.Spacing.xs)
+                    .padding(.top, DesignTokens.Spacing.sm)
+                    .padding(.bottom, DesignTokens.Spacing.xxs)
+
+                    ForEach(remoteBranches) { branch in
+                        SidebarBranchRow(branch: branch)
+                    }
                 }
             }
 
