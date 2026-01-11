@@ -1035,8 +1035,6 @@ struct CreatePRSheet: View {
     @State private var availableLabels: [GitHubLabel] = []
     @State private var prTemplate: String?
 
-    private let aiService = AIService()
-
     /// Only local branches can be used as PR head
     private var localBranches: [Branch] {
         appState.currentRepository?.branches.filter { !$0.isRemote } ?? []
@@ -1228,8 +1226,8 @@ struct CreatePRSheet: View {
             let commits = try await GitService().getCommits(branch: headBranch, limit: 20)
 
             // Generate both in parallel
-            async let generatedTitle = aiService.generatePRTitle(commits: commits, diff: diff)
-            async let generatedDescription = aiService.generatePRDescription(
+            async let generatedTitle = AIService.shared.generatePRTitle(commits: commits, diff: diff)
+            async let generatedDescription = AIService.shared.generatePRDescription(
                 diff: diff,
                 commits: commits,
                 template: prTemplate
@@ -1644,7 +1642,6 @@ class PRReviewViewModel: ObservableObject {
 
     private var commitId: String?
     private let githubService = GitHubService()
-    private let aiService = AIService()
 
     func loadReviewData(pr: GitHubPullRequest, owner: String, repo: String) async {
         isLoading = true
@@ -1690,7 +1687,7 @@ class PRReviewViewModel: ObservableObject {
         isGeneratingAI = true
 
         do {
-            let suggestions = try await aiService.suggestCodeImprovements(
+            let suggestions = try await AIService.shared.suggestCodeImprovements(
                 filename: file.filename,
                 patch: patch
             )

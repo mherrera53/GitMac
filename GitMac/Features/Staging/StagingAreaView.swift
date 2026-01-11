@@ -1552,8 +1552,6 @@ struct AICommitMessageSheet: View {
     @State private var error: String?
     @State private var selectedStyle: CommitStyle? = .conventional
 
-    private let aiService = AIService()
-
     var body: some View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Text("Generate Commit Message")
@@ -1633,7 +1631,7 @@ struct AICommitMessageSheet: View {
         error = nil
 
         do {
-            generatedMessage = try await aiService.generateCommitMessage(
+            generatedMessage = try await AIService.shared.generateCommitMessage(
                 diff: diff,
                 style: selectedStyle ?? .conventional
             )
@@ -2404,8 +2402,6 @@ struct CreatePRSheetFromCommit: View {
     @State private var availableReviewers: [GitHubUser] = []
     @State private var availableLabels: [GitHubLabel] = []
 
-    private let aiService = AIService()
-
     private var headBranch: String {
         appState.currentRepository?.currentBranch?.name ?? ""
     }
@@ -2605,17 +2601,19 @@ struct CreatePRSheetFromCommit: View {
     private func generateTitleAndDescription() async {
         isGenerating = true
         do {
-            let gitService = appState.gitService
-            let diff = try await gitService.getDiff(from: baseBranch, to: headBranch)
-            let commits = try await gitService.getCommits(branch: headBranch, limit: 10)
+            // Get diff between base and head branches
+            let diff = try await appState.gitService.getDiff(from: baseBranch, to: headBranch)
+            let commits = try await appState.gitService.getCommits(branch: headBranch, limit: 20)
 
-            async let generatedTitle = aiService.generatePRTitle(commits: commits, diff: diff)
-            async let generatedDescription = aiService.generatePRDescription(diff: diff, commits: commits, template: nil)
+            // Generate both in parallel
+            async let generatedTitle = AIService.shared.generatePRTitle(commits: commits, diff: diff)
+            async let generatedDescription = AIService.shared.generatePRDescription(diff: diff, commits: commits, template: nil)
 
             title = try await generatedTitle
             prBody = try await generatedDescription
         } catch {
             print("Failed to generate PR content: \(error)")
+            NotificationManager.shared.error("AI Generation Failed", detail: error.localizedDescription)
         }
         isGenerating = false
     }
