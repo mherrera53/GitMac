@@ -233,7 +233,7 @@ struct RepositoryHierarchicalNavigator: View {
             if !group.repos.isEmpty {
                 NavigationCategoryRow(
                     icon: "folder.fill",
-                    iconColor: Color(hex: group.color),
+                    iconColor: SwiftUI.Color(hex: group.color),
                     title: group.name,
                     count: group.repos.count
                 ) {

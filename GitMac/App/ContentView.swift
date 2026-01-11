@@ -250,7 +250,7 @@ struct MainLayout: View {
     // Helper function for group colors
     private func getGroupColor(for repoPath: String) -> Color? {
         let groups = RepoGroupsService.shared.getGroupsForRepo(repoPath)
-        return groups.first.map { Color(hex: $0.color) }
+        return groups.first.map { SwiftUI.Color(hex: $0.color) }
     }
 
     @State private var columnVisibility: NavigationSplitViewVisibility = .all

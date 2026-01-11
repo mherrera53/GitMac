@@ -17,7 +17,6 @@ struct XcodeToolbarButton: View {
     let isEnabled: Bool
 
     @State private var isHovered = false
-    @State private var isPressed = false
 
     /// Icon-only button
     init(
@@ -85,8 +84,7 @@ struct XcodeToolbarButton: View {
                     .cornerRadius(DesignTokens.CornerRadius.sm)
             }
         }
-        .buttonStyle(PlainButtonStyle())
-        .scaleEffect(isPressed ? 0.95 : 1.0)
+        .buttonStyle(XcodeToolbarButtonStyle(isEnabled: isEnabled))
         .opacity(isEnabled ? 1.0 : DesignTokens.Opacity.disabled)
         .disabled(!isEnabled)
         .onHover { hovering in
@@ -94,21 +92,6 @@ struct XcodeToolbarButton: View {
                 isHovered = hovering
             }
         }
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    if !isPressed {
-                        withAnimation(.easeInOut(duration: 0.1)) {
-                            isPressed = true
-                        }
-                    }
-                }
-                .onEnded { _ in
-                    withAnimation(.easeInOut(duration: 0.1)) {
-                        isPressed = false
-                    }
-                }
-        )
     }
 
     private var buttonColor: Color {
@@ -140,7 +123,6 @@ struct XcodeToolbarButtonAsync: View {
     let isEnabled: Bool
 
     @State private var isHovered = false
-    @State private var isPressed = false
     @State private var isLoading = false
 
     /// Icon-only button with async action
@@ -174,12 +156,11 @@ struct XcodeToolbarButtonAsync: View {
 
     var body: some View {
         Button(action: {
-            if isEnabled && !isLoading {
-                Task {
-                    isLoading = true
-                    await action()
-                    isLoading = false
-                }
+            guard isEnabled && !isLoading else { return }
+            isLoading = true  // Set BEFORE Task to prevent race condition
+            Task {
+                await action()
+                isLoading = false
             }
         }) {
             if let label = label {
@@ -226,8 +207,7 @@ struct XcodeToolbarButtonAsync: View {
                 .cornerRadius(DesignTokens.CornerRadius.sm)
             }
         }
-        .buttonStyle(PlainButtonStyle())
-        .scaleEffect(isPressed ? 0.95 : 1.0)
+        .buttonStyle(XcodeToolbarButtonStyle(isEnabled: isEnabled && !isLoading))
         .opacity((isEnabled && !isLoading) ? 1.0 : DesignTokens.Opacity.disabled)
         .disabled(!isEnabled || isLoading)
         .onHover { hovering in
@@ -235,21 +215,6 @@ struct XcodeToolbarButtonAsync: View {
                 isHovered = hovering
             }
         }
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    if !isPressed && !isLoading {
-                        withAnimation(.easeInOut(duration: 0.1)) {
-                            isPressed = true
-                        }
-                    }
-                }
-                .onEnded { _ in
-                    withAnimation(.easeInOut(duration: 0.1)) {
-                        isPressed = false
-                    }
-                }
-        )
     }
 
     private var buttonColor: Color {
@@ -267,6 +232,20 @@ struct XcodeToolbarButtonAsync: View {
             return AppTheme.hover
         }
         return Color.clear
+    }
+}
+
+// MARK: - Button Style
+
+/// Custom button style that handles pressed state properly without interfering with clicks
+/// Using ButtonStyle instead of simultaneousGesture with DragGesture to prevent first-click issues
+struct XcodeToolbarButtonStyle: ButtonStyle {
+    let isEnabled: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 

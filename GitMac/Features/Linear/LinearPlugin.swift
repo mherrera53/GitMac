@@ -14,7 +14,7 @@ struct LinearPlugin: IntegrationPlugin {
     let id = "linear"
     let name = "Linear"
     let icon = "lineweight"
-    let iconColor = Color(hex: "5E6AD2")
+    let iconColor = SwiftUI.Color(hex: "5E6AD2")
 
     typealias ViewModel = LinearViewModel
     typealias ContentView = LinearContentView

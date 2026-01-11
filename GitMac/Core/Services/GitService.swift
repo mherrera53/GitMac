@@ -334,7 +334,9 @@ class GitService: ObservableObject {
         )
     }
 
-    func push(force: Bool = false, setUpstream: Bool = false) async throws {
+    /// Push changes to remote and return the HEAD SHA after push
+    @discardableResult
+    func push(force: Bool = false, setUpstream: Bool = false) async throws -> String {
         guard let path = currentRepository?.path else {
             throw GitServiceError.noRepository
         }
@@ -355,7 +357,12 @@ class GitService: ObservableObject {
         }
 
         try await engine.push(options: options, at: path)
+
+        // Get SHA after successful push
+        let sha = try await engine.getHeadSHA(at: path)
+
         try await refresh()
+        return sha
     }
 
     // MARK: - Stash Operations

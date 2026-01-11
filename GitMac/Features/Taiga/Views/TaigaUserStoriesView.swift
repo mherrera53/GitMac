@@ -44,7 +44,7 @@ struct TaigaKanbanColumn: View {
             // Column header
             HStack(spacing: DesignTokens.Spacing.sm) {
                 Circle()
-                    .fill(Color(hex: status?.color ?? "888888"))
+                    .fill(SwiftUI.Color(hex: status?.color ?? "888888"))
                     .frame(width: 8, height: 8)
 
                 Text(status?.name ?? "Unknown")
@@ -130,8 +130,8 @@ struct TaigaStoryCard: View {
                                 .font(DesignTokens.Typography.caption2)
                                 .padding(.horizontal, DesignTokens.Spacing.xs)
                                 .padding(.vertical, 2)
-                                .background(Color(hex: tagColor).opacity(0.3))
-                                .foregroundColor(Color(hex: tagColor))
+                                .background(SwiftUI.Color(hex: tagColor).opacity(0.3))
+                                .foregroundColor(SwiftUI.Color(hex: tagColor))
                                 .cornerRadius(DesignTokens.CornerRadius.sm)
                         }
                     }

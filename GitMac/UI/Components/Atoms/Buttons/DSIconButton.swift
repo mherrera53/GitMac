@@ -35,10 +35,16 @@ struct DSIconButton: View {
 
     var body: some View {
         Button {
-            guard !isLoading && !isDisabled else { return }
+            print("🔵 DSIconButton CLICKED: icon=\(iconName) isLoading=\(isLoading) isDisabled=\(isDisabled)")
+            guard !isLoading && !isDisabled else {
+                print("⛔ DSIconButton BLOCKED: isLoading=\(isLoading) isDisabled=\(isDisabled)")
+                return
+            }
+            isLoading = true  // Set immediately to prevent double-clicks
+            print("▶️ DSIconButton STARTING action...")
             Task {
-                isLoading = true
                 await action()
+                print("✅ DSIconButton action COMPLETED")
                 isLoading = false
             }
         } label: {

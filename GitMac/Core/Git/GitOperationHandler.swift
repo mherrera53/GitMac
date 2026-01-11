@@ -99,17 +99,34 @@ class GitOperationHandler: ObservableObject {
         guard let repo = appState?.currentRepository else { return }
         let branchName = repo.currentBranch?.name ?? "unknown"
 
-        await execute(
-            operation: {
-                try await self.appState?.gitService.push()
-            },
-            message: "Pushing to remote...",
-            onSuccess: {
-                // Trigger GitHub and CodeBuild refresh after push
-                NotificationCenter.default.post(name: .gitPushCompleted, object: branchName)
-            },
-            tracking: .push(branch: branchName, remote: "origin")
-        )
+        isOperationInProgress = true
+        operationMessage = "Pushing to remote..."
+
+        do {
+            let sha = try await appState?.gitService.push() ?? ""
+            let shortSHA = String(sha.prefix(7))
+
+            await appState?.refresh()
+
+            // Trigger GitHub and CodeBuild refresh after push
+            NotificationCenter.default.post(name: .gitPushCompleted, object: branchName)
+
+            // Track success
+            TrackingInfo.push(branch: branchName, remote: "origin").recordSuccess()
+
+            // Show success notification with SHA
+            NotificationManager.shared.success(
+                "Push completed",
+                detail: "Branch '\(branchName)' pushed • SHA: \(shortSHA)"
+            )
+        } catch {
+            let errorMessage = "Push failed: \(error.localizedDescription)"
+            appState?.errorMessage = errorMessage
+            TrackingInfo.push(branch: branchName, remote: "origin").recordFailure(error)
+            NotificationManager.shared.error("Push failed", detail: error.localizedDescription)
+        }
+
+        isOperationInProgress = false
     }
 
     // MARK: - Stash Operations

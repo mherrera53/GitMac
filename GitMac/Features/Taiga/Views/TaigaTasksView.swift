@@ -35,7 +35,7 @@ struct TaigaTaskRow: View {
             // Leading icon with status color
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Circle()
-                    .fill(Color(hex: task.statusExtraInfo?.color ?? "888888"))
+                    .fill(SwiftUI.Color(hex: task.statusExtraInfo?.color ?? "888888"))
                     .frame(width: 8, height: 8)
 
                 Button {

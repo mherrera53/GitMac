@@ -1035,8 +1035,6 @@ struct CreatePRSheet: View {
     @State private var availableLabels: [GitHubLabel] = []
     @State private var prTemplate: String?
 
-    private let aiService = AIService()
-
     /// Only local branches can be used as PR head
     private var localBranches: [Branch] {
         appState.currentRepository?.branches.filter { !$0.isRemote } ?? []
@@ -1224,12 +1222,14 @@ struct CreatePRSheet: View {
     private func generateTitleAndDescription() async {
         isGenerating = true
         do {
-            let diff = try await GitService().getDiff(from: baseBranch, to: headBranch)
-            let commits = try await GitService().getCommits(branch: headBranch, limit: 20)
+            // Use origin/baseBranch...HEAD to compare properly
+            let remoteBase = "origin/\(baseBranch)"
+            let diff = try await appState.gitService.getDiff(from: remoteBase, to: "HEAD")
+            let commits = try await appState.gitService.getCommits(branch: "HEAD", limit: 20)
 
             // Generate both in parallel
-            async let generatedTitle = aiService.generatePRTitle(commits: commits, diff: diff)
-            async let generatedDescription = aiService.generatePRDescription(
+            async let generatedTitle = AIService.shared.generatePRTitle(commits: commits, diff: diff)
+            async let generatedDescription = AIService.shared.generatePRDescription(
                 diff: diff,
                 commits: commits,
                 template: prTemplate
@@ -1239,6 +1239,7 @@ struct CreatePRSheet: View {
             prBody = try await generatedDescription
         } catch {
             print("Failed to generate PR content: \(error)")
+            NotificationManager.shared.error("AI Generation Failed", detail: error.localizedDescription)
         }
         isGenerating = false
     }
@@ -1257,12 +1258,18 @@ struct CreatePRSheet: View {
     }
 
     private func loadMetadata() async {
-        guard let repo = appState.currentRepository,
-              let remote = repo.remotes.first(where: { $0.isGitHub }),
-              let ownerRepo = remote.ownerAndRepo else { return }
+        // ALWAYS set base branch from WorkspaceSettings first
+        if let repo = appState.currentRepository {
+            baseBranch = WorkspaceSettingsManager.shared.getMainBranch(for: repo.path)
+        }
 
         // Load PR template
         await loadPRTemplate()
+
+        // Load GitHub-specific metadata if available
+        guard let repo = appState.currentRepository,
+              let remote = repo.remotes.first(where: { $0.isGitHub }),
+              let ownerRepo = remote.ownerAndRepo else { return }
 
         // Load collaborators (potential reviewers)
         do {
@@ -1644,7 +1651,6 @@ class PRReviewViewModel: ObservableObject {
 
     private var commitId: String?
     private let githubService = GitHubService()
-    private let aiService = AIService()
 
     func loadReviewData(pr: GitHubPullRequest, owner: String, repo: String) async {
         isLoading = true
@@ -1690,7 +1696,7 @@ class PRReviewViewModel: ObservableObject {
         isGeneratingAI = true
 
         do {
-            let suggestions = try await aiService.suggestCodeImprovements(
+            let suggestions = try await AIService.shared.suggestCodeImprovements(
                 filename: file.filename,
                 patch: patch
             )

@@ -10,6 +10,8 @@ struct StagingAreaPanel: View {
     @ObservedObject private var themeManager = ThemeManager.shared
     @State private var viewMode: StagingViewMode = .tree
     @State private var extensionFilter: String? = nil
+    @State private var showCreatePRSheet = false
+    @State private var commitSHAForPR: String = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -61,7 +63,74 @@ struct StagingAreaPanel: View {
                 commitMessage: $commitMessage,
                 canCommit: !stagingVM.stagedFiles.isEmpty,
                 repositoryPath: appState.currentRepository?.path,
-                onCommit: { stagingVM.commit(message: commitMessage) { commitMessage = "" } }
+                onCommit: { stagingVM.commit(message: commitMessage) { commitMessage = "" } },
+                onCommitPushPR: {
+                    Task {
+                        await commitPushAndOpenPR()
+                    }
+                }
+            )
+        }
+        .sheet(isPresented: $showCreatePRSheet) {
+            if let repoPath = appState.currentRepository?.path {
+                CreatePRSheetFromCommit(
+                    commitSHA: commitSHAForPR,
+                    repoPath: repoPath,
+                    onDismiss: { showCreatePRSheet = false }
+                )
+                .environmentObject(appState)
+            }
+        }
+    }
+
+    // MARK: - Commit + Push + PR Flow
+
+    private func commitPushAndOpenPR() async {
+        guard let repoPath = appState.currentRepository?.path else {
+            NotificationManager.shared.error("No repository", detail: "No repository selected")
+            return
+        }
+
+        // Step 1: Commit
+        let commitSuccess = await stagingVM.commitAsync(message: commitMessage)
+        guard commitSuccess else {
+            return // Commit failed, error already shown
+        }
+
+        // Clear commit message
+        commitMessage = ""
+
+        // Step 2: Push using GitEngine directly with the tab's repoPath
+        do {
+            let engine = GitEngine()
+
+            // Get current branch for push
+            let currentBranch = appState.currentRepository?.currentBranch?.name
+            var options = PushOptions()
+            options.setUpstream = true
+            if let branch = currentBranch {
+                options.branch = branch
+            }
+
+            try await engine.push(options: options, at: repoPath)
+
+            // Get SHA after push
+            let sha = try await engine.getHeadSHA(at: repoPath)
+            let shortSHA = String(sha.prefix(7))
+
+            NotificationManager.shared.success(
+                "Commit & Push completed",
+                detail: "SHA: \(shortSHA)"
+            )
+
+            // Step 3: Open PR sheet
+            commitSHAForPR = shortSHA
+            showCreatePRSheet = true
+
+        } catch {
+            NotificationManager.shared.error(
+                "Push failed",
+                detail: error.localizedDescription
             )
         }
     }

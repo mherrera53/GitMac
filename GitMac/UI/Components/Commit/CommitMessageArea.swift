@@ -11,6 +11,7 @@ struct CommitMessageArea: View {
     var validationError: CommitValidationError? = nil
     var hasConflicts: Bool = false
     let onCommit: () -> Void
+    var onCommitPushPR: (() -> Void)? = nil  // Optional: Commit + Push + Create PR
     let onGenerateAI: () -> Void
     var style: MessageAreaStyle = .default
 
@@ -91,12 +92,30 @@ struct CommitMessageArea: View {
 
                 Spacer()
 
-                Button("Commit") {
-                    onCommit()
+                // Two commit buttons
+                HStack(spacing: 8) {
+                    Button("Commit") {
+                        onCommit()
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(!canCommit)
+                    .keyboardShortcut(.return, modifiers: .command)
+
+                    if let onCommitPushPR = onCommitPushPR {
+                        Button {
+                            onCommitPushPR()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text("Commit & PR")
+                                Image(systemName: "arrow.up.circle.fill")
+                                    .font(.caption)
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!canCommit || isAmending)
+                        .help("Commit, Push, and Create Pull Request")
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(!canCommit)
-                .keyboardShortcut(.return, modifiers: .command)
             }
         }
         .padding(style.padding)

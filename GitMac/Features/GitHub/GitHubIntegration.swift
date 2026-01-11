@@ -607,7 +607,7 @@ struct GitHubIssueRow: View {
                             .font(.caption2)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color(hex: label.color).opacity(0.3))
+                            .background(SwiftUI.Color(hex: label.color).opacity(0.3))
                             .cornerRadius(4)
                     }
                 }

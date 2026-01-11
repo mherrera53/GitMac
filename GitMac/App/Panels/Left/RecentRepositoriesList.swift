@@ -59,7 +59,7 @@ struct RecentRepositoriesList: View {
                     MiniSidebarSection(
                         title: group.name.uppercased(),
                         icon: "folder.fill",
-                        iconColor: Color(hex: group.color),
+                        iconColor: SwiftUI.Color(hex: group.color),
                         isExpanded: expandedGroups.contains(group.id)
                     ) {
                         expandedGroups.toggle(group.id)

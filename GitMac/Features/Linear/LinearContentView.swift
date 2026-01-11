@@ -100,7 +100,7 @@ struct LinearIssueRow: View {
             },
             statusBadge: {
                 if let state = issue.state {
-                    StatusBadge(text: state.name, color: Color(hex: state.color))
+                    StatusBadge(text: state.name, color: SwiftUI.Color(hex: state.color))
                 }
             },
             metadata: {

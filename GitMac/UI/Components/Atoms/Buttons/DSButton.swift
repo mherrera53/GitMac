@@ -46,8 +46,8 @@ struct DSButton<Label: View>: View {
     var body: some View {
         Button {
             guard !isLoading && !isDisabled else { return }
+            isLoading = true  // Set immediately to prevent double-clicks
             Task {
-                isLoading = true
                 await action()
                 isLoading = false
             }

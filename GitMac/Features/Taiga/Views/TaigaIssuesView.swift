@@ -35,7 +35,7 @@ struct TaigaIssueRow: View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             // Type icon
             Image(systemName: "ladybug.fill")
-                .foregroundColor(Color(hex: issue.typeExtraInfo?.color ?? "ff6b6b"))
+                .foregroundColor(SwiftUI.Color(hex: issue.typeExtraInfo?.color ?? "ff6b6b"))
                 .font(DesignTokens.Typography.callout)
 
             // TG Reference badge
@@ -86,8 +86,8 @@ struct TaigaIssueRow: View {
                     .font(DesignTokens.Typography.caption2)
                     .padding(.horizontal, DesignTokens.Spacing.xs)
                     .padding(.vertical, 2)
-                    .background(Color(hex: type.color).opacity(0.2))
-                    .foregroundColor(Color(hex: type.color))
+                    .background(SwiftUI.Color(hex: type.color).opacity(0.2))
+                    .foregroundColor(SwiftUI.Color(hex: type.color))
                     .cornerRadius(DesignTokens.CornerRadius.sm)
             }
 
@@ -97,8 +97,8 @@ struct TaigaIssueRow: View {
                     .font(DesignTokens.Typography.caption2)
                     .padding(.horizontal, DesignTokens.Spacing.xs)
                     .padding(.vertical, 2)
-                    .background(Color(hex: status.color).opacity(0.2))
-                    .foregroundColor(Color(hex: status.color))
+                    .background(SwiftUI.Color(hex: status.color).opacity(0.2))
+                    .foregroundColor(SwiftUI.Color(hex: status.color))
                     .cornerRadius(DesignTokens.CornerRadius.sm)
             }
         }

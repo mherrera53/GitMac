@@ -157,7 +157,7 @@ struct PanelHeaderActions: View {
     PanelHeader(
         title: "Linear",
         icon: "line.3.horizontal",
-        iconColor: Color(hex: "5E6AD2"),
+        iconColor: SwiftUI.Color(hex: "5E6AD2"),
         actions: {
             PanelHeaderActions(
                 onRefresh: { print("Refresh") },
@@ -174,7 +174,7 @@ struct PanelHeaderActions: View {
     PanelHeader(
         title: "Jira",
         icon: "square.grid.2x2",
-        iconColor: Color(hex: "0052CC"),
+        iconColor: SwiftUI.Color(hex: "0052CC"),
         selector: {
             Picker("", selection: .constant("Project 1")) {
                 Text("Project 1").tag("Project 1")
@@ -193,7 +193,7 @@ struct PanelHeaderActions: View {
     PanelHeader(
         title: "Planner",
         icon: "checklist",
-        iconColor: Color(hex: "0078D4")
+        iconColor: SwiftUI.Color(hex: "0078D4")
     ) {
         Picker("", selection: .constant("Plan 1")) {
             Text("Plan 1").tag("Plan 1")

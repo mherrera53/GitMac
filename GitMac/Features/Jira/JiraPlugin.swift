@@ -13,7 +13,7 @@ struct JiraPlugin: IntegrationPlugin {
     let id = "jira"
     let name = "Jira"
     let icon = "square.stack.3d.up.fill"
-    let iconColor = Color(hex: "0052CC")
+    let iconColor = SwiftUI.Color(hex: "0052CC")
 
     typealias ViewModel = JiraViewModel
     typealias ContentView = JiraContentView

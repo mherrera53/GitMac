@@ -121,7 +121,7 @@ private struct GroupContainer: View {
     
     var groupColor: Color {
         if let hex = group.color {
-            return Color(hex: hex)
+            return SwiftUI.Color(hex: hex)
         }
         return AppTheme.border // Fallback for ungrouped
     }

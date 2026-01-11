@@ -20,7 +20,7 @@ struct JiraLoginPrompt: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "square.stack.3d.up.fill")
                 .font(DesignTokens.Typography.iconXXXL)
-                .foregroundColor(Color(hex: "0052CC"))
+                .foregroundColor(SwiftUI.Color(hex: "0052CC"))
 
             Text("Connect to Jira")
                 .font(DesignTokens.Typography.headline)
