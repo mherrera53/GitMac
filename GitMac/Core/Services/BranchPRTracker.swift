@@ -151,7 +151,17 @@ class BranchPRTracker: ObservableObject {
 
     /// Merge a PR
     func mergePR(_ pr: GitHubPullRequest, method: MergeMethod) async throws {
+        // Validate configuration
+        guard !owner.isEmpty && !repo.isEmpty else {
+            throw NSError(
+                domain: "BranchPRTracker",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "PR tracker not configured. owner='\(owner)' repo='\(repo)'"]
+            )
+        }
+
         let branchKey = pr.head.ref.lowercased()
+        print("🔀 MERGE PR: #\(pr.number) with method \(method.rawValue) on \(owner)/\(repo)")
 
         // API call waits for response - when it returns, PR is merged
         try await githubService.mergePullRequest(
