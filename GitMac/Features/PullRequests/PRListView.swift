@@ -4,7 +4,7 @@ import SwiftUI
 struct PRListView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = PRListViewModel()
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var selectedPR: GitHubPullRequest?
     @State private var showCreatePRSheet = false
     @State private var filterState: PRState = .open
@@ -304,7 +304,7 @@ struct PRRow: View {
     let isSelected: Bool
     var onMerge: ((MergeMethod) -> Void)?
     var onClose: (() -> Void)?
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -460,7 +460,7 @@ struct PRRow: View {
 struct PRDetailView: View {
     let pr: GitHubPullRequest
     @ObservedObject var viewModel: PRListViewModel
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var files: [GitHubPRFile] = []
     @State private var checks: [GitHubCheckRun] = []
     @State private var comments: [GitHubComment] = []
@@ -509,7 +509,9 @@ struct PRDetailView: View {
                         .buttonStyle(.bordered)
 
                         Button {
-                            NSWorkspace.shared.open(URL(string: pr.htmlUrl)!)
+                            if let url = URL(string: pr.htmlUrl) {
+                                NSWorkspace.shared.open(url)
+                            }
                         } label: {
                             Label("Open in GitHub", systemImage: "arrow.up.right.square")
                         }
@@ -868,7 +870,7 @@ struct PRDetailView: View {
 struct PRStatusBadge: View {
     let state: String
     let draft: Bool
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -915,7 +917,7 @@ struct StatItem: View {
     let label: String
     let value: String
     var color: Color = .primary
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -937,7 +939,7 @@ struct StatItem: View {
 }
 
 struct PRFileRow: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     let file: GitHubPRFile
 
     var body: some View {
@@ -976,7 +978,7 @@ struct PRFileRow: View {
 
 struct EmptyPRView: View {
     let state: PRState
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -1003,7 +1005,7 @@ struct CreatePRSheet: View {
     @ObservedObject var viewModel: PRListViewModel
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     @State private var title = ""
     @State private var prBody = ""
@@ -1302,7 +1304,7 @@ struct PRReviewView: View {
     let repo: String
 
     @StateObject private var viewModel = PRReviewViewModel()
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var selectedFile: GitHubPRFile?
     @State private var showAIPanel = false
     @State private var selectedLines: Set<Int> = []
@@ -1729,7 +1731,7 @@ struct ReviewFileRow: View {
     let isSelected: Bool
     let commentCount: Int
     let onSelect: () -> Void
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -1797,7 +1799,7 @@ struct DiffCodeView: View {
     @Binding var selectedLines: Set<Int>
     let onAddComment: (Int) -> Void
     let onDeletePendingComment: (UUID) -> Void
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     @State private var hoveredLine: Int?
 
@@ -1883,7 +1885,7 @@ struct DiffCodeView: View {
 
 struct ReviewCommentRow: View {
     let comment: GitHubReviewComment
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -1935,7 +1937,7 @@ struct ReviewCommentRow: View {
 struct PendingReviewCommentRow: View {
     let comment: PendingReviewComment
     let onDelete: () -> Void
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -1991,7 +1993,7 @@ struct AddReviewCommentSheet: View {
     @State private var commentText = ""
     let onAdd: (String) -> Void
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -2055,7 +2057,7 @@ struct AISuggestionsSheet: View {
     let suggestions: [AISuggestion]
     let onAccept: (AISuggestion) -> Void
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)

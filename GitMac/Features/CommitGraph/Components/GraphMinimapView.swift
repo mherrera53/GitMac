@@ -6,7 +6,7 @@ struct GraphMinimapView: View {
     let totalHeight: CGFloat
     let onSeek: (Int) -> Void
 
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var isDragging = false
 
     var body: some View {

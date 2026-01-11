@@ -8,7 +8,7 @@ import Splash
 /// Automatically switches between rich and fast rendering based on file size
 /// Supports Mermaid diagrams (flowchart, sequence, class, state, ER, pie, gantt)
 struct MarkdownView: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     @Environment(\.colorScheme) private var colorScheme
     
     let content: String
@@ -86,7 +86,7 @@ struct MarkdownView: View {
         }
         .padding(.horizontal, DesignTokens.Spacing.lg)
         .padding(.vertical, DesignTokens.Spacing.sm + 2) // 10 = 8 + 2
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(DesignTokens.Colors.controlBackground)
     }
 }
 
@@ -94,7 +94,7 @@ struct MarkdownView: View {
 
 /// Mixed renderer that handles both markdown text and Mermaid diagrams
 struct MermaidMarkdownView: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     let content: String
     let isDarkMode: Bool
 
@@ -242,90 +242,7 @@ private struct MermaidSegmentView: View {
     }
 }
 
-// MARK: - Corner Radius Extension
-
-struct RectCorner: OptionSet {
-    let rawValue: Int
-
-    static let topLeft = RectCorner(rawValue: 1 << 0)
-    static let topRight = RectCorner(rawValue: 1 << 1)
-    static let bottomLeft = RectCorner(rawValue: 1 << 2)
-    static let bottomRight = RectCorner(rawValue: 1 << 3)
-    static let allCorners: RectCorner = [.topLeft, .topRight, .bottomLeft, .bottomRight]
-}
-
-extension View {
-    func cornerRadius(_ radius: CGFloat, corners: RectCorner) -> some View {
-        clipShape(RoundedCornerShape(radius: radius, corners: corners))
-    }
-}
-
-private struct RoundedCornerShape: Shape {
-    var radius: CGFloat
-    var corners: RectCorner
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-
-        let topLeft = corners.contains(.topLeft) ? radius : 0
-        let topRight = corners.contains(.topRight) ? radius : 0
-        let bottomLeft = corners.contains(.bottomLeft) ? radius : 0
-        let bottomRight = corners.contains(.bottomRight) ? radius : 0
-
-        path.move(to: CGPoint(x: rect.minX + topLeft, y: rect.minY))
-
-        // Top edge and top right corner
-        path.addLine(to: CGPoint(x: rect.maxX - topRight, y: rect.minY))
-        if topRight > 0 {
-            path.addArc(
-                center: CGPoint(x: rect.maxX - topRight, y: rect.minY + topRight),
-                radius: topRight,
-                startAngle: .degrees(-90),
-                endAngle: .degrees(0),
-                clockwise: false
-            )
-        }
-
-        // Right edge and bottom right corner
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - bottomRight))
-        if bottomRight > 0 {
-            path.addArc(
-                center: CGPoint(x: rect.maxX - bottomRight, y: rect.maxY - bottomRight),
-                radius: bottomRight,
-                startAngle: .degrees(0),
-                endAngle: .degrees(90),
-                clockwise: false
-            )
-        }
-
-        // Bottom edge and bottom left corner
-        path.addLine(to: CGPoint(x: rect.minX + bottomLeft, y: rect.maxY))
-        if bottomLeft > 0 {
-            path.addArc(
-                center: CGPoint(x: rect.minX + bottomLeft, y: rect.maxY - bottomLeft),
-                radius: bottomLeft,
-                startAngle: .degrees(90),
-                endAngle: .degrees(180),
-                clockwise: false
-            )
-        }
-
-        // Left edge and top left corner
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + topLeft))
-        if topLeft > 0 {
-            path.addArc(
-                center: CGPoint(x: rect.minX + topLeft, y: rect.minY + topLeft),
-                radius: topLeft,
-                startAngle: .degrees(180),
-                endAngle: .degrees(270),
-                clockwise: false
-            )
-        }
-
-        path.closeSubpath()
-        return path
-    }
-}
+// RectCorner is defined in UI/Components/Utilities/ViewModifiers.swift
 
 // MARK: - Fast Markdown View (For Large Files)
 

@@ -8,25 +8,31 @@ struct EnhancedSplitDiffView: View {
     @Binding var showHistory: Bool
     @Binding var showBlame: Bool
     @Binding var showMinimap: Bool
-    
+
     @State private var selectedLines: Set<Int> = []
     @State private var scrollOffset: CGFloat = 0
     @State private var viewportHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
     @State private var minimapScrollTrigger = UUID()
-    
-    @StateObject private var themeManager = ThemeManager.shared
-    
+
     private let pairedLines: [DiffPairWithConnection]
-    
+    private let hunksById: [UUID: DiffHunk]
+
     init(fileDiff: FileDiff, showHistory: Binding<Bool>, showBlame: Binding<Bool>, showMinimap: Binding<Bool>) {
         self.fileDiff = fileDiff
         self._showHistory = showHistory
         self._showBlame = showBlame
         self._showMinimap = showMinimap
         self.pairedLines = KaleidoscopePairingEngine.calculatePairs(from: fileDiff.hunks)
+
+        // Build hunksById dictionary
+        var hunks: [UUID: DiffHunk] = [:]
+        for hunk in fileDiff.hunks {
+            hunks[hunk.id] = hunk
+        }
+        self.hunksById = hunks
     }
-    
+
     var body: some View {
         GeometryReader { geometry in
             HStack(spacing: 0) {
@@ -42,12 +48,15 @@ struct EnhancedSplitDiffView: View {
                         showMinimap: $showMinimap,
                         onDiscardLines: discardSelectedLines
                     )
-                    
+
                     // Split view with connection overlay
                     ZStack(alignment: .topLeading) {
                         // Base split view
                         KaleidoscopeSplitDiffView(
                             pairedLines: pairedLines,
+                            filePath: fileDiff.newPath,
+                            hunksById: hunksById,
+                            repoPath: nil,
                             showLineNumbers: true,
                             showConnectionLines: true,
                             isFluidMode: false,
@@ -56,7 +65,7 @@ struct EnhancedSplitDiffView: View {
                             contentHeight: $contentHeight,
                             minimapScrollTrigger: $minimapScrollTrigger
                         )
-                        
+
                         // Connection overlay spanning both panes
                         if showMinimap {
                             ConnectionOverlay(
@@ -66,29 +75,28 @@ struct EnhancedSplitDiffView: View {
                         }
                     }
                 }
-                
-                // Minimap
+
+                // Minimap placeholder - will show change indicators
                 if showMinimap {
                     Rectangle()
-                        .fill(themeManager.currentTheme.border)
+                        .fill(AppTheme.border)
                         .frame(width: 1)
-                    
-                    DiffMinimap(
+
+                    EnhancedDiffMinimap(
                         pairedLines: pairedLines,
                         scrollOffset: $scrollOffset,
-                        viewportHeight: $viewportHeight,
-                        contentHeight: $contentHeight,
-                        minimapScrollTrigger: $minimapScrollTrigger
+                        viewportHeight: viewportHeight,
+                        contentHeight: contentHeight
                     )
                     .frame(width: 120)
                 }
             }
-            
+
             // History/Blame overlay
             if showHistory || showBlame {
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
-                
+
                 EnhancedHistoryBlameView(
                     fileDiff: fileDiff,
                     showHistory: showHistory,
@@ -100,12 +108,69 @@ struct EnhancedSplitDiffView: View {
                 )
             }
         }
-        .background(themeManager.currentTheme.background)
+        .background(AppTheme.background)
     }
-    
+
     private func discardSelectedLines(_ lines: [DiffLine]) {
         // Implement discard logic using PatchManipulator
         print("Discarding \(lines.count) selected lines")
+    }
+}
+
+// MARK: - Enhanced Diff Minimap
+
+/// Simple minimap showing change locations
+struct EnhancedDiffMinimap: View {
+    let pairedLines: [DiffPairWithConnection]
+    @Binding var scrollOffset: CGFloat
+    let viewportHeight: CGFloat
+    let contentHeight: CGFloat
+
+    var body: some View {
+        GeometryReader { geometry in
+            let scale = geometry.size.height / max(contentHeight, 1)
+
+            ZStack(alignment: .topLeading) {
+                // Background
+                Rectangle()
+                    .fill(AppTheme.backgroundSecondary)
+
+                // Change indicators
+                ForEach(pairedLines) { pair in
+                    let yPos = CGFloat(pair.id) * 2 * scale
+
+                    if pair.connectionType != .none {
+                        Rectangle()
+                            .fill(colorForConnection(pair.connectionType))
+                            .frame(width: geometry.size.width, height: max(2, 4 * scale))
+                            .offset(y: yPos)
+                    }
+                }
+
+                // Viewport indicator
+                Rectangle()
+                    .fill(AppTheme.accent.opacity(0.3))
+                    .frame(width: geometry.size.width, height: viewportHeight * scale)
+                    .offset(y: scrollOffset * scale)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { location in
+            // Jump to location in diff
+        }
+    }
+
+    private func colorForConnection(_ type: ConnectionType) -> Color {
+        switch type {
+        case .addition:
+            return AppTheme.success
+        case .deletion:
+            return AppTheme.error
+        case .change:
+            return AppTheme.warning
+        case .none:
+            return .clear
+        }
     }
 }
 
@@ -115,50 +180,51 @@ struct EnhancedSplitDiffView: View {
 struct ConnectionOverlay: View {
     let pairedLines: [DiffPairWithConnection]
     let viewportWidth: CGFloat
-    
-    @StateObject private var themeManager = ThemeManager.shared
-    
+
     var body: some View {
         Canvas { context, size in
             let paneWidth = viewportWidth / 2
-            
+
             for pair in pairedLines {
-                if let connection = pair.connection {
+                if pair.connectionType != .none {
                     // Draw bezier curve spanning both panes
                     var path = Path()
-                    
-                    let startY = CGFloat(pair.index) * 22
-                    
+
+                    let startY = CGFloat(pair.id) * 22
+
                     // Start from left pane
                     path.move(to: CGPoint(x: paneWidth - 2, y: startY))
-                    
+
                     // Control points for smooth curve
                     let midX = paneWidth
                     let controlY1 = startY + 5
                     let controlY2 = startY - 5
-                    
+
                     path.addCurve(
                         to: CGPoint(x: paneWidth + 2, y: startY),
                         control1: CGPoint(x: midX, y: controlY1),
                         control2: CGPoint(x: midX, y: controlY2)
                     )
-                    
+
                     // Style based on connection type
                     let color: Color
                     let lineWidth: CGFloat
-                    
-                    switch connection {
+
+                    switch pair.connectionType {
                     case .addition:
-                        color = themeManager.currentTheme.diff.addition
+                        color = AppTheme.success
                         lineWidth = 2
                     case .deletion:
-                        color = themeManager.currentTheme.diff.deletion
+                        color = AppTheme.error
                         lineWidth = 2
-                    case .modification:
-                        color = themeManager.currentTheme.diff.modification
+                    case .change:
+                        color = AppTheme.warning
                         lineWidth = 3
+                    case .none:
+                        color = .clear
+                        lineWidth = 0
                     }
-                    
+
                     context.stroke(
                         path,
                         with: .color(color.opacity(0.6)),
@@ -179,12 +245,10 @@ struct EnhancedHistoryBlameView: View {
     let showHistory: Bool
     let showBlame: Bool
     let onClose: () -> Void
-    
+
     @State private var selectedCommit: Commit?
     @State private var commits: [Commit] = []
-    
-    @StateObject private var themeManager = ThemeManager.shared
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -192,17 +256,17 @@ struct EnhancedHistoryBlameView: View {
                 Button(action: onClose) {
                     Image(systemName: "xmark")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(themeManager.currentTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
-                
+
                 Spacer()
-                
+
                 Text(showHistory ? "History" : "Blame")
                     .font(.headline)
-                    .foregroundColor(themeManager.currentTheme.text)
-                
+                    .foregroundColor(AppTheme.textPrimary)
+
                 Spacer()
-                
+
                 // Toggle between history and blame
                 Picker("Mode", selection: showHistory ? .constant(true) : .constant(false)) {
                     Text("History").tag(true)
@@ -212,8 +276,8 @@ struct EnhancedHistoryBlameView: View {
                 .frame(width: 200)
             }
             .padding()
-            .background(themeManager.currentTheme.backgroundSecondary)
-            
+            .background(AppTheme.backgroundSecondary)
+
             // Content
             HSplitView {
                 // List view
@@ -227,14 +291,14 @@ struct EnhancedHistoryBlameView: View {
                     }
                 }
                 .frame(minWidth: 300)
-                
+
                 // Diff view
                 if let commit = selectedCommit {
                     VStack {
-                        Text("Changes in \(commit.hash.prefix(8))")
+                        Text("Changes in \(commit.shortSHA)")
                             .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textSecondary)
-                        
+                            .foregroundColor(AppTheme.textSecondary)
+
                         // Show diff for selected commit
                         KaleidoscopeDiffView(
                             files: [fileDiff],
@@ -246,14 +310,14 @@ struct EnhancedHistoryBlameView: View {
                 } else {
                     VStack {
                         Text("Select a commit to view changes")
-                            .foregroundColor(themeManager.currentTheme.textSecondary)
+                            .foregroundColor(AppTheme.textSecondary)
                     }
                     .frame(maxWidth: .infinity)
                 }
             }
         }
         .frame(width: 1000, height: 700)
-        .background(themeManager.currentTheme.background)
+        .background(AppTheme.background)
         .cornerRadius(12)
         .shadow(radius: 20)
     }
@@ -263,29 +327,27 @@ struct EnhancedHistoryBlameView: View {
 
 struct CommitRowView: View {
     let commit: Commit
-    
-    @StateObject private var themeManager = ThemeManager.shared
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(commit.message)
                 .font(.system(.body, design: .monospaced))
-                .foregroundColor(themeManager.currentTheme.text)
-            
+                .foregroundColor(AppTheme.textPrimary)
+
             HStack {
-                Text(commit.hash.prefix(8))
+                Text(commit.shortSHA)
                     .font(.caption)
-                    .foregroundColor(themeManager.currentTheme.textSecondary)
-                
+                    .foregroundColor(AppTheme.textSecondary)
+
                 Spacer()
-                
+
                 Text(commit.author)
                     .font(.caption)
-                    .foregroundColor(themeManager.currentTheme.textSecondary)
-                
-                Text(commit.date, style: .relative)
+                    .foregroundColor(AppTheme.textSecondary)
+
+                Text(commit.authorDate, style: .relative)
                     .font(.caption)
-                    .foregroundColor(themeManager.currentTheme.textSecondary)
+                    .foregroundColor(AppTheme.textSecondary)
             }
         }
         .padding(.vertical, 4)
@@ -294,13 +356,11 @@ struct CommitRowView: View {
 
 struct BlameListView: View {
     let path: String
-    
-    @StateObject private var themeManager = ThemeManager.shared
-    
+
     var body: some View {
         List {
             Text("Blame information for \(path)")
-                .foregroundColor(themeManager.currentTheme.textSecondary)
+                .foregroundColor(AppTheme.textSecondary)
         }
     }
 }

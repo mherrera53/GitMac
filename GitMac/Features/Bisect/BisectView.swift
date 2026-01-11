@@ -50,7 +50,7 @@ enum BisectCommitStatus {
     case current
     case skipped
 
-    var color: Color {
+    @MainActor var color: Color {
         switch self {
         case .good: return AppTheme.success
         case .bad: return AppTheme.error
@@ -74,7 +74,7 @@ enum BisectCommitStatus {
 // MARK: - Bisect View
 
 struct BisectView: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = BisectViewModel()
@@ -316,7 +316,7 @@ struct BisectView: View {
             if let commit = viewModel.currentCommit {
                 VStack(spacing: DesignTokens.Spacing.sm) {
                     Text(commit.shortSHA)
-                        .font(.system(size: 16, design: .monospaced, weight: .bold))
+                        .font(.system(size: 16, weight: .bold, design: .monospaced))
                         .foregroundColor(AppTheme.accent)
 
                     Text(commit.message)

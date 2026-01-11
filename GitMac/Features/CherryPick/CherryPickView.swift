@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Cherry-pick commits from one branch to another
 struct CherryPickView: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = CherryPickViewModel()

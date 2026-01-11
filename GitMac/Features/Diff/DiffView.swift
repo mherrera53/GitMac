@@ -25,7 +25,7 @@ struct DiffView: View {
         @State private var scrollOffset: CGFloat = 0
     @State private var viewportHeight: CGFloat = 400
     @State private var contentHeight: CGFloat = 1000
-    @StateObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
     
     // History and Blame panel states
     @State private var showHistory = false
@@ -311,6 +311,18 @@ struct DiffView: View {
         .sheet(isPresented: $showBlame) {
             BlameSheet(path: fileDiff.newPath, repoPath: repoPath ?? "")
         }
+        .onDisappear {
+            clearCaches()
+        }
+    }
+
+    /// Clear caches to free memory when view disappears
+    private func clearCaches() {
+        cachedHunksById.removeAll()
+        cachedPairedLines.removeAll()
+        cachedUnifiedLines.removeAll()
+        availableCommits.removeAll()
+        overrideHunks = nil
     }
 
     private func rebuildKaleidoscopeCaches() {
@@ -773,7 +785,7 @@ struct BlameSheet: View {
 // MARK: - Large File Split Diff View Wrapper
 
 struct LargeFileSplitDiffViewWrapper: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
     
     let hunks: [DiffHunk]
     let showLineNumbers: Bool
@@ -859,7 +871,7 @@ struct OptimizedSplitDiffView: View {
     @Binding var viewportHeight: CGFloat
     @Binding var contentHeight: CGFloat
 
-    @StateObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
 
     private var pairs: [DiffPair] {
         // ... (implementation hidden, same as before)
@@ -1321,7 +1333,7 @@ struct SplitDiffView: View {
     let hunks: [DiffHunk]
     let showLineNumbers: Bool
     let filename: String
-    @StateObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
 
     // Build paired lines for proper alignment
     private var pairedLines: [(left: DiffLine?, right: DiffLine?, hunkHeader: String?)] {
@@ -1442,7 +1454,7 @@ struct SplitDiffView: View {
 
 struct SplitHunkHeaderRow: View {
     let header: String
-    @StateObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -1466,7 +1478,7 @@ struct SplitDiffLineRow: View {
     let side: DiffSide
     let showLineNumber: Bool
     let pairedLine: DiffLine?
-    @StateObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
 
     var lineNumber: Int? {
         switch side {
@@ -1806,7 +1818,7 @@ struct HunkSummaryHeader: View {
     let hunkCount: Int
     let totalAdditions: Int
     let totalDeletions: Int
-    @StateObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -1858,7 +1870,7 @@ struct HunkSelectionToolbar: View {
     var onStageSelected: (() -> Void)?
     var onUnstageSelected: (() -> Void)?
     var onDiscardSelected: (() -> Void)?
-    @StateObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -1997,7 +2009,7 @@ struct CollapsibleHunkCard: View {
     var onDiscard: (() -> Void)?
 
     @State private var isHovered = false
-    @StateObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
 
     private var additions: Int {
         hunk.lines.filter { $0.type == .addition }.count
@@ -2164,7 +2176,7 @@ struct HunkCard: View {
     var onUnstage: (() -> Void)?
     var onDiscard: (() -> Void)?
     @State private var isHovered = false
-    @StateObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -2287,7 +2299,7 @@ private struct LargeDiffLine: Identifiable {
 private struct LargeDiffLineView: View {
     let line: LargeDiffLine
     let showLineNumbers: Bool
-    @StateObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)

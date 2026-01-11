@@ -9,7 +9,7 @@ struct KaleidoscopeFileList: View {
     @State private var filterText: String = ""
     @State private var expandedDirectories: Set<String> = []
 
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     private var groupedFiles: [String: [FileDiff]] {
         var groups: [String: [FileDiff]] = [:]
@@ -154,7 +154,7 @@ struct DirectoryHeader: View {
     let isExpanded: Bool
     let onToggle: () -> Void
 
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -197,7 +197,7 @@ struct FileListRow: View {
     let onSelect: () -> Void
 
     @State private var isHovered = false
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     private var fileName: String {
         (file.displayPath as NSString).lastPathComponent

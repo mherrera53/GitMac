@@ -8,40 +8,8 @@
 import Foundation
 import SwiftUI
 
-// MARK: - Natural Language Translation Models
-
-struct NLCommandRequest {
-    let input: String
-    let context: NLContext
-    let language: String = "en"
-}
-
-struct NLContext {
-    let workingDirectory: String?
-    let gitBranch: String?
-    let recentCommands: [String]
-    let environment: [String: String]
-    let osType: String
-}
-
-enum TerminalCommandCategory: String, CaseIterable {
-    case git = "Git"
-    case file = "File Management"
-    case network = "Network"
-    case system = "System"
-    case docker = "Docker"
-    case npm = "NPM/Yarn"
-    case other = "Other"
-}
-
-struct NLCommandResponse {
-    let command: String
-    let explanation: String
-    let confidence: Double
-    let alternatives: [String]
-    let warnings: [String]
-    let category: TerminalCommandCategory
-}
+// NLCommandRequest, NLContext, NLCommandResponse, and CommandCategory are
+// defined in TerminalNLTranslationService.swift - do not redefine here
 
 // MARK: - Tracked Command Model (Rich History)
 
@@ -271,63 +239,91 @@ class GhosttyEnhancedViewModel: ObservableObject {
         // Check cache
         let cacheKey = input.lowercased()
         if let cached = aiCache[cacheKey] {
-            print("✅ Enhanced: Found \(cached.count) cached suggestions")
-            aiSuggestions = cached
+            aiSuggestions = filterSuggestions(cached, excluding: input)
             return
         }
 
-        print("🔄 Enhanced: Starting debounced AI call...")
         // Debounced AI call
         aiSuggestionTask = Task {
             try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
-            guard !Task.isCancelled else {
-                print("❌ Enhanced: AI task cancelled")
-                return
-            }
-
+            guard !Task.isCancelled else { return }
             await fetchAISuggestions(for: input, repoPath: repoPath)
+        }
+    }
+
+    private func filterSuggestions(_ suggestions: [AICommandSuggestion], excluding input: String) -> [AICommandSuggestion] {
+        let inputLower = input.lowercased().trimmingCharacters(in: .whitespaces)
+        guard !inputLower.isEmpty else { return [] }
+
+        return suggestions.filter { suggestion in
+            let cmdLower = suggestion.command.lowercased().trimmingCharacters(in: .whitespaces)
+
+            // Skip empty or exact match
+            guard !cmdLower.isEmpty, cmdLower != inputLower else { return false }
+
+            // Skip if suggestion is shorter than input (not useful)
+            guard cmdLower.count > inputLower.count else { return false }
+
+            // Skip if suggestion doesn't start with or contain the input
+            // (prefer completions over unrelated commands)
+            let isCompletion = cmdLower.hasPrefix(inputLower)
+            let isRelated = cmdLower.contains(inputLower) || inputLower.split(separator: " ").first.map { cmdLower.hasPrefix(String($0)) } ?? false
+
+            return isCompletion || isRelated
         }
     }
 
     private func fetchAISuggestions(for input: String, repoPath: String?) async {
         isLoadingAI = true
-        print("🤖 Enhanced: Fetching AI suggestions for '\(input)'...")
 
         do {
-            // Get AI suggestions
             let suggestions = try await TerminalAIService.shared.suggestTerminalCommands(
                 input: input,
                 repoPath: repoPath,
                 recentCommands: trackedCommands.suffix(5).map { $0.command }
             )
 
-            print("✅ Enhanced: Received \(suggestions.count) suggestions from AI service")
-
-            // Cache and update (suggestions are already AICommandSuggestion)
-            aiCache[input.lowercased()] = suggestions
-            self.aiSuggestions = suggestions
+            // Cache and update, filtering out exact matches
+            let filtered = filterSuggestions(suggestions, excluding: input)
+            aiCache[input.lowercased()] = filtered
+            self.aiSuggestions = filtered
             selectedSuggestionIndex = 0
 
-            print("📝 Enhanced: Updated aiSuggestions array with \(aiSuggestions.count) items")
-            print("📊 Enhanced: currentInput = '\(currentInput)', isEmpty = \(currentInput.isEmpty)")
-
         } catch {
-            print("❌ AI suggestion error: \(error)")
+            // Silent fail
         }
 
         isLoadingAI = false
     }
 
     func applySuggestion(_ suggestion: AICommandSuggestion, to viewModel: GhosttyViewModel) {
-        // Send the command to Ghostty
-        viewModel.writeInput(suggestion.command + "\n")
+        let cmd = suggestion.command
+        let input = currentInput
 
-        // Track it
-        trackCommand(suggestion.command)
+        // Smart completion: only add what's missing
+        if cmd.lowercased().hasPrefix(input.lowercased()) && !input.isEmpty {
+            // Suggestion starts with what user typed - just append the rest
+            let startIndex = cmd.index(cmd.startIndex, offsetBy: input.count)
+            let completion = String(cmd[startIndex...])
+            viewModel.writeInput(completion)
+        } else if let range = cmd.lowercased().range(of: input.lowercased()), range.lowerBound == cmd.startIndex {
+            // Case-insensitive match at start - append rest
+            let startIndex = cmd.index(cmd.startIndex, offsetBy: input.count)
+            let completion = String(cmd[startIndex...])
+            viewModel.writeInput(completion)
+        } else {
+            // No prefix match - need to replace
+            // Send backspaces to clear current input
+            if !input.isEmpty {
+                let backspaces = String(repeating: "\u{7F}", count: input.count)
+                viewModel.writeInput(backspaces)
+            }
+            viewModel.writeInput(cmd)
+        }
 
         // Clear suggestions
         aiSuggestions.removeAll()
-        currentInput = ""
+        currentInput = cmd
     }
 
     // MARK: - Suggestion Navigation

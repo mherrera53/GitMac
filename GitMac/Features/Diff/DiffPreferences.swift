@@ -1,8 +1,8 @@
 import Foundation
 
-// MARK: - Diff Degradation
+// MARK: - Diff Degradation (UI-level)
 
-/// Types of performance degradations applied to diffs
+/// Types of visual degradations applied for performance
 enum DiffDegradation: String, Identifiable, Sendable {
     case largeFileModeActive
     case wordDiffDisabled
@@ -10,9 +10,9 @@ enum DiffDegradation: String, Identifiable, Sendable {
     case sideBySideDisabled
     case softWrapDisabled
     case hunksCollapsedByDefault
-    
+
     var id: String { rawValue }
-    
+
     var description: String {
         switch self {
         case .largeFileModeActive:
@@ -29,7 +29,7 @@ enum DiffDegradation: String, Identifiable, Sendable {
             return "Hunks collapsed by default"
         }
     }
-    
+
     var icon: String {
         switch self {
         case .largeFileModeActive:
@@ -46,7 +46,7 @@ enum DiffDegradation: String, Identifiable, Sendable {
             return "chevron.down.circle"
         }
     }
-    
+
     var severity: DegradationSeverity {
         switch self {
         case .largeFileModeActive:
@@ -65,69 +65,70 @@ enum DegradationSeverity {
     case error
 }
 
-// MARK: - Diff Preferences
+// MARK: - Diff UI Preferences
 
-/// User preferences for diff viewing
-struct DiffPreferences: Codable {
+/// User preferences for diff viewing (stored in UserDefaults)
+/// Note: DiffViewMode enum is defined in UI/Components/Diff/DiffToolbar.swift
+struct DiffUIPreferences: Codable {
     var defaultContextLines: Int
     var enableWordDiffOnDemand: Bool
     var enableSyntaxHighlightOnDemand: Bool
-    var defaultViewMode: DiffViewModePreference
+    var defaultViewModeRaw: String  // Uses DiffViewMode.rawValue
     var showLineNumbers: Bool
     var showWhitespace: Bool
-    
+    var fontSize: Int
+    var fontName: String
+
     init(
         defaultContextLines: Int = 3,
         enableWordDiffOnDemand: Bool = true,
         enableSyntaxHighlightOnDemand: Bool = true,
-        defaultViewMode: DiffViewModePreference = .split,
+        defaultViewModeRaw: String = "Split",
         showLineNumbers: Bool = true,
-        showWhitespace: Bool = false
+        showWhitespace: Bool = false,
+        fontSize: Int = 12,
+        fontName: String = "SF Mono"
     ) {
         self.defaultContextLines = defaultContextLines
         self.enableWordDiffOnDemand = enableWordDiffOnDemand
         self.enableSyntaxHighlightOnDemand = enableSyntaxHighlightOnDemand
-        self.defaultViewMode = defaultViewMode
+        self.defaultViewModeRaw = defaultViewModeRaw
         self.showLineNumbers = showLineNumbers
         self.showWhitespace = showWhitespace
+        self.fontSize = fontSize
+        self.fontName = fontName
     }
-    
-    /// Default preferences
-    static var `default`: DiffPreferences {
-        DiffPreferences()
-    }
-}
 
-enum DiffViewModePreference: String, Codable {
-    case split
-    case inline
-    case hunk
+    /// Default preferences
+    static var `default`: DiffUIPreferences {
+        DiffUIPreferences()
+    }
 }
 
 // MARK: - UserDefaults Extension
 
 extension UserDefaults {
-    private static let diffPreferencesKey = "com.gitmac.diffPreferences"
-    
-    var diffPreferences: DiffPreferences {
+    private static let diffUIPreferencesKey = "com.gitmac.diffUIPreferences"
+
+    var diffUIPreferences: DiffUIPreferences {
         get {
-            guard let data = data(forKey: Self.diffPreferencesKey) else {
+            guard let data = data(forKey: Self.diffUIPreferencesKey) else {
                 return .default
             }
-            
+
             do {
-                return try JSONDecoder().decode(DiffPreferences.self, from: data)
+                return try JSONDecoder().decode(DiffUIPreferences.self, from: data)
             } catch {
-                print("Failed to decode DiffPreferences: \(error)")
+                print("Failed to decode DiffUIPreferences: \(error)")
                 return .default
             }
         }
         set {
             do {
                 let data = try JSONEncoder().encode(newValue)
-                set(data, forKey: Self.diffPreferencesKey)
+                set(data, forKey: Self.diffUIPreferencesKey)
             } catch {
-                print("Failed to encode DiffPreferences: \(error)")
+                print("Failed to encode DiffUIPreferences: \(error)")
             }
         }
     }

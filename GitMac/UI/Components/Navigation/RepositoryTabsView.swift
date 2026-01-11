@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - Modern Grouped Repository Slider
 struct RepositoryTabsView: View {
@@ -101,33 +102,9 @@ struct RepositoryTabsView: View {
                 .padding(.horizontal, 4)
             }
             .frame(maxWidth: .infinity) // Take all available horizontal space
-            
-            // Overflow Menu ("More" Button)
-            Menu {
-                ForEach(appState.openTabs) { tab in
-                    Button(action: { appState.selectTab(tab.id) }) {
-                        HStack {
-                            if appState.activeTabId == tab.id {
-                                Image(systemName: "checkmark")
-                            }
-                            Text(tab.repository.name)
-                            Spacer()
-                            Text(tab.repository.path)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-            } label: {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(AppTheme.textSecondary)
-                    .frame(width: 20, height: 28)
-                    .contentShape(Rectangle())
-            }
-            .menuStyle(.borderlessButton)
-            .padding(.leading, 4)
-            .help("Show All Open Repositories")
+
+            // Dropdown for recent repos
+            TabsOverflowMenu()
         }
         .frame(height: 32) // Slightly taller for dedicated space
     }
@@ -261,5 +238,40 @@ struct TabDropDelegate: DropDelegate {
             }
         }
         return true
+    }
+}
+
+// MARK: - Tabs Overflow Menu
+
+private struct TabsOverflowMenu: View {
+    @ObservedObject private var recentManager = RecentRepositoriesManager.shared
+
+    var body: some View {
+        Menu {
+            if !recentManager.recentRepos.isEmpty {
+                Section("Recent") {
+                    ForEach(recentManager.recentRepos.prefix(5)) { repo in
+                        Button(repo.name) {
+                            NotificationCenter.default.post(name: .openRepository, object: repo.path)
+                        }
+                    }
+                }
+                Divider()
+            }
+
+            Button {
+                NotificationCenter.default.post(name: .openRepository, object: nil)
+            } label: {
+                Label("Open Repository...", systemImage: "folder.badge.plus")
+            }
+        } label: {
+            Image(systemName: "chevron.down")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundColor(AppTheme.textMuted)
+                .frame(width: 20, height: 28)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .help("More tabs")
     }
 }

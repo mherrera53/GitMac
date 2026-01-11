@@ -159,10 +159,12 @@ class HistoryViewModel: ObservableObject {
                 let content = String(line.dropFirst())
                 lineNumber += 1
                 lines.append(BlameLine(
-                    lineNumber: lineNumber,
-                    sha: currentSha,
+                    commitSHA: currentSha,
                     author: currentAuthor,
+                    email: "",
                     date: currentDate,
+                    message: "",
+                    lineNumber: lineNumber,
                     content: content
                 ))
             } else if line.count >= 40 && !line.contains(" ") {
@@ -181,24 +183,7 @@ class HistoryViewModel: ObservableObject {
     }
 }
 
-struct BlameLine: Identifiable {
-    let id = UUID()
-    let lineNumber: Int
-    let sha: String
-    let author: String
-    let date: Date
-    let content: String
-
-    var shortSHA: String {
-        String(sha.prefix(7))
-    }
-
-    var relativeDate: String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: date, relativeTo: Date())
-    }
-}
+// BlameLine is defined in FileAnnotationView.swift - don't redefine here
 
 // MARK: - File History View
 

@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Diff Line Renderers
 
 struct DiffLineRow: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     let line: DiffLine
     let side: DiffSide
@@ -57,7 +57,7 @@ struct DiffLineRow: View {
 }
 
 struct InlineDiffLineRow: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     let line: DiffLine
     let showLineNumbers: Bool
@@ -134,7 +134,7 @@ struct InlineDiffLineRow: View {
 }
 
 struct HunkLineRow: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     let line: DiffLine
     let showLineNumber: Bool
@@ -213,7 +213,7 @@ struct HunkLineRow: View {
 }
 
 struct HunkHeaderRow: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     let header: String
     let hunkIndex: Int
@@ -260,7 +260,7 @@ struct HunkHeaderRow: View {
 }
 
 struct EmptyLineRow: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     let showLineNumber: Bool
 

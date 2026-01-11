@@ -89,9 +89,9 @@ struct DiffToolbar: View {
     }
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: DesignTokens.Spacing.lg) {
             // File info
-            HStack(spacing: 8) {
+            HStack(spacing: DesignTokens.Spacing.sm) {
                 Image(systemName: "doc.fill")
                     .font(.system(size: 14))
                     .foregroundColor(AppTheme.accent)
@@ -108,7 +108,7 @@ struct DiffToolbar: View {
             Spacer()
 
             // History and Blame buttons (always visible)
-            HStack(spacing: 4) {
+            HStack(spacing: DesignTokens.Spacing.xs) {
                 if showHistoryButton {
                     ToolbarButton(
                         icon: "clock.arrow.circlepath",
@@ -151,7 +151,7 @@ struct DiffToolbar: View {
                 .frame(width: 1, height: 20)
 
             // View options
-            HStack(spacing: 4) {
+            HStack(spacing: DesignTokens.Spacing.xs) {
                 ToolbarButton(
                     icon: "number",
                     isActive: showLineNumbers,
@@ -178,7 +178,7 @@ struct DiffToolbar: View {
             }
 
             // View mode selector
-            HStack(spacing: 2) {
+            HStack(spacing: DesignTokens.Spacing.xxs) {
                 ForEach(availableModes, id: \.self) { mode in
                     DiffModeButton(
                         mode: mode,
@@ -192,10 +192,10 @@ struct DiffToolbar: View {
             }
             .padding(3)
             .background(AppTheme.backgroundTertiary)
-            .cornerRadius(6)
+            .cornerRadius(DesignTokens.CornerRadius.md)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, DesignTokens.Spacing.lg)
+        .padding(.vertical, 10) // Keeping 10 as it's a specific visual choice for toolbar height
         .background(AppTheme.toolbar)
     }
 }

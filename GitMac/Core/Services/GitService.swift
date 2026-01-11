@@ -391,7 +391,36 @@ class GitService: ObservableObject {
         var options = StashApplyOptions()
         options.stashRef = "stash@{\(index)}"
 
-        try await engine.stashApply(options: options, at: path)
+        do {
+            try await engine.stashApply(options: options, at: path)
+        } catch GitError.stashApplyConflict {
+            // Smart Apply Logic: Handle conflicts by stashing local changes first
+            
+            // 1. Stash current changes (including untracked) to backup
+            let backupTime = Date().formatted(date: .numeric, time: .shortened)
+            let backupMessage = "Backup before applying stash@{\(index)} - \(backupTime)"
+            var stashOptions = StashOptions()
+            stashOptions.message = backupMessage
+            stashOptions.includeUntracked = true
+            
+            _ = try await engine.stash(options: stashOptions, at: path)
+            
+            // 2. Adjust index (shifted by 1 because we just pushed a new stash)
+            let newIndex = index + 1
+            options.stashRef = "stash@{\(newIndex)}"
+            
+            // 3. Try to apply again
+            try await engine.stashApply(options: options, at: path)
+            
+            // 4. Notify user
+            let message = NotificationMessage(
+                type: .info,
+                message: "Smart Stash Apply",
+                detail: "Local changes were backed up to '\(backupMessage)' to allow stash application."
+            )
+            NotificationCenter.default.post(name: .showNotification, object: message)
+        }
+        
         try await refresh()
     }
 
@@ -445,6 +474,9 @@ class GitService: ObservableObject {
 
         try await engine.merge(branch: branch, options: options, at: path)
         try await refresh()
+
+        // Notify CI/CD services that merge completed
+        NotificationCenter.default.post(name: .gitMergeCompleted, object: branch)
     }
 
     func mergeAbort() async throws {

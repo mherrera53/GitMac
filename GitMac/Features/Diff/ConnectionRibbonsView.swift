@@ -10,7 +10,7 @@ struct ConnectionRibbonsView: View {
     let panelOverlap: CGFloat
     let visibleRange: Range<Int> // Virtualization support
 
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         Canvas { context, size in
@@ -127,76 +127,142 @@ struct ConnectionRibbonsView: View {
         color: Color,
         layoutWidth: CGFloat
     ) {
-        let gutterLeft = max(0, (layoutWidth - gutterWidth) / 2)
-        let gutterRight = gutterLeft + gutterWidth
-        let gutterMid = (gutterLeft + gutterRight) / 2
+        let panelWidth = max(0, (layoutWidth - gutterWidth) / 2)
+        let gutterLeft = panelWidth
+        let gutterRight = panelWidth + gutterWidth
 
-        let gutterInset: CGFloat = max(6, min(10, gutterWidth * 0.16))
-
-        let height = max(lineHeight, bottomY - topY)
-        let radius: CGFloat = min(8, lineHeight * 0.35)
-        let pointInset: CGFloat = max(10, min(16, gutterWidth * 0.28))
-        let baseWidth: CGFloat = max(14, min(22, gutterWidth * 0.36))
-
-        let midY = topY + height / 2
-        let y0 = topY
-        let y1 = topY + height
-
-        let xBase0: CGFloat
-        let xBase1: CGFloat
-        let xPoint: CGFloat
-
-        let halfCenter: CGFloat = switch side {
-        case .left:
-            (gutterLeft + gutterMid) / 2
-        case .right:
-            (gutterMid + gutterRight) / 2
-        }
-        let centeredBase0 = max(gutterLeft + gutterInset, min(halfCenter - baseWidth / 2, gutterRight - gutterInset - baseWidth))
-        let centeredBase1 = centeredBase0 + baseWidth
-
+        let effectiveOverlap = min(panelOverlap, panelWidth)
+        let leftX: CGFloat
+        let rightX: CGFloat
+        
         switch side {
         case .left:
-            xBase0 = centeredBase0
-            xBase1 = centeredBase1
-            xPoint = min(gutterRight - gutterInset, xBase1 + pointInset)
+            leftX = max(0, gutterLeft - effectiveOverlap)
+            rightX = gutterLeft
         case .right:
-            xBase0 = centeredBase0
-            xBase1 = centeredBase1
-            xPoint = max(gutterLeft + gutterInset, xBase0 - pointInset)
+            leftX = gutterRight
+            rightX = min(layoutWidth, gutterRight + effectiveOverlap)
         }
 
-        let gutterClip = CGRect(x: gutterLeft + 1, y: y0, width: max(0, gutterRight - gutterLeft - 2), height: y1 - y0)
-        let path = Path(roundedRect: CGRect(x: min(xBase0, xBase1), y: y0, width: abs(xBase1 - xBase0), height: y1 - y0), cornerRadius: radius)
+        let height = max(lineHeight, bottomY - topY)
+        let midY = topY + height / 2
+        let top = topY
+        let bottom = topY + height
 
-        var tip = Path()
-        tip.move(to: CGPoint(x: xBase1, y: midY - radius))
-        tip.addLine(to: CGPoint(x: xPoint, y: midY))
-        tip.addLine(to: CGPoint(x: xBase1, y: midY + radius))
-        tip.closeSubpath()
-
-        if side == .right {
-            tip = Path()
-            tip.move(to: CGPoint(x: xBase0, y: midY - radius))
-            tip.addLine(to: CGPoint(x: xPoint, y: midY))
-            tip.addLine(to: CGPoint(x: xBase0, y: midY + radius))
-            tip.closeSubpath()
-        }
-
+        // EXACTLY the same gradient as change ribbons
         let gradient = Gradient(stops: [
-            .init(color: color.opacity(0.22), location: 0.0),
-            .init(color: color.opacity(0.10), location: 1.0)
+            .init(color: color.opacity(0.0), location: 0.0),
+            .init(color: color.opacity(0.16), location: 0.10),
+            .init(color: color.opacity(0.28), location: 0.30),
+            .init(color: color.opacity(0.34), location: 0.50),
+            .init(color: color.opacity(0.28), location: 0.70),
+            .init(color: color.opacity(0.16), location: 0.90),
+            .init(color: color.opacity(0.0), location: 1.0)
         ])
 
-        context.drawLayer { layer in
-            layer.clip(to: Path(gutterClip))
-            layer.fill(path, with: .linearGradient(gradient, startPoint: CGPoint(x: xBase0, y: midY), endPoint: CGPoint(x: xBase1, y: midY)))
-            layer.fill(tip, with: .color(color.opacity(0.20)))
+        let borderGradient = Gradient(stops: [
+            .init(color: color.opacity(0.0), location: 0.0),
+            .init(color: color.opacity(0.60), location: 0.12),
+            .init(color: color.opacity(0.60), location: 0.50),
+            .init(color: color.opacity(0.60), location: 0.88),
+            .init(color: color.opacity(0.0), location: 1.0)
+        ])
 
-            var outline = Path()
-            outline.addPath(path)
-            outline.addPath(tip)
-            layer.stroke(outline, with: .color(color.opacity(0.55)), style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round))
+        let markerWidth: CGFloat = 4
+        let fadeWidth: CGFloat = min(18, max(10, panelWidth * 0.06))
+
+        // Create main ribbon shape
+        let topLeft = CGPoint(x: leftX, y: top)
+        let topRight = CGPoint(x: rightX, y: top)
+        let bottomRight = CGPoint(x: rightX, y: bottom)
+        let bottomLeft = CGPoint(x: leftX, y: bottom)
+
+        var band = Path()
+        band.move(to: topLeft)
+        band.addLine(to: topRight)
+        band.addLine(to: bottomRight)
+        band.addLine(to: bottomLeft)
+        band.closeSubpath()
+
+        context.drawLayer { layer in
+            // Main ribbon fill with gradient (SAME as change ribbons)
+            layer.fill(
+                band,
+                with: .linearGradient(
+                    gradient,
+                    startPoint: CGPoint(x: leftX, y: midY),
+                    endPoint: CGPoint(x: rightX, y: midY)
+                )
+            )
+
+            // Top edge border (SAME as change ribbons)
+            var topEdge = Path()
+            topEdge.move(to: topLeft)
+            topEdge.addLine(to: topRight)
+            layer.stroke(
+                topEdge,
+                with: .linearGradient(borderGradient, startPoint: CGPoint(x: leftX, y: midY), endPoint: CGPoint(x: rightX, y: midY)),
+                style: StrokeStyle(lineWidth: 1.25, lineCap: .round, lineJoin: .round)
+            )
+
+            // Bottom edge border (SAME as change ribbons)
+            var bottomEdge = Path()
+            bottomEdge.move(to: bottomLeft)
+            bottomEdge.addLine(to: bottomRight)
+            layer.stroke(
+                bottomEdge,
+                with: .linearGradient(borderGradient, startPoint: CGPoint(x: leftX, y: midY), endPoint: CGPoint(x: rightX, y: midY)),
+                style: StrokeStyle(lineWidth: 1.25, lineCap: .round, lineJoin: .round)
+            )
+
+            // Panel inner edge marker and fade (EXACTLY like change ribbons)
+            if side == .left {
+                // Left panel marker (at gutter edge)
+                let markerRect = CGRect(x: max(0, gutterLeft - markerWidth - 1), y: top, width: markerWidth, height: height)
+                layer.fill(Path(markerRect), with: .color(color.opacity(0.32)))
+                
+                // Left fade
+                let leftFadeRect = CGRect(x: max(0, gutterLeft - markerWidth - 1 - fadeWidth), y: top, width: fadeWidth, height: height)
+                layer.fill(
+                    Path(leftFadeRect),
+                    with: .linearGradient(
+                        Gradient(stops: [
+                            .init(color: color.opacity(0.18), location: 0.0),
+                            .init(color: color.opacity(0.0), location: 1.0)
+                        ]),
+                        startPoint: CGPoint(x: gutterLeft, y: midY),
+                        endPoint: CGPoint(x: gutterLeft - fadeWidth, y: midY)
+                    )
+                )
+            } else {
+                // Right panel marker (at gutter edge)
+                let markerRect = CGRect(x: min(layoutWidth - markerWidth, gutterRight + 1), y: top, width: markerWidth, height: height)
+                layer.fill(Path(markerRect), with: .color(color.opacity(0.32)))
+                
+                // Right fade
+                let rightFadeRect = CGRect(x: min(layoutWidth, gutterRight + 1 + markerWidth), y: top, width: fadeWidth, height: height)
+                layer.fill(
+                    Path(rightFadeRect),
+                    with: .linearGradient(
+                        Gradient(stops: [
+                            .init(color: color.opacity(0.18), location: 0.0),
+                            .init(color: color.opacity(0.0), location: 1.0)
+                        ]),
+                        startPoint: CGPoint(x: gutterRight, y: midY),
+                        endPoint: CGPoint(x: gutterRight + fadeWidth, y: midY)
+                    )
+                )
+            }
+
+            // Center line for continuity (SAME as change ribbons)
+            var center = Path()
+            center.move(to: CGPoint(x: leftX + 2, y: midY))
+            center.addLine(to: CGPoint(x: rightX - 2, y: midY))
+            layer.stroke(
+                center,
+                with: .linearGradient(borderGradient, startPoint: CGPoint(x: leftX, y: midY), endPoint: CGPoint(x: rightX, y: midY)),
+                style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round)
+            )
         }
     }
 

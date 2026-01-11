@@ -5,7 +5,6 @@ import AppKit
 struct StagingAreaView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = StagingAreaViewModel()
-    @StateObject private var themeManager = ThemeManager.shared
     @State private var commitMessage = ""
     @State private var isAmending = false
     @State private var selectedFile: String?
@@ -14,13 +13,18 @@ struct StagingAreaView: View {
     @State private var conflictFileToResolve: FileStatus?
     @State private var viewMode: FileViewMode = .tree
     @State private var extensionFilter: String? = nil
-    @State private var themeRefreshTrigger = UUID()
+    @State private var searchText: String = ""
     @Namespace private var animation
 
     // Section heights for resize functionality
     @State private var unstagedHeight: CGFloat = 200
     @State private var stagedHeight: CGFloat = 200
     @State private var commitHeight: CGFloat = 150
+
+    // Pagination for large file lists
+    private let maxVisibleFiles = 500
+    @State private var unstagedOffset = 0
+    @State private var stagedOffset = 0
 
     private var repoPath: String {
         appState.currentRepository?.path ?? ""
@@ -33,7 +37,6 @@ struct StagingAreaView: View {
             VStack(spacing: 0) {
                 // View mode and filter toolbar
                 fileToolbar
-                    .id(themeRefreshTrigger)
 
                 // Conflicted files (if any)
                 if !viewModel.conflictedFiles.isEmpty {
@@ -142,12 +145,6 @@ struct StagingAreaView: View {
                 Task { await viewModel.loadStatus(for: repo) }
             }
         }
-        .onChange(of: themeManager.currentTheme) { _, _ in
-            themeRefreshTrigger = UUID()
-        }
-        .onChange(of: themeManager.customColors) { _, _ in
-            themeRefreshTrigger = UUID()
-        }
         .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { notification in
             // Refresh when stash apply/pop, commit, or other operations complete
             if let path = notification.object as? String,
@@ -167,72 +164,139 @@ struct StagingAreaView: View {
     // MARK: - Toolbar
 
     private var fileToolbar: some View {
-        HStack(spacing: DesignTokens.Spacing.sm) {
-            // View mode picker (custom segmented control)
-            HStack(spacing: 0) {
-                Button(action: { viewMode = .flat }) {
-                    Image(systemName: "list.bullet")
-                        .font(DesignTokens.Typography.body)
-                        .foregroundColor(viewMode == .flat ? AppTheme.accent : AppTheme.textSecondary)
-                        .frame(width: 35, height: 22)
-                        .background(viewMode == .flat ? AppTheme.accent.opacity(0.15) : Color.clear)
-                }
-                .buttonStyle(.plain)
-                .help("List view")
+        VStack(spacing: 0) {
+            // Main toolbar row
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                // View mode picker (custom segmented control)
+                HStack(spacing: 0) {
+                    Button(action: { viewMode = .flat }) {
+                        Image(systemName: "list.bullet")
+                            .font(DesignTokens.Typography.body)
+                            .foregroundColor(viewMode == .flat ? AppTheme.accent : AppTheme.textSecondary)
+                            .frame(width: 35, height: 22)
+                            .background(viewMode == .flat ? AppTheme.accent.opacity(0.15) : Color.clear)
+                    }
+                    .buttonStyle(.plain)
+                    .help("List view")
 
-                Button(action: { viewMode = .tree }) {
-                    Image(systemName: "folder.fill")
-                        .font(DesignTokens.Typography.body)
-                        .foregroundColor(viewMode == .tree ? AppTheme.accent : AppTheme.textSecondary)
-                        .frame(width: 35, height: 22)
-                        .background(viewMode == .tree ? AppTheme.accent.opacity(0.15) : Color.clear)
+                    Button(action: { viewMode = .tree }) {
+                        Image(systemName: "folder.fill")
+                            .font(DesignTokens.Typography.body)
+                            .foregroundColor(viewMode == .tree ? AppTheme.accent : AppTheme.textSecondary)
+                            .frame(width: 35, height: 22)
+                            .background(viewMode == .tree ? AppTheme.accent.opacity(0.15) : Color.clear)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Tree view")
                 }
-                .buttonStyle(.plain)
-                .help("Tree view")
-            }
-            .background(Color(nsColor: .controlBackgroundColor))
-            .cornerRadius(DesignTokens.CornerRadius.md)
-            .overlay(
-                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
-                    .stroke(Color.Theme(themeManager.colors).border, lineWidth: 0.5)
-            )
+                .background(AppTheme.backgroundTertiary)
+                .cornerRadius(DesignTokens.CornerRadius.md)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
+                        .stroke(AppTheme.border, lineWidth: 0.5)
+                )
 
-            Divider().frame(height: DesignTokens.Size.iconMD)
+                // Search bar
+                HStack(spacing: 4) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 11))
+                        .foregroundColor(AppTheme.textMuted)
 
-            // Extension filter
-            Menu {
-                Button("All Files") {
-                    extensionFilter = nil
-                }
-                Divider()
-                ForEach(viewModel.availableExtensions, id: \.self) { ext in
-                    Button {
-                        extensionFilter = ext
-                    } label: {
-                        HStack {
-                            Image(systemName: "doc.fill")
-                            Text(".\(ext)")
-                            Spacer()
-                            Text("\(viewModel.fileCountForExtension(ext))")
+                    TextField("Search files...", text: $searchText)
+                        .textFieldStyle(.plain)
+                        .font(DesignTokens.Typography.caption)
+
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(AppTheme.textMuted)
                         }
+                        .buttonStyle(.plain)
                     }
                 }
-            } label: {
-                Image(systemName: "line.3.horizontal.decrease.circle")
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(AppTheme.backgroundTertiary)
+                .cornerRadius(DesignTokens.CornerRadius.md)
+                .frame(maxWidth: 200)
+
+                // Extension filter
+                Menu {
+                    Button("All Files") {
+                        extensionFilter = nil
+                    }
+                    Divider()
+                    ForEach(viewModel.availableExtensions, id: \.self) { ext in
+                        Button {
+                            extensionFilter = ext
+                        } label: {
+                            HStack {
+                                Image(systemName: "doc.fill")
+                                Text(".\(ext)")
+                                Spacer()
+                                Text("\(viewModel.fileCountForExtension(ext))")
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: extensionFilter != nil ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                }
+                .tint(extensionFilter != nil ? AppTheme.accent : AppTheme.textSecondary)
+                .menuStyle(.borderlessButton)
+
+                Spacer()
+
+                // File count with warning for large lists
+                if viewModel.totalFileCount > maxVisibleFiles {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(AppTheme.warning)
+                        Text("\(viewModel.totalFileCount) files (showing \(maxVisibleFiles))")
+                            .font(DesignTokens.Typography.caption)
+                            .foregroundColor(AppTheme.warning)
+                    }
+                    .help("Use search or filter to narrow down the file list")
+                } else {
+                    Text("\(viewModel.totalFileCount) files")
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+                }
             }
-            .tint(AppTheme.textSecondary)
-            .menuStyle(.borderlessButton)
+            .padding(.horizontal, DesignTokens.Spacing.md)
+            .padding(.vertical, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
+            .background(AppTheme.backgroundSecondary)
 
-            Spacer()
-
-            // File count
-            Text("\(viewModel.totalFileCount) files")
-                .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+            // Active filters indicator
+            if extensionFilter != nil || !searchText.isEmpty {
+                HStack(spacing: DesignTokens.Spacing.xs) {
+                    if let ext = extensionFilter {
+                        ActiveFilterTag(label: ".\(ext)") {
+                            extensionFilter = nil
+                        }
+                    }
+                    if !searchText.isEmpty {
+                        ActiveFilterTag(label: "\"\(searchText)\"") {
+                            searchText = ""
+                        }
+                    }
+                    Spacer()
+                    Button("Clear all") {
+                        extensionFilter = nil
+                        searchText = ""
+                    }
+                    .font(DesignTokens.Typography.caption2)
+                    .foregroundColor(AppTheme.accent)
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, DesignTokens.Spacing.md)
+                .padding(.vertical, DesignTokens.Spacing.xxs)
+                .background(AppTheme.accent.opacity(0.08))
+            }
         }
-        .padding(.horizontal, DesignTokens.Spacing.md)
-        .padding(.vertical, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
-        .background(Color(nsColor: .controlBackgroundColor))
     }
 
     // MARK: - Sections
@@ -309,8 +373,9 @@ struct StagingAreaView: View {
                 FileTreeView(
                     files: filteredUnstagedFiles,
                     untrackedFiles: filteredUntrackedFiles,
-                    selectedFile: $selectedFile,
+                    selectedFile: selectedFile,
                     namespace: animation,
+                    onSelect: { path in selectedFile = path },
                     onStage: { path in Task { await viewModel.stage(file: path) } },
                     onDiscard: { path in Task { await viewModel.discardChanges(file: path) } },
                     onStageFolder: { folder in Task { await viewModel.stageFolder(folder) } }
@@ -368,8 +433,8 @@ struct StagingAreaView: View {
                     }
                 }
             } else {
-                // No filter - show all files together
-                ForEach(filteredUnstagedFiles) { file in
+                // No filter - show paginated files for performance
+                ForEach(paginatedUnstagedFiles) { file in
                     FileRow(
                         file: file,
                         isSelected: selectedFile == file.path,
@@ -379,13 +444,21 @@ struct StagingAreaView: View {
                     )
                 }
 
-                ForEach(filteredUntrackedFiles, id: \.self) { path in
+                ForEach(paginatedUntrackedFiles, id: \.self) { path in
                     UntrackedFileRow(
                         path: path,
                         isSelected: selectedFile == path,
                         namespace: animation,
                         onSelect: { selectedFile = path },
                         onStage: { Task { await viewModel.stage(file: path) } }
+                    )
+                }
+
+                // Show "more files" indicator
+                if hasMoreUnstagedFiles {
+                    MoreFilesIndicator(
+                        count: (filteredUnstagedFiles.count + filteredUntrackedFiles.count) - maxVisibleFiles,
+                        message: "Use search to find specific files"
                     )
                 }
             }
@@ -439,17 +512,18 @@ struct StagingAreaView: View {
     private var stagedContent: some View {
         if viewMode == .tree {
             FileTreeView(
-                files: filteredStagedFiles,
+                files: paginatedStagedFiles,
                 untrackedFiles: [],
-                selectedFile: $selectedFile,
+                selectedFile: selectedFile,
                 isStaged: true,
                 namespace: animation,
+                onSelect: { path in selectedFile = path },
                 onUnstage: { path in Task { await viewModel.unstage(file: path) } },
                 onUnstageFolder: { folder in Task { await viewModel.unstageFolder(folder) } },
                 onDiscardStaged: { path in Task { await viewModel.discardStagedFile(path) } }
             )
         } else {
-            ForEach(filteredStagedFiles) { file in
+            ForEach(paginatedStagedFiles) { file in
                 FileRow(
                     file: file,
                     isSelected: selectedFile == file.path,
@@ -458,6 +532,14 @@ struct StagingAreaView: View {
                     onDiscardStaged: { await viewModel.discardStagedFile(file.path) }
                 )
             }
+        }
+
+        // Show "more files" indicator for staged
+        if hasMoreStagedFiles {
+            MoreFilesIndicator(
+                count: filteredStagedFiles.count - maxVisibleFiles,
+                message: "Use search to find specific files"
+            )
         }
     }
 
@@ -469,23 +551,130 @@ struct StagingAreaView: View {
             .padding()
     }
 
-    // MARK: - Filtered Files
+    // MARK: - Filtered Files (with search and extension filter)
+
+    private func applyFilters(_ files: [FileStatus]) -> [FileStatus] {
+        var result = files
+
+        // Apply extension filter
+        if let ext = extensionFilter {
+            result = result.filter { $0.fileExtension == ext }
+        }
+
+        // Apply search filter
+        if !searchText.isEmpty {
+            let search = searchText.lowercased()
+            result = result.filter { $0.path.lowercased().contains(search) }
+        }
+
+        return result
+    }
 
     private var filteredUnstagedFiles: [FileStatus] {
-        guard let ext = extensionFilter else { return viewModel.unstagedFiles }
-        return viewModel.unstagedFiles.filter { $0.fileExtension == ext }
+        applyFilters(viewModel.unstagedFiles)
     }
 
     private var filteredUntrackedFiles: [String] {
-        guard let ext = extensionFilter else { return viewModel.untrackedFiles }
-        return viewModel.untrackedFiles.filter {
-            (URL(fileURLWithPath: $0).pathExtension.lowercased()) == ext
+        var result = viewModel.untrackedFiles
+
+        // Apply extension filter
+        if let ext = extensionFilter {
+            result = result.filter {
+                URL(fileURLWithPath: $0).pathExtension.lowercased() == ext
+            }
         }
+
+        // Apply search filter
+        if !searchText.isEmpty {
+            let search = searchText.lowercased()
+            result = result.filter { $0.lowercased().contains(search) }
+        }
+
+        return result
     }
 
     private var filteredStagedFiles: [FileStatus] {
-        guard let ext = extensionFilter else { return viewModel.stagedFiles }
-        return viewModel.stagedFiles.filter { $0.fileExtension == ext }
+        applyFilters(viewModel.stagedFiles)
+    }
+
+    // Paginated versions for display
+    private var paginatedUnstagedFiles: [FileStatus] {
+        Array(filteredUnstagedFiles.prefix(maxVisibleFiles))
+    }
+
+    private var paginatedUntrackedFiles: [String] {
+        Array(filteredUntrackedFiles.prefix(maxVisibleFiles))
+    }
+
+    private var paginatedStagedFiles: [FileStatus] {
+        Array(filteredStagedFiles.prefix(maxVisibleFiles))
+    }
+
+    private var hasMoreUnstagedFiles: Bool {
+        filteredUnstagedFiles.count + filteredUntrackedFiles.count > maxVisibleFiles
+    }
+
+    private var hasMoreStagedFiles: Bool {
+        filteredStagedFiles.count > maxVisibleFiles
+    }
+}
+
+// MARK: - More Files Indicator
+
+private struct MoreFilesIndicator: View {
+    let count: Int
+    let message: String
+
+    var body: some View {
+        HStack(spacing: DesignTokens.Spacing.sm) {
+            Image(systemName: "ellipsis.circle")
+                .foregroundColor(AppTheme.warning)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("+\(count) more files not shown")
+                    .font(DesignTokens.Typography.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(AppTheme.warning)
+
+                Text(message)
+                    .font(DesignTokens.Typography.caption2)
+                    .foregroundColor(AppTheme.textMuted)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, DesignTokens.Spacing.md)
+        .padding(.vertical, DesignTokens.Spacing.sm)
+        .background(AppTheme.warning.opacity(0.1))
+        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .padding(.horizontal, DesignTokens.Spacing.sm)
+        .padding(.vertical, DesignTokens.Spacing.xs)
+    }
+}
+
+// MARK: - Active Filter Tag
+
+private struct ActiveFilterTag: View {
+    let label: String
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(label)
+                .font(DesignTokens.Typography.caption2)
+                .foregroundColor(AppTheme.accent)
+
+            Button(action: onRemove) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(AppTheme.accent)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(AppTheme.accent.opacity(0.15))
+        .cornerRadius(DesignTokens.CornerRadius.sm)
     }
 }
 
@@ -786,9 +975,6 @@ struct ConflictedFileRow: View {
     var onSelect: () -> Void = {}
     var onResolve: () -> Void = {}
 
-    @StateObject private var themeManager = ThemeManager.shared
-    @State private var isHovered = false
-
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             // Conflict indicator
@@ -831,7 +1017,6 @@ struct ConflictedFileRow: View {
         .background(isSelected ? AppTheme.accent.opacity(0.2) : AppTheme.error.opacity(0.05))
         .contentShape(Rectangle())
         .onTapGesture { onSelect() }
-        .onHover { isHovered = $0 }
         .contextMenu {
             Button {
                 onResolve()
@@ -1032,9 +1217,6 @@ struct UntrackedFileRow: View {
     var onSelect: () -> Void = {}
     var onStage: (() -> Void)? = nil
 
-    @StateObject private var themeManager = ThemeManager.shared
-    @State private var isHovered = false
-
     var filename: String {
         URL(fileURLWithPath: path).lastPathComponent
     }
@@ -1047,8 +1229,8 @@ struct UntrackedFileRow: View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             StatusIcon(status: .untracked)
 
-            Image(systemName: "doc.fill") // FileTypeIcon.systemIcon(for: filename))
-                .foregroundColor(AppTheme.accent) // FileTypeIcon.color(for: filename))
+            Image(systemName: "doc.fill")
+                .foregroundColor(AppTheme.accent)
                 .frame(width: DesignTokens.Size.iconMD)
 
             VStack(alignment: .leading, spacing: 0) {
@@ -1064,23 +1246,12 @@ struct UntrackedFileRow: View {
             }
 
             Spacer()
-
-            if isHovered, let stage = onStage {
-                DSIconButton(iconName: "plus.circle", variant: .ghost, size: .sm) {
-                    stage()
-                }
-                .help("Stage")
-            }
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
-        .background(isSelected ? AppTheme.accent.opacity(0.2) : (isHovered ? AppTheme.textSecondary.opacity(0.1) : Color.clear))
+        .background(isSelected ? AppTheme.accent.opacity(0.2) : Color.clear)
         .contentShape(Rectangle())
         .onTapGesture { onSelect() }
-        .onHover { isHovered = $0 }
-        .scaleEffect(isHovered ? 1.02 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHovered)
-        .matchedGeometryEffect(id: path, in: namespace ?? Namespace().wrappedValue, isSource: true)
         .contextMenu {
             if let stage = onStage {
                 Button {
@@ -1133,7 +1304,6 @@ struct FileStatusSeparator: View {
     let count: Int
     let color: Color
 
-    @StateObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.sm) {
@@ -1168,7 +1338,7 @@ struct DiffPreviewView: View {
     let staged: Bool
     var gitService: GitService?
 
-    @StateObject private var themeManager = ThemeManager.shared
+
     @State private var diff = ""
     @State private var hunks: [DiffHunk] = []
     @State private var isLoading = true
@@ -1197,7 +1367,7 @@ struct DiffPreviewView: View {
                 }
             }
             .padding()
-            .background(Color(nsColor: .controlBackgroundColor))
+            .background(AppTheme.backgroundSecondary)
 
             Divider()
 
@@ -1303,7 +1473,7 @@ struct AICommitMessageSheet: View {
     @Binding var message: String
     let diff: String
 
-    @StateObject private var themeManager = ThemeManager.shared
+
     @State private var generatedMessage = ""
     @State private var isGenerating = false
     @State private var error: String?
@@ -1402,14 +1572,31 @@ struct AICommitMessageSheet: View {
     }
 }
 
-// MARK: - File Tree View
+// MARK: - Flat Tree Item (for virtualized rendering)
+
+struct FlatTreeItem: Identifiable {
+    let id: String
+    let name: String
+    let path: String
+    let isFolder: Bool
+    let depth: Int  // Indentation level
+    let fileCount: Int  // For folders
+    let file: FileStatus?
+    let isUntracked: Bool
+    let hasChildren: Bool
+}
+
+// MARK: - File Tree View (Flattened for performance)
 
 struct FileTreeView: View {
     let files: [FileStatus]
     let untrackedFiles: [String]
-    @Binding var selectedFile: String?
+    let selectedFile: String?
     var isStaged: Bool = false
     var namespace: Namespace.ID? = nil
+
+    // Selection callback
+    var onSelect: ((String) -> Void)? = nil
 
     // Callbacks for unstaged files
     var onStage: ((String) -> Void)? = nil
@@ -1421,20 +1608,28 @@ struct FileTreeView: View {
     var onUnstageFolder: ((String) -> Void)? = nil
     var onDiscardStaged: ((String) -> Void)? = nil
 
-    // Section identifier for expansion state (prevents conflicts between staged/unstaged)
+    // Section identifier for expansion state
     private var section: String {
         isStaged ? "staged" : "unstaged"
     }
 
+    // Flattened tree for virtualized rendering
+    @State private var flatItems: [FlatTreeItem] = []
+    @State private var lastFileCount: Int = -1
+    @State private var lastUntrackedCount: Int = -1
+    @State private var expandedPaths: Set<String> = []
+    @State private var refreshTrigger: Int = 0
+
     var body: some View {
-        let tree = buildTree()
-        ForEach(tree.children.sorted(by: { $0.name < $1.name })) { node in
-            TreeNodeView(
-                node: node,
-                selectedFile: $selectedFile,
+        // Use ForEach with explicit id for stable identity during scroll
+        ForEach(flatItems, id: \.id) { item in
+            FlatTreeRowView(
+                item: item,
+                isSelected: selectedFile == item.path,
+                isExpanded: expandedPaths.contains(item.path),
                 isStaged: isStaged,
-                section: section,
-                namespace: namespace,
+                onToggle: { toggleExpansion(item.path) },
+                onSelect: { onSelect?(item.path) },
                 onStage: onStage,
                 onDiscard: onDiscard,
                 onStageFolder: onStageFolder,
@@ -1442,53 +1637,296 @@ struct FileTreeView: View {
                 onUnstageFolder: onUnstageFolder,
                 onDiscardStaged: onDiscardStaged
             )
+            .id(item.id)  // Stable identity for virtualization
+        }
+        .onAppear {
+            loadExpandedState()
+            rebuildFlatListIfNeeded()
+        }
+        .onChange(of: files.count) { _, _ in
+            rebuildFlatListIfNeeded()
+        }
+        .onChange(of: untrackedFiles.count) { _, _ in
+            rebuildFlatListIfNeeded()
         }
     }
 
-    private func buildTree() -> FileTreeNode {
-        let root = FileTreeNode(name: "", path: "", isFolder: true, section: section)
+    private func loadExpandedState() {
+        // Load expansion state from TreeExpansionState
+        expandedPaths = TreeExpansionState.shared.expandedPaths(for: section)
+    }
+
+    private func toggleExpansion(_ path: String) {
+        if expandedPaths.contains(path) {
+            expandedPaths.remove(path)
+        } else {
+            expandedPaths.insert(path)
+        }
+        TreeExpansionState.shared.setExpanded(path, section: section, expanded: expandedPaths.contains(path))
+        rebuildFlatList()
+    }
+
+    private func rebuildFlatListIfNeeded() {
+        let fileCount = files.count
+        let untrackedCount = untrackedFiles.count
+
+        guard fileCount != lastFileCount || untrackedCount != lastUntrackedCount else { return }
+
+        lastFileCount = fileCount
+        lastUntrackedCount = untrackedCount
+        rebuildFlatList()
+    }
+
+    private func rebuildFlatList() {
+        let root = FileTreeBuilder.buildTree(
+            files: files,
+            untrackedFiles: untrackedFiles,
+            section: section
+        )
+        flatItems = flattenTree(root.children, depth: 0)
+    }
+
+    private func flattenTree(_ nodes: [FileTreeNode], depth: Int) -> [FlatTreeItem] {
+        var result: [FlatTreeItem] = []
+        for node in nodes {
+            let item = FlatTreeItem(
+                id: node.id,
+                name: node.name,
+                path: node.path,
+                isFolder: node.isFolder,
+                depth: depth,
+                fileCount: node.cachedFileCount,
+                file: node.file,
+                isUntracked: node.isUntracked,
+                hasChildren: !node.children.isEmpty
+            )
+            result.append(item)
+
+            // Only add children if folder is expanded
+            if node.isFolder && expandedPaths.contains(node.path) {
+                result.append(contentsOf: flattenTree(node.children, depth: depth + 1))
+            }
+        }
+        return result
+    }
+}
+
+// MARK: - Flat Tree Row View (single row, no nesting)
+
+struct FlatTreeRowView: View {
+    let item: FlatTreeItem
+    let isSelected: Bool
+    let isExpanded: Bool
+    let isStaged: Bool
+    let onToggle: () -> Void
+    let onSelect: () -> Void
+    var onStage: ((String) -> Void)?
+    var onDiscard: ((String) -> Void)?
+    var onStageFolder: ((String) -> Void)?
+    var onUnstage: ((String) -> Void)?
+    var onUnstageFolder: ((String) -> Void)?
+    var onDiscardStaged: ((String) -> Void)?
+
+    var body: some View {
+        HStack(spacing: DesignTokens.Spacing.xs) {
+            // Indentation
+            if item.depth > 0 {
+                Color.clear.frame(width: CGFloat(item.depth) * 16)
+            }
+
+            if item.isFolder {
+                folderContent
+            } else {
+                fileContent
+            }
+        }
+        .padding(.horizontal, DesignTokens.Spacing.md)
+        .padding(.vertical, DesignTokens.Spacing.xs)
+        .background(isSelected && !item.isFolder ? AppTheme.accent.opacity(0.2) : Color.clear)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if item.isFolder {
+                onToggle()
+            } else {
+                onSelect()
+            }
+        }
+        .contextMenu { contextMenuContent }
+    }
+
+    @ViewBuilder
+    private var folderContent: some View {
+        HStack(spacing: DesignTokens.Spacing.sm) {
+            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                .font(DesignTokens.Typography.callout)
+                .fontWeight(.bold)
+                .foregroundColor(AppTheme.textSecondary.opacity(0.6))
+                .frame(width: DesignTokens.Size.iconLG)
+
+            Image(systemName: isExpanded ? "folder.fill" : "folder")
+                .foregroundColor(AppTheme.warning)
+                .frame(width: DesignTokens.Size.iconMD)
+
+            Text(item.name)
+                .lineLimit(1)
+
+            Text("(\(item.fileCount))")
+                .font(DesignTokens.Typography.caption)
+                .foregroundColor(AppTheme.textSecondary)
+
+            Spacer()
+        }
+    }
+
+    @ViewBuilder
+    private var fileContent: some View {
+        // Indent space for alignment with folder chevron
+        Color.clear.frame(width: DesignTokens.Size.iconLG)
+
+        // Status icon
+        if let file = item.file {
+            StatusIcon(status: file.status)
+        } else if item.isUntracked {
+            StatusIcon(status: .untracked)
+        }
+
+        // File icon
+        Image(systemName: "doc.fill")
+            .foregroundColor(AppTheme.accent)
+            .frame(width: DesignTokens.Size.iconMD)
+
+        // Filename
+        Text(item.name)
+            .lineLimit(1)
+
+        Spacer()
+
+        // Line change counters (don't show for deleted files)
+        if let file = item.file, file.hasChanges, file.status != .deleted {
+            DiffStatsView(additions: file.additions, deletions: file.deletions)
+        }
+    }
+
+    @ViewBuilder
+    private var contextMenuContent: some View {
+        if item.isFolder {
+            if isStaged {
+                Button { onUnstageFolder?(item.path) } label: {
+                    Label("Unstage Folder", systemImage: "minus.circle")
+                }
+            } else {
+                Button { onStageFolder?(item.path) } label: {
+                    Label("Stage Folder", systemImage: "plus.circle")
+                }
+            }
+        } else {
+            if isStaged {
+                Button { onUnstage?(item.path) } label: {
+                    Label("Unstage File", systemImage: "minus.circle")
+                }
+                if onDiscardStaged != nil {
+                    Divider()
+                    Button(role: .destructive) { onDiscardStaged?(item.path) } label: {
+                        Label("Unstage & Revert", systemImage: "trash")
+                    }
+                }
+            } else {
+                Button { onStage?(item.path) } label: {
+                    Label("Stage File", systemImage: "plus.circle")
+                }
+                if !item.isUntracked, let discard = onDiscard {
+                    Divider()
+                    Button(role: .destructive) { discard(item.path) } label: {
+                        Label("Revert Changes", systemImage: "arrow.uturn.backward")
+                    }
+                }
+            }
+        }
+
+        Divider()
+
+        Button {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(item.path, forType: .string)
+        } label: {
+            Label("Copy Path", systemImage: "doc.on.doc")
+        }
+    }
+}
+
+// MARK: - Tree Builder (static for caching)
+
+enum FileTreeBuilder {
+    static func buildTree(files: [FileStatus], untrackedFiles: [String], section: String) -> FileTreeNode {
+        var root = FileTreeNode(name: "", path: "", isFolder: true, section: section)
 
         // Add FileStatus files
         for file in files {
-            addToTree(root: root, path: file.path, file: file, isUntracked: false)
+            addToTree(root: &root, path: file.path, file: file, isUntracked: false, section: section)
         }
 
         // Add untracked files
         for path in untrackedFiles {
-            addToTree(root: root, path: path, file: nil, isUntracked: true)
+            addToTree(root: &root, path: path, file: nil, isUntracked: true, section: section)
         }
+
+        // Post-process: compute file counts and sort children (once, not during render)
+        finalizeNode(&root)
 
         return root
     }
 
-    private func addToTree(root: FileTreeNode, path: String, file: FileStatus?, isUntracked: Bool) {
+    /// Post-process to compute file counts and sort children
+    private static func finalizeNode(_ node: inout FileTreeNode) {
+        if node.isFolder {
+            // First finalize all children
+            for i in node.children.indices {
+                finalizeNode(&node.children[i])
+            }
+            // Sort children: folders first, then alphabetically
+            node.children.sort { a, b in
+                if a.isFolder && !b.isFolder { return true }
+                if !a.isFolder && b.isFolder { return false }
+                return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
+            }
+            // Compute file count from children
+            node.cachedFileCount = node.children.reduce(0) { $0 + $1.cachedFileCount }
+        } else {
+            node.cachedFileCount = 1
+        }
+    }
+
+    private static func addToTree(root: inout FileTreeNode, path: String, file: FileStatus?, isUntracked: Bool, section: String) {
         let components = path.split(separator: "/").map(String.init)
-        var current = root
+        addToNode(node: &root, components: components, index: 0, file: file, isUntracked: isUntracked, section: section)
+    }
 
-        for (index, component) in components.enumerated() {
-            let isLast = index == components.count - 1
-            let currentPath = components[0...index].joined(separator: "/")
+    private static func addToNode(node: inout FileTreeNode, components: [String], index: Int, file: FileStatus?, isUntracked: Bool, section: String) {
+        guard index < components.count else { return }
 
-            if isLast {
-                // This is a file
-                let fileNode = FileTreeNode(
-                    name: component,
-                    path: currentPath,
-                    isFolder: false,
-                    file: file,
-                    isUntracked: isUntracked,
-                    section: section
-                )
-                current.children.append(fileNode)
+        let component = components[index]
+        let isLast = index == components.count - 1
+        let currentPath = components[0...index].joined(separator: "/")
+
+        if isLast {
+            // This is a file
+            let fileNode = FileTreeNode(
+                name: component,
+                path: currentPath,
+                isFolder: false,
+                file: file,
+                isUntracked: isUntracked,
+                section: section
+            )
+            node.children.append(fileNode)
+        } else {
+            // This is a folder - find or create
+            if let existingIndex = node.children.firstIndex(where: { $0.name == component && $0.isFolder }) {
+                addToNode(node: &node.children[existingIndex], components: components, index: index + 1, file: file, isUntracked: isUntracked, section: section)
             } else {
-                // This is a folder - find or create
-                if let existing = current.children.first(where: { $0.name == component && $0.isFolder }) {
-                    current = existing
-                } else {
-                    let folderNode = FileTreeNode(name: component, path: currentPath, isFolder: true, section: section)
-                    current.children.append(folderNode)
-                    current = folderNode
-                }
+                var folderNode = FileTreeNode(name: component, path: currentPath, isFolder: true, section: section)
+                addToNode(node: &folderNode, components: components, index: index + 1, file: file, isUntracked: isUntracked, section: section)
+                node.children.append(folderNode)
             }
         }
     }
@@ -1496,9 +1934,9 @@ struct FileTreeView: View {
 
 // MARK: - TreeExpansionState moved to UI/Components/FileTree/TreeExpansionState.swift
 
-// MARK: - Tree Node Model
+// MARK: - Tree Node Model (struct for performance)
 
-class FileTreeNode: Identifiable, ObservableObject {
+struct FileTreeNode: Identifiable {
     let id: String
     let name: String
     let path: String
@@ -1507,6 +1945,7 @@ class FileTreeNode: Identifiable, ObservableObject {
     var file: FileStatus?
     var isUntracked: Bool
     var children: [FileTreeNode] = []
+    var cachedFileCount: Int = 0  // Pre-computed to avoid recursive calls during render
 
     init(name: String, path: String, isFolder: Bool, file: FileStatus? = nil, isUntracked: Bool = false, section: String = "") {
         self.name = name
@@ -1515,364 +1954,8 @@ class FileTreeNode: Identifiable, ObservableObject {
         self.section = section
         self.file = file
         self.isUntracked = isUntracked
-        // Create stable ID using section and path
         self.id = section.isEmpty ? (path.isEmpty ? "root" : path) : "\(section):\(path.isEmpty ? "root" : path)"
-    }
-
-    var fileCount: Int {
-        if isFolder {
-            return children.reduce(0) { $0 + $1.fileCount }
-        }
-        return 1
-    }
-}
-
-// MARK: - Tree Node View
-
-struct TreeNodeView: View {
-    @ObservedObject var node: FileTreeNode
-    @Binding var selectedFile: String?
-    var isStaged: Bool
-    var section: String = ""
-    var namespace: Namespace.ID? = nil
-    var onStage: ((String) -> Void)?
-    var onDiscard: ((String) -> Void)?
-    var onStageFolder: ((String) -> Void)?
-    var onUnstage: ((String) -> Void)?
-    var onUnstageFolder: ((String) -> Void)?
-    var onDiscardStaged: ((String) -> Void)?
-
-    @StateObject private var themeManager = ThemeManager.shared
-    @ObservedObject private var expansionState = TreeExpansionState.shared
-    @State private var isHovered = false
-
-    private var isExpanded: Bool {
-        expansionState.isExpanded(node.path, section: section)
-    }
-
-    var body: some View {
-        let theme = Color.Theme(themeManager.colors)
-
-        if node.isFolder {
-            folderView(theme)
-        } else {
-            fileView(theme)
-        }
-    }
-
-    @ViewBuilder
-    private func folderView(_ theme: Color.Theme) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Folder header
-            HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
-                // Clickable folder name area - LARGE CLICKABLE AREA
-                HStack(spacing: DesignTokens.Spacing.sm) {
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(DesignTokens.Typography.callout)
-                        .fontWeight(.bold)
-                        .foregroundColor(isHovered ? .primary : theme.textSecondary.opacity(0.6))
-                        .frame(width: DesignTokens.Size.iconLG)
-
-                    Image(systemName: isExpanded ? "folder.fill" : "folder")
-                        .foregroundColor(AppTheme.warning)
-                        .frame(width: DesignTokens.Size.iconMD + DesignTokens.Spacing.xxs)
-
-                    Text(node.name)
-                        .lineLimit(1)
-                        .fontWeight(isHovered ? .medium : .regular)
-
-                    Text("(\(node.fileCount))")
-                        .font(DesignTokens.Typography.caption)
-                        .foregroundColor(theme.textSecondary)
-                }
-                .padding(.horizontal, DesignTokens.Spacing.sm)
-                .padding(.vertical, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
-                .background(
-                    RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
-                        .fill(isHovered ? AppTheme.textSecondary.opacity(0.15) : Color.clear)
-                )
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    withAnimation(.easeInOut(duration: 0.15)) {
-                        expansionState.toggle(node.path, section: section)
-                    }
-                }
-                .onHover { hovering in
-                    if hovering {
-                        NSCursor.pointingHand.push()
-                    } else {
-                        NSCursor.pop()
-                    }
-                }
-                .help(isExpanded ? "Click to collapse folder" : "Click to expand folder")
-
-                Spacer()
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            expansionState.toggle(node.path, section: section)
-                        }
-                    }
-
-                // Folder actions on hover
-                if isHovered {
-                    if isStaged {
-                        if let unstageFolder = onUnstageFolder {
-                            DSIconButton(iconName: "minus.circle", variant: .ghost, size: .sm) {
-                                unstageFolder(node.path)
-                            }
-                            .help("Unstage Folder")
-                        }
-                    } else {
-                        if let stageFolder = onStageFolder {
-                            DSIconButton(iconName: "plus.circle", variant: .ghost, size: .sm) {
-                                stageFolder(node.path)
-                            }
-                            .help("Stage Folder")
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal, DesignTokens.Spacing.md)
-            .padding(.vertical, DesignTokens.Spacing.xs)
-            .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading)
-            .background(isHovered ? AppTheme.textSecondary.opacity(0.1) : Color.clear)
-            .onHover { isHovered = $0 }
-            .contextMenu {
-                if isStaged {
-                    Button {
-                        onUnstageFolder?(node.path)
-                    } label: {
-                        Label("Unstage Folder", systemImage: "minus.circle")
-                    }
-                } else {
-                    Button {
-                        onStageFolder?(node.path)
-                    } label: {
-                        Label("Stage Folder", systemImage: "plus.circle")
-                    }
-                    
-                    // Discard all changes in folder
-                    if onDiscard != nil {
-                        Divider()
-                        
-                        Button(role: .destructive) {
-                            // Discard all files in this folder
-                            discardFilesInFolder(node)
-                        } label: {
-                            Label("Discard Changes in Folder", systemImage: "arrow.uturn.backward")
-                        }
-                    }
-                }
-
-                Divider()
-
-                Button {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(node.path, forType: .string)
-                } label: {
-                    Label("Copy Path", systemImage: "doc.on.doc")
-                }
-                
-                Button {
-                    NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: node.path)
-                } label: {
-                    Label("Reveal in Finder", systemImage: "folder")
-                }
-            }
-
-            // Children
-            if isExpanded {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(node.children.sorted(by: sortNodes)) { child in
-                        TreeNodeView(
-                            node: child,
-                            selectedFile: $selectedFile,
-                            isStaged: isStaged,
-                            section: section,
-                            namespace: namespace,
-                            onStage: onStage,
-                            onDiscard: onDiscard,
-                            onStageFolder: onStageFolder,
-                            onUnstage: onUnstage,
-                            onUnstageFolder: onUnstageFolder,
-                            onDiscardStaged: onDiscardStaged
-                        )
-                        .padding(.leading, 16)
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func fileView(_ theme: Color.Theme) -> some View {
-        HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
-            // Indent space for alignment
-            Color.clear.frame(width: DesignTokens.Spacing.md)
-
-            // Status icon
-            if let file = node.file {
-                StatusIcon(status: file.status)
-            } else if node.isUntracked {
-                StatusIcon(status: .untracked)
-            }
-
-            // File icon
-            Image(systemName: "doc.fill") // FileTypeIcon.systemIcon(for: node.name))
-                .foregroundColor(AppTheme.accent) // FileTypeIcon.color(for: node.name))
-                .frame(width: DesignTokens.Size.iconMD)
-
-            // Filename
-            Text(node.name)
-                .lineLimit(1)
-
-            Spacer()
-
-            // Line change counters
-            if let file = node.file, file.hasChanges {
-                DiffStatsView(additions: file.additions, deletions: file.deletions)
-            }
-
-            // Actions on hover
-            if isHovered {
-                if isStaged {
-                    if let unstage = onUnstage {
-                        DSIconButton(iconName: "minus.circle", variant: .ghost, size: .sm) {
-                            unstage(node.path)
-                        }
-                        .help("Unstage")
-                    }
-                    if let discardStaged = onDiscardStaged {
-                        DSIconButton(iconName: "xmark.circle", variant: .ghost, size: .sm) {
-                            discardStaged(node.path)
-                        }
-                        .help("Discard staged changes")
-                    }
-                } else {
-                    if let stage = onStage {
-                        DSIconButton(iconName: "plus.circle", variant: .ghost, size: .sm) {
-                            stage(node.path)
-                        }
-                        .help("Stage")
-                    }
-
-                    if let discard = onDiscard, !node.isUntracked {
-                        DSIconButton(iconName: "xmark.circle", variant: .ghost, size: .sm) {
-                            discard(node.path)
-                        }
-                        .help("Discard")
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, DesignTokens.Spacing.md)
-        .padding(.vertical, DesignTokens.Spacing.xs)
-        .background(selectedFile == node.path ? AppTheme.accent.opacity(0.2) : Color.clear)
-        .contextMenu {
-            if isStaged {
-                Button {
-                    onUnstage?(node.path)
-                } label: {
-                    Label("Unstage File", systemImage: "minus.circle")
-                }
-                
-                if onDiscardStaged != nil {
-                    Divider()
-                    
-                    Button(role: .destructive) {
-                        onDiscardStaged?(node.path)
-                    } label: {
-                        Label("Unstage & Revert", systemImage: "trash")
-                    }
-                }
-            } else {
-                Button {
-                    onStage?(node.path)
-                } label: {
-                    Label("Stage File [TREE]", systemImage: "plus.circle")
-                }
-                
-                // ALWAYS show Revert Changes for modified files (not untracked)
-                if !node.isUntracked {
-                    if let discard = onDiscard {
-                        Divider()
-                        
-                        Button(role: .destructive) {
-                            discard(node.path)
-                        } label: {
-                            Label("Revert Changes", systemImage: "arrow.uturn.backward")
-                        }
-                    }
-                }
-            }
-
-            Divider()
-
-            Button {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(node.path, forType: .string)
-            } label: {
-                Label("Copy Path", systemImage: "doc.on.doc")
-            }
-
-            Button {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(node.name, forType: .string)
-            } label: {
-                Label("Copy Filename", systemImage: "doc.text")
-            }
-
-            Divider()
-
-            Button {
-                NSWorkspace.shared.selectFile(node.path, inFileViewerRootedAtPath: "")
-            } label: {
-                Label("Reveal in Finder", systemImage: "folder")
-            }
-
-            // For untracked files, show Delete option instead of Revert
-            if node.isUntracked {
-                Divider()
-                
-                Button(role: .destructive) {
-                    try? FileManager.default.removeItem(atPath: node.path)
-                } label: {
-                    Label("Delete File", systemImage: "trash")
-                }
-                
-                Divider()
-                
-                Button {
-                    NotificationCenter.default.post(name: .ignoreFile, object: node.path)
-                } label: {
-                    Label("Ignore", systemImage: "eye.slash")
-                }
-            }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            selectedFile = node.path
-        }
-    }
-
-    // Sort: folders first, then files alphabetically
-    private func sortNodes(_ a: FileTreeNode, _ b: FileTreeNode) -> Bool {
-        if a.isFolder && !b.isFolder { return true }
-        if !a.isFolder && b.isFolder { return false }
-        return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
-    }
-    
-    // Discard all modified files in a folder recursively
-    private func discardFilesInFolder(_ folder: FileTreeNode) {
-        for child in folder.children {
-            if child.isFolder {
-                discardFilesInFolder(child)
-            } else if !child.isUntracked {
-                // Only discard tracked (modified) files, not untracked
-                onDiscard?(child.path)
-            }
-        }
+        self.cachedFileCount = isFolder ? 0 : 1
     }
 }
 
@@ -1888,7 +1971,7 @@ struct FilePreviewView: View {
     let filePath: String
     let repositoryPath: String
     @State private var content: String = ""
-    @StateObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject var themeManager: ThemeManager
     @State private var isLoading = true
     @State private var error: String?
     @State private var isBinary = false
@@ -1995,7 +2078,7 @@ struct FilePreviewView: View {
             }
         }
         .padding(DesignTokens.Spacing.md)
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(AppTheme.backgroundSecondary)
     }
 
     // MARK: - Content Views
@@ -2009,7 +2092,7 @@ struct FilePreviewView: View {
                 .padding(DesignTokens.Spacing.md)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .background(Color(NSColor.textBackgroundColor))
+        .background(AppTheme.background)
     }
 
     @ViewBuilder

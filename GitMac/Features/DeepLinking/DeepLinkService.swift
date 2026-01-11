@@ -4,6 +4,7 @@ import AppKit
 // MARK: - Deep Link Service
 
 /// Service for creating and handling deep links to specific commits, branches, and files
+@MainActor
 class DeepLinkService {
     static let shared = DeepLinkService()
     

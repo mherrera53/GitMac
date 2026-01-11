@@ -95,7 +95,7 @@ struct InsightsView: View {
         }
     }
 
-    private func summaryCards(_ metrics: RepositoryMetrics) -> some View {
+    private func summaryCards(_ metrics: InsightMetrics) -> some View {
         LazyVGrid(columns: [
             GridItem(.flexible()),
             GridItem(.flexible()),
@@ -137,7 +137,7 @@ struct InsightsView: View {
     }
 
     @ViewBuilder
-    private func chartsSection(_ metrics: RepositoryMetrics) -> some View {
+    private func chartsSection(_ metrics: InsightMetrics) -> some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             Text("Commit Activity")
                 .font(DesignTokens.Typography.headline)
@@ -216,7 +216,7 @@ struct InsightsView: View {
         .cornerRadius(DesignTokens.CornerRadius.lg)
     }
 
-    private func topContributorsSection(_ metrics: RepositoryMetrics) -> some View {
+    private func topContributorsSection(_ metrics: InsightMetrics) -> some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             Text("Top Contributors")
                 .font(DesignTokens.Typography.headline)
@@ -364,7 +364,8 @@ enum TimeRange: CaseIterable {
     }
 }
 
-struct RepositoryMetrics {
+/// Metrics focused on PRs, merge rates and cycle times
+struct InsightMetrics {
     let totalCommits: Int
     let averageCycleTime: TimeInterval
     let mergeRate: Double
@@ -373,7 +374,7 @@ struct RepositoryMetrics {
     let cycleTimeTrend: Double?
     let mergeRateTrend: Double?
     let dailyCommits: [DailyCommit]
-    let topContributors: [Contributor]
+    let topContributors: [InsightContributor]
     let openPRs: Int
     let mergedPRs: Int
     let closedPRs: Int
@@ -384,7 +385,7 @@ struct RepositoryMetrics {
         let count: Int
     }
 
-    struct Contributor: Identifiable {
+    struct InsightContributor: Identifiable {
         let id = UUID()
         let name: String
         let email: String
@@ -396,84 +397,88 @@ struct RepositoryMetrics {
 
 @MainActor
 class InsightsViewModel: ObservableObject {
-    @Published var metrics: RepositoryMetrics?
+    @Published var metrics: InsightMetrics?
     @Published var isLoading = false
 
     private let engine = GitEngine()
+    private let shell = ShellExecutor()
 
     func loadMetrics(at repoPath: String, timeRange: TimeRange) async {
         isLoading = true
 
-        do {
-            let sinceDate = Calendar.current.date(byAdding: .day, value: -timeRange.days, to: Date()) ?? Date()
-            let dateFormatter = ISO8601DateFormatter()
-            let sinceString = dateFormatter.string(from: sinceDate)
+        let sinceDate = Calendar.current.date(byAdding: .day, value: -timeRange.days, to: Date()) ?? Date()
+        let dateFormatter = ISO8601DateFormatter()
+        let sinceString = dateFormatter.string(from: sinceDate)
 
-            // Get commits in time range
-            let commitsResult = try await ShellExecutor.shared.execute(
-                "cd '\(repoPath)' && git log --since='\(sinceString)' --format='%H|%an|%ae|%aI' --no-merges"
-            )
+        // Get commits in time range
+        let commitsResult = await shell.execute(
+            "git",
+            arguments: ["log", "--since=\(sinceString)", "--format=%H|%an|%ae|%aI", "--no-merges"],
+            workingDirectory: repoPath
+        )
 
-            var commits: [(sha: String, author: String, email: String, date: Date)] = []
-            for line in commitsResult.output.components(separatedBy: "\n") where !line.isEmpty {
-                let parts = line.components(separatedBy: "|")
-                if parts.count >= 4 {
-                    if let date = dateFormatter.date(from: parts[3]) {
-                        commits.append((parts[0], parts[1], parts[2], date))
-                    }
-                }
-            }
-
-            // Calculate daily commits
-            var dailyCommits: [Date: Int] = [:]
-            let calendar = Calendar.current
-            for commit in commits {
-                let day = calendar.startOfDay(for: commit.date)
-                dailyCommits[day, default: 0] += 1
-            }
-
-            let sortedDaily = dailyCommits.map { RepositoryMetrics.DailyCommit(date: $0.key, count: $0.value) }
-                .sorted { $0.date < $1.date }
-
-            // Calculate contributors
-            var contributorCounts: [String: (name: String, email: String, count: Int)] = [:]
-            for commit in commits {
-                if let existing = contributorCounts[commit.email] {
-                    contributorCounts[commit.email] = (existing.name, existing.email, existing.count + 1)
-                } else {
-                    contributorCounts[commit.email] = (commit.author, commit.email, 1)
-                }
-            }
-
-            let topContributors = contributorCounts.values
-                .map { RepositoryMetrics.Contributor(name: $0.name, email: $0.email, commits: $0.count) }
-                .sorted { $0.commits > $1.commits }
-
-            // Calculate trends (compare first half to second half)
-            let midpoint = commits.count / 2
-            let firstHalf = commits.prefix(midpoint).count
-            let secondHalf = commits.suffix(midpoint).count
-            let commitsTrend = firstHalf > 0 ? Double(secondHalf - firstHalf) / Double(firstHalf) : 0
-
-            metrics = RepositoryMetrics(
-                totalCommits: commits.count,
-                averageCycleTime: 3600 * 24 * 2, // Placeholder - would need PR data
-                mergeRate: 0.85, // Placeholder
-                activeContributors: contributorCounts.count,
-                commitsTrend: commitsTrend,
-                cycleTimeTrend: nil,
-                mergeRateTrend: nil,
-                dailyCommits: sortedDaily,
-                topContributors: topContributors,
-                openPRs: 0,
-                mergedPRs: 0,
-                closedPRs: 0
-            )
-
-        } catch {
-            print("Error loading metrics: \(error)")
+        guard commitsResult.isSuccess else {
+            print("Error loading metrics: \(commitsResult.stderr)")
             metrics = nil
+            isLoading = false
+            return
         }
+
+        var commits: [(sha: String, author: String, email: String, date: Date)] = []
+        for line in commitsResult.stdout.components(separatedBy: "\n") where !line.isEmpty {
+            let parts = line.components(separatedBy: "|")
+            if parts.count >= 4 {
+                if let date = dateFormatter.date(from: parts[3]) {
+                    commits.append((parts[0], parts[1], parts[2], date))
+                }
+            }
+        }
+
+        // Calculate daily commits
+        var dailyCommits: [Date: Int] = [:]
+        let calendar = Calendar.current
+        for commit in commits {
+            let day = calendar.startOfDay(for: commit.date)
+            dailyCommits[day, default: 0] += 1
+        }
+
+        let sortedDaily = dailyCommits.map { InsightMetrics.DailyCommit(date: $0.key, count: $0.value) }
+            .sorted { $0.date < $1.date }
+
+        // Calculate contributors
+        var contributorCounts: [String: (name: String, email: String, count: Int)] = [:]
+        for commit in commits {
+            if let existing = contributorCounts[commit.email] {
+                contributorCounts[commit.email] = (existing.name, existing.email, existing.count + 1)
+            } else {
+                contributorCounts[commit.email] = (commit.author, commit.email, 1)
+            }
+        }
+
+        let topContributors = contributorCounts.values
+            .map { InsightMetrics.InsightContributor(name: $0.name, email: $0.email, commits: $0.count) }
+            .sorted { $0.commits > $1.commits }
+
+        // Calculate trends (compare first half to second half)
+        let midpoint = commits.count / 2
+        let firstHalf = commits.prefix(midpoint).count
+        let secondHalf = commits.suffix(midpoint).count
+        let commitsTrend = firstHalf > 0 ? Double(secondHalf - firstHalf) / Double(firstHalf) : 0
+
+        metrics = InsightMetrics(
+            totalCommits: commits.count,
+            averageCycleTime: 3600 * 24 * 2, // Placeholder - would need PR data
+            mergeRate: 0.85, // Placeholder
+            activeContributors: contributorCounts.count,
+            commitsTrend: commitsTrend,
+            cycleTimeTrend: nil,
+            mergeRateTrend: nil,
+            dailyCommits: sortedDaily,
+            topContributors: topContributors,
+            openPRs: 0,
+            mergedPRs: 0,
+            closedPRs: 0
+        )
 
         isLoading = false
     }

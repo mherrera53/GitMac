@@ -141,6 +141,12 @@ struct BranchListView: View {
             // Initialize cache on first appear
             updateFilterCache()
         }
+        .onDisappear {
+            // Clear caches to free memory
+            cachedFilteredLocalBranches.removeAll()
+            cachedFilteredRemoteBranches.removeAll()
+            cachedGroupedRemoteBranches.removeAll()
+        }
     }
 
     // MARK: - Cache Management

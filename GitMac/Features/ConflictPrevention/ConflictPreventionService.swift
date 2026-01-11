@@ -9,6 +9,7 @@ actor ConflictPreventionService {
     static let shared = ConflictPreventionService()
 
     private let engine = GitEngine()
+    private let shell = ShellExecutor()
 
     // MARK: - Models
 
@@ -179,10 +180,10 @@ actor ConflictPreventionService {
 
     /// Get the merge base (common ancestor) of two branches
     private func getMergeBase(source: String, target: String, at repoPath: String) async throws -> String {
-        let result = try await ShellExecutor.shared.execute(
+        let result = await shell.execute(
             "cd \(repoPath.shellEscaped) && git merge-base \(source.shellEscaped) \(target.shellEscaped)"
         )
-        return result.output.trimmingCharacters(in: .whitespacesAndNewlines)
+        return result.output.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }
 
     /// Get files changed between two refs with line-level detail
@@ -192,19 +193,19 @@ actor ConflictPreventionService {
         at repoPath: String
     ) async throws -> [String: FileChange] {
         // Get list of changed files
-        let diffResult = try await ShellExecutor.shared.execute(
+        let diffResult = await shell.execute(
             "cd \(repoPath.shellEscaped) && git diff --name-only \(base.shellEscaped)..\(head.shellEscaped)"
         )
 
         let files = diffResult.output.components(separatedBy: "\n")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .map { $0.trimmingCharacters(in: CharacterSet.whitespaces) }
             .filter { !$0.isEmpty }
 
         var changes: [String: FileChange] = [:]
 
         for file in files {
             // Get detailed diff for this file
-            let fileDiff = try await ShellExecutor.shared.execute(
+            let fileDiff = await shell.execute(
                 "cd \(repoPath.shellEscaped) && git diff -U0 \(base.shellEscaped)..\(head.shellEscaped) -- \(file.shellEscaped)"
             )
 
@@ -212,16 +213,16 @@ actor ConflictPreventionService {
             let (lines, content) = parseDiffForLines(fileDiff.output)
 
             // Get the last author who modified this file
-            let blameResult = try? await ShellExecutor.shared.execute(
+            let blameResult: ShellResult? = await shell.execute(
                 "cd \(repoPath.shellEscaped) && git log -1 --format='%an' \(head.shellEscaped) -- \(file.shellEscaped)"
             )
-            let author = blameResult?.output.trimmingCharacters(in: .whitespacesAndNewlines)
+            let author = blameResult?.output.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 
             // Get the last commit for this file
-            let commitResult = try? await ShellExecutor.shared.execute(
+            let commitResult: ShellResult? = await shell.execute(
                 "cd \(repoPath.shellEscaped) && git log -1 --format='%h' \(head.shellEscaped) -- \(file.shellEscaped)"
             )
-            let commit = commitResult?.output.trimmingCharacters(in: .whitespacesAndNewlines)
+            let commit = commitResult?.output.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 
             changes[file] = FileChange(
                 file: file,

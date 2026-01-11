@@ -35,7 +35,7 @@ struct BaseRow<Content: View>: View {
                         .help(action.tooltip)
                     }
                 }
-                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                .transition(.opacity)
             }
         }
         .padding(.horizontal, style.horizontalPadding)
@@ -47,9 +47,7 @@ struct BaseRow<Content: View>: View {
             onSelect?()
         }
         .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isHovered = hovering
-            }
+            isHovered = hovering
         }
         .contextMenu {
             if let menu = contextMenu {

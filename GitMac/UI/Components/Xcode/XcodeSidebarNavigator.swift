@@ -136,7 +136,7 @@ struct XcodeSidebarNavigatorBar: View {
             .padding(.horizontal, 2)
         }
         .frame(height: 28)
-        .background(AppTheme.backgroundSecondary)
+        .background(.thinMaterial)
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(AppTheme.border)

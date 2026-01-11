@@ -4,6 +4,7 @@ import SwiftUI
 struct GitMacApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var recentReposManager = RecentRepositoriesManager.shared
+    @StateObject private var themeManager = ThemeManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -13,6 +14,9 @@ struct GitMacApp: App {
         Task {
             await KeychainManager.shared.preloadCache()
         }
+
+        // Initialize memory pressure monitoring
+        _ = MemoryPressureHandler.shared
 
         // Register all integration plugins
         registerPlugins()
@@ -37,11 +41,10 @@ struct GitMacApp: App {
             ThemeManager.shared.applyTheme()
 
             if let window = NSApplication.shared.windows.first {
-                window.titlebarAppearsTransparent = true
-                window.isMovableByWindowBackground = true
-                window.titleVisibility = .hidden  // Hide system title, we use custom toolbar title
-                window.title = "" // Explicitly clear title text to prevent duplicates
-                // Apply theme appearance
+                window.titlebarAppearsTransparent = false
+                window.isMovableByWindowBackground = false
+                window.titleVisibility = .hidden
+                window.title = ""
                 window.appearance = ThemeManager.shared.appearance
             }
 
@@ -57,6 +60,7 @@ struct GitMacApp: App {
             ContentView()
                 .environmentObject(appState)
                 .environmentObject(recentReposManager)
+                .environmentObject(themeManager)
                 .task {
                     // Restore previous session on launch
                     await appState.restoreSession()
@@ -274,6 +278,8 @@ class AppState: ObservableObject {
                 updatedTab.repository = repo
                 openTabs[index] = updatedTab
             }
+            // Notify all views to refresh
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
         } catch {
             errorMessage = "Error refreshing: \(error.localizedDescription)"
         }
@@ -613,17 +619,9 @@ struct GitMacCommands: Commands {
 }
 
 // MARK: - Notification Names
+// Note: Some names are defined in IntegrationHelpers.swift
 extension Notification.Name {
-    static let openRepository = Notification.Name("openRepository")
-    static let cloneRepository = Notification.Name("cloneRepository")
     static let initRepository = Notification.Name("initRepository")
-    static let fetch = Notification.Name("fetch")
-    static let pull = Notification.Name("pull")
-    static let push = Notification.Name("push")
-    static let stash = Notification.Name("stash")
-    static let popStash = Notification.Name("popStash")
-    static let newBranch = Notification.Name("newBranch")
-    static let merge = Notification.Name("merge")
     static let rebase = Notification.Name("rebase")
     static let showGraph = Notification.Name("show_graph")
     static let showHistory = Notification.Name("show_history")
@@ -635,4 +633,10 @@ extension Notification.Name {
     static let showWorktrees = Notification.Name("show_worktrees")
     static let toggleSidebar = Notification.Name("toggle_sidebar")
     static let repositoryDidRefresh = Notification.Name("repositoryDidRefresh")
+
+    // CI/CD Triggers
+    static let gitPushCompleted = Notification.Name("gitPushCompleted")
+    static let gitMergeCompleted = Notification.Name("gitMergeCompleted")
+    static let refreshCICD = Notification.Name("refreshCICD")
+    static let showCICD = Notification.Name("showCICD")
 }

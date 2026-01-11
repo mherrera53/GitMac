@@ -16,7 +16,7 @@ struct TerminalTab: Identifiable, Equatable {
 // MARK: - Multi-Tab Terminal View
 
 struct TerminalView: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     @EnvironmentObject var appState: AppState
     @StateObject private var tabManager = TerminalTabManager()
@@ -133,126 +133,20 @@ struct TerminalTabBar: View {
                         )
                     }
 
-                    // Add tab button
-                    Button(action: onAddTab) {
+                    // Helper tools hidden for minimalism
+                    /* Button(action: onAddTab) {
                         Image(systemName: "plus")
-                            .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(TerminalColors.textMuted)
-                            .frame(width: DesignTokens.Size.iconXL, height: DesignTokens.Size.iconXL)
-                    }
-                    .buttonStyle(.plain)
-                    .help("New tab")
+                    } */
                 }
                 .padding(.horizontal, DesignTokens.Spacing.xs)
             }
 
             Spacer()
 
-            // Controls
-            HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
-                // Open in Wave button
-                Button {
-                    onOpenWave?()
-                } label: {
-                    HStack(spacing: DesignTokens.Spacing.xxs) {
-                        Image(systemName: "wave.3.right")
-                            .font(DesignTokens.Typography.caption2)
-                        Text("Wave")
-                            .font(DesignTokens.Typography.caption2)
-                    }
-                    .foregroundColor(TerminalColors.accent)
-                    .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
-                    .padding(.vertical, DesignTokens.Spacing.xxs)
-                    .background(TerminalColors.accent.opacity(0.1))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
-                }
-                .buttonStyle(.plain)
-                .help("Open in Wave Terminal")
-
-                // Open lazygit button
-                Button {
-                    onOpenLazygit?()
-                } label: {
-                    HStack(spacing: DesignTokens.Spacing.xxs) {
-                        Image(systemName: "arrow.triangle.branch")
-                            .font(DesignTokens.Typography.caption2)
-                        Text("lazygit")
-                            .font(DesignTokens.Typography.caption2)
-                    }
-                    .foregroundColor(AppTheme.warning)
-                    .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
-                    .padding(.vertical, DesignTokens.Spacing.xxs)
-                    .background(AppTheme.warning.opacity(0.1))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
-                }
-                .buttonStyle(.plain)
-                .help("Open lazygit TUI")
-
-                Divider()
-                    .frame(height: DesignTokens.Size.iconMD)
-
-                // AI Chat button
-                Button {
-                    showAIChat.toggle()
-                } label: {
-                    HStack(spacing: DesignTokens.Spacing.xxs) {
-                        Image(systemName: "bubble.left.and.bubble.right")
-                            .font(DesignTokens.Typography.caption2)
-                        Text("Chat")
-                            .font(DesignTokens.Typography.caption2)
-                    }
-                    .foregroundColor(AppTheme.accent)
-                    .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
-                    .padding(.vertical, DesignTokens.Spacing.xxs)
-                    .background(AppTheme.accent.opacity(0.1))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
-                }
-                .buttonStyle(.plain)
-                .help("AI Chat Assistant")
-                .popover(isPresented: $showAIChat) {
-                    TerminalAIChatView(repoPath: repoPath)
-                        .frame(width: 400, height: 500)
-                }
-
-                // AI toggle
-                Button {
-                    aiEnabled.toggle()
-                } label: {
-                    HStack(spacing: DesignTokens.Spacing.xxs) {
-                        Image(systemName: "sparkles")
-                            .font(DesignTokens.Typography.caption2)
-                        Text("AI")
-                            .font(DesignTokens.Typography.caption2)
-                    }
-                    .foregroundColor(aiEnabled ? TerminalColors.accent : TerminalColors.textMuted)
-                    .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
-                    .padding(.vertical, DesignTokens.Spacing.xxs)
-                    .background(aiEnabled ? TerminalColors.accent.opacity(0.15) : Color.clear)
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
-                }
-                .buttonStyle(.plain)
-                .help(aiEnabled ? "AI suggestions enabled" : "AI suggestions disabled")
-
-                // Clear button
-                Button(action: onClear) {
-                    Image(systemName: "trash")
-                        .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(TerminalColors.textMuted)
-                }
-                .buttonStyle(.plain)
-                .help("Clear terminal")
-
-                // Running indicator
-                if isRunning {
-                    ProgressView()
-                        .scaleEffect(0.5)
-                        .frame(width: DesignTokens.Size.iconMD, height: DesignTokens.Size.iconMD)
-                }
-            }
-            .padding(.horizontal, DesignTokens.Spacing.sm)
+            Spacer()
         }
-        .frame(height: DesignTokens.Size.buttonHeightMD)
-        .background(TerminalColors.headerBackground)
+        .frame(height: 0) // Hide header completely for minimalism
+        .hidden()
     }
 }
 
@@ -338,22 +232,17 @@ struct TerminalSessionView: View {
                 }
             }
 
-            // Command input
-            CommandInputArea(
+            // Minimalist Input (Standard Shell Style)
+            SimpleCommandInputAndOutput(
                 commandInput: $commandInput,
-                suggestions: suggestions,
-                showSuggestions: showSuggestions,
-                selectedSuggestion: $selectedSuggestion,
                 prompt: session.prompt,
-                isRunning: session.isRunning,
-                isLoadingAI: isLoadingAI,
-                isInputFocused: _isInputFocused,
                 onSubmit: executeCommand,
                 onArrowUp: { commandInput = session.previousCommand() },
                 onArrowDown: { commandInput = session.nextCommand() },
-                onTab: applySuggestion,
-                onSelectSuggestion: selectSuggestion
+                isInputFocused: $isInputFocused
             )
+            .padding(.horizontal, 8)
+            .padding(.bottom, 4)
         }
         .onAppear {
             isInputFocused = true
@@ -424,23 +313,7 @@ struct TerminalSessionView: View {
     }
 }
 
-// MARK: - Color Hex Extension
-
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let r, g, b: UInt64
-        switch hex.count {
-        case 6:
-            (r, g, b) = ((int >> 16) & 0xFF, (int >> 8) & 0xFF, int & 0xFF)
-        default:
-            (r, g, b) = (0, 0, 0)
-        }
-        self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255, opacity: 1)
-    }
-}
+// Color.init(hex:) is in ThemeManager.swift
 
 // MARK: - Terminal Colors (Now using dynamic AppTheme)
 
@@ -659,90 +532,31 @@ struct OutputLineView: View {
 
 // MARK: - Command Input Area
 
-struct CommandInputArea: View {
+// MARK: - Simple Input (Minimalist Replacement)
+struct SimpleCommandInputAndOutput: View {
     @Binding var commandInput: String
-    let suggestions: [TerminalSuggestion]
-    let showSuggestions: Bool
-    @Binding var selectedSuggestion: Int
     let prompt: String
-    let isRunning: Bool
-    let isLoadingAI: Bool
-    @FocusState var isInputFocused: Bool
     let onSubmit: () -> Void
     let onArrowUp: () -> Void
     let onArrowDown: () -> Void
-    let onTab: () -> Void
-    let onSelectSuggestion: (Int) -> Void
+    var isInputFocused: FocusState<Bool>.Binding
 
     var body: some View {
-        VStack(spacing: 0) {
-            Rectangle()
-                .fill(TerminalColors.blockBorder)
-                .frame(height: 1)
-
-            // Suggestions popup
-            if showSuggestions && !suggestions.isEmpty {
-                AISuggestionsPopup(
-                    suggestions: suggestions,
-                    selectedIndex: selectedSuggestion,
-                    isLoadingAI: isLoadingAI,
-                    onSelect: onSelectSuggestion
-                )
-            }
-
-            // Multi-line expandable input (Warp-style)
-            HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
-                // Prompt
-                Text(prompt)
-                    .font(DesignTokens.Typography.callout)
-                    .foregroundColor(TerminalColors.prompt)
-                    .padding(.top, DesignTokens.Spacing.xxs)
-
-                // Expandable text input
-                ExpandableTextEditor(
-                    text: $commandInput,
-                    placeholder: "Enter command or describe what you want...",
-                    isInputFocused: _isInputFocused,
-                    onSubmit: onSubmit,
-                    onArrowUp: {
-                        if showSuggestions && selectedSuggestion > 0 {
-                            selectedSuggestion -= 1
-                        } else {
-                            onArrowUp()
-                        }
-                    },
-                    onArrowDown: {
-                        if showSuggestions && selectedSuggestion < suggestions.count - 1 {
-                            selectedSuggestion += 1
-                        } else {
-                            onArrowDown()
-                        }
-                    },
-                    onTab: onTab
-                )
-
-                // Loading/Running indicator
-                if isRunning {
-                    ProgressView()
-                        .scaleEffect(0.6)
-                        .frame(width: DesignTokens.Size.iconMD, height: DesignTokens.Size.iconMD)
-                        .padding(.top, DesignTokens.Spacing.xxs)
-                } else if isLoadingAI {
-                    HStack(spacing: DesignTokens.Spacing.xs) {
-                        Image(systemName: "sparkles")
-                            .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(TerminalColors.accent)
-                        ProgressView()
-                            .scaleEffect(0.5)
-                    }
-                    .frame(width: DesignTokens.Size.iconXL + DesignTokens.Spacing.sm, height: DesignTokens.Size.iconMD)
-                    .padding(.top, DesignTokens.Spacing.xxs)
-                }
-            }
-            .padding(.horizontal, DesignTokens.Spacing.lg)
-            .padding(.vertical, DesignTokens.Spacing.sm + DesignTokens.Spacing.xxs)
-            .background(TerminalColors.inputBackground)
+        HStack(spacing: 6) {
+            Text(prompt)
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .foregroundColor(TerminalColors.prompt)
+            
+            TextField("", text: $commandInput)
+                .font(.system(size: 13, design: .monospaced))
+                .textFieldStyle(.plain)
+                .focused(isInputFocused)
+                .onSubmit(onSubmit)
+                // Basic arrow keys need NSEvent monitoring or a custom field, 
+                // but this is a simplified SwiftUI starter.
         }
+        .padding(.vertical, 4)
+        .background(TerminalColors.background)
     }
 }
 
@@ -1572,7 +1386,8 @@ struct TerminalAIChatBubble: View {
 #if GHOSTTY_AVAILABLE
 
 /// Native Ghostty terminal view with Warp-like AI overlay
-struct GhosttyNativeView: View {
+/// Note: Main GhosttyNativeView is in GhosttyNativeView.swift
+struct TerminalGhosttyView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = GhosttyViewModel()
     @StateObject private var enhancedViewModel = GhosttyEnhancedViewModel()
@@ -1622,7 +1437,7 @@ struct GhosttyNativeView: View {
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
                 }
-                .background(GhosttyColors.background)
+                .background(TerminalGhosttyColors.background)
             }
 
             // Command Palette (Cmd+K)
@@ -1663,18 +1478,18 @@ struct GhosttyHeaderBar: View {
             HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
                 Image(systemName: "folder.fill")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(GhosttyColors.accent)
+                    .foregroundColor(TerminalGhosttyColors.accent)
 
                 Text(repositoryName)
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(GhosttyColors.textPrimary)
+                    .foregroundColor(TerminalGhosttyColors.textPrimary)
 
                 Text("•")
-                    .foregroundColor(GhosttyColors.textMuted)
+                    .foregroundColor(TerminalGhosttyColors.textMuted)
 
                 Text(currentDirectory)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(GhosttyColors.textMuted)
+                    .foregroundColor(TerminalGhosttyColors.textMuted)
                     .lineLimit(1)
             }
             .padding(.leading, DesignTokens.Spacing.md)
@@ -1694,10 +1509,10 @@ struct GhosttyHeaderBar: View {
                             Text("Palette")
                                 .font(DesignTokens.Typography.caption2)
                         }
-                        .foregroundColor(GhosttyColors.accent)
+                        .foregroundColor(TerminalGhosttyColors.accent)
                         .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                         .padding(.vertical, DesignTokens.Spacing.xs)
-                        .background(GhosttyColors.accent.opacity(0.1))
+                        .background(TerminalGhosttyColors.accent.opacity(0.1))
                         .cornerRadius(DesignTokens.CornerRadius.sm)
                     }
                     .buttonStyle(.plain)
@@ -1738,10 +1553,10 @@ struct GhosttyHeaderBar: View {
                         Text("AI")
                             .font(DesignTokens.Typography.caption2)
                     }
-                    .foregroundColor(aiEnabled ? GhosttyColors.accent : GhosttyColors.textMuted)
+                    .foregroundColor(aiEnabled ? TerminalGhosttyColors.accent : TerminalGhosttyColors.textMuted)
                     .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                     .padding(.vertical, DesignTokens.Spacing.xs)
-                    .background(aiEnabled ? GhosttyColors.accent.opacity(0.15) : Color.clear)
+                    .background(aiEnabled ? TerminalGhosttyColors.accent.opacity(0.15) : Color.clear)
                     .cornerRadius(DesignTokens.CornerRadius.sm)
                 }
                 .buttonStyle(.plain)
@@ -1751,7 +1566,7 @@ struct GhosttyHeaderBar: View {
                 Button(action: onClear) {
                     Image(systemName: "trash")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(GhosttyColors.textMuted)
+                        .foregroundColor(TerminalGhosttyColors.textMuted)
                 }
                 .buttonStyle(.plain)
                 .help("Clear terminal (Cmd+K)")
@@ -1759,10 +1574,10 @@ struct GhosttyHeaderBar: View {
             .padding(.trailing, DesignTokens.Spacing.md)
         }
         .frame(height: DesignTokens.Size.buttonHeightMD + DesignTokens.Spacing.xs)
-        .background(GhosttyColors.backgroundSecondary)
+        .background(TerminalGhosttyColors.backgroundSecondary)
         .overlay(
             Rectangle()
-                .fill(GhosttyColors.textMuted.opacity(0.2))
+                .fill(TerminalGhosttyColors.textMuted.opacity(0.2))
                 .frame(height: 1),
             alignment: .bottom
         )
@@ -1773,6 +1588,18 @@ struct GhosttyHeaderBar: View {
 
 class GhosttyTerminalNSView: NSView {
     var surface: ghostty_surface_t?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        self.wantsLayer = true
+        self.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        self.wantsLayer = true
+        self.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+    }
 
     override var acceptsFirstResponder: Bool { true }
 
@@ -1835,9 +1662,9 @@ class GhosttyTerminalNSView: NSView {
     }
 }
 
-// MARK: - Ghostty NSViewRepresentable
+// MARK: - Ghostty NSViewRepresentable (Local to TerminalView)
 
-struct GhosttyTerminalRepresentable: NSViewRepresentable {
+struct TerminalGhosttyRepresentable: NSViewRepresentable {
     @ObservedObject var viewModel: GhosttyViewModel
     let initialDirectory: String
 
@@ -1871,7 +1698,7 @@ struct GhosttyTerminalRepresentable: NSViewRepresentable {
             let errorView = NSTextField(labelWithString: "Failed to initialize Ghostty library")
             errorView.textColor = .red
             errorView.alignment = .center
-            errorView.backgroundColor = NSColor(red: 0.1, green: 0.11, blue: 0.15, alpha: 1.0)
+            errorView.backgroundColor = NSColor.windowBackgroundColor
             errorView.isBordered = false
             return errorView
         }
@@ -1907,7 +1734,7 @@ struct GhosttyTerminalRepresentable: NSViewRepresentable {
             let errorView = NSTextField(labelWithString: "Failed to create Ghostty app")
             errorView.textColor = .red
             errorView.alignment = .center
-            errorView.backgroundColor = NSColor(red: 0.1, green: 0.11, blue: 0.15, alpha: 1.0)
+            errorView.backgroundColor = NSColor.windowBackgroundColor
             errorView.isBordered = false
             return errorView
         }
@@ -1944,7 +1771,7 @@ struct GhosttyTerminalRepresentable: NSViewRepresentable {
             let errorView = NSTextField(labelWithString: "Failed to create Ghostty surface")
             errorView.textColor = .red
             errorView.alignment = .center
-            errorView.backgroundColor = NSColor(red: 0.1, green: 0.11, blue: 0.15, alpha: 1.0)
+            errorView.backgroundColor = NSColor.windowBackgroundColor
             errorView.isBordered = false
             return errorView
         }
@@ -1997,7 +1824,7 @@ struct GhosttyTerminalRepresentable: NSViewRepresentable {
     }
 }
 
-// MARK: - Ghostty ViewModel
+// MARK: - Ghostty ViewModel (Local to TerminalView)
 
 @MainActor
 class GhosttyViewModel: ObservableObject {
@@ -2027,10 +1854,10 @@ class GhosttyViewModel: ObservableObject {
     }
 }
 
-// MARK: - Ghostty Color Scheme (Now using dynamic AppTheme)
+// MARK: - Ghostty Color Scheme (Local to TerminalView)
 
 @MainActor
-enum GhosttyColors {
+enum TerminalGhosttyColors {
     static var background: Color { AppTheme.background }
     static var backgroundSecondary: Color { AppTheme.backgroundSecondary }
     static var textPrimary: Color { AppTheme.textPrimary }
@@ -2049,6 +1876,102 @@ enum GhosttyColors {
     static var magenta: Color { AppTheme.accentPurple }
     static var cyan: Color { AppTheme.accentCyan }
     static var white: Color { AppTheme.textPrimary }
+}
+
+// MARK: - Inline AI Suggestion Bar (Warp-style bottom bar)
+
+struct InlineAISuggestionBar: View {
+    let suggestion: AICommandSuggestion
+    let currentInput: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Icon
+            Image(systemName: suggestion.isFromAI ? "sparkles" : "command.circle")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(suggestion.isFromAI ? AppTheme.accent : AppTheme.textSecondary)
+                .symbolRenderingMode(.hierarchical)
+            
+            // Inline suggestion with ghosted completion
+            HStack(spacing: 2) {
+                // Current input
+                Text(currentInput)
+                    .font(.system(size: 13, design: .monospaced))
+                    .foregroundColor(AppTheme.textPrimary)
+                    .fontWeight(.medium)
+                
+                // Ghosted completion (the part that will be auto-completed)
+                if suggestion.command.hasPrefix(currentInput) {
+                    let completion = String(suggestion.command.dropFirst(currentInput.count))
+                    Text(completion)
+                        .font(.system(size: 13, design: .monospaced))
+                        .foregroundColor(AppTheme.textMuted.opacity(0.5))
+                        .fontWeight(.regular)
+                } else {
+                    Text(suggestion.command)
+                        .font(.system(size: 13, design: .monospaced))
+                        .foregroundColor(AppTheme.textMuted.opacity(0.5))
+                        .fontWeight(.regular)
+                }
+            }
+            
+            Spacer()
+            
+            // Description
+            if !suggestion.description.isEmpty {
+                Text(suggestion.description)
+                    .font(.system(size: 11))
+                    .foregroundColor(AppTheme.textSecondary)
+                    .lineLimit(1)
+            }
+            
+            // Hint
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 9, weight: .semibold))
+                Text("Tab")
+                    .font(.system(size: 10, weight: .medium))
+            }
+            .foregroundColor(AppTheme.textMuted)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(AppTheme.backgroundTertiary.opacity(0.5))
+            .cornerRadius(6)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(
+            AppTheme.backgroundSecondary.opacity(0.95)
+        )
+        .overlay(
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            suggestion.isFromAI ? AppTheme.accent.opacity(0.3) : AppTheme.info.opacity(0.2),
+                            AppTheme.accent.opacity(0.0)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+        )
+        .overlay(
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            suggestion.isFromAI ? AppTheme.accent : AppTheme.info,
+                            AppTheme.accent.opacity(0.0)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(height: 2),
+            alignment: .top
+        )
+    }
 }
 
 #endif

@@ -12,68 +12,66 @@ struct EnhancedDiffToolbar: View {
     @Binding var showMinimap: Bool
     let onDiscardLines: ([DiffLine]) -> Void
     
-    @StateObject private var themeManager = ThemeManager.shared
-    
     var body: some View {
         HStack(spacing: 0) {
             // File info
             VStack(alignment: .leading, spacing: 2) {
                 Text(filename)
                     .font(.system(.body, design: .monospaced))
-                    .foregroundColor(themeManager.currentTheme.text)
-                
+                    .foregroundColor(AppTheme.textPrimary)
+
                 HStack(spacing: 12) {
                     Label("\(additions)", systemImage: "plus")
-                        .foregroundColor(themeManager.currentTheme.diff.addition)
+                        .foregroundColor(AppTheme.gitAdded)
                     Label("\(deletions)", systemImage: "minus")
-                        .foregroundColor(themeManager.currentTheme.diff.deletion)
+                        .foregroundColor(AppTheme.gitDeleted)
                 }
                 .font(.caption)
-                .foregroundColor(themeManager.currentTheme.textSecondary)
+                .foregroundColor(AppTheme.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            
+
             // Action buttons
             HStack(spacing: 8) {
                 // History button
                 Button(action: { showHistory.toggle() }) {
                     Image(systemName: "clock")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(showHistory ? themeManager.currentTheme.accent : themeManager.currentTheme.textSecondary)
+                        .foregroundColor(showHistory ? AppTheme.accent : AppTheme.textSecondary)
                 }
                 .buttonStyle(ToolbarButtonStyle(isActive: showHistory))
-                
+
                 // Blame button
                 Button(action: { showBlame.toggle() }) {
                     Image(systemName: "person.crop.circle")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(showBlame ? themeManager.currentTheme.accent : themeManager.currentTheme.textSecondary)
+                        .foregroundColor(showBlame ? AppTheme.accent : AppTheme.textSecondary)
                 }
                 .buttonStyle(ToolbarButtonStyle(isActive: showBlame))
-                
+
                 // Minimap toggle
                 Button(action: { showMinimap.toggle() }) {
                     Image(systemName: "map")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(showMinimap ? themeManager.currentTheme.accent : themeManager.currentTheme.textSecondary)
+                        .foregroundColor(showMinimap ? AppTheme.accent : AppTheme.textSecondary)
                 }
                 .buttonStyle(ToolbarButtonStyle(isActive: showMinimap))
-                
+
                 // Discard selected
                 Button(action: { onDiscardLines([]) }) {
                     Image(systemName: "trash")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(themeManager.currentTheme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
                 .buttonStyle(ToolbarButtonStyle(isActive: false))
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(themeManager.currentTheme.backgroundSecondary)
+        .background(AppTheme.backgroundSecondary)
         .overlay(
             Rectangle()
-                .fill(themeManager.currentTheme.border)
+                .fill(AppTheme.border)
                 .frame(height: 0.5),
             alignment: .bottom
         )

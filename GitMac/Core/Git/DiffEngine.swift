@@ -4,63 +4,63 @@ import os.signpost
 // MARK: - DiffEngine Configuration
 
 /// Large File Mode configuration
-public struct LargeFileModeConfig: Codable, Equatable {
+struct LargeFileModeConfig: Codable, Equatable {
     /// File size threshold in bytes (default: 8 MB)
-    public var fileSizeThreshold: Int = 100 * 1024 * 1024  // 100 MB
+    var fileSizeThreshold: Int = 100 * 1024 * 1024  // 100 MB
 
     /// Estimated lines threshold (default: 50k)
-    public var linesThreshold: Int = 1_000_000  // 1M lines
+    var linesThreshold: Int = 1_000_000  // 1M lines
 
     /// Maximum line length before triggering LFM (default: 2k characters)
-    public var maxLineLengthThreshold: Int = 10_000
+    var maxLineLengthThreshold: Int = 10_000
 
     /// Maximum hunks before triggering LFM (default: 1k)
-    public var hunksThreshold: Int = 10_000
+    var hunksThreshold: Int = 10_000
 
     /// Context lines in LFM mode (default: 3)
-    public var lfmContextLines: Int = 3
+    var lfmContextLines: Int = 3
 
-    public static let `default` = LargeFileModeConfig()
+    static let `default` = LargeFileModeConfig()
 }
 
 /// Controls Large File Mode behavior
-public enum LargeFileMode: Equatable {
+enum LargeFileMode: Equatable {
     case auto           // Automatically detect based on thresholds
     case forceOn        // Always use LFM
     case forceOff       // Never use LFM (may cause performance issues)
 }
 
 /// Controls side-by-side view
-public enum SideBySideMode: Equatable {
+enum SideBySideMode: Equatable {
     case auto           // Off in LFM, on otherwise (if medium size)
     case forceOn        // Always side-by-side
     case forceOff       // Always unified
 }
 
 /// Options for diff operations
-public struct DiffOptions: Equatable {
+struct DiffOptions: Equatable {
     /// Number of context lines around changes
-    public var contextLines: Int = 3
+    var contextLines: Int = 3
 
     /// Enable word-level diff highlighting
-    public var enableWordDiff: Bool = true
+    var enableWordDiff: Bool = true
 
     /// Enable syntax highlighting
-    public var enableSyntaxHighlight: Bool = true
+    var enableSyntaxHighlight: Bool = true
 
     /// Large file mode setting
-    public var largeFileMode: LargeFileMode = .auto
+    var largeFileMode: LargeFileMode = .auto
 
     /// Side-by-side view setting
-    public var sideBySide: SideBySideMode = .auto
+    var sideBySide: SideBySideMode = .auto
 
     /// LFM configuration thresholds
-    public var lfmConfig: LargeFileModeConfig = .default
+    var lfmConfig: LargeFileModeConfig = .default
 
-    public static let `default` = DiffOptions()
+    static let `default` = DiffOptions()
 
     /// Options optimized for large files
-    public static var largeFile: DiffOptions {
+    static var largeFile: DiffOptions {
         var opts = DiffOptions()
         opts.enableWordDiff = false
         opts.enableSyntaxHighlight = false
@@ -74,44 +74,44 @@ public struct DiffOptions: Equatable {
 // MARK: - Preflight Stats
 
 /// Statistics from preflight check (git diff --numstat)
-public struct DiffPreflightStats {
-    public let additions: Int
-    public let deletions: Int
-    public let estimatedLines: Int
-    public let fileSizeBytes: Int?
-    public let isLargeFile: Bool
-    public let suggestedOptions: DiffOptions
+struct DiffPreflightStats {
+    let additions: Int
+    let deletions: Int
+    let estimatedLines: Int
+    let fileSizeBytes: Int?
+    let isLargeFile: Bool
+    let suggestedOptions: DiffOptions
 
-    public var totalChanges: Int { additions + deletions }
+    var totalChanges: Int { additions + deletions }
 }
 
 // MARK: - Extended Models
 
 /// Extended DiffHunk with LFM support
-public struct StreamingDiffHunk: Identifiable, Sendable {
-    public let id: UUID
-    public let header: String
-    public let oldStart: Int
-    public let oldLines: Int
-    public let newStart: Int
-    public let newLines: Int
+struct StreamingDiffHunk: Identifiable, Sendable {
+    let id: UUID
+    let header: String
+    let oldStart: Int
+    let oldLines: Int
+    let newStart: Int
+    let newLines: Int
 
     /// For LFM: byte offsets in the raw diff stream (lazy materialization)
-    public let byteRange: Range<Int>?
+    let byteRange: Range<Int>?
 
     /// Estimated line count (may differ from actual after materialization)
-    public let estimatedLineCount: Int
+    let estimatedLineCount: Int
 
     /// Whether this hunk is collapsed in the UI
-    public var isCollapsed: Bool = true
+    var isCollapsed: Bool = true
 
     /// Materialized lines (nil until expanded in LFM)
-    public var lines: [DiffLine]?
+    var lines: [DiffLine]?
 
     /// Whether lines have been materialized
-    public var isMaterialized: Bool { lines != nil }
+    var isMaterialized: Bool { lines != nil }
 
-    public init(
+    init(
         header: String,
         oldStart: Int,
         oldLines: Int,
@@ -135,7 +135,7 @@ public struct StreamingDiffHunk: Identifiable, Sendable {
     }
 
     /// Convert to standard DiffHunk (requires materialization)
-    public func toDiffHunk() -> DiffHunk? {
+    func toDiffHunk() -> DiffHunk? {
         guard let lines = lines else { return nil }
         return DiffHunk(
             header: header,
@@ -149,17 +149,17 @@ public struct StreamingDiffHunk: Identifiable, Sendable {
 }
 
 /// Extended DiffLine with intraline ranges
-public struct ExtendedDiffLine: Identifiable, Sendable {
-    public let id: UUID
-    public let type: DiffLineType
-    public let content: String
-    public let oldLineNumber: Int?
-    public let newLineNumber: Int?
+struct ExtendedDiffLine: Identifiable, Sendable {
+    let id: UUID
+    let type: DiffLineType
+    let content: String
+    let oldLineNumber: Int?
+    let newLineNumber: Int?
 
     /// Ranges within the line that are specifically changed (for word-diff)
-    public var intralineRanges: [Range<String.Index>]?
+    var intralineRanges: [Range<String.Index>]?
 
-    public init(
+    init(
         type: DiffLineType,
         content: String,
         oldLineNumber: Int?,
@@ -175,7 +175,7 @@ public struct ExtendedDiffLine: Identifiable, Sendable {
     }
 
     /// Convert to standard DiffLine
-    public func toDiffLine() -> DiffLine {
+    func toDiffLine() -> DiffLine {
         DiffLine(
             type: type,
             content: content,
@@ -220,19 +220,19 @@ public actor DiffEngine {
 
     // MARK: - Cache
 
-    private var hunkCache: DiffCache<String, [StreamingDiffHunk]>
+    private var hunkCache: LRUDiffCache<String, [StreamingDiffHunk]>
 
     // MARK: - Initialization
 
-    public init(shellExecutor: ShellExecutor = ShellExecutor(), cacheSize: Int = 50 * 1024 * 1024) {
+    init(shellExecutor: ShellExecutor = ShellExecutor(), cacheSize: Int = 50 * 1024 * 1024) {
         self.shellExecutor = shellExecutor
-        self.hunkCache = DiffCache(maxCostBytes: cacheSize)
+        self.hunkCache = LRUDiffCache(maxCostBytes: cacheSize)
     }
 
     // MARK: - Preflight
 
     /// Quick stats check before loading full diff
-    public func preflight(file: String, staged: Bool = false, at repoPath: String, config: LargeFileModeConfig = .default) async throws -> DiffPreflightStats {
+    func preflight(file: String, staged: Bool = false, at repoPath: String, config: LargeFileModeConfig = .default) async throws -> DiffPreflightStats {
         os_signpost(.begin, log: Self.signpostLog, name: "Preflight", signpostID: parseSignpost)
         defer { os_signpost(.end, log: Self.signpostLog, name: "Preflight", signpostID: parseSignpost) }
 
@@ -286,21 +286,22 @@ public actor DiffEngine {
     // MARK: - Streaming Diff
 
     /// Stream diff hunks for a file
-    public func diff(
+    nonisolated func diff(
         file: String,
         staged: Bool = false,
         at repoPath: String,
         options: DiffOptions = .default
     ) -> AsyncThrowingStream<StreamingDiffHunk, Error> {
         AsyncThrowingStream { continuation in
-            Task {
+            Task { [self] in
                 do {
-                    os_signpost(.begin, log: Self.signpostLog, name: "ParseDiff", signpostID: self.parseSignpost)
-                    defer { os_signpost(.end, log: Self.signpostLog, name: "ParseDiff", signpostID: self.parseSignpost) }
+                    let signpost = self.parseSignpost
+                    os_signpost(.begin, log: Self.signpostLog, name: "ParseDiff", signpostID: signpost)
+                    defer { os_signpost(.end, log: Self.signpostLog, name: "ParseDiff", signpostID: signpost) }
 
                     // Check cache first
                     let cacheKey = "\(repoPath):\(file):\(staged)"
-                    if let cached = self.hunkCache.get(key: cacheKey) {
+                    if let cached = await self.hunkCache.get(key: cacheKey) {
                         for hunk in cached {
                             continuation.yield(hunk)
                         }
@@ -315,8 +316,10 @@ public actor DiffEngine {
                     }
 
                     // In LFM, avoid expensive options
-                    let useLFM = options.largeFileMode == .forceOn ||
-                                 (options.largeFileMode == .auto && await self.shouldUseLFM(file: file, staged: staged, at: repoPath, config: options.lfmConfig))
+                    var useLFM = options.largeFileMode == .forceOn
+                    if !useLFM && options.largeFileMode == .auto {
+                        useLFM = await self.shouldUseLFM(file: file, staged: staged, at: repoPath, config: options.lfmConfig)
+                    }
 
                     if useLFM {
                         args.append("--no-renames")
@@ -334,11 +337,11 @@ public actor DiffEngine {
                     }
 
                     // Parse hunks
-                    let hunks = self.parseHunksFromOutput(result.stdout, materializeLines: !useLFM)
+                    let hunks = await self.parseHunksFromOutput(result.stdout, materializeLines: !useLFM)
 
                     // Cache the results
                     let cost = result.stdout.utf8.count
-                    self.hunkCache.set(key: cacheKey, value: hunks, cost: cost)
+                    await self.hunkCache.set(key: cacheKey, value: hunks, cost: cost)
 
                     // Yield hunks
                     for hunk in hunks {
@@ -360,7 +363,7 @@ public actor DiffEngine {
     // MARK: - Materialization
 
     /// Materialize lines for a specific hunk (for LFM lazy loading)
-    public func materialize(
+    func materialize(
         hunk: StreamingDiffHunk,
         rawDiffData: Data,
         range: Range<Int>? = nil
@@ -387,7 +390,7 @@ public actor DiffEngine {
     // MARK: - Stats
 
     /// Get diff stats for a file
-    public func stats(file: String, staged: Bool = false, at repoPath: String) async throws -> DiffStats {
+    func stats(file: String, staged: Bool = false, at repoPath: String) async throws -> DiffStats {
         let preflight = try await preflight(file: file, staged: staged, at: repoPath)
         return DiffStats(
             additions: preflight.additions,
@@ -606,24 +609,24 @@ public actor DiffEngine {
     // MARK: - Cache Management
 
     /// Clear the diff cache
-    public func clearCache() {
+    func clearCache() {
         hunkCache.clear()
     }
 
     /// Get cache statistics
-    public func cacheStats() -> (entries: Int, bytesUsed: Int) {
+    func cacheStats() -> (entries: Int, bytesUsed: Int) {
         return hunkCache.stats()
     }
 }
 
 // MARK: - Errors
 
-public enum DiffEngineError: Error, LocalizedError {
+enum DiffEngineError: Error, LocalizedError {
     case invalidEncoding
     case parseFailed(String)
     case cancelled
 
-    public var errorDescription: String? {
+    var errorDescription: String? {
         switch self {
         case .invalidEncoding:
             return "Failed to decode diff content as UTF-8"
@@ -637,8 +640,9 @@ public enum DiffEngineError: Error, LocalizedError {
 
 // MARK: - LRU Cache
 
-/// Cost-based LRU cache for diff data
-public final class DiffCache<Key: Hashable, Value>: @unchecked Sendable {
+/// Cost-based LRU cache for diff data (generic class implementation)
+/// Note: Actor-based DiffCache is in Features/Diff/DiffCache.swift
+final class LRUDiffCache<Key: Hashable, Value>: @unchecked Sendable {
     private struct Entry {
         let value: Value
         let cost: Int
@@ -650,11 +654,11 @@ public final class DiffCache<Key: Hashable, Value>: @unchecked Sendable {
     private let maxCostBytes: Int
     private let lock = NSLock()
 
-    public init(maxCostBytes: Int) {
+    init(maxCostBytes: Int) {
         self.maxCostBytes = maxCostBytes
     }
 
-    public func get(key: Key) -> Value? {
+    func get(key: Key) -> Value? {
         lock.lock()
         defer { lock.unlock() }
 
@@ -664,7 +668,7 @@ public final class DiffCache<Key: Hashable, Value>: @unchecked Sendable {
         return entry.value
     }
 
-    public func set(key: Key, value: Value, cost: Int) {
+    func set(key: Key, value: Value, cost: Int) {
         lock.lock()
         defer { lock.unlock() }
 
@@ -682,14 +686,14 @@ public final class DiffCache<Key: Hashable, Value>: @unchecked Sendable {
         totalCost += cost
     }
 
-    public func clear() {
+    func clear() {
         lock.lock()
         defer { lock.unlock() }
         cache.removeAll()
         totalCost = 0
     }
 
-    public func stats() -> (entries: Int, bytesUsed: Int) {
+    func stats() -> (entries: Int, bytesUsed: Int) {
         lock.lock()
         defer { lock.unlock() }
         return (cache.count, totalCost)

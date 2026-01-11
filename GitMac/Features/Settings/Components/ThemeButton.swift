@@ -1,0 +1,38 @@
+import SwiftUI
+
+struct ThemeButton: View {
+    @ObservedObject private var themeManager = ThemeManager.shared
+    let theme: Theme
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: DesignTokens.Spacing.xs) {
+                Image(systemName: theme.icon)
+                    .font(DesignTokens.Typography.iconXXL)
+                    .foregroundColor(isSelected ? .white : iconColor)
+                    .frame(width: DesignTokens.Spacing.xxl + DesignTokens.Spacing.lg, height: DesignTokens.Spacing.xxl + DesignTokens.Spacing.lg)
+                    .background(
+                        RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+                            .fill(isSelected ? AppTheme.accent : AppTheme.backgroundSecondary)
+                    )
+
+                Text(theme.displayName)
+                    .foregroundColor(AppTheme.textPrimary)
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundColor(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var iconColor: Color {
+        switch theme {
+        case .system: return AppTheme.textSecondary
+        case .light: return AppTheme.warning
+        case .dark: return AppTheme.accent
+        case .custom: return AppTheme.accent.opacity(0.8)
+        }
+    }
+}

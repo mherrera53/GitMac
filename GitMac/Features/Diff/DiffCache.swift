@@ -242,12 +242,41 @@ extension DiffCache {
 /// Shared global diff cache
 actor GlobalDiffCache {
     static let shared = GlobalDiffCache()
-    
+
     private let cache: DiffCache
-    
+
     private init() {
         // Default to 50 MB cache
         self.cache = DiffCache(maxBytes: 50_000_000, maxEntries: 1000)
+
+        // Subscribe to memory pressure notifications
+        Task {
+            await Self.setupMemoryPressureObserver()
+        }
+    }
+
+    @MainActor
+    private static func setupMemoryPressureObserver() {
+        NotificationCenter.default.addObserver(
+            forName: MemoryPressureHandler.memoryPressureNotification,
+            object: nil,
+            queue: .main
+        ) { notification in
+            let level = notification.userInfo?["level"] as? String ?? "warning"
+            Task {
+                if level == "critical" {
+                    await GlobalDiffCache.shared.clear()
+                } else {
+                    // On warning, just trim cache
+                    await GlobalDiffCache.shared.trimCache()
+                }
+            }
+        }
+    }
+
+    /// Trim cache to reduce memory usage
+    func trimCache() async {
+        await cache.clear()
     }
     
     func get(_ key: String) async -> CachedHunk? {

@@ -80,6 +80,7 @@ enum ProFeature: String, CaseIterable {
 
 // MARK: - Feature Manager
 
+@MainActor
 class FeatureManager: ObservableObject {
     static let shared = FeatureManager()
 

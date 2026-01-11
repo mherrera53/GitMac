@@ -11,7 +11,7 @@ import SwiftUI
 // MARK: - Natural Language Input View
 
 struct TerminalNLInputView: View {
-    @StateObject private var nlService = TerminalNLTranslationService.shared
+    private let nlService = TerminalNLTranslationService.shared
     @Binding var selectedCommand: String?
     @State private var inputText: String = ""
     @State private var isTranslating = false
@@ -68,7 +68,7 @@ struct TerminalNLInputView: View {
                 }) {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(inputText.isEmpty ? AppTheme.textTertiary : AppTheme.accent)
+                        .foregroundColor(inputText.isEmpty ? AppTheme.textMuted : AppTheme.accent)
                 }
                 .disabled(inputText.isEmpty || isTranslating)
                 .buttonStyle(PlainButtonStyle())
@@ -110,7 +110,7 @@ struct TerminalNLInputView: View {
                                 .font(.system(size: 12, weight: .medium))
                             
                             Text(result.command)
-                                .font(.system(size: 13, weight: .medium, family: .monospaced))
+                                .font(.system(size: 13, weight: .medium, design: .monospaced))
                                 .foregroundColor(AppTheme.textPrimary)
                         }
                         .padding(.horizontal, 10)
@@ -253,10 +253,10 @@ struct TerminalNLInputView: View {
                     HStack {
                         Image(systemName: "terminal")
                             .font(.system(size: 11))
-                            .foregroundColor(AppTheme.textTertiary)
+                            .foregroundColor(AppTheme.textMuted)
                         
                         Text(alternative)
-                            .font(.system(size: 12, family: .monospaced))
+                            .font(.system(size: 12, design: .monospaced))
                             .foregroundColor(AppTheme.textPrimary)
                         
                         Spacer()
@@ -314,7 +314,7 @@ struct TerminalNLInputView: View {
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(AppTheme.textTertiary)
+                        .foregroundColor(AppTheme.textMuted)
                 }
                 .buttonStyle(PlainButtonStyle())
             }
@@ -349,9 +349,9 @@ struct TerminalNLInputView: View {
     
     private func explainCommand(_ command: String) async {
         showingExplanation = true
-        
+
         do {
-            let explanation = try await nlService.explainCommand(command, context: context)
+            _ = try await nlService.explainCommand(command, context: context)
             // Update the explanation view with the result
             // This would require state management to update the view
         } catch {
@@ -368,11 +368,11 @@ struct NLTextFieldStyle: TextFieldStyle {
             .font(.system(size: 14))
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(AppTheme.background)
+            .background(Color(nsColor: .windowBackgroundColor))
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(AppTheme.border, lineWidth: 1)
+                    .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
             )
     }
 }

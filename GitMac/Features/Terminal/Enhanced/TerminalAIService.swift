@@ -179,7 +179,37 @@ class TerminalAIService {
     ) async throws -> [AICommandSuggestion] {
         print("🔮 TerminalAIService: suggestTerminalCommands called with input: '\(input)'")
 
-        // PRIORITY: Check for directory/file path suggestions first
+        // PRIORITY 1: Check for git branch suggestions (checkout, switch, merge)
+        let branchSuggestions = getBranchSuggestions(for: input, repoPath: repoPath)
+        if !branchSuggestions.isEmpty {
+            print("🌿 Returning \(branchSuggestions.count) branch suggestions")
+            return branchSuggestions
+        }
+
+        // PRIORITY 2: Check for remote branch suggestions
+        let remoteBranchSuggestions = getRemoteBranchSuggestions(for: input, repoPath: repoPath)
+        if !remoteBranchSuggestions.isEmpty {
+            print("🌐 Returning \(remoteBranchSuggestions.count) remote branch suggestions")
+            return remoteBranchSuggestions
+        }
+
+        // PRIORITY 3: Check for git tag suggestions
+        let tagSuggestions = getTagSuggestions(for: input, repoPath: repoPath)
+        if !tagSuggestions.isEmpty {
+            print("🏷️ Returning \(tagSuggestions.count) tag suggestions")
+            return tagSuggestions
+        }
+
+        // PRIORITY 4: Check for commit message suggestions (when typing "git commit")
+        if input.hasPrefix("git commit") && !input.contains("-m") {
+            let commitSuggestions = await suggestCommitMessage(repoPath: repoPath)
+            if !commitSuggestions.isEmpty {
+                print("📝 Returning \(commitSuggestions.count) commit message suggestions")
+                return commitSuggestions
+            }
+        }
+
+        // PRIORITY 5: Check for directory/file path suggestions
         let directorySuggestions = getDirectorySuggestions(for: input, repoPath: repoPath)
         if !directorySuggestions.isEmpty {
             print("📁 Returning \(directorySuggestions.count) directory suggestions")
@@ -558,6 +588,266 @@ class TerminalAIService {
         } catch {
             print("❌ OpenAI also failed: \(error.localizedDescription)")
             return "Unable to get AI explanation. Error: \(error.localizedDescription)\n\nTry checking the command syntax and ensure you have the necessary permissions."
+        }
+    }
+
+    // MARK: - Git Branch Suggestions
+
+    private func getBranchSuggestions(for input: String, repoPath: String?) -> [AICommandSuggestion] {
+        // Commands that take branch names
+        let branchCommands = ["git checkout", "git switch", "git merge", "git rebase", "git branch -d", "git branch -D"]
+
+        // Check if input matches a branch command
+        let matchedCommand = branchCommands.first { input.hasPrefix($0) }
+        guard let command = matchedCommand else { return [] }
+
+        // Get the partial branch name
+        let partialBranch = input.dropFirst(command.count).trimmingCharacters(in: .whitespaces)
+
+        // Get branches from repo
+        guard let repoPath = repoPath else { return [] }
+        let branches = getGitBranches(at: repoPath)
+
+        // Filter branches matching partial input
+        let filtered = partialBranch.isEmpty ? branches : branches.filter {
+            $0.localizedCaseInsensitiveContains(partialBranch)
+        }
+
+        return filtered.prefix(8).map { branch in
+            AICommandSuggestion(
+                command: "\(command) \(branch)",
+                description: "🌿 Branch",
+                confidence: 0.95,
+                isFromAI: false,
+                category: "Git Branch"
+            )
+        }
+    }
+
+    private func getGitBranches(at repoPath: String) -> [String] {
+        let task = Process()
+        task.launchPath = "/usr/bin/git"
+        task.arguments = ["-C", repoPath, "branch", "--list", "--format=%(refname:short)"]
+        task.standardOutput = Pipe()
+        task.standardError = Pipe()
+
+        do {
+            try task.run()
+            let data = (task.standardOutput as? Pipe)?.fileHandleForReading.readDataToEndOfFile()
+            task.waitUntilExit()
+
+            if task.terminationStatus == 0, let data = data,
+               let output = String(data: data, encoding: .utf8) {
+                return output.split(separator: "\n").map { String($0).trimmingCharacters(in: .whitespaces) }
+            }
+        } catch {}
+        return []
+    }
+
+    // MARK: - Git Remote Branch Suggestions
+
+    private func getRemoteBranchSuggestions(for input: String, repoPath: String?) -> [AICommandSuggestion] {
+        guard input.hasPrefix("git checkout origin/") || input.hasPrefix("git fetch origin") else { return [] }
+        guard let repoPath = repoPath else { return [] }
+
+        let remoteBranches = getGitRemoteBranches(at: repoPath)
+        let partial = input.contains("origin/") ?
+            input.components(separatedBy: "origin/").last ?? "" : ""
+
+        let filtered = partial.isEmpty ? remoteBranches : remoteBranches.filter {
+            $0.localizedCaseInsensitiveContains(partial)
+        }
+
+        return filtered.prefix(8).map { branch in
+            AICommandSuggestion(
+                command: "git checkout origin/\(branch)",
+                description: "🌐 Remote branch",
+                confidence: 0.9,
+                isFromAI: false,
+                category: "Git Remote"
+            )
+        }
+    }
+
+    private func getGitRemoteBranches(at repoPath: String) -> [String] {
+        let task = Process()
+        task.launchPath = "/usr/bin/git"
+        task.arguments = ["-C", repoPath, "branch", "-r", "--format=%(refname:short)"]
+        task.standardOutput = Pipe()
+        task.standardError = Pipe()
+
+        do {
+            try task.run()
+            let data = (task.standardOutput as? Pipe)?.fileHandleForReading.readDataToEndOfFile()
+            task.waitUntilExit()
+
+            if task.terminationStatus == 0, let data = data,
+               let output = String(data: data, encoding: .utf8) {
+                return output.split(separator: "\n")
+                    .map { String($0).trimmingCharacters(in: .whitespaces) }
+                    .map { $0.replacingOccurrences(of: "origin/", with: "") }
+                    .filter { !$0.contains("HEAD") }
+            }
+        } catch {}
+        return []
+    }
+
+    // MARK: - Git Tag Suggestions
+
+    private func getTagSuggestions(for input: String, repoPath: String?) -> [AICommandSuggestion] {
+        let tagCommands = ["git tag -d", "git checkout", "git show"]
+        guard tagCommands.contains(where: { input.hasPrefix($0) }) else { return [] }
+        guard let repoPath = repoPath else { return [] }
+
+        let tags = getGitTags(at: repoPath)
+        let partial = input.components(separatedBy: " ").last ?? ""
+
+        let filtered = partial.isEmpty ? tags : tags.filter {
+            $0.localizedCaseInsensitiveContains(partial)
+        }
+
+        let baseCommand = tagCommands.first { input.hasPrefix($0) } ?? "git checkout"
+
+        return filtered.prefix(5).map { tag in
+            AICommandSuggestion(
+                command: "\(baseCommand) \(tag)",
+                description: "🏷️ Tag",
+                confidence: 0.9,
+                isFromAI: false,
+                category: "Git Tag"
+            )
+        }
+    }
+
+    private func getGitTags(at repoPath: String) -> [String] {
+        let task = Process()
+        task.launchPath = "/usr/bin/git"
+        task.arguments = ["-C", repoPath, "tag", "--list", "--sort=-creatordate"]
+        task.standardOutput = Pipe()
+        task.standardError = Pipe()
+
+        do {
+            try task.run()
+            let data = (task.standardOutput as? Pipe)?.fileHandleForReading.readDataToEndOfFile()
+            task.waitUntilExit()
+
+            if task.terminationStatus == 0, let data = data,
+               let output = String(data: data, encoding: .utf8) {
+                return output.split(separator: "\n").map { String($0).trimmingCharacters(in: .whitespaces) }
+            }
+        } catch {}
+        return []
+    }
+
+    // MARK: - Commit Message Suggestions
+
+    func suggestCommitMessage(repoPath: String?) async -> [AICommandSuggestion] {
+        guard let repoPath = repoPath else { return [] }
+
+        // Get staged diff
+        let diff = getStagedDiff(at: repoPath)
+        guard !diff.isEmpty else { return [] }
+
+        // Generate commit message suggestions
+        var suggestions: [AICommandSuggestion] = []
+
+        // Analyze diff to generate suggestions
+        let changedFiles = getChangedFileNames(from: diff)
+        let changeTypes = analyzeChangeTypes(from: diff)
+
+        // Generate conventional commit suggestions
+        if let primaryType = changeTypes.first {
+            let scope = changedFiles.first.map { "(\($0))" } ?? ""
+
+            // Main suggestion based on change type
+            let mainMessage = generateCommitMessage(type: primaryType, files: changedFiles)
+            suggestions.append(AICommandSuggestion(
+                command: "git commit -m \"\(primaryType)\(scope): \(mainMessage)\"",
+                description: "✨ Auto-generated",
+                confidence: 0.85,
+                isFromAI: true,
+                category: "Commit"
+            ))
+
+            // Alternative: simple message
+            suggestions.append(AICommandSuggestion(
+                command: "git commit -m \"\(mainMessage)\"",
+                description: "📝 Simple message",
+                confidence: 0.75,
+                isFromAI: true,
+                category: "Commit"
+            ))
+        }
+
+        // Add WIP commit option
+        suggestions.append(AICommandSuggestion(
+            command: "git commit -m \"WIP: work in progress\"",
+            description: "🚧 Work in progress",
+            confidence: 0.6,
+            isFromAI: false,
+            category: "Commit"
+        ))
+
+        return suggestions
+    }
+
+    private func getStagedDiff(at repoPath: String) -> String {
+        let task = Process()
+        task.launchPath = "/usr/bin/git"
+        task.arguments = ["-C", repoPath, "diff", "--cached", "--stat"]
+        task.standardOutput = Pipe()
+        task.standardError = Pipe()
+
+        do {
+            try task.run()
+            let data = (task.standardOutput as? Pipe)?.fileHandleForReading.readDataToEndOfFile()
+            task.waitUntilExit()
+
+            if task.terminationStatus == 0, let data = data {
+                return String(data: data, encoding: .utf8) ?? ""
+            }
+        } catch {}
+        return ""
+    }
+
+    private func getChangedFileNames(from diff: String) -> [String] {
+        return diff.split(separator: "\n")
+            .compactMap { line -> String? in
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                guard let pipeIndex = trimmed.firstIndex(of: "|") else { return nil }
+                return String(trimmed[..<pipeIndex]).trimmingCharacters(in: .whitespaces)
+                    .components(separatedBy: "/").last
+            }
+    }
+
+    private func analyzeChangeTypes(from diff: String) -> [String] {
+        var types: Set<String> = []
+
+        let diffLower = diff.lowercased()
+
+        if diffLower.contains("test") { types.insert("test") }
+        if diffLower.contains("readme") || diffLower.contains(".md") { types.insert("docs") }
+        if diffLower.contains("config") || diffLower.contains("package.json") { types.insert("chore") }
+        if diffLower.contains("fix") { types.insert("fix") }
+        if diffLower.contains("style") || diffLower.contains(".css") { types.insert("style") }
+
+        // Default to feat if nothing specific detected
+        if types.isEmpty { types.insert("feat") }
+
+        return Array(types)
+    }
+
+    private func generateCommitMessage(type: String, files: [String]) -> String {
+        let fileList = files.prefix(2).joined(separator: ", ")
+
+        switch type {
+        case "fix": return "fix issue in \(fileList)"
+        case "docs": return "update documentation"
+        case "test": return "add/update tests"
+        case "style": return "update styles"
+        case "chore": return "update configuration"
+        case "refactor": return "refactor \(fileList)"
+        default: return "update \(fileList)"
         }
     }
 

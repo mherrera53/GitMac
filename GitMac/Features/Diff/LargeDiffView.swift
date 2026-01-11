@@ -56,6 +56,7 @@ struct LargeDiffView: NSViewRepresentable {
         diffView.needsDisplay = true
     }
 
+    @MainActor
     class Coordinator: NSObject {
         var parent: LargeDiffView
         weak var diffView: LargeDiffNSView?

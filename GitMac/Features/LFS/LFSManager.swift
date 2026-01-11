@@ -57,7 +57,7 @@ struct LFSStorageInfo {
 // MARK: - LFS View
 
 struct LFSManagerView: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = LFSViewModel()
@@ -179,7 +179,7 @@ struct LFSManagerView: View {
             } else if filteredFiles.isEmpty {
                 VStack(spacing: DesignTokens.Spacing.sm) {
                     Image(systemName: "doc.badge.ellipsis")
-                        .font(DesignTokens.Typography.title)
+                        .font(DesignTokens.Typography.title2)
                         .foregroundColor(AppTheme.textPrimary)
                     Text("No LFS files tracked")
                         .font(DesignTokens.Typography.caption)

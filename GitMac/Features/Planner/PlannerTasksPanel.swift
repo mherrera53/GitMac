@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Planner Tasks Panel (Bottom Panel)
 
 struct PlannerTasksPanel: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     @Binding var height: CGFloat
     let onClose: () -> Void

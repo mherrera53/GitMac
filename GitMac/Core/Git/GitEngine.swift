@@ -451,10 +451,18 @@ actor GitEngine {
 
             let index = line.index(line.startIndex, offsetBy: 0)
             let worktree = line.index(line.startIndex, offsetBy: 1)
-            let filePath = String(line.dropFirst(3))
+            var filePath = String(line.dropFirst(3))
 
             let indexStatus = String(line[index])
             let worktreeStatus = String(line[worktree])
+
+            // Handle renames: "R  old_path -> new_path" - use new_path
+            if filePath.contains(" -> ") {
+                let parts = filePath.components(separatedBy: " -> ")
+                if parts.count == 2 {
+                    filePath = parts[1]  // Use the new (destination) path
+                }
+            }
 
             // Handle staged changes
             if indexStatus != " " && indexStatus != "?" {
@@ -880,7 +888,13 @@ actor GitEngine {
         let result = await shellExecutor.execute("git", arguments: args, workingDirectory: path)
 
         // Exit code 1 with empty stderr can mean "nothing to apply" which is OK
-        guard result.exitCode == 0 || (result.exitCode == 1 && result.stderr.isEmpty) else {
+        // Check for conflicts or untracked file errors
+        if result.exitCode != 0 {
+            if result.stderr.contains("untracked working tree files would be overwritten") ||
+               result.stderr.contains("local changes would be overwritten") ||
+               result.stderr.contains("Merge conflict") {
+                throw GitError.stashApplyConflict(result.stderr)
+            }
             throw GitError.stashApplyFailed(result.stderr.isEmpty ? "Failed to apply stash" : result.stderr)
         }
     }
@@ -1942,6 +1956,7 @@ enum GitError: LocalizedError {
     case pushFailed(String)
     case stashFailed(String)
     case stashApplyFailed(String)
+    case stashApplyConflict(String)
     case stashDropFailed(String)
     case mergeFailed(String)
     case mergeConflict(String)
@@ -1995,6 +2010,8 @@ enum GitError: LocalizedError {
             return "Stash failed: \(message)"
         case .stashApplyFailed(let message):
             return "Failed to apply stash: \(message)"
+        case .stashApplyConflict(let message):
+            return "Stash apply conflict: \(message)"
         case .stashDropFailed(let message):
             return "Failed to drop stash: \(message)"
         case .mergeFailed(let message):

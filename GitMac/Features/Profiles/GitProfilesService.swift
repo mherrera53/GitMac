@@ -4,6 +4,7 @@ import Combine
 // MARK: - Git Profiles Service
 
 /// Manages multiple Git identities for different repositories
+@MainActor
 class GitProfilesService: ObservableObject {
     static let shared = GitProfilesService()
     
@@ -13,6 +14,7 @@ class GitProfilesService: ObservableObject {
     private let userDefaults = UserDefaults.standard
     private let profilesKey = "git_profiles"
     private let mappingsKey = "git_profile_mappings"
+    private nonisolated let shell = ShellExecutor()
     
     private init() {
         loadProfiles()
@@ -62,7 +64,7 @@ class GitProfilesService: ObservableObject {
     func updateProfile(_ profile: GitProfile) {
         guard let index = profiles.firstIndex(where: { $0.id == profile.id }) else { return }
         
-        var updatedProfile = profile
+        let updatedProfile = profile
         
         // If this profile is being set as default, unset others
         if updatedProfile.isDefault {
@@ -119,36 +121,40 @@ class GitProfilesService: ObservableObject {
     /// Apply a profile's settings to a repository
     func applyProfile(_ profile: GitProfile, to repoPath: String) async throws {
         // Set user.name
-        _ = try await ShellExecutor.shared.execute(
+        _ = await shell.execute(
             "cd '\(repoPath)' && git config user.name '\(profile.name)'"
         )
-        
+
         // Set user.email
-        _ = try await ShellExecutor.shared.execute(
+        _ = await shell.execute(
             "cd '\(repoPath)' && git config user.email '\(profile.email)'"
         )
-        
+
         // Set signing key if present
         if let signingKey = profile.signingKey, !signingKey.isEmpty {
-            _ = try await ShellExecutor.shared.execute(
+            _ = await shell.execute(
                 "cd '\(repoPath)' && git config user.signingkey '\(signingKey)'"
             )
-            _ = try await ShellExecutor.shared.execute(
+            _ = await shell.execute(
                 "cd '\(repoPath)' && git config commit.gpgsign true"
             )
         }
-        
+
         // Update mapping
         setProfile(profile.id, for: repoPath)
     }
     
     /// Get current Git config from a repository
     func getCurrentConfig(at repoPath: String) async -> (name: String?, email: String?, signingKey: String?) {
-        let name = try? await ShellExecutor.shared.execute("cd '\(repoPath)' && git config user.name").output.trimmingCharacters(in: .whitespacesAndNewlines)
-        let email = try? await ShellExecutor.shared.execute("cd '\(repoPath)' && git config user.email").output.trimmingCharacters(in: .whitespacesAndNewlines)
-        let key = try? await ShellExecutor.shared.execute("cd '\(repoPath)' && git config user.signingkey").output.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        return (name, email, key)
+        let nameResult = await shell.execute("cd '\(repoPath)' && git config user.name")
+        let emailResult = await shell.execute("cd '\(repoPath)' && git config user.email")
+        let keyResult = await shell.execute("cd '\(repoPath)' && git config user.signingkey")
+
+        let name = nameResult.output.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        let email = emailResult.output.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        let key = keyResult.output.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+
+        return (name.isEmpty ? nil : name, email.isEmpty ? nil : email, key.isEmpty ? nil : key)
     }
     
     // MARK: - Persistence

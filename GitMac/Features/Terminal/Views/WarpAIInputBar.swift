@@ -48,7 +48,7 @@ struct WarpAIInputBar: View {
                         }) {
                             Image(systemName: "arrow.up.circle.fill")
                                 .font(.system(size: 20))
-                                .foregroundColor(inputText.isEmpty ? AppTheme.textTertiary : AppTheme.accent)
+                                .foregroundColor(inputText.isEmpty ? AppTheme.textMuted : AppTheme.accent)
                         }
                         .disabled(inputText.isEmpty)
                         .buttonStyle(PlainButtonStyle())
@@ -126,12 +126,11 @@ struct WarpAIResultCard: View {
                     HStack(spacing: 8) {
                         Image(systemName: "play.circle.fill")
                             .font(.system(size: 16))
-                            .foregroundColor(.white)
-                        
+
                         Text(result.command)
                             .font(.system(.body, design: .monospaced))
-                            .foregroundColor(.white)
                     }
+                    .foregroundStyle(AppTheme.buttonTextOnColor)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(
@@ -230,6 +229,6 @@ struct WarpAIInputStyle: TextFieldStyle {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(Color.clear)
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundColor(Color(nsColor: .labelColor))
     }
 }

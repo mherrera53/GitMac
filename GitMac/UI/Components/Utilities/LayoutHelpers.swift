@@ -262,25 +262,7 @@ struct DSContainer<Content: View>: View {
     }
 }
 
-// MARK: - DSSpacer
-
-/// Flexible or fixed spacer with Design System values
-struct DSSpacer: View {
-    let size: CGFloat?
-
-    init(size: CGFloat? = nil) {
-        self.size = size
-    }
-
-    var body: some View {
-        if let size = size {
-            Spacer()
-                .frame(width: size, height: size)
-        } else {
-            Spacer()
-        }
-    }
-}
+// DSSpacer is defined in UI/Components/Atoms/Display/DSSpacer.swift
 
 // MARK: - DSFlexibleSpacer
 
@@ -355,7 +337,7 @@ extension View {
 #Preview("Layout Helpers - Grid") {
     DSScrollView {
         DSGrid(columns: 3, spacing: DesignTokens.Spacing.md) {
-            ForEach(0..<12) { index in
+            ForEach(Array(0..<12), id: \.self) { index in
                 RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                     .fill(AppTheme.accent.opacity(0.2))
                     .frame(height: 100)
@@ -448,9 +430,9 @@ extension View {
 }
 
 #Preview("Layout Helpers - Lazy Stacks") {
-    DSScrollView {
-        DSLazyVStack(spacing: DesignTokens.Spacing.sm) {
-            ForEach(0..<50) { index in
+    ScrollView {
+        LazyVStack(spacing: DesignTokens.Spacing.sm) {
+            ForEach(Array(0..<50), id: \.self) { index in
                 HStack {
                     Text("Item \(index)")
                         .font(DesignTokens.Typography.body)
@@ -458,10 +440,7 @@ extension View {
 
                     Spacer()
 
-                    DSBadge(
-                        text: "\(index)",
-                        style: .primary
-                    )
+                    DSBadge("\(index)", variant: .info)
                 }
                 .padding(DesignTokens.Spacing.md)
                 .background(AppTheme.backgroundSecondary)

@@ -57,6 +57,7 @@ struct DSListItem<Leading: View, Trailing: View>: View {
         .padding(DesignTokens.Spacing.md)
         .background(isHovered ? AppTheme.backgroundSecondary : Color.clear)
         .cornerRadius(DesignTokens.CornerRadius.md)
+        .contentShape(Rectangle())
         .onHover { hovering in
             withAnimation(DesignTokens.Animation.fastEasing) {
                 isHovered = hovering

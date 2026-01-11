@@ -7,12 +7,28 @@ actor AIService {
     private let keychainManager = KeychainManager.shared
     private var preferencesLoaded = false
 
+    // MARK: - Ollama Configuration
+
+    /// Default Ollama URL
+    private static let defaultOllamaURL = "http://localhost:11434"
+
+    /// Get the configured Ollama base URL
+    static var ollamaBaseURL: String {
+        get {
+            UserDefaults.standard.string(forKey: "ollama.baseURL") ?? defaultOllamaURL
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "ollama.baseURL")
+        }
+    }
+
     // MARK: - Provider Configuration
 
     enum AIProvider: String, CaseIterable, Identifiable {
         case openai = "openai"
         case anthropic = "anthropic"
         case gemini = "gemini"
+        case ollama = "ollama"
 
         var id: String { rawValue }
 
@@ -21,6 +37,7 @@ actor AIService {
             case .openai: return "OpenAI"
             case .anthropic: return "Anthropic"
             case .gemini: return "Google Gemini"
+            case .ollama: return "Ollama (Local)"
             }
         }
 
@@ -29,6 +46,15 @@ actor AIService {
             case .openai: return "https://api.openai.com/v1"
             case .anthropic: return "https://api.anthropic.com/v1"
             case .gemini: return "https://generativelanguage.googleapis.com/v1beta"
+            case .ollama: return AIService.ollamaBaseURL
+            }
+        }
+
+        /// Whether this provider requires an API key
+        var requiresAPIKey: Bool {
+            switch self {
+            case .ollama: return false
+            default: return true
             }
         }
 
@@ -57,6 +83,17 @@ actor AIService {
                     AIModel(id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", provider: self),
                     AIModel(id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", provider: self)
                 ]
+            case .ollama:
+                // Default models - actual models fetched dynamically
+                return [
+                    AIModel(id: "llama3.2", name: "Llama 3.2", provider: self),
+                    AIModel(id: "llama3.1", name: "Llama 3.1", provider: self),
+                    AIModel(id: "codellama", name: "Code Llama", provider: self),
+                    AIModel(id: "mistral", name: "Mistral", provider: self),
+                    AIModel(id: "mixtral", name: "Mixtral", provider: self),
+                    AIModel(id: "qwen2.5-coder", name: "Qwen 2.5 Coder", provider: self),
+                    AIModel(id: "deepseek-coder-v2", name: "DeepSeek Coder V2", provider: self)
+                ]
             }
         }
     }
@@ -84,48 +121,115 @@ actor AIService {
         return currentModel
     }
 
-    /// Load saved preferences from keychain
+    /// Load saved preferences from keychain or UserDefaults
     private func loadPreferencesIfNeeded() async {
         guard !preferencesLoaded else { return }
         preferencesLoaded = true
 
-        // Try to load saved preferences
+        // Try to load saved preferences from keychain first
         if let prefs = await keychainManager.getPreferredAIProvider(),
            let provider = AIProvider(rawValue: prefs.provider.rawValue) {
             currentProvider = provider
             currentModel = prefs.model
-        } else {
-            // Find first configured provider
-            for provider in AIProvider.allCases {
-                if await hasAPIKey(for: provider) {
-                    currentProvider = provider
-                    currentModel = provider.models.first?.id ?? currentModel
-                    break
-                }
+            return
+        }
+
+        // Check UserDefaults (used for Ollama)
+        if let providerStr = UserDefaults.standard.string(forKey: "ai.preferredProvider"),
+           let provider = AIProvider(rawValue: providerStr) {
+            currentProvider = provider
+            currentModel = UserDefaults.standard.string(forKey: "ai.preferredModel") ?? provider.models.first?.id ?? currentModel
+            return
+        }
+
+        // Find first configured provider as fallback
+        for provider in AIProvider.allCases {
+            if await hasAPIKey(for: provider) {
+                currentProvider = provider
+                currentModel = provider.models.first?.id ?? currentModel
+                break
             }
         }
     }
 
     func setProvider(_ provider: AIProvider, model: String) async throws {
-        // Verify we have an API key for this provider
+        // Verify we have an API key for this provider (or Ollama is running)
         guard await hasAPIKey(for: provider) else {
+            if provider == .ollama {
+                throw AIError.connectionError("Ollama is not running. Start it with 'ollama serve'")
+            }
             throw AIError.noAPIKey(provider)
         }
 
         currentProvider = provider
         currentModel = model
 
-        try await keychainManager.savePreferredAIProvider(
-            KeychainManager.AIProvider(rawValue: provider.rawValue)!,
-            model: model
-        )
+        // Save to UserDefaults (works for all providers)
+        UserDefaults.standard.set(provider.rawValue, forKey: "ai.preferredProvider")
+        UserDefaults.standard.set(model, forKey: "ai.preferredModel")
+
+        // Also try keychain for non-Ollama providers (backup)
+        if let kcProvider = KeychainManager.AIProvider(rawValue: provider.rawValue) {
+            try? await keychainManager.savePreferredAIProvider(kcProvider, model: model)
+        }
     }
 
     func hasAPIKey(for provider: AIProvider) async -> Bool {
+        // Ollama doesn't need API key - check if it's running
+        if provider == .ollama {
+            return await isOllamaRunning()
+        }
+
         guard let kcProvider = KeychainManager.AIProvider(rawValue: provider.rawValue) else {
             return false
         }
         return await keychainManager.hasAIKey(provider: kcProvider)
+    }
+
+    /// Check if Ollama is running
+    private func isOllamaRunning() async -> Bool {
+        guard let url = URL(string: "\(AIService.ollamaBaseURL)/api/tags") else { return false }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 2
+
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            if let httpResponse = response as? HTTPURLResponse {
+                return httpResponse.statusCode == 200
+            }
+        } catch {
+            // Ollama not running
+        }
+        return false
+    }
+
+    /// Fetch available models from Ollama
+    func fetchOllamaModels() async -> [AIModel] {
+        guard let url = URL(string: "\(AIService.ollamaBaseURL)/api/tags") else { return AIProvider.ollama.models }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 5
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                return AIProvider.ollama.models
+            }
+
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let models = json["models"] as? [[String: Any]] else {
+                return AIProvider.ollama.models
+            }
+
+            return models.compactMap { model -> AIModel? in
+                guard let name = model["name"] as? String else { return nil }
+                // Clean up model name for display
+                let displayName = name.components(separatedBy: ":").first ?? name
+                return AIModel(id: name, name: displayName.capitalized, provider: .ollama)
+            }
+        } catch {
+            return AIProvider.ollama.models
+        }
     }
 
     func setAPIKey(_ key: String, for provider: AIProvider) async throws {
@@ -465,6 +569,11 @@ actor AIService {
     private func sendQuickMessage(_ message: String, maxTokens: Int = 200) async throws -> String {
         await loadPreferencesIfNeeded()
 
+        // Ollama doesn't need API key
+        if currentProvider == .ollama {
+            return try await sendOllamaQuick(message, maxTokens: maxTokens)
+        }
+
         guard let kcProvider = KeychainManager.AIProvider(rawValue: currentProvider.rawValue),
               let apiKey = try await keychainManager.getAIKey(provider: kcProvider) else {
             throw AIError.noAPIKey(currentProvider)
@@ -477,7 +586,49 @@ actor AIService {
             return try await sendAnthropicQuick(message, apiKey: apiKey, maxTokens: maxTokens)
         case .gemini:
             return try await sendGeminiQuick(message, apiKey: apiKey, maxTokens: maxTokens)
+        case .ollama:
+            return try await sendOllamaQuick(message, maxTokens: maxTokens)
         }
+    }
+
+    private func sendOllamaQuick(_ message: String, maxTokens: Int) async throws -> String {
+        guard let url = URL(string: "\(AIService.ollamaBaseURL)/api/generate") else {
+            throw AIError.connectionError("Invalid Ollama URL")
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30
+
+        // Use configured model or default
+        let model = currentModel.isEmpty ? "llama3.2" : currentModel
+
+        let body: [String: Any] = [
+            "model": model,
+            "prompt": message,
+            "stream": false,
+            "options": [
+                "num_predict": maxTokens,
+                "temperature": 0.3
+            ]
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AIError.connectionError("Invalid response from Ollama")
+        }
+
+        if httpResponse.statusCode != 200 {
+            throw AIError.connectionError("Ollama returned status \(httpResponse.statusCode). Make sure Ollama is running.")
+        }
+
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let text = json["response"] as? String else {
+            throw AIError.invalidResponse
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func sendOpenAIQuick(_ message: String, apiKey: String, maxTokens: Int) async throws -> String {
@@ -861,6 +1012,11 @@ actor AIService {
         // Load preferences on first use
         await loadPreferencesIfNeeded()
 
+        // Ollama doesn't need API key
+        if currentProvider == .ollama {
+            return try await sendOllamaMessage(message)
+        }
+
         guard let kcProvider = KeychainManager.AIProvider(rawValue: currentProvider.rawValue),
               let apiKey = try await keychainManager.getAIKey(provider: kcProvider) else {
             throw AIError.noAPIKey(currentProvider)
@@ -873,7 +1029,48 @@ actor AIService {
             return try await sendAnthropicMessage(message, apiKey: apiKey)
         case .gemini:
             return try await sendGeminiMessage(message, apiKey: apiKey)
+        case .ollama:
+            return try await sendOllamaMessage(message)
         }
+    }
+
+    private func sendOllamaMessage(_ message: String) async throws -> String {
+        guard let url = URL(string: "\(AIService.ollamaBaseURL)/api/generate") else {
+            throw AIError.connectionError("Invalid Ollama URL")
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 60 // Longer timeout for full messages
+
+        let model = currentModel.isEmpty ? "llama3.2" : currentModel
+
+        let body: [String: Any] = [
+            "model": model,
+            "prompt": message,
+            "stream": false,
+            "options": [
+                "num_predict": 1000,
+                "temperature": 0.7
+            ]
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AIError.connectionError("Invalid response from Ollama")
+        }
+
+        if httpResponse.statusCode != 200 {
+            throw AIError.connectionError("Ollama returned status \(httpResponse.statusCode). Make sure Ollama is running.")
+        }
+
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let text = json["response"] as? String else {
+            throw AIError.invalidResponse
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func sendOpenAIMessage(_ message: String, apiKey: String) async throws -> String {
@@ -1039,6 +1236,7 @@ enum AIError: LocalizedError {
     case invalidProvider
     case requestFailed(String)
     case invalidResponse
+    case connectionError(String)
 
     var errorDescription: String? {
         switch self {
@@ -1050,6 +1248,8 @@ enum AIError: LocalizedError {
             return "AI request failed: \(message)"
         case .invalidResponse:
             return "Invalid response from AI service"
+        case .connectionError(let message):
+            return message
         }
     }
 }

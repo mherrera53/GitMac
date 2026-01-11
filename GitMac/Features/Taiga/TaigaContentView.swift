@@ -42,8 +42,29 @@ struct TaigaContentView: View {
             DSDivider()
 
             // Tab content
+            // Tab content
             if viewModel.isLoading {
                 DSLoadingState(message: "Loading project data...")
+            } else if let error = viewModel.error {
+                VStack(spacing: DesignTokens.Spacing.sm) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 24))
+                        .foregroundColor(AppTheme.error)
+                    Text("Connection Error")
+                        .font(.headline)
+                        .foregroundColor(AppTheme.textPrimary)
+                    Text(error)
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    Button("Retry") {
+                        Task { try? await viewModel.refresh() }
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, DesignTokens.Spacing.sm)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if viewModel.selectedProjectId == nil {
                 DSEmptyState(
                     icon: "folder",
@@ -53,13 +74,29 @@ struct TaigaContentView: View {
             } else {
                 switch selectedTab {
                 case .userStories:
-                    TaigaUserStoriesView(stories: viewModel.userStories, viewModel: viewModel)
+                    if viewModel.userStories.isEmpty {
+                        DSEmptyState(icon: "doc.text", title: "No Stories", description: "No user stories found for this project.")
+                    } else {
+                        TaigaUserStoriesView(stories: viewModel.userStories, viewModel: viewModel)
+                    }
                 case .tasks:
-                    TaigaTasksView(tasks: viewModel.tasks)
+                    if viewModel.tasks.isEmpty {
+                        DSEmptyState(icon: "checklist", title: "No Tasks", description: "No tasks found for this project.")
+                    } else {
+                        TaigaTasksView(tasks: viewModel.tasks)
+                    }
                 case .issues:
-                    TaigaIssuesView(issues: viewModel.issues)
+                    if viewModel.issues.isEmpty {
+                        DSEmptyState(icon: "exclamationmark.circle", title: "No Issues", description: "No issues found for this project.")
+                    } else {
+                        TaigaIssuesView(issues: viewModel.issues)
+                    }
                 case .epics:
-                    TaigaEpicsView(epics: viewModel.epics)
+                    if viewModel.epics.isEmpty {
+                        DSEmptyState(icon: "flag", title: "No Epics", description: "No epics found for this project.")
+                    } else {
+                        TaigaEpicsView(epics: viewModel.epics)
+                    }
                 }
             }
         }

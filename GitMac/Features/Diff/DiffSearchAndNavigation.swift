@@ -4,56 +4,56 @@ import AppKit
 // MARK: - Search Result
 
 /// Represents a search match in the diff
-public struct DiffSearchMatch: Identifiable, Equatable {
-    public let id = UUID()
-    public let hunkIndex: Int
-    public let lineIndex: Int
-    public let range: Range<String.Index>
-    public let lineContent: String
+struct DiffSearchMatch: Identifiable, Equatable {
+    let id = UUID()
+    let hunkIndex: Int
+    let lineIndex: Int
+    let range: Range<String.Index>
+    let lineContent: String
 
     /// Y offset for scrolling to this match
-    public var yOffset: CGFloat = 0
+    var yOffset: CGFloat = 0
 }
 
 // MARK: - Search State
 
 /// Manages search state for diff view
 @MainActor
-public class DiffSearchState: ObservableObject {
-    @Published public var query: String = ""
-    @Published public var matches: [DiffSearchMatch] = []
-    @Published public var currentMatchIndex: Int = 0
-    @Published public var isSearching: Bool = false
-    @Published public var caseSensitive: Bool = false
-    @Published public var useRegex: Bool = false
+class DiffSearchState: ObservableObject {
+    @Published var query: String = ""
+    @Published var matches: [DiffSearchMatch] = []
+    @Published var currentMatchIndex: Int = 0
+    @Published var isSearching: Bool = false
+    @Published var caseSensitive: Bool = false
+    @Published var useRegex: Bool = false
 
-    public var currentMatch: DiffSearchMatch? {
+    var currentMatch: DiffSearchMatch? {
         guard !matches.isEmpty, currentMatchIndex < matches.count else { return nil }
         return matches[currentMatchIndex]
     }
 
-    public var matchCount: Int { matches.count }
+    var matchCount: Int { matches.count }
 
-    public var hasMatches: Bool { !matches.isEmpty }
+    var hasMatches: Bool { !matches.isEmpty }
 
-    public func nextMatch() {
+    func nextMatch() {
         guard !matches.isEmpty else { return }
         currentMatchIndex = (currentMatchIndex + 1) % matches.count
     }
 
-    public func previousMatch() {
+    func previousMatch() {
         guard !matches.isEmpty else { return }
         currentMatchIndex = (currentMatchIndex - 1 + matches.count) % matches.count
     }
 
-    public func clearSearch() {
+    func clearSearch() {
         query = ""
         matches = []
         currentMatchIndex = 0
     }
 
     /// Search within hunks
-    public func search(in hunks: [StreamingDiffHunk]) {
+    func search(in hunks: [StreamingDiffHunk]) {
         guard !query.isEmpty else {
             matches = []
             currentMatchIndex = 0
@@ -96,8 +96,6 @@ public class DiffSearchState: ObservableObject {
 
 /// Search bar for diff view
 struct DiffSearchBar: View {
-    @StateObject private var themeManager = ThemeManager.shared
-
     @ObservedObject var searchState: DiffSearchState
     @FocusState private var isFocused: Bool
     var onClose: () -> Void
@@ -155,8 +153,12 @@ struct DiffSearchBar: View {
                 .frame(height: DesignTokens.Size.iconMD)
 
             // Options
-            DSToggle(isOn: $searchState.caseSensitive, label: "Aa", style: .button)
-                .help("Case Sensitive")
+            Toggle(isOn: $searchState.caseSensitive) {
+                Text("Aa")
+                    .font(DesignTokens.Typography.caption2.weight(.medium))
+            }
+            .toggleStyle(.button)
+            .help("Case Sensitive")
 
             // Close button
             Button {
@@ -176,7 +178,7 @@ struct DiffSearchBar: View {
         .cornerRadius(DesignTokens.CornerRadius.md)
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
-                .stroke(Color.Theme(themeManager.colors).border, lineWidth: 1)
+                .stroke(AppTheme.border, lineWidth: 1)
         )
         .onAppear {
             isFocused = true
@@ -188,36 +190,36 @@ struct DiffSearchBar: View {
 
 /// Manages navigation between changes
 @MainActor
-public class DiffNavigationState: ObservableObject {
-    @Published public var changePositions: [ChangePosition] = []
-    @Published public var currentChangeIndex: Int = 0
+class DiffNavigationState: ObservableObject {
+    @Published var changePositions: [ChangePosition] = []
+    @Published var currentChangeIndex: Int = 0
 
-    public struct ChangePosition: Identifiable {
-        public let id = UUID()
-        public let hunkIndex: Int
-        public let lineIndex: Int
-        public let type: DiffLineType
-        public let yOffset: CGFloat
+    struct ChangePosition: Identifiable {
+        let id = UUID()
+        let hunkIndex: Int
+        let lineIndex: Int
+        let type: DiffLineType
+        let yOffset: CGFloat
     }
 
-    public var currentChange: ChangePosition? {
+    var currentChange: ChangePosition? {
         guard !changePositions.isEmpty, currentChangeIndex < changePositions.count else { return nil }
         return changePositions[currentChangeIndex]
     }
 
-    public var changeCount: Int { changePositions.count }
+    var changeCount: Int { changePositions.count }
 
-    public func nextChange() {
+    func nextChange() {
         guard !changePositions.isEmpty else { return }
         currentChangeIndex = (currentChangeIndex + 1) % changePositions.count
     }
 
-    public func previousChange() {
+    func previousChange() {
         guard !changePositions.isEmpty else { return }
         currentChangeIndex = (currentChangeIndex - 1 + changePositions.count) % changePositions.count
     }
 
-    public func nextAddition() {
+    func nextAddition() {
         guard !changePositions.isEmpty else { return }
         let startIndex = currentChangeIndex
         var index = (startIndex + 1) % changePositions.count
@@ -231,7 +233,7 @@ public class DiffNavigationState: ObservableObject {
         }
     }
 
-    public func nextDeletion() {
+    func nextDeletion() {
         guard !changePositions.isEmpty else { return }
         let startIndex = currentChangeIndex
         var index = (startIndex + 1) % changePositions.count
@@ -246,7 +248,7 @@ public class DiffNavigationState: ObservableObject {
     }
 
     /// Build change positions from hunks
-    public func buildChangePositions(from hunks: [StreamingDiffHunk], lineHeight: CGFloat = 18) {
+    func buildChangePositions(from hunks: [StreamingDiffHunk], lineHeight: CGFloat = 18) {
         var positions: [ChangePosition] = []
         var yOffset: CGFloat = 0
 
@@ -370,10 +372,10 @@ struct DiffNavigationToolbar: View {
     }
 }
 
-// MARK: - Status Bar
+// MARK: - Viewer Status Bar
 
-/// Status bar showing diff metrics and LFM status
-struct DiffStatusBar: View {
+/// Status bar showing diff metrics and LFM status for EnhancedDiffViewer
+struct ViewerDiffStatusBar: View {
     let stats: DiffPreflightStats?
     let isLargeFileMode: Bool
     let parseTimeMs: Double?
@@ -493,7 +495,7 @@ struct SideBySideDiffView: View {
 
                 // Divider
                 Rectangle()
-                    .fill(Color.Theme(themeManager.colors).border)
+                    .fill(AppTheme.border)
                     .frame(width: 1)
 
                 // Gutter with line connectors
@@ -639,6 +641,7 @@ private struct SideBySideLineRow: View {
 // MARK: - Copy Selection
 
 /// Handles copying selected diff content
+@MainActor
 struct DiffCopyManager {
     /// Copy selected lines to clipboard
     static func copyLines(_ lines: [DiffLine], includeLineNumbers: Bool = false, includePrefixes: Bool = true) {
@@ -763,7 +766,7 @@ struct EnhancedDiffViewer: View {
             Divider()
 
             // Status bar
-            DiffStatusBar(
+            ViewerDiffStatusBar(
                 stats: preflightStats,
                 isLargeFileMode: isLargeFileMode,
                 parseTimeMs: parseTimeMs,
@@ -775,7 +778,7 @@ struct EnhancedDiffViewer: View {
         .task {
             await loadDiff()
         }
-        .onChange(of: searchState.query) { _ in
+        .onChange(of: searchState.query) {
             searchState.search(in: hunks)
         }
     }
@@ -786,15 +789,13 @@ struct EnhancedDiffViewer: View {
         HStack(spacing: DesignTokens.Spacing.md) {
             // View mode picker (only if not LFM)
             if !isLargeFileMode {
-                DSPicker(selection: $viewMode) {
-                    Image(systemName: "text.alignleft")
-                        .foregroundColor(AppTheme.textSecondary)
-                        .tag(ViewMode.unified)
-                    Image(systemName: "rectangle.split.2x1")
-                        .foregroundColor(AppTheme.textSecondary)
-                        .tag(ViewMode.sideBySide)
+                Picker("View Mode", selection: $viewMode) {
+                    Label("Unified", systemImage: "text.alignleft").tag(ViewMode.unified)
+                    Label("Side by Side", systemImage: "rectangle.split.2x1").tag(ViewMode.sideBySide)
                 }
-                .frame(width: 80)
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 100)
             }
 
             Spacer()

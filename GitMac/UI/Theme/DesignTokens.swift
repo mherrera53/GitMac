@@ -13,21 +13,55 @@ import AppKit
 /// Estos tokens son la base del Atomic Design System
 enum DesignTokens {
 
+    // MARK: - Colors (Semantic System)
+    
+    /// Colores semánticos nativos de macOS (NSColor)
+    enum Colors {
+        // Text
+        static let label = Color(nsColor: .labelColor)
+        static let secondaryLabel = Color(nsColor: .secondaryLabelColor)
+        static let tertiaryLabel = Color(nsColor: .tertiaryLabelColor)
+        static let quaternaryLabel = Color(nsColor: .quaternaryLabelColor)
+        static let link = Color(nsColor: .linkColor)
+        static let placeholder = Color(nsColor: .placeholderTextColor)
+
+        // Backgrounds
+        static let windowBackground = Color(nsColor: .windowBackgroundColor)
+        static let underPageBackground = Color(nsColor: .underPageBackgroundColor)
+        static let controlBackground = Color(nsColor: .controlBackgroundColor)
+        static let selectedContentBackground = Color(nsColor: .selectedContentBackgroundColor)
+        static let unemphasizedSelectedContentBackground = Color(nsColor: .unemphasizedSelectedContentBackgroundColor)
+        static let textBackgroundColor = Color(nsColor: .textBackgroundColor)
+
+        // Separators
+        static let separator = Color(nsColor: .separatorColor)
+        static let grid = Color(nsColor: .gridColor)
+
+        // Accent
+        static let controlAccent = Color(nsColor: .controlAccentColor)
+        
+        // Semantic
+        static let error = Color(nsColor: .systemRed)
+        static let success = Color(nsColor: .systemGreen)
+        static let warning = Color(nsColor: .systemOrange)
+        static let info = Color(nsColor: .systemBlue)
+    }
+
     // MARK: - Typography
 
     /// Sistema tipográfico con escala modular
     enum Typography {
         // Base scale (Major Third: 1.250)
-        static let caption2: Font = .system(size: 10)    // 10px
-        static let caption: Font = .system(size: 11)     // 11px
-        static let callout: Font = .system(size: 12)     // 12px
-        static let body: Font = .system(size: 13)        // 13px (base)
-        static let headline: Font = .system(size: 14, weight: .semibold)  // 14px semibold
-        static let subheadline: Font = .system(size: 15) // 15px
-        static let title3: Font = .system(size: 17)      // 17px
-        static let title2: Font = .system(size: 20)      // 20px
-        static let title1: Font = .system(size: 22, weight: .bold)      // 22px
-        static let largeTitle: Font = .system(size: 28, weight: .bold)  // 28px
+        static let caption2: Font = .caption2    // Semantic caption2
+        static let caption: Font = .caption      // Semantic caption
+        static let callout: Font = .callout      // Semantic callout
+        static let body: Font = .body            // Semantic body
+        static let headline: Font = .headline    // Semantic headline
+        static let subheadline: Font = .subheadline // Semantic subheadline
+        static let title3: Font = .title3      // Semantic title3
+        static let title2: Font = .title2      // Semantic title2
+        static let title1: Font = .title       // Semantic title1
+        static let largeTitle: Font = .largeTitle  // Semantic largeTitle
 
         // Large icons for decorative/hero elements (como tallas de ropa: XL → XXL → XXXL → XXXXL)
         static let iconXL: Font = .system(size: 24)        // 24px - XL icons
@@ -108,6 +142,78 @@ enum DesignTokens {
         static let md: CGFloat = 6
         static let lg: CGFloat = 8
         static let xl: CGFloat = 12
+    }
+
+    // MARK: - Layout (Metrics)
+
+    /// Métricas de layout centralizadas
+    enum Layout {
+        /// Sidebar metrics
+        enum Sidebar {
+            static let minWidth: CGFloat = 240
+            static let idealWidth: CGFloat = 260
+            static let maxWidth: CGFloat = 400
+        }
+
+        /// Staging Panel metrics
+        enum StagingPanel {
+            static let minWidth: CGFloat = 300
+            static let idealWidth: CGFloat = 380
+            static let maxWidth: CGFloat = 500
+        }
+
+        /// Bottom Panel metrics
+        enum BottomPanel {
+            static let minHeight: CGFloat = 150
+            static let maxHeight: CGFloat = 500
+            static let defaultHeight: CGFloat = 250 // Assuming a default starting height
+        }
+
+        /// Window metrics
+        enum Window {
+            static let minWidth: CGFloat = 900
+            static let minHeight: CGFloat = 600
+        }
+
+        /// CI/CD Panel metrics
+        enum CICDPanel {
+            static let width: CGFloat = 900
+            static let height: CGFloat = 600
+        }
+        
+        /// Workflows Panel metrics
+        enum WorkflowsPanel {
+             static let width: CGFloat = 700
+             static let height: CGFloat = 500
+        }
+        
+        /// Hooks Panel metrics
+        enum HooksPanel {
+            static let minWidth: CGFloat = 700
+            static let minHeight: CGFloat = 600
+        }
+        
+        /// Submodule Panel metrics
+        enum SubmodulePanel {
+            static let minWidth: CGFloat = 600
+            static let minHeight: CGFloat = 500
+        }
+    }
+
+    // MARK: - Shadow (Elevation)
+
+    /// Sistema de sombras para profundidad
+    enum Shadow {
+        static let sm: ShadowStyle = .init(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        static let md: ShadowStyle = .init(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
+        static let lg: ShadowStyle = .init(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+        
+        struct ShadowStyle {
+            let color: Color
+            let radius: CGFloat
+            let x: CGFloat
+            let y: CGFloat
+        }
     }
 
     // MARK: - Size

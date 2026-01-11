@@ -62,8 +62,8 @@ struct FileRow: View {
 
         Spacer()
 
-        // Diff stats
-        if showStats && file.hasChanges {
+        // Diff stats (don't show for deleted files - the status icon is enough)
+        if showStats && file.hasChanges && file.status != .deleted {
             DiffStatsView(additions: file.additions, deletions: file.deletions)
         }
     }

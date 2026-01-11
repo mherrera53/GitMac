@@ -7,9 +7,10 @@ import CryptoKit
 /// Advanced feature's Cloud Patches feature
 actor CloudPatchService {
     static let shared = CloudPatchService()
-    
+
     private let baseURL = "https://api.github.com/gists" // Using GitHub Gists as backend
     private var token: String?
+    private let shell = ShellExecutor()
     
     // MARK: - Models
     
@@ -154,15 +155,12 @@ actor CloudPatchService {
         // Parse metadata if available
         var title = "Untitled Patch"
         var description: String?
-        var fileList: [String] = []
-        
         if let metadataFile = files["metadata.json"],
            let content = metadataFile["content"] as? String,
            let metadataData = content.data(using: .utf8),
            let metadata = try? JSONSerialization.jsonObject(with: metadataData) as? [String: Any] {
             title = metadata["title"] as? String ?? title
             description = metadata["description"] as? String
-            fileList = metadata["files"] as? [String] ?? []
         }
         
         let isPublic = json["public"] as? Bool ?? true
@@ -203,8 +201,10 @@ actor CloudPatchService {
         }
         
         // Apply the patch
-        let result = try await ShellExecutor.shared.execute(
-            "cd '\(repoPath)' && git apply '\(tempURL.path)'"
+        let result = await shell.execute(
+            "bash",
+            arguments: ["-c", "cd '\(repoPath)' && git apply '\(tempURL.path)'"],
+            workingDirectory: repoPath
         )
         
         if !result.output.isEmpty && result.output.contains("error") {

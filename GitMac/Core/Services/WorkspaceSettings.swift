@@ -95,6 +95,7 @@ struct WorkspaceConfig: Codable {
 
     // AWS CodeBuild
     var codeBuildProjectName: String?
+    var awsRegion: String?
 
     init() {}
 }
