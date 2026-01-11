@@ -262,6 +262,7 @@ struct BranchListView: View {
                 showDeleteAlert = true
             },
             onPush: branch.isRemote ? nil : {
+                print("🔘 onPush CLICKED for branch: \(branch.name)")
                 await viewModel.push(branch)
                 await prTracker.refresh()
             },
@@ -663,12 +664,18 @@ class BranchListViewModel: ObservableObject {
     }
 
     func push(_ branch: Branch) async {
-        guard let path = currentRepoPath else { return }
+        print("🚀 PUSH START: branch='\(branch.name)' currentRepoPath='\(currentRepoPath ?? "NIL")'")
+        guard let path = currentRepoPath else {
+            print("❌ PUSH FAILED: currentRepoPath is nil!")
+            return
+        }
         isLoading = true
+        print("🚀 PUSH: Calling engine.push...")
         do {
             // Push the specific branch (works for both HEAD and non-HEAD branches)
             let options = PushOptions(branch: branch.name)
             try await engine.push(options: options, at: path)
+            print("✅ PUSH SUCCESS")
 
             // Notify UI
             NotificationCenter.default.post(name: .remoteOperationCompleted, object: "push")
