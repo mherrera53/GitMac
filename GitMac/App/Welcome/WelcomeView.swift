@@ -7,11 +7,89 @@
 
 import SwiftUI
 
+// MARK: - App Icon View
+
+/// Displays the official GitMac app icon from the bundle
+struct AppIconView: View {
+    let size: CGFloat
+    @State private var appIcon: NSImage?
+
+    var body: some View {
+        Group {
+            if let icon = appIcon {
+                Image(nsImage: icon)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: size, height: size)
+                    .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
+            } else {
+                // Fallback with gradient
+                RoundedRectangle(cornerRadius: size * 0.2)
+                    .fill(
+                        LinearGradient(
+                            colors: [AppTheme.accent, AppTheme.info],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: size, height: size)
+                    .overlay(
+                        Image(systemName: "arrow.triangle.branch")
+                            .font(.system(size: size * 0.5))
+                            .foregroundColor(.white)
+                    )
+                    .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
+            }
+        }
+        .onAppear {
+            loadIcon()
+        }
+    }
+
+    private func loadIcon() {
+        // Method 1: Get from NSApp (most reliable for running app)
+        if let icon = NSApp.applicationIconImage, icon.size.width > 0 {
+            appIcon = icon
+            return
+        }
+
+        // Method 2: Load from bundle Resources
+        if let resourcePath = Bundle.main.resourcePath {
+            let icnsPath = (resourcePath as NSString).appendingPathComponent("AppIcon.icns")
+            if let icon = NSImage(contentsOfFile: icnsPath) {
+                appIcon = icon
+                return
+            }
+        }
+
+        // Method 3: Try bundle URL
+        if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
+           let icon = NSImage(contentsOf: iconURL) {
+            appIcon = icon
+            return
+        }
+
+        // Method 4: Get from Info.plist CFBundleIconFile
+        if let iconName = Bundle.main.object(forInfoDictionaryKey: "CFBundleIconFile") as? String {
+            let name = iconName.hasSuffix(".icns") ? String(iconName.dropLast(5)) : iconName
+            if let iconURL = Bundle.main.url(forResource: name, withExtension: "icns"),
+               let icon = NSImage(contentsOf: iconURL) {
+                appIcon = icon
+                return
+            }
+        }
+    }
+}
+
+// MARK: - Welcome View
+
 struct WelcomeView: View {
     let onOpen: () -> Void
     let onClone: () -> Void
     @EnvironmentObject var recentReposManager: RecentRepositoriesManager
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var themeManager: ThemeManager
 
     var body: some View {
         HStack(spacing: 0) {
@@ -19,24 +97,8 @@ struct WelcomeView: View {
             VStack(spacing: 24) {
                 Spacer()
 
-                // App Icon
-                if let appIcon = NSImage(named: NSImage.applicationIconName) {
-                    Image(nsImage: appIcon)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 120, height: 120)
-                        .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
-                } else {
-                    Image(systemName: "arrow.triangle.branch")
-                        .font(.system(size: 80))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [AppTheme.accent, AppTheme.info],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                }
+                // App Icon - Load from bundle
+                AppIconView(size: 120)
 
                 Text("GitMac")
                     .font(.system(size: 36, weight: .bold))
@@ -91,6 +153,8 @@ struct WelcomeView: View {
             .frame(width: 320)
             .background(AppTheme.backgroundSecondary)
         }
+        // Force re-render when theme changes
+        .id(themeManager.currentTheme)
     }
 }
 

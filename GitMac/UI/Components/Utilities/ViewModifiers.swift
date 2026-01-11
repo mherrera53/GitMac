@@ -229,9 +229,70 @@ struct DSSelectionHighlight: ViewModifier {
     }
 }
 
+// MARK: - Instant Tooltip Modifier
+
+/// Shows a tooltip immediately on hover (no delay like .help())
+struct InstantTooltip: ViewModifier {
+    let text: String
+    let delay: Double
+
+    @State private var isHovered = false
+    @State private var showTooltip = false
+    @State private var hoverTask: Task<Void, Never>?
+
+    init(_ text: String, delay: Double = 0.3) {
+        self.text = text
+        self.delay = delay
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .onHover { hovering in
+                isHovered = hovering
+                hoverTask?.cancel()
+
+                if hovering {
+                    hoverTask = Task {
+                        try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                        if !Task.isCancelled {
+                            await MainActor.run {
+                                showTooltip = true
+                            }
+                        }
+                    }
+                } else {
+                    showTooltip = false
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if showTooltip {
+                    Text(text)
+                        .font(.system(size: 11))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.black.opacity(0.85))
+                        )
+                        .fixedSize()
+                        .offset(y: 28)
+                        .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .top)))
+                        .zIndex(1000)
+                }
+            }
+            .animation(.easeOut(duration: 0.15), value: showTooltip)
+    }
+}
+
 // MARK: - View Extensions
 
 extension View {
+    /// Shows an instant tooltip on hover (much faster than .help())
+    func instantTooltip(_ text: String, delay: Double = 0.3) -> some View {
+        modifier(InstantTooltip(text, delay: delay))
+    }
+
     /// Applies hover effect with consistent styling
     func hoverEffect(
         isHovered: Binding<Bool>,

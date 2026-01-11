@@ -493,6 +493,10 @@ struct CommitGraphView: View {
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 showDetailPanel = false
                             }
+                        },
+                        onOpenDiff: { selectedCommit in
+                            // Set appState.selectedCommit to open diff in the right panel
+                            appState.selectedCommit = selectedCommit
                         }
                     )
                     .environmentObject(appState)
@@ -936,6 +940,11 @@ struct CommitGraphView: View {
             .onTapGesture {
                 handleSelection(item: item)
             }
+            .simultaneousGesture(
+                TapGesture(count: 2).onEnded {
+                    handleDoubleClick(item: item)
+                }
+            )
         case .commit(let node):
             if matchesSearchAndFilter(node) {
                 GraphRow(
@@ -963,6 +972,11 @@ struct CommitGraphView: View {
                 .onTapGesture {
                     handleSelection(item: item)
                 }
+                .simultaneousGesture(
+                    TapGesture(count: 2).onEnded {
+                        handleDoubleClick(item: item)
+                    }
+                )
                 .draggable(CommitTransferable(commit: node.commit))
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Commit \(node.commit.shortSha) by \(node.commit.author): \(node.commit.summary)")
@@ -979,6 +993,11 @@ struct CommitGraphView: View {
                 .onTapGesture {
                     handleSelection(item: item)
                 }
+                .simultaneousGesture(
+                    TapGesture(count: 2).onEnded {
+                        handleDoubleClick(item: item)
+                    }
+                )
             }
         }
     }
@@ -1045,8 +1064,7 @@ struct CommitGraphView: View {
             lastSelectedId = itemId
         }
 
-        // Update AppState for the primarily selected item
-        // DISABLED: User requested to remove automatic diff loading from CommitGraph
+        // Single-click: show right panel with changed files (no diff loaded)
         if let firstId = selectedIds.first {
             if let commitItem = vm.timelineItems.first(where: { $0.id == firstId }),
                case .commit(let node) = commitItem {
@@ -1062,6 +1080,12 @@ struct CommitGraphView: View {
                 appState.selectedStash = nil
             }
         }
+    }
+
+    /// Handle double-click to load the diff for the first file
+    private func handleDoubleClick(item: TimelineItem) {
+        // Post notification to load diff for first file
+        NotificationCenter.default.post(name: .loadFirstFileDiff, object: nil)
     }
 
     private var selectedCommits: [Commit] {
@@ -1324,6 +1348,7 @@ extension Notification.Name {
     static let applyStash = Notification.Name("applyStash")
     static let popStashAtIndex = Notification.Name("popStashAtIndex")
     static let dropStash = Notification.Name("dropStash")
+    static let loadFirstFileDiff = Notification.Name("loadFirstFileDiff")
 }
 
 // MARK: - Branch Badge (Modern)

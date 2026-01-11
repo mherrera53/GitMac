@@ -57,35 +57,43 @@ struct RightStagingPanel: View {
                 }
             }
         }
-        .onChange(of: appState.selectedCommit) { _, newCommit in
-            if let commit = newCommit, let path = appState.currentRepository?.path {
-                let requestedSHA = commit.sha
+        .onReceive(NotificationCenter.default.publisher(for: .fileSavedInEditor)) { _ in
+            // Refresh staging when a file is saved in the editor
+            if let path = appState.currentRepository?.path {
                 Task {
-                    await commitDetailVM.loadCommitFiles(sha: requestedSHA, at: path)
-
-                    let firstFile = await MainActor.run { commitDetailVM.changedFiles.first }
-                    guard let firstFile else { return }
-
-                    let stillSelectedBefore = await MainActor.run { appState.selectedCommit?.sha == requestedSHA }
-                    guard stillSelectedBefore else { return }
-
-                    await MainActor.run {
-                        isLoadingDiff = true
-                        selectedFileDiff = nil
-                    }
-
-                    let diff = await commitDetailVM.getDiff(for: firstFile, commit: commit, at: path)
-
-                    let stillSelectedAfter = await MainActor.run { appState.selectedCommit?.sha == requestedSHA }
-                    guard stillSelectedAfter else { return }
-
-                    await MainActor.run {
-                        if let diff {
+                    await stagingVM.loadStatus(at: path)
+                    // If we have a selected diff, reload it
+                    if let currentDiff = selectedFileDiff {
+                        let file = StagingFile(path: currentDiff.newPath, status: .modified, isStaged: false)
+                        if let diff = await stagingVM.getDiff(for: file, at: path) {
                             selectedFileDiff = diff
                         }
-                        isLoadingDiff = false
                     }
                 }
+            }
+        }
+        .onChange(of: appState.selectedCommit) { _, newCommit in
+            // Single-click: only load the file list, not the diff
+            if let commit = newCommit, let path = appState.currentRepository?.path {
+                Task {
+                    await commitDetailVM.loadCommitFiles(sha: commit.sha, at: path)
+                }
+            }
+            // Clear diff when commit changes
+            selectedFileDiff = nil
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .loadFirstFileDiff)) { _ in
+            // Double-click: load diff for first file
+            guard let commit = appState.selectedCommit,
+                  let path = appState.currentRepository?.path,
+                  let firstFile = commitDetailVM.changedFiles.first else { return }
+
+            Task {
+                isLoadingDiff = true
+                if let diff = await commitDetailVM.getDiff(for: firstFile, commit: commit, at: path) {
+                    selectedFileDiff = diff
+                }
+                isLoadingDiff = false
             }
         }
         .onChange(of: appState.selectedStash) { _, newStash in

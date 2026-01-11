@@ -119,6 +119,11 @@ struct RightCommitDetailPanel: View {
 
             Spacer()
         }
+        .task(id: commit.sha) {
+            // Load files when commit changes or panel appears
+            guard let path = appState.currentRepository?.path else { return }
+            await viewModel.loadCommitFiles(sha: commit.sha, at: path)
+        }
     }
 
     private func loadCommitFileDiff(_ file: CommitFile) {
@@ -130,5 +135,3 @@ struct RightCommitDetailPanel: View {
         }
     }
 }
-
-// ViewModel is in App/ViewModels/CommitDetailViewModel.swift

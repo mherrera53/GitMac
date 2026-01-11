@@ -23,6 +23,7 @@ struct UnifiedFileContextMenu: View {
     var onStopTracking: (() -> Void)? = nil
     var onAssumeUnchanged: (() -> Void)? = nil
     var onOpenInEditor: (() -> Void)? = nil
+    var onEditInApp: (() -> Void)? = nil  // Edit in built-in editor
     var onShowHistory: (() -> Void)? = nil
     var onBlame: (() -> Void)? = nil
     
@@ -195,7 +196,16 @@ struct UnifiedFileContextMenu: View {
     @ViewBuilder
     private var viewEditSection: some View {
         Divider()
-        
+
+        // Edit in GitMac (built-in editor)
+        if canPreview, let editInApp = onEditInApp {
+            Button {
+                editInApp()
+            } label: {
+                Label("Edit in GitMac", systemImage: "pencil.and.outline")
+            }
+        }
+
         // Preview file (for text files)
         if canPreview, let preview = onPreview {
             Button {
@@ -204,14 +214,14 @@ struct UnifiedFileContextMenu: View {
                 Label("Preview File", systemImage: "eye")
             }
         }
-        
+
         // Open with default app
         Button {
             NSWorkspace.shared.open(URL(fileURLWithPath: filePath))
         } label: {
             Label("Open with Default App", systemImage: "arrow.up.forward.app")
         }
-        
+
         // Open in External Editor
         if let openInEditor = onOpenInEditor {
             Button {

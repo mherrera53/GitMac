@@ -20,6 +20,7 @@ extension Notification.Name {
     static let stash = Notification.Name("stash")
     static let popStash = Notification.Name("popStash")
     static let showNotification = Notification.Name("showNotification")
+    static let fileSavedInEditor = Notification.Name("fileSavedInEditor")  // Triggers diff refresh
 }
 
 // MARK: - Helper para usar NotificationManager

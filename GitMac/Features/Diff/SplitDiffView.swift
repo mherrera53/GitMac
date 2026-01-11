@@ -31,9 +31,9 @@ struct AdvancedSplitDiffView: View {
             
             // Diff content
             switch viewMode {
-            case .inline, .hunk, .kaleidoscopeUnified:
+            case .inline, .hunk:
                 unifiedDiffView
-            case .split, .kaleidoscopeBlocks, .kaleidoscopeFluid:
+            case .split, .kaleidoscopeBlocks:
                 splitDiffView
             case .preview:
                 unifiedDiffView  // Preview uses unified layout

@@ -19,6 +19,7 @@ struct DiffView: View {
     let fileDiff: FileDiff
     var repoPath: String? = nil
     var onClose: (() -> Void)? = nil
+    var onFileSaved: (() -> Void)? = nil  // Called when file is saved in editor
     @AppStorage("diffViewMode") private var viewMode: DiffViewMode = .split
     @AppStorage("diffShowLineNumbers") private var showLineNumbers = true
     @AppStorage("diffWordWrap") private var wordWrap = false
@@ -31,6 +32,8 @@ struct DiffView: View {
     // History and Blame panel states
     @State private var showHistory = false
     @State private var showBlame = false
+    @State private var showEditor = false  // Built-in code editor
+    @State private var showPreviewModal = false  // Preview modal
     @State private var minimapScrollTrigger: UUID = UUID()
 
     // History diff override (when selecting commits)
@@ -183,6 +186,11 @@ struct DiffView: View {
         let ext = (fileDiff.displayPath as NSString).pathExtension.lowercased()
         return ["png", "jpg", "jpeg", "gif", "webp", "bmp", "tiff", "ico", "svg"].contains(ext)
     }
+
+    private var isMarkdown: Bool {
+        let ext = (fileDiff.displayPath as NSString).pathExtension.lowercased()
+        return ext == "md" || ext == "markdown"
+    }
     
     // Helper to reconstruct old file content from hunks
     private var reconstructedOldContent: String {
@@ -238,11 +246,14 @@ struct DiffView: View {
                 wordWrap: $wordWrap,
                 isPreviewable: isPreviewable,
                 showMinimap: $showMinimap,
+                filePath: repoPath.map { URL(fileURLWithPath: $0).appendingPathComponent(fileDiff.newPath).path },
                 onHistoryTap: {
                     showHistory.toggle()
                     loadCommitsIfNeeded()
                 },
                 onBlameTap: { showBlame = true },
+                onEditTap: { showEditor = true },
+                onPreviewTap: { showPreviewModal = true },
                 onClose: onClose
             )
 
@@ -312,6 +323,21 @@ struct DiffView: View {
         }
         .sheet(isPresented: $showBlame) {
             BlameSheet(path: fileDiff.newPath, repoPath: repoPath ?? "")
+        }
+        .sheet(isPresented: $showEditor) {
+            if let path = repoPath {
+                let fullPath = URL(fileURLWithPath: path).appendingPathComponent(fileDiff.newPath).path
+                EditorSheet(filePath: fullPath, onFileSaved: onFileSaved)
+            }
+        }
+        .sheet(isPresented: $showPreviewModal) {
+            PreviewSheet(
+                content: previewContent,
+                fileName: fileDiff.displayPath,
+                isMarkdown: isMarkdown,
+                isImage: isImage,
+                imagePath: repoPath.map { URL(fileURLWithPath: $0).appendingPathComponent(fileDiff.newPath) }
+            )
         }
         .onDisappear {
             clearCaches()
@@ -495,7 +521,7 @@ struct DiffView: View {
         let hunksById = cachedHunksById
 
         switch viewMode {
-        case .kaleidoscopeBlocks, .kaleidoscopeFluid:
+        case .kaleidoscopeBlocks:
             let pairedLines = cachedPairedLines
             HStack(spacing: 0) {
                 KaleidoscopeSplitDiffView(
@@ -507,7 +533,7 @@ struct DiffView: View {
                     contentVersion: kaleidoscopeRenderVersion,
                     showLineNumbers: showLineNumbers,
                     showConnectionLines: true,
-                    isFluidMode: viewMode == .kaleidoscopeFluid,
+                    isFluidMode: false,
                     scrollOffset: $scrollOffset,
                     viewportHeight: $viewportHeight,
                     contentHeight: $contentHeight,
@@ -521,36 +547,6 @@ struct DiffView: View {
 
                     KaleidoscopeMinimapWrapper(
                         rows: minimapRows(from: pairedLines),
-                        scrollOffset: $scrollOffset,
-                        viewportHeight: $viewportHeight,
-                        contentHeight: $contentHeight,
-                        minimapScrollTriggerAction: { minimapScrollTrigger = UUID() }
-                    )
-                    .frame(width: 80)
-                    .padding(.trailing, 4)
-                    .padding(.vertical, 4)
-                }
-            }
-        case .kaleidoscopeUnified:
-            let unifiedLines = cachedUnifiedLines
-            HStack(spacing: 0) {
-                KaleidoscopeUnifiedView(
-                    unifiedLines: unifiedLines,
-                    showLineNumbers: showLineNumbers,
-                    scrollOffset: $scrollOffset,
-                    viewportHeight: $viewportHeight,
-                    contentHeight: $contentHeight,
-                    minimapScrollTrigger: $minimapScrollTrigger,
-                    contentVersion: kaleidoscopeRenderVersion
-                )
-
-                if showMinimap {
-                    Rectangle()
-                        .fill(theme.border)
-                        .frame(width: 1)
-
-                    KaleidoscopeMinimapWrapper(
-                        rows: minimapRows(from: unifiedLines),
                         scrollOffset: $scrollOffset,
                         viewportHeight: $viewportHeight,
                         contentHeight: $contentHeight,
@@ -576,7 +572,10 @@ struct DiffView: View {
                     showLineNumbers: showLineNumbers,
                     scrollOffset: $scrollOffset,
                     viewportHeight: $viewportHeight,
-                    contentHeight: $contentHeight
+                    contentHeight: $contentHeight,
+                    filePath: fileDiff.newPath,
+                    repoPath: repoPath,
+                    allowPatchActions: allowPatchActions
                 )
                 .id(fileDiff.id)
             case .inline:
@@ -585,19 +584,25 @@ struct DiffView: View {
                     showLineNumbers: showLineNumbers,
                     scrollOffset: $scrollOffset,
                     viewportHeight: $viewportHeight,
-                    contentHeight: $contentHeight
+                    contentHeight: $contentHeight,
+                    filePath: fileDiff.newPath,
+                    repoPath: repoPath,
+                    allowPatchActions: allowPatchActions
                 )
             case .hunk:
                 HunkDiffView(
                     hunks: effectiveHunks,
                     showLineNumbers: showLineNumbers,
+                    filePath: fileDiff.newPath,
                     scrollOffset: $scrollOffset,
                     viewportHeight: $viewportHeight,
-                    contentHeight: $contentHeight
+                    contentHeight: $contentHeight,
+                    repoPath: repoPath,
+                    allowPatchActions: allowPatchActions
                 )
             case .preview:
                 previewView()
-            case .kaleidoscopeBlocks, .kaleidoscopeFluid, .kaleidoscopeUnified:
+            case .kaleidoscopeBlocks:
                 EmptyView()
             }
 
@@ -624,11 +629,16 @@ struct DiffView: View {
     @ViewBuilder
     private func previewView() -> some View {
         if isImage, let repoPath = repoPath {
+            // Image preview
             let path = URL(fileURLWithPath: repoPath).appendingPathComponent(fileDiff.newPath)
             ImagePreviewView(imageURL: path, filename: fileDiff.displayPath)
                 .padding()
-        } else {
+        } else if isMarkdown {
+            // Markdown preview with Mermaid support
             MarkdownView(content: previewContent, fileName: fileDiff.displayPath)
+        } else {
+            // Plain text preview for other file types
+            PlainTextPreviewView(content: previewContent, fileName: fileDiff.displayPath)
         }
     }
 
@@ -655,12 +665,12 @@ struct DiffView: View {
             case .hunkHeader: theme.accent.opacity(0.4)
             case .context: SwiftUI.Color.clear
             }
-            return MinimapRow(id: line.id, color: color, isHeader: line.type == .hunkHeader)
+            return MinimapRow(id: line.id.hashValue, color: color, isHeader: line.type == .hunkHeader)
         }
     }
-    
+
     // MARK: - Helper Methods
-    
+
     /// Load commits for kaleidoscope history sidebar
     private func loadCommitsIfNeeded() {
         guard let repoPath = repoPath else { return }
@@ -870,7 +880,18 @@ struct OptimizedSplitDiffView: View {
     @Binding var viewportHeight: CGFloat
     @Binding var contentHeight: CGFloat
 
+    // For line-level staging/discarding
+    var filePath: String = ""
+    var repoPath: String? = nil
+    var allowPatchActions: Bool = true
+
     @EnvironmentObject var themeManager: ThemeManager
+
+    // Line selection state
+    @State private var selectedPairIds: Set<Int> = []
+    @State private var lastSelectedPairId: Int? = nil
+    @State private var isStaging = false
+    @State private var isDiscarding = false
 
     private var pairs: [DiffPair] {
         // ... (implementation hidden, same as before)
@@ -953,19 +974,48 @@ struct OptimizedSplitDiffView: View {
 
         let desiredHeight = desiredContentHeight(from: rows)
 
-        return SynchronizedSplitDiffScrollView(
-            scrollOffset: $scrollOffset,
-            viewportHeight: $viewportHeight,
-            contentHeight: $contentHeight,
-            contentVersion: contentVersion
-        ) {
-            SplitDiffContentView(pairs: rows, side: .left, showLineNumbers: showLineNumbers)
+        return ZStack(alignment: .bottom) {
+            SynchronizedSplitDiffScrollView(
+                scrollOffset: $scrollOffset,
+                viewportHeight: $viewportHeight,
+                contentHeight: $contentHeight,
+                contentVersion: contentVersion
+            ) {
+                SelectableSplitDiffContentView(
+                    pairs: rows,
+                    side: .left,
+                    showLineNumbers: showLineNumbers,
+                    selectedPairIds: $selectedPairIds,
+                    lastSelectedPairId: $lastSelectedPairId
+                )
                 .background(theme.background)
-        } rightContent: {
-            SplitDiffContentView(pairs: rows, side: .right, showLineNumbers: showLineNumbers)
+            } rightContent: {
+                SelectableSplitDiffContentView(
+                    pairs: rows,
+                    side: .right,
+                    showLineNumbers: showLineNumbers,
+                    selectedPairIds: $selectedPairIds,
+                    lastSelectedPairId: $lastSelectedPairId
+                )
                 .background(theme.background)
+            }
+            .background(theme.background)
+
+            // Floating action bar when lines are selected
+            if !selectedPairIds.isEmpty && allowPatchActions {
+                DiffSelectionActionBar(
+                    selectedCount: selectedPairIds.count,
+                    isStaging: isStaging,
+                    isDiscarding: isDiscarding,
+                    onStage: stageSelectedLines,
+                    onDiscard: discardSelectedLines,
+                    onClearSelection: { selectedPairIds.removeAll() }
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .padding(.bottom, 16)
+            }
         }
-        .background(theme.background)
+        .animation(.easeInOut(duration: 0.2), value: selectedPairIds.isEmpty)
         .onAppear {
             // Defer binding update to avoid SwiftUI appearance deadlock
             DispatchQueue.main.async {
@@ -984,6 +1034,97 @@ struct OptimizedSplitDiffView: View {
             let newDesired = desiredContentHeight(from: rows)
             if abs(contentHeight - newDesired) > 0.5 {
                 contentHeight = newDesired
+            }
+        }
+    }
+
+    // MARK: - Selection Actions
+
+    private func stageSelectedLines() {
+        guard !selectedPairIds.isEmpty, let repoPath, !filePath.isEmpty else { return }
+
+        isStaging = true
+        Task {
+            let service = GitService()
+            service.currentRepository = Repository(path: repoPath)
+
+            var stagedCount = 0
+            var errors: [String] = []
+
+            let selectedPairs = pairs.filter { selectedPairIds.contains($0.id) }
+
+            for (hunkIndex, hunk) in hunks.enumerated() {
+                for (lineIndex, line) in hunk.lines.enumerated() {
+                    // Check if this line matches any selected pair
+                    let isPairSelected = selectedPairs.contains { pair in
+                        (pair.left == line && line.type == .deletion) ||
+                        (pair.right == line && line.type == .addition)
+                    }
+
+                    if isPairSelected && (line.type == .addition || line.type == .deletion) {
+                        do {
+                            try await service.stageLine(filePath: filePath, hunk: hunk, lineIndex: lineIndex)
+                            stagedCount += 1
+                        } catch {
+                            errors.append(String(describing: error))
+                        }
+                    }
+                }
+            }
+
+            await MainActor.run {
+                isStaging = false
+                selectedPairIds.removeAll()
+
+                if errors.isEmpty {
+                    NotificationManager.shared.success("Staged \(stagedCount) line(s)")
+                } else {
+                    NotificationManager.shared.error("Staged \(stagedCount) lines with \(errors.count) error(s)")
+                }
+            }
+        }
+    }
+
+    private func discardSelectedLines() {
+        guard !selectedPairIds.isEmpty, let repoPath, !filePath.isEmpty else { return }
+
+        isDiscarding = true
+        Task {
+            let service = GitService()
+            service.currentRepository = Repository(path: repoPath)
+
+            var discardedCount = 0
+            var errors: [String] = []
+
+            let selectedPairs = pairs.filter { selectedPairIds.contains($0.id) }
+
+            for (hunkIndex, hunk) in hunks.enumerated() {
+                for (lineIndex, line) in hunk.lines.enumerated() {
+                    let isPairSelected = selectedPairs.contains { pair in
+                        (pair.left == line && line.type == .deletion) ||
+                        (pair.right == line && line.type == .addition)
+                    }
+
+                    if isPairSelected && (line.type == .addition || line.type == .deletion) {
+                        do {
+                            try await service.discardLine(filePath: filePath, hunk: hunk, lineIndex: lineIndex)
+                            discardedCount += 1
+                        } catch {
+                            errors.append(String(describing: error))
+                        }
+                    }
+                }
+            }
+
+            await MainActor.run {
+                isDiscarding = false
+                selectedPairIds.removeAll()
+
+                if errors.isEmpty {
+                    NotificationManager.shared.success("Discarded \(discardedCount) line(s)")
+                } else {
+                    NotificationManager.shared.error("Discarded \(discardedCount) lines with \(errors.count) error(s)")
+                }
             }
         }
     }
@@ -1281,6 +1422,138 @@ struct SplitDiffContentView: View {
     }
 }
 
+// MARK: - Selectable Split Diff Content View
+
+/// Renders one side of the split diff with line selection support
+struct SelectableSplitDiffContentView: View {
+    let pairs: [DiffPair]
+    let side: DiffSide
+    let showLineNumbers: Bool
+    @Binding var selectedPairIds: Set<Int>
+    @Binding var lastSelectedPairId: Int?
+
+    var body: some View {
+        LazyVStack(spacing: 0, pinnedViews: []) {
+            ForEach(Array(pairs.enumerated()), id: \.element.id) { index, pair in
+                if let header = pair.hunkHeader {
+                    FastHunkHeader(header: header)
+                } else {
+                    SelectableSplitDiffRow(
+                        pair: pair,
+                        pairIndex: index,
+                        side: side,
+                        showLineNumbers: showLineNumbers,
+                        isSelected: selectedPairIds.contains(pair.id),
+                        onSelect: { handleSelection(pair: pair, index: index) }
+                    )
+                }
+            }
+        }
+    }
+
+    private func handleSelection(pair: DiffPair, index: Int) {
+        let line = side == .left ? pair.left : pair.right
+        guard let line = line, line.type == .addition || line.type == .deletion else { return }
+
+        let isShiftPressed = NSEvent.modifierFlags.contains(.shift)
+        let isCommandPressed = NSEvent.modifierFlags.contains(.command)
+
+        if isShiftPressed, let lastId = lastSelectedPairId {
+            if let lastIndex = pairs.firstIndex(where: { $0.id == lastId }) {
+                let rangeStart = min(lastIndex, index)
+                let rangeEnd = max(lastIndex, index)
+
+                for i in rangeStart...rangeEnd {
+                    let p = pairs[i]
+                    let pairLine = side == .left ? p.left : p.right
+                    if pairLine?.type == .addition || pairLine?.type == .deletion {
+                        selectedPairIds.insert(p.id)
+                    }
+                }
+            }
+        } else if isCommandPressed {
+            if selectedPairIds.contains(pair.id) {
+                selectedPairIds.remove(pair.id)
+            } else {
+                selectedPairIds.insert(pair.id)
+            }
+        } else {
+            selectedPairIds = [pair.id]
+        }
+
+        lastSelectedPairId = pair.id
+    }
+}
+
+// MARK: - Selectable Split Diff Row
+
+/// A single selectable row in the split diff view
+struct SelectableSplitDiffRow: View {
+    let pair: DiffPair
+    let pairIndex: Int
+    let side: DiffSide
+    let showLineNumbers: Bool
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    @State private var isHovered = false
+
+    private var line: DiffLine? {
+        side == .left ? pair.left : pair.right
+    }
+
+    private var pairedLine: DiffLine? {
+        side == .left ? pair.right : pair.left
+    }
+
+    private var isSelectable: Bool {
+        guard let line = line else { return false }
+        return line.type == .addition || line.type == .deletion
+    }
+
+    var body: some View {
+        Group {
+            if let line = line {
+                FastDiffLine(
+                    line: line,
+                    side: side,
+                    showLineNumber: showLineNumbers,
+                    paired: pairedLine
+                )
+            } else {
+                FastEmptyLine(
+                    showLineNumber: showLineNumbers,
+                    isDeleted: side == .left && pair.right?.type == .addition,
+                    isAdded: side == .right && pair.left?.type == .deletion
+                )
+            }
+        }
+        .overlay(alignment: .leading) {
+            if isSelected {
+                Rectangle()
+                    .fill(AppTheme.accent)
+                    .frame(width: 3)
+            }
+        }
+        .background(
+            isSelected
+                ? AppTheme.accent.opacity(0.15)
+                : (isHovered && isSelectable ? AppTheme.hover : Color.clear)
+        )
+        .onHover { hovering in
+            if isSelectable {
+                isHovered = hovering
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isSelectable {
+                onSelect()
+            }
+        }
+    }
+}
+
 // MARK: - Optimized Inline Diff View
 
 struct OptimizedInlineDiffView: View {
@@ -1290,34 +1563,225 @@ struct OptimizedInlineDiffView: View {
     @Binding var viewportHeight: CGFloat
     @Binding var contentHeight: CGFloat
 
-    private var allLines: [IdentifiedDiffLine] {
-        var result: [IdentifiedDiffLine] = []
+    // For line-level staging/discarding
+    var filePath: String = ""
+    var repoPath: String? = nil
+    var allowPatchActions: Bool = true
+
+    // Line selection state
+    @State private var selectedLineIds: Set<Int> = []
+    @State private var lastSelectedLineId: Int? = nil
+    @State private var isStaging = false
+    @State private var isDiscarding = false
+
+    private var allLines: [IdentifiedInlineLine] {
+        var result: [IdentifiedInlineLine] = []
         var lineId = 0
-        for hunk in hunks {
+        for (hunkIndex, hunk) in hunks.enumerated() {
             lineId += 1
-            result.append(IdentifiedDiffLine(id: lineId, line: nil, hunkHeader: hunk.header))
-            for line in hunk.lines {
+            result.append(IdentifiedInlineLine(id: lineId, line: nil, hunkHeader: hunk.header, hunkIndex: hunkIndex, lineIndexInHunk: nil))
+            for (lineIndex, line) in hunk.lines.enumerated() {
                 lineId += 1
-                result.append(IdentifiedDiffLine(id: lineId, line: line, hunkHeader: nil))
+                result.append(IdentifiedInlineLine(id: lineId, line: line, hunkHeader: nil, hunkIndex: hunkIndex, lineIndexInHunk: lineIndex))
             }
         }
         return result
     }
 
     var body: some View {
-        UnifiedDiffScrollView(scrollOffset: $scrollOffset, viewportHeight: $viewportHeight) {
-            VStack(spacing: 0) {
-                LazyVStack(spacing: 0) {
-                    ForEach(allLines) { item in
-                        if let header = item.hunkHeader {
-                            FastHunkHeader(header: header)
-                        } else if let line = item.line {
-                            FastInlineLine(line: line, showLineNumber: showLineNumbers)
+        ZStack(alignment: .bottom) {
+            UnifiedDiffScrollView(scrollOffset: $scrollOffset, viewportHeight: $viewportHeight) {
+                VStack(spacing: 0) {
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(allLines.enumerated()), id: \.element.id) { index, item in
+                            if let header = item.hunkHeader {
+                                FastHunkHeader(header: header)
+                            } else if let line = item.line {
+                                SelectableInlineLineRow(
+                                    item: item,
+                                    index: index,
+                                    showLineNumbers: showLineNumbers,
+                                    isSelected: selectedLineIds.contains(item.id),
+                                    onSelect: { handleLineSelection(item: item, index: index) }
+                                )
+                            }
                         }
                     }
                 }
             }
+
+            // Floating action bar when lines are selected
+            if !selectedLineIds.isEmpty && allowPatchActions {
+                DiffSelectionActionBar(
+                    selectedCount: selectedLineIds.count,
+                    isStaging: isStaging,
+                    isDiscarding: isDiscarding,
+                    onStage: stageSelectedLines,
+                    onDiscard: discardSelectedLines,
+                    onClearSelection: { selectedLineIds.removeAll() }
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .padding(.bottom, 16)
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: selectedLineIds.isEmpty)
+    }
+
+    private func handleLineSelection(item: IdentifiedInlineLine, index: Int) {
+        guard let line = item.line, line.type == .addition || line.type == .deletion else { return }
+
+        let isShiftPressed = NSEvent.modifierFlags.contains(.shift)
+        let isCommandPressed = NSEvent.modifierFlags.contains(.command)
+
+        if isShiftPressed, let lastId = lastSelectedLineId {
+            if let lastIndex = allLines.firstIndex(where: { $0.id == lastId }) {
+                let rangeStart = min(lastIndex, index)
+                let rangeEnd = max(lastIndex, index)
+
+                for i in rangeStart...rangeEnd {
+                    let l = allLines[i]
+                    if l.line?.type == .addition || l.line?.type == .deletion {
+                        selectedLineIds.insert(l.id)
+                    }
+                }
+            }
+        } else if isCommandPressed {
+            if selectedLineIds.contains(item.id) {
+                selectedLineIds.remove(item.id)
+            } else {
+                selectedLineIds.insert(item.id)
+            }
+        } else {
+            selectedLineIds = [item.id]
+        }
+
+        lastSelectedLineId = item.id
+    }
+
+    private func stageSelectedLines() {
+        guard !selectedLineIds.isEmpty, let repoPath, !filePath.isEmpty else { return }
+
+        isStaging = true
+        Task {
+            let service = GitService()
+            service.currentRepository = Repository(path: repoPath)
+
+            var stagedCount = 0
+            var errors: [String] = []
+
+            for item in allLines where selectedLineIds.contains(item.id) {
+                if let lineIndex = item.lineIndexInHunk, item.hunkIndex < hunks.count {
+                    let hunk = hunks[item.hunkIndex]
+                    do {
+                        try await service.stageLine(filePath: filePath, hunk: hunk, lineIndex: lineIndex)
+                        stagedCount += 1
+                    } catch {
+                        errors.append(String(describing: error))
+                    }
+                }
+            }
+
+            await MainActor.run {
+                isStaging = false
+                selectedLineIds.removeAll()
+
+                if errors.isEmpty {
+                    NotificationManager.shared.success("Staged \(stagedCount) line(s)")
+                } else {
+                    NotificationManager.shared.error("Staged \(stagedCount) lines with \(errors.count) error(s)")
+                }
+            }
+        }
+    }
+
+    private func discardSelectedLines() {
+        guard !selectedLineIds.isEmpty, let repoPath, !filePath.isEmpty else { return }
+
+        isDiscarding = true
+        Task {
+            let service = GitService()
+            service.currentRepository = Repository(path: repoPath)
+
+            var discardedCount = 0
+            var errors: [String] = []
+
+            for item in allLines where selectedLineIds.contains(item.id) {
+                if let lineIndex = item.lineIndexInHunk, item.hunkIndex < hunks.count {
+                    let hunk = hunks[item.hunkIndex]
+                    do {
+                        try await service.discardLine(filePath: filePath, hunk: hunk, lineIndex: lineIndex)
+                        discardedCount += 1
+                    } catch {
+                        errors.append(String(describing: error))
+                    }
+                }
+            }
+
+            await MainActor.run {
+                isDiscarding = false
+                selectedLineIds.removeAll()
+
+                if errors.isEmpty {
+                    NotificationManager.shared.success("Discarded \(discardedCount) line(s)")
+                } else {
+                    NotificationManager.shared.error("Discarded \(discardedCount) lines with \(errors.count) error(s)")
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Identified Inline Line
+
+struct IdentifiedInlineLine: Identifiable {
+    let id: Int
+    let line: DiffLine?
+    let hunkHeader: String?
+    let hunkIndex: Int
+    let lineIndexInHunk: Int?
+}
+
+// MARK: - Selectable Inline Line Row
+
+struct SelectableInlineLineRow: View {
+    let item: IdentifiedInlineLine
+    let index: Int
+    let showLineNumbers: Bool
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    @State private var isHovered = false
+
+    private var isSelectable: Bool {
+        guard let line = item.line else { return false }
+        return line.type == .addition || line.type == .deletion
+    }
+
+    var body: some View {
+        FastInlineLine(line: item.line!, showLineNumber: showLineNumbers)
+            .overlay(alignment: .leading) {
+                if isSelected {
+                    Rectangle()
+                        .fill(AppTheme.accent)
+                        .frame(width: 3)
+                }
+            }
+            .background(
+                isSelected
+                    ? AppTheme.accent.opacity(0.15)
+                    : (isHovered && isSelectable ? AppTheme.hover : Color.clear)
+            )
+            .onHover { hovering in
+                if isSelectable {
+                    isHovered = hovering
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if isSelectable {
+                    onSelect()
+                }
+            }
     }
 }
 
@@ -1649,6 +2113,11 @@ struct HunkDiffView: View {
     @Binding var viewportHeight: CGFloat
     var contentHeight: Binding<CGFloat>? = nil
     var viewId: String = "DiffScrollView"
+
+    // For line-level staging/discarding
+    var repoPath: String? = nil
+    var allowPatchActions: Bool = true
+
     @State private var collapsedHunks: Set<Int> = []
     @State private var selectedHunks: Set<Int> = []
     @State private var isSelectionMode: Bool = false
