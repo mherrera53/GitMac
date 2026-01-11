@@ -1053,14 +1053,18 @@ struct CreatePullRequestSheet: View {
                 return
             }
 
+            // Strip remote prefix from branch names (e.g., "origin/master" -> "master")
+            let cleanHead = branch.name.replacingOccurrences(of: #"^origin/"#, with: "", options: .regularExpression)
+            let cleanBase = (baseBranch ?? "main").replacingOccurrences(of: #"^origin/"#, with: "", options: .regularExpression)
+
             let githubService = GitHubService()
             let newPR = try await githubService.createPullRequest(
                 owner: owner,
                 repo: repoName,
                 title: title,
                 body: prBody.isEmpty ? nil : prBody,
-                head: branch.name,
-                base: baseBranch ?? "main",
+                head: cleanHead,
+                base: cleanBase,
                 draft: isDraft
             )
 
