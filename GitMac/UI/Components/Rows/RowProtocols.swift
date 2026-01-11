@@ -115,19 +115,19 @@ struct RowAction: Identifiable {
 
 // MARK: - Row Style
 
-/// Visual style configuration for rows
+/// Visual style configuration for rows - optimized for compact layouts
 struct RowStyle {
-    var horizontalPadding: CGFloat = 12
-    var verticalPadding: CGFloat = 6
-    var spacing: CGFloat = 8
+    var horizontalPadding: CGFloat = 8
+    var verticalPadding: CGFloat = 4
+    var spacing: CGFloat = 6
     var cornerRadius: CGFloat = 4
     var showHoverActions: Bool = true
     var highlightOnHover: Bool = true
     var highlightOnSelection: Bool = true
 
     static let `default` = RowStyle()
-    static let compact = RowStyle(verticalPadding: 4, spacing: 6)
-    static let comfortable = RowStyle(verticalPadding: 8, spacing: 10)
+    static let compact = RowStyle(horizontalPadding: 6, verticalPadding: 3, spacing: 4)
+    static let comfortable = RowStyle(horizontalPadding: 12, verticalPadding: 6, spacing: 8)
 }
 
 // MARK: - Selectable Protocol

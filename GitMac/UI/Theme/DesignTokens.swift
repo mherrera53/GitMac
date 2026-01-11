@@ -150,29 +150,29 @@ enum DesignTokens {
     enum Layout {
         /// Sidebar metrics (left panel)
         enum Sidebar {
-            static let minWidth: CGFloat = 200
-            static let idealWidth: CGFloat = 240
-            static let maxWidth: CGFloat = 350
+            static let minWidth: CGFloat = 120
+            static let idealWidth: CGFloat = 180
+            static let maxWidth: CGFloat = 300
         }
 
         /// Staging Panel metrics (right inspector)
         enum StagingPanel {
-            static let minWidth: CGFloat = 260
-            static let idealWidth: CGFloat = 320
-            static let maxWidth: CGFloat = 450
+            static let minWidth: CGFloat = 180
+            static let idealWidth: CGFloat = 260
+            static let maxWidth: CGFloat = 380
         }
 
         /// Bottom Panel metrics
         enum BottomPanel {
-            static let minHeight: CGFloat = 150
+            static let minHeight: CGFloat = 100
             static let maxHeight: CGFloat = 500
-            static let defaultHeight: CGFloat = 250
+            static let defaultHeight: CGFloat = 180
         }
 
-        /// Window metrics - responsive to screen size
+        /// Window metrics - compact with all 3 panels
         enum Window {
-            static let minWidth: CGFloat = 1024
-            static let minHeight: CGFloat = 680
+            static let minWidth: CGFloat = 580   // 120 + 100 + 180 + margins
+            static let minHeight: CGFloat = 380
         }
 
         /// CI/CD Panel metrics

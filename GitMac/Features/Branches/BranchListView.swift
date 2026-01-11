@@ -66,7 +66,7 @@ struct BranchListView: View {
             }
             Button("Stash & Checkout") {
                 Task {
-                    _ = try? await viewModel.gitService.stash()
+                    _ = try? await viewModel.stash()
                     await viewModel.forceCheckout()
                 }
             }
@@ -321,11 +321,7 @@ struct BranchListView: View {
             await viewModel.checkout(target)
 
             // Then merge the dragged branch into it
-            do {
-                try await viewModel.gitService.merge(branch: dragged.name)
-            } catch {
-                // Merge failed - error handled elsewhere
-            }
+            await viewModel.merge(dragged)
 
             // Clear the state
             draggedBranch = nil
@@ -340,12 +336,8 @@ struct BranchListView: View {
             // First checkout the target branch
             await viewModel.checkout(target)
 
-            // Then rebase it onto the dragged branch
-            do {
-                try await viewModel.gitService.rebase(onto: dragged.name)
-            } catch {
-                // Rebase failed - error handled elsewhere
-            }
+            // Then rebase onto the dragged branch
+            await viewModel.rebase(onto: dragged)
 
             // Clear the state
             draggedBranch = nil
@@ -370,8 +362,13 @@ class BranchListViewModel: ObservableObject {
     @Published var error: String?
 
     let gitService = GitService()
+    private let engine = GitEngine()
+
+    /// Current repository path - set when loading branches
+    private(set) var currentRepoPath: String?
 
     func loadBranches(from repo: Repository) {
+        currentRepoPath = repo.path
         localBranches = repo.branches.sorted { lhs, rhs in
             if lhs.isHead { return true }
             if rhs.isHead { return false }
@@ -416,16 +413,27 @@ class BranchListViewModel: ObservableObject {
         pendingCheckoutBranch = nil
     }
 
+    /// Stash current changes
+    func stash() async throws {
+        guard let path = currentRepoPath else { return }
+        _ = try await engine.stash(at: path)
+    }
+
     private func performCheckout(_ branchName: String) async {
+        guard let path = currentRepoPath else {
+            self.error = "No repository path available"
+            return
+        }
         isLoading = true
         do {
-            try await gitService.checkout(branchName)
-            try await gitService.refresh()
+            try await engine.checkout(branchName, at: path)
             NotificationManager.shared.success(
                 "Switched to '\(branchName)'",
                 detail: nil
             )
-            NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
+            // Post both notifications for full sync
+            NotificationCenter.default.post(name: .branchDidCheckout, object: branchName)
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
         } catch let gitError as GitError {
             self.error = gitError.localizedDescription
             if let fix = gitError.suggestedFix {
@@ -438,7 +446,7 @@ class BranchListViewModel: ObservableObject {
                     // Action depends on fix
                     if fix.command == "git stash" {
                         Task {
-                            _ = try? await self.gitService.stash()
+                            _ = try? await self.engine.stash(at: path)
                             NotificationManager.shared.success("Changes stashed", detail: "Try checkout again")
                         }
                     }
@@ -447,7 +455,7 @@ class BranchListViewModel: ObservableObject {
                 NotificationManager.shared.error("Checkout failed", detail: gitError.localizedDescription)
             }
         } catch {
-            self.self.error = error.localizedDescription
+            self.error = error.localizedDescription
             NotificationManager.shared.error("Checkout failed", detail: error.localizedDescription)
         }
         isLoading = false
@@ -455,7 +463,7 @@ class BranchListViewModel: ObservableObject {
 
     /// Checkout with automatic stash and pop to avoid accumulating stashes
     private func performCheckoutWithAutoStash(_ branchName: String) async {
-        guard let path = gitService.currentRepository?.path else { return }
+        guard let path = currentRepoPath else { return }
         isLoading = true
 
         let shell = ShellExecutor()
@@ -471,7 +479,7 @@ class BranchListViewModel: ObservableObject {
 
         // 2. Perform checkout
         do {
-            try await gitService.checkout(branchName)
+            try await engine.checkout(branchName, at: path)
 
             // 3. Pop stash if we stashed something
             if didStash {
@@ -487,8 +495,8 @@ class BranchListViewModel: ObservableObject {
                 }
             }
 
-            // 4. Refresh UI to update graph and branch indicator
-            try await gitService.refresh()
+            // 4. Notify UI to refresh
+            NotificationCenter.default.post(name: .branchDidCheckout, object: branchName)
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
         } catch {
             // Checkout failed - restore stash if we made one
@@ -499,14 +507,14 @@ class BranchListViewModel: ObservableObject {
                     workingDirectory: path
                 )
             }
-            self.self.error = error.localizedDescription
+            self.error = error.localizedDescription
         }
 
         isLoading = false
     }
 
     private func checkUncommittedChanges() async -> [String] {
-        guard let path = gitService.currentRepository?.path else { return [] }
+        guard let path = currentRepoPath else { return [] }
         let result = await ShellExecutor().execute("git", arguments: ["status", "--porcelain"], workingDirectory: path)
         guard result.isSuccess else { return [] }
 
@@ -520,69 +528,76 @@ class BranchListViewModel: ObservableObject {
     }
 
     func checkoutRemote(_ branch: Branch) async {
+        guard let path = currentRepoPath else { return }
         // Create local branch from remote and checkout
         let localName = branch.displayName
         isLoading = true
         do {
-            _ = try await gitService.createBranch(named: localName, from: branch.name, checkout: true)
+            _ = try await engine.createBranch(named: localName, from: branch.name, checkout: true, at: path)
+            // Post notifications for full sync
+            NotificationCenter.default.post(name: .branchDidCheckout, object: localName)
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
         } catch {
-            self.self.error = error.localizedDescription
+            self.error = error.localizedDescription
         }
         isLoading = false
     }
 
     func createBranch(name: String, from: String, checkout: Bool) async {
+        guard let path = currentRepoPath else { return }
         isLoading = true
         do {
-            _ = try await gitService.createBranch(named: name, from: from, checkout: checkout)
+            _ = try await engine.createBranch(named: name, from: from, checkout: checkout, at: path)
 
-            // Refresh repository state and notify UI
-            try await gitService.refresh()
-            NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
+            // Notify UI
+            if checkout {
+                NotificationCenter.default.post(name: .branchDidCheckout, object: name)
+            }
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
         } catch {
-            self.self.error = error.localizedDescription
+            self.error = error.localizedDescription
         }
         isLoading = false
     }
 
     func deleteBranch(_ branch: Branch, force: Bool = false) async {
+        guard let path = currentRepoPath else { return }
         isLoading = true
         do {
-            try await gitService.deleteBranch(named: branch.name, force: force)
+            try await engine.deleteBranch(named: branch.name, force: force, at: path)
 
-            // Refresh repository state and notify UI
-            try await gitService.refresh()
-            NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
+            // Notify UI
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
         } catch {
-            self.self.error = error.localizedDescription
+            self.error = error.localizedDescription
         }
         isLoading = false
     }
 
     func merge(_ branch: Branch, noFastForward: Bool = false) async {
-        let currentBranch = gitService.currentRepository?.currentBranch?.name ?? "HEAD"
+        guard let path = currentRepoPath else { return }
+        let currentBranchName = localBranches.first(where: { $0.isHead })?.name ?? "HEAD"
         isLoading = true
         do {
-            try await gitService.merge(branch: branch.name, noFastForward: noFastForward)
+            try await engine.merge(branch: branch.name, options: MergeOptions(noFastForward: noFastForward), at: path)
 
-            // Refresh repository state and notify UI
-            try await gitService.refresh()
-            NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
+            // Notify UI
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
 
             // Track successful merge
             RemoteOperationTracker.shared.recordMerge(
                 success: true,
                 sourceBranch: branch.name,
-                targetBranch: currentBranch
+                targetBranch: currentBranchName
             )
         } catch {
-            self.self.error = error.localizedDescription
+            self.error = error.localizedDescription
 
             // Track failed merge
             RemoteOperationTracker.shared.recordMerge(
                 success: false,
                 sourceBranch: branch.name,
-                targetBranch: currentBranch,
+                targetBranch: currentBranchName,
                 error: error.localizedDescription
             )
         }
@@ -590,28 +605,30 @@ class BranchListViewModel: ObservableObject {
     }
 
     func rebase(onto branch: Branch) async {
+        guard let path = currentRepoPath else { return }
         isLoading = true
         do {
-            try await gitService.rebase(onto: branch.name)
+            try await engine.rebase(onto: branch.name, at: path)
 
-            // Refresh repository state and notify UI
-            try await gitService.refresh()
-            NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
+            // Notify UI
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
         } catch {
-            self.self.error = error.localizedDescription
+            self.error = error.localizedDescription
         }
         isLoading = false
     }
 
     func push(_ branch: Branch) async {
+        guard let path = currentRepoPath else { return }
         isLoading = true
         do {
             if branch.isHead {
-                try await gitService.push()
+                try await engine.push(at: path)
 
-                // Refresh repository state and notify UI
-                try await gitService.refresh()
-                NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
+                // Notify UI
+                NotificationCenter.default.post(name: .remoteOperationCompleted, object: "push")
+                NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+                GitHubSyncManager.shared.notifyOperationCompleted(type: .push, details: branch.name)
 
                 NotificationManager.shared.success(
                     "Pushed '\(branch.name)'",
@@ -640,7 +657,7 @@ class BranchListViewModel: ObservableObject {
                 ) {
                     Task {
                         if fix.command == "git pull --rebase" {
-                            try? await self.gitService.pull(rebase: true)
+                            try? await self.engine.pull(options: PullOptions(rebase: true), at: path)
                             NotificationManager.shared.info("Pulled with rebase", detail: "Try pushing again")
                         }
                     }
@@ -649,7 +666,7 @@ class BranchListViewModel: ObservableObject {
                 NotificationManager.shared.error("Push failed", detail: gitError.localizedDescription)
             }
         } catch {
-            self.self.error = error.localizedDescription
+            self.error = error.localizedDescription
             RemoteOperationTracker.shared.recordPush(
                 success: false,
                 branch: branch.name,
@@ -662,14 +679,16 @@ class BranchListViewModel: ObservableObject {
     }
 
     func pull(_ branch: Branch) async {
+        guard let path = currentRepoPath else { return }
         isLoading = true
         do {
             if branch.isHead {
-                try await gitService.pull()
+                try await engine.pull(at: path)
 
-                // Refresh repository state and notify UI
-                try await gitService.refresh()
-                NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
+                // Notify UI
+                NotificationCenter.default.post(name: .remoteOperationCompleted, object: "pull")
+                NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+                GitHubSyncManager.shared.notifyOperationCompleted(type: .pull, details: branch.name)
 
                 NotificationManager.shared.success(
                     "Pulled '\(branch.name)'",
@@ -698,7 +717,7 @@ class BranchListViewModel: ObservableObject {
                 ) {
                     Task {
                         if fix.command == "git stash" {
-                            _ = try? await self.gitService.stash()
+                            _ = try? await self.engine.stash(at: path)
                             NotificationManager.shared.success("Changes stashed", detail: "Try pulling again")
                         }
                     }
@@ -707,7 +726,7 @@ class BranchListViewModel: ObservableObject {
                 NotificationManager.shared.error("Pull failed", detail: gitError.localizedDescription)
             }
         } catch {
-            self.self.error = error.localizedDescription
+            self.error = error.localizedDescription
             RemoteOperationTracker.shared.recordPull(
                 success: false,
                 branch: branch.name,

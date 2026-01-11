@@ -23,26 +23,61 @@ enum EditorThemeFactory {
         return rgb
     }
 
-    /// Creates theme from current app theme settings
-    static func makeTheme() -> EditorTheme {
-        EditorTheme(
-            text: .init(color: concreteColor(.labelColor)),
-            insertionPoint: concreteColor(.textColor),
-            invisibles: .init(color: concreteColor(.tertiaryLabelColor)),
-            background: concreteColor(.textBackgroundColor),
-            lineHighlight: concreteColor(.selectedContentBackgroundColor.withAlphaComponent(0.15)),
-            selection: concreteColor(.selectedTextBackgroundColor),
+    /// Creates theme from AppTheme semantic colors
+    /// Uses NSColor semantic colors that automatically adapt to light/dark mode
+    static func makeTheme(for colorScheme: SwiftUI.ColorScheme = .dark) -> EditorTheme {
+        // Use NSColor semantic colors which adapt automatically to appearance
+        // Apply correct appearance before getting colors
+        let appearance: NSAppearance? = colorScheme == .dark
+            ? NSAppearance(named: .darkAqua)
+            : NSAppearance(named: .aqua)
+
+        // Get colors with correct appearance
+        var textColor = NSColor.labelColor
+        var backgroundColor = NSColor.textBackgroundColor
+        var lineHighlightColor = NSColor.selectedContentBackgroundColor.withAlphaComponent(0.15)
+        var selectionColor = NSColor.selectedTextBackgroundColor
+        var tertiaryLabel = NSColor.tertiaryLabelColor
+        var secondaryLabel = NSColor.secondaryLabelColor
+
+        if let app = appearance {
+            textColor = textColor.forAppearance(app)
+            backgroundColor = backgroundColor.forAppearance(app)
+            lineHighlightColor = lineHighlightColor.forAppearance(app)
+            selectionColor = selectionColor.forAppearance(app)
+            tertiaryLabel = tertiaryLabel.forAppearance(app)
+            secondaryLabel = secondaryLabel.forAppearance(app)
+        }
+
+        return EditorTheme(
+            text: .init(color: concreteColor(textColor)),
+            insertionPoint: concreteColor(textColor),
+            invisibles: .init(color: concreteColor(tertiaryLabel)),
+            background: concreteColor(backgroundColor),
+            lineHighlight: concreteColor(lineHighlightColor),
+            selection: concreteColor(selectionColor),
             keywords: .init(color: concreteColor(.systemPink)),        // AppTheme.syntaxKeyword
             commands: .init(color: concreteColor(.systemTeal)),        // commands/functions
-            types: .init(color: concreteColor(.systemCyan)),           // AppTheme.syntaxType equivalent
+            types: .init(color: concreteColor(.systemCyan)),           // AppTheme.syntaxType
             attributes: .init(color: concreteColor(.systemOrange)),    // decorators/attributes
             variables: .init(color: concreteColor(.systemBlue)),       // variable names
             values: .init(color: concreteColor(.systemPurple)),        // constants/values
             numbers: .init(color: concreteColor(.systemCyan)),         // AppTheme.syntaxNumber
             strings: .init(color: concreteColor(.systemGreen)),        // AppTheme.syntaxString
             characters: .init(color: concreteColor(.systemYellow)),    // character literals
-            comments: .init(color: concreteColor(.secondaryLabelColor)) // AppTheme.syntaxComment
+            comments: .init(color: concreteColor(secondaryLabel))      // AppTheme.syntaxComment
         )
+    }
+}
+
+// Helper extension to get NSColor for specific appearance
+extension NSColor {
+    func forAppearance(_ appearance: NSAppearance) -> NSColor {
+        var result = self
+        appearance.performAsCurrentDrawingAppearance {
+            result = NSColor(cgColor: self.cgColor) ?? self
+        }
+        return result
     }
 }
 
@@ -55,6 +90,8 @@ struct CodeEditorView: View {
     let isEditable: Bool
 
     @State private var editorState = SourceEditorState()
+    @State private var themeRefreshID = UUID()
+    @Environment(\.colorScheme) private var colorScheme
 
     init(
         text: Binding<String>,
@@ -69,7 +106,7 @@ struct CodeEditorView: View {
     private var configuration: SourceEditorConfiguration {
         SourceEditorConfiguration(
             appearance: .init(
-                theme: EditorThemeFactory.makeTheme(),
+                theme: EditorThemeFactory.makeTheme(for: colorScheme),
                 font: .monospacedSystemFont(ofSize: 13, weight: .regular),
                 lineHeightMultiple: 1.4,
                 wrapLines: true,
@@ -89,6 +126,13 @@ struct CodeEditorView: View {
             configuration: configuration,
             state: $editorState
         )
+        .id(themeRefreshID) // Force recreation when theme changes
+        .onReceive(NotificationCenter.default.publisher(for: .themeDidChange)) { _ in
+            themeRefreshID = UUID()
+        }
+        .onChange(of: colorScheme) { _, _ in
+            themeRefreshID = UUID()
+        }
     }
 }
 

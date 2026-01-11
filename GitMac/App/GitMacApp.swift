@@ -46,6 +46,12 @@ struct GitMacApp: App {
                 window.titleVisibility = .hidden
                 window.title = ""
                 window.appearance = ThemeManager.shared.appearance
+
+                // Set minimum window size - center panel compresses first
+                window.minSize = NSSize(
+                    width: DesignTokens.Layout.Window.minWidth,
+                    height: DesignTokens.Layout.Window.minHeight
+                )
             }
 
             // Ensure the app icon is properly set
@@ -651,6 +657,7 @@ extension Notification.Name {
     static let showWorktrees = Notification.Name("show_worktrees")
     static let toggleSidebar = Notification.Name("toggle_sidebar")
     static let repositoryDidRefresh = Notification.Name("repositoryDidRefresh")
+    static let branchDidCheckout = Notification.Name("branchDidCheckout")
 
     // CI/CD Triggers
     static let gitPushCompleted = Notification.Name("gitPushCompleted")
