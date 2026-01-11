@@ -72,11 +72,14 @@ struct StagingAreaPanel: View {
             )
         }
         .sheet(isPresented: $showCreatePRSheet) {
-            CreatePRSheetFromCommit(
-                commitSHA: commitSHAForPR,
-                onDismiss: { showCreatePRSheet = false }
-            )
-            .environmentObject(appState)
+            if let repoPath = appState.currentRepository?.path {
+                CreatePRSheetFromCommit(
+                    commitSHA: commitSHAForPR,
+                    repoPath: repoPath,
+                    onDismiss: { showCreatePRSheet = false }
+                )
+                .environmentObject(appState)
+            }
         }
     }
 

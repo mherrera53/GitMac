@@ -125,11 +125,14 @@ struct StagingAreaView: View {
             AICommitMessageSheet(message: $commitMessage, diff: viewModel.currentDiff)
         }
         .sheet(isPresented: $showCreatePRSheet) {
-            CreatePRSheetFromCommit(
-                commitSHA: commitSHAForPR,
-                onDismiss: { showCreatePRSheet = false }
-            )
-            .environmentObject(appState)
+            if let repoPath = appState.currentRepository?.path {
+                CreatePRSheetFromCommit(
+                    commitSHA: commitSHAForPR,
+                    repoPath: repoPath,
+                    onDismiss: { showCreatePRSheet = false }
+                )
+                .environmentObject(appState)
+            }
         }
         .sheet(isPresented: $showConflictResolver) {
             if let file = conflictFileToResolve, let repoPath = appState.currentRepository?.path {
@@ -2384,6 +2387,7 @@ struct PreviewFileTypeIcon: View {
 /// Sheet to create a PR after commit + push flow
 struct CreatePRSheetFromCommit: View {
     let commitSHA: String
+    let repoPath: String  // Pass repo path directly from the tab
     let onDismiss: () -> Void
 
     @EnvironmentObject var appState: AppState
@@ -2599,10 +2603,13 @@ struct CreatePRSheetFromCommit: View {
     private func generateTitleAndDescription() async {
         isGenerating = true
         do {
-            // Use origin/baseBranch...HEAD to get diff since branch diverged from base
+            // Use GitEngine directly with the passed repoPath
+            let engine = GitEngine()
             let remoteBase = "origin/\(baseBranch)"
-            let diff = try await appState.gitService.getDiff(from: remoteBase, to: "HEAD")
-            let commits = try await appState.gitService.getCommits(branch: "HEAD", limit: 20)
+
+            // Get diff and commits using the specific repoPath
+            let diff = try await engine.getDiff(from: remoteBase, to: "HEAD", at: repoPath)
+            let commits = try await engine.getCommits(at: repoPath, branch: "HEAD", limit: 20)
 
             // Generate both in parallel
             async let generatedTitle = AIService.shared.generatePRTitle(commits: commits, diff: diff)
@@ -2637,12 +2644,13 @@ struct CreatePRSheetFromCommit: View {
     }
 
     private func loadMetadata() async {
+        // ALWAYS set base branch from WorkspaceSettings using the passed repoPath
+        baseBranch = WorkspaceSettingsManager.shared.getMainBranch(for: repoPath)
+
+        // Load GitHub-specific metadata if available
         guard let repo = appState.currentRepository,
               let remote = repo.remotes.first(where: { $0.isGitHub }),
               let ownerRepo = remote.ownerAndRepo else { return }
-
-        // Set base branch from WorkspaceSettings
-        baseBranch = WorkspaceSettingsManager.shared.getMainBranch(for: repo.path)
 
         // Configure viewModel
         viewModel.owner = ownerRepo.owner
