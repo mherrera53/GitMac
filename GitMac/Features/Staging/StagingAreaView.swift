@@ -2448,7 +2448,7 @@ struct CreatePRSheetFromCommit: View {
                     .font(.subheadline)
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(isGenerating || headBranch.isEmpty)
+                .disabled(isGenerating || headBranch.isEmpty || baseBranch.isEmpty)
             }
 
             ScrollView {
@@ -2608,8 +2608,9 @@ struct CreatePRSheetFromCommit: View {
             let remoteBase = "origin/\(baseBranch)"
 
             // Get diff and commits using the specific repoPath
+            // Use range to get only commits that will be in the PR (not in base branch)
             let diff = try await engine.getDiff(from: remoteBase, to: "HEAD", at: repoPath)
-            let commits = try await engine.getCommits(at: repoPath, branch: "HEAD", limit: 20)
+            let commits = try await engine.getCommits(at: repoPath, branch: "\(remoteBase)..HEAD", limit: 50)
 
             // Generate both in parallel
             async let generatedTitle = AIService.shared.generatePRTitle(commits: commits, diff: diff)

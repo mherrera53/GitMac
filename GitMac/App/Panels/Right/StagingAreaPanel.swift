@@ -86,6 +86,11 @@ struct StagingAreaPanel: View {
     // MARK: - Commit + Push + PR Flow
 
     private func commitPushAndOpenPR() async {
+        guard let repoPath = appState.currentRepository?.path else {
+            NotificationManager.shared.error("No repository", detail: "No repository selected")
+            return
+        }
+
         // Step 1: Commit
         let commitSuccess = await stagingVM.commitAsync(message: commitMessage)
         guard commitSuccess else {
@@ -95,10 +100,23 @@ struct StagingAreaPanel: View {
         // Clear commit message
         commitMessage = ""
 
-        // Step 2: Push
+        // Step 2: Push using GitEngine directly with the tab's repoPath
         do {
-            let pushSHA = try await appState.gitService.push()
-            let shortSHA = String(pushSHA.prefix(7))
+            let engine = GitEngine()
+
+            // Get current branch for push
+            let currentBranch = appState.currentRepository?.currentBranch?.name
+            var options = PushOptions()
+            options.setUpstream = true
+            if let branch = currentBranch {
+                options.branch = branch
+            }
+
+            try await engine.push(options: options, at: repoPath)
+
+            // Get SHA after push
+            let sha = try await engine.getHeadSHA(at: repoPath)
+            let shortSHA = String(sha.prefix(7))
 
             NotificationManager.shared.success(
                 "Commit & Push completed",
