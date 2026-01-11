@@ -244,14 +244,19 @@ class PRListViewModel: ObservableObject {
         assignees: [String],
         labels: [String]
     ) async {
+        // Strip remote prefix from branch names (e.g., "origin/feature" -> "feature")
+        // GitHub API expects just the branch name, not the remote prefix
+        let cleanHead = head.replacingOccurrences(of: #"^origin/"#, with: "", options: .regularExpression)
+        let cleanBase = base.replacingOccurrences(of: #"^origin/"#, with: "", options: .regularExpression)
+
         do {
             let newPR = try await githubService.createPullRequest(
                 owner: owner,
                 repo: repo,
                 title: title,
                 body: body,
-                head: head,
-                base: base,
+                head: cleanHead,
+                base: cleanBase,
                 draft: draft
             )
 
@@ -1025,6 +1030,11 @@ struct CreatePRSheet: View {
 
     private let aiService = AIService()
 
+    /// Only local branches can be used as PR head
+    private var localBranches: [Branch] {
+        appState.currentRepository?.branches.filter { !$0.isRemote } ?? []
+    }
+
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
 
@@ -1059,12 +1069,12 @@ struct CreatePRSheet: View {
 
             ScrollView {
                 VStack(spacing: DesignTokens.Spacing.lg) {
-                    // Branches
+                    // Branches - only show local branches for PR head
                     HStack {
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                             Text("From").font(.caption).foregroundColor(theme.text)
                             Picker("", selection: $headBranch) {
-                                ForEach(appState.currentRepository?.branches ?? [], id: \.id) { branch in
+                                ForEach(localBranches, id: \.id) { branch in
                                     Text(branch.name).tag(branch.name)
                                 }
                             }
