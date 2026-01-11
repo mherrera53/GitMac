@@ -6,7 +6,7 @@ import SwiftUI
 // This file uses SwiftTerm for terminal rendering
 // To enable, add: OTHER_SWIFT_FLAGS = -D GHOSTTY_AVAILABLE
 
-#if GHOSTTY_AVAILABLE
+#if GHOSTTY_AVAILABLE && canImport(SwiftTerm)
 import SwiftTerm
 
 /// High-performance terminal view using SwiftTerm (Ghostty-like rendering)
@@ -275,7 +275,7 @@ struct GhosttyTerminalView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(hex: "1a1b26"))
+        .background(AppTheme.background)
     }
 }
 

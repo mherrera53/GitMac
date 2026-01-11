@@ -1,6 +1,7 @@
 import Foundation
 
 /// Service for fetching GitHub Pull Request information
+@MainActor
 class GitHubPRService {
     static let shared = GitHubPRService()
 

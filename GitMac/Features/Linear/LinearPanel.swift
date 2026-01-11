@@ -14,7 +14,7 @@ struct LinearPanel: View {
             iconColor: Color(hex: "5E6AD2"),
             viewModel: viewModel,
             content: {
-                LinearContentView(viewModel: viewModel)
+                LinearPanelContentView(viewModel: viewModel)
             },
             loginView: {
                 LinearLoginPrompt(viewModel: viewModel)
@@ -265,9 +265,9 @@ struct LinearSettingsSheet: View {
     }
 }
 
-// MARK: - Content View
+// MARK: - Content View (renamed to avoid conflict with LinearContentView.swift)
 
-struct LinearContentView: View {
+struct LinearPanelContentView: View {
     @ObservedObject var viewModel: LinearViewModel
 
     var body: some View {
@@ -326,16 +326,16 @@ struct LinearContentView: View {
     }
 }
 
-// MARK: - Issues List
+// MARK: - Issues List (Simple version with hover state)
 
-struct LinearIssuesListView: View {
+struct SimpleLinearIssuesListView: View {
     let issues: [LinearIssue]
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: DesignTokens.Spacing.xs) {
                 ForEach(issues) { issue in
-                    LinearIssueRow(issue: issue)
+                    SimpleLinearIssueRow(issue: issue)
                 }
             }
             .padding(DesignTokens.Spacing.sm)
@@ -343,7 +343,7 @@ struct LinearIssuesListView: View {
     }
 }
 
-struct LinearIssueRow: View {
+struct SimpleLinearIssueRow: View {
     let issue: LinearIssue
     @State private var isHovered = false
 

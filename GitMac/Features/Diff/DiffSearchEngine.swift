@@ -20,7 +20,7 @@ actor DiffSearchEngine {
         term: String,
         in hunks: [DiffHunk],
         options: SearchOptions
-    ) -> AsyncStream<SearchResult> {
+    ) -> AsyncStream<DiffSearchResult> {
         AsyncStream { continuation in
             Task {
                 let signpostID = OSSignpostID(log: searchLog)
@@ -43,7 +43,7 @@ actor DiffSearchEngine {
                     
                     // Materialize hunk if needed
                     let lines: [DiffLine]
-                    if let byteOffsets = hunk.byteOffsets {
+                    if hunk.byteOffsets != nil {
                         // Hunk not materialized yet - skip or materialize if needed
                         // For now, skip unmaterialized hunks in LFM
                         os_signpost(.event, log: searchLog, name: "diff.search.skip_unmaterialized", "hunk=%d", hunkIndex)
@@ -57,7 +57,7 @@ actor DiffSearchEngine {
                         if let ranges = matcher.match(line.content) {
                             matchCount += 1
                             
-                            let result = SearchResult(
+                            let result = DiffSearchResult(
                                 hunkIndex: hunkIndex,
                                 lineIndex: lineIndex,
                                 line: line,
@@ -112,16 +112,16 @@ struct SearchOptions: Sendable {
     }
 }
 
-// MARK: - Search Result
+// MARK: - Diff Search Result
 
-struct SearchResult: Identifiable, Sendable {
+struct DiffSearchResult: Identifiable, Sendable {
     let id = UUID()
     let hunkIndex: Int
     let lineIndex: Int
     let line: DiffLine
     let matchRanges: [NSRange]
     let hunkHeader: String
-    
+
     var lineNumber: Int? {
         line.newLineNumber ?? line.oldLineNumber
     }
@@ -191,7 +191,7 @@ struct SearchMatcher {
 @MainActor
 class DiffSearchViewModel: ObservableObject {
     @Published var searchTerm: String = ""
-    @Published var results: [SearchResult] = []
+    @Published var results: [DiffSearchResult] = []
     @Published var isSearching: Bool = false
     @Published var currentResultIndex: Int = 0
     @Published var options: SearchOptions = .default
@@ -218,7 +218,7 @@ class DiffSearchViewModel: ObservableObject {
         currentResultIndex = 0
         
         searchTask = Task {
-            var newResults: [SearchResult] = []
+            var newResults: [DiffSearchResult] = []
             
             for await result in await searchEngine.search(term: searchTerm, in: hunks, options: options) {
                 // Check for cancellation
@@ -257,7 +257,7 @@ class DiffSearchViewModel: ObservableObject {
     }
     
     /// Get current result
-    var currentResult: SearchResult? {
+    var currentResult: DiffSearchResult? {
         guard currentResultIndex < results.count else { return nil }
         return results[currentResultIndex]
     }

@@ -30,7 +30,7 @@ struct GhosttyDirectView: View {
             // Ghostty Surface
             ZStack {
                 GhosttyDirectRepresentable(viewModel: viewModel)
-                    .background(Color(hex: "1a1b26"))
+                    .background(AppTheme.background)
 
                 // AI suggestions overlay
                 if aiEnabled && (!viewModel.aiSuggestions.isEmpty || viewModel.isLoadingSuggestions) {
@@ -116,7 +116,7 @@ struct GhosttyDirectView: View {
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
-        .background(Color(hex: "16161e"))
+        .background(AppTheme.backgroundSecondary)
     }
 
     // MARK: - AI Suggestions (Warp-style)
@@ -128,12 +128,12 @@ struct GhosttyDirectView: View {
     private var suggestionPanel: some View {
         VStack(alignment: .leading, spacing: 0) {
             suggestionHeader
-            Divider().background(Color(hex: "283457"))
+            Divider().background(AppTheme.border)
             suggestionsList
         }
-        .background(Color(hex: "16161e").opacity(0.98))
+        .background(AppTheme.backgroundSecondary.opacity(0.98))
         .cornerRadius(DesignTokens.CornerRadius.xl)
-        .shadow(color: AppTheme.background.opacity(0.3), radius: 20)
+        .shadow(color: AppTheme.shadow, radius: 20)
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.bottom, DesignTokens.Spacing.md)
         .frame(maxWidth: 600)
@@ -157,7 +157,7 @@ struct GhosttyDirectView: View {
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
-        .background(Color(hex: "1a1b26"))
+        .background(AppTheme.backgroundTertiary)
     }
 
     @ViewBuilder
@@ -166,7 +166,7 @@ struct GhosttyDirectView: View {
             ForEach(Array(viewModel.aiSuggestions.prefix(5).enumerated()), id: \.offset) { index, suggestion in
                 suggestionRow(suggestion: suggestion, index: index)
                 if index < viewModel.aiSuggestions.count - 1 {
-                    Divider().background(Color(hex: "283457").opacity(0.5))
+                    Divider().background(AppTheme.border.opacity(0.5))
                 }
             }
         } else if viewModel.isLoadingSuggestions {
@@ -196,11 +196,11 @@ struct GhosttyDirectView: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                 HStack(spacing: DesignTokens.Spacing.sm) {
                     Circle()
-                        .fill(index == viewModel.selectedSuggestionIndex ? Color(hex: "7aa2f7") : Color.clear)
+                        .fill(index == viewModel.selectedSuggestionIndex ? AppTheme.accent : Color.clear)
                         .frame(width: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs, height: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                     Text(suggestion.command)
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(Color(hex: "c0caf5"))
+                        .foregroundColor(AppTheme.textPrimary)
                     Spacer()
                     if suggestion.confidence > 0.8 {
                         Text("HIGH")
@@ -222,7 +222,7 @@ struct GhosttyDirectView: View {
             }
             .padding(.horizontal, DesignTokens.Spacing.md)
             .padding(.vertical, DesignTokens.Spacing.sm)
-            .background(index == viewModel.selectedSuggestionIndex ? Color(hex: "283457") : Color.clear)
+            .background(index == viewModel.selectedSuggestionIndex ? AppTheme.selection : Color.clear)
         }
         .buttonStyle(.plain)
     }
@@ -264,7 +264,7 @@ struct GhosttyDirectView: View {
         .foregroundColor(AppTheme.textSecondary)
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.xs)
-        .background(Color(hex: "16161e"))
+        .background(AppTheme.backgroundSecondary)
     }
 }
 
@@ -273,8 +273,8 @@ struct GhosttyDirectView: View {
 struct GhosttyDirectRepresentable: NSViewRepresentable {
     @ObservedObject var viewModel: GhosttyDirectViewModel
 
-    func makeNSView(context: Context) -> GhosttyNativeView {
-        let view = GhosttyNativeView()
+    func makeNSView(context: Context) -> GhosttyNSView {
+        let view = GhosttyNSView()
 
         // Store reference
         context.coordinator.nativeView = view
@@ -286,7 +286,7 @@ struct GhosttyDirectRepresentable: NSViewRepresentable {
         return view
     }
 
-    func updateNSView(_ nsView: GhosttyNativeView, context: Context) {
+    func updateNSView(_ nsView: GhosttyNSView, context: Context) {
         // Handle updates if needed
     }
 
@@ -296,21 +296,25 @@ struct GhosttyDirectRepresentable: NSViewRepresentable {
 
     class Coordinator: NSObject {
         var viewModel: GhosttyDirectViewModel
-        weak var nativeView: GhosttyNativeView?
+        weak var nativeView: GhosttyNSView?
 
         init(viewModel: GhosttyDirectViewModel) {
             self.viewModel = viewModel
         }
 
         deinit {
-            nativeView?.cleanup()
+            let view = nativeView
+            Task { @MainActor in
+                view?.cleanup()
+            }
         }
     }
 }
 
 // MARK: - Ghostty Native View (NSView)
+// Note: SwiftUI GhosttyNSView is in GhosttyNSView.swift
 
-class GhosttyNativeView: NSView {
+class GhosttyNSView: NSView {
     private var app: ghostty_app_t?
     var surface: ghostty_surface_t? // Make surface accessible to ViewModel
     private var config: ghostty_config_t?
@@ -323,7 +327,7 @@ class GhosttyNativeView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         self.wantsLayer = true
-        self.layer?.backgroundColor = NSColor(red: 0.1, green: 0.11, blue: 0.15, alpha: 1.0).cgColor
+        self.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
 
         // Initialize Ghostty global state once
         Self.initializeGhosttyOnce()
@@ -702,6 +706,7 @@ class GhosttyNativeView: NSView {
 
 // MARK: - ViewModel
 
+@MainActor
 class GhosttyDirectViewModel: ObservableObject {
     @Published var currentInput = ""
     @Published var currentDirectory = "~"
@@ -711,7 +716,7 @@ class GhosttyDirectViewModel: ObservableObject {
     @Published var selectedSuggestionIndex = 0
     @Published var isLoadingSuggestions = false
 
-    weak var nativeView: GhosttyNativeView?
+    weak var nativeView: GhosttyNSView?
 
     private var suggestionTask: Task<Void, Never>?
     private var lastSuggestionInput = ""
@@ -849,14 +854,14 @@ struct GhosttyDirectView: View {
                 .foregroundColor(AppTheme.textPrimary)
             Text("GhosttyKit framework not available")
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundColor(AppTheme.textSecondary)
             Text("Enable GHOSTTY_AVAILABLE flag in build settings")
                 .font(.caption2)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundColor(AppTheme.textMuted)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(hex: "1a1b26"))
+        .background(AppTheme.background)
     }
 }
 

@@ -32,7 +32,7 @@ struct KaleidoscopeDiffView: View {
     var onHistoryTap: (() -> Void)?
     var onBlameTap: (() -> Void)?
 
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     // Select first file by default
     init(
@@ -401,7 +401,6 @@ struct KaleidoscopeDiffView: View {
                     MarkdownView(content: previewContent, fileName: file.displayPath)
                 }
             case .blocks:
-                // Traditional side-by-side (like Split)
                 KaleidoscopeSplitDiffView(
                     pairedLines: pairedLines,
                     filePath: file.newPath,
@@ -416,9 +415,8 @@ struct KaleidoscopeDiffView: View {
                     contentHeight: $contentHeight,
                     minimapScrollTrigger: $minimapScrollTrigger
                 )
-
+            
             case .fluid:
-                // Fluid view with connection lines (enhanced version)
                 KaleidoscopeSplitDiffView(
                     pairedLines: pairedLines,
                     filePath: file.newPath,
@@ -426,7 +424,7 @@ struct KaleidoscopeDiffView: View {
                     repoPath: repoPath,
                     allowPatchActions: !swappedAB,
                     showLineNumbers: showLineNumbers,
-                    showConnectionLines: showConnectionLines,
+                    showConnectionLines: false,
                     isFluidMode: true,
                     scrollOffset: $scrollOffset,
                     viewportHeight: $viewportHeight,
@@ -825,7 +823,7 @@ struct CommitHistorySidebar: View {
     @Binding var selectedCommitB: Commit?
     @State private var filterText: String = ""
     @State private var currentChangeIndex: Int = 0
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     private var filteredCommits: [Commit] {
         if filterText.isEmpty {
@@ -954,7 +952,7 @@ struct CommitHistoryRow: View {
     let onSelectB: () -> Void
 
     @State private var isHovered = false
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     private var initials: String {
         let components = commit.author.components(separatedBy: " ")
@@ -1002,7 +1000,7 @@ enum KaleidoscopeViewMode: String, CaseIterable {
     case hunk = "Hunk"
     case preview = "Preview"
     case blocks = "Blocks"    // Kaleidoscope split with connection lines
-    case fluid = "Fluid"      // Kaleidoscope split (cleaner)
+    case fluid = "Fluid"      // Kaleidoscope split continuous line numbers
     case unified = "Unified"  // Kaleidoscope unified with A/B labels
 
     var icon: String {

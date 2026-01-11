@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 // MARK: - Theme Environment Key
 
@@ -13,10 +14,503 @@ extension EnvironmentValues {
     }
 }
 
-// MARK: - Themed Color Extension
+// MARK: - Apple HIG Compliant Theme System
+// Following Apple Human Interface Guidelines:
+// https://developer.apple.com/design/human-interface-guidelines/color
+// Always use semantic system colors for UI elements - they adapt automatically
+
+/// AppTheme - Sistema de colores siguiendo Apple Human Interface Guidelines
+/// Los colores semánticos de NSColor se adaptan automáticamente a light/dark mode
+@MainActor
+enum AppTheme {
+
+    // MARK: - Text Colors (Always use NSColor semantic colors)
+    // These colors automatically adapt to light/dark appearance
+
+    /// Primary text - highest contrast, for main content
+    static var textPrimary: Color {
+        Color(nsColor: .labelColor)
+    }
+
+    /// Secondary text - for subtitles and less prominent text
+    static var textSecondary: Color {
+        Color(nsColor: .secondaryLabelColor)
+    }
+
+    /// Muted text - for placeholder and disabled states
+    static var textMuted: Color {
+        Color(nsColor: .tertiaryLabelColor)
+    }
+
+    /// Quaternary text - least prominent
+    static var textQuaternary: Color {
+        Color(nsColor: .quaternaryLabelColor)
+    }
+
+    // MARK: - Background Colors (Always use NSColor semantic colors)
+
+    /// Main window background
+    static var background: Color {
+        Color(nsColor: .windowBackgroundColor)
+    }
+
+    /// Secondary background for grouped content
+    static var backgroundSecondary: Color {
+        Color(nsColor: .controlBackgroundColor)
+    }
+
+    /// Tertiary background for nested content
+    static var backgroundTertiary: Color {
+        Color(nsColor: .windowBackgroundColor)
+    }
+
+    /// Panel background with transparency
+    static var panel: Color {
+        Color(nsColor: .controlBackgroundColor).opacity(0.8)
+    }
+
+    /// Toolbar background
+    static var toolbar: Color {
+        Color(nsColor: .windowBackgroundColor)
+    }
+
+    /// Sidebar background
+    static var sidebar: Color {
+        Color(nsColor: .controlBackgroundColor)
+    }
+
+    /// Text input background
+    static var inputBackground: Color {
+        Color(nsColor: .textBackgroundColor)
+    }
+
+    // MARK: - Accent Colors
+
+    /// System accent color (user-configurable in System Preferences)
+    static var accent: Color {
+        Color(nsColor: .controlAccentColor)
+    }
+
+    /// Accent hover state
+    static var accentHover: Color {
+        Color(nsColor: .controlAccentColor).opacity(0.8)
+    }
+
+    /// Accent pressed state
+    static var accentPressed: Color {
+        Color(nsColor: .controlAccentColor).opacity(0.7)
+    }
+
+    /// Accent disabled state
+    static var accentDisabled: Color {
+        Color(nsColor: .tertiaryLabelColor)
+    }
+
+    // MARK: - Semantic Status Colors (System colors that adapt to appearance)
+
+    /// Success color - green
+    static var success: Color {
+        Color(nsColor: .systemGreen)
+    }
+
+    /// Warning color - orange
+    static var warning: Color {
+        Color(nsColor: .systemOrange)
+    }
+
+    /// Error color - red
+    static var error: Color {
+        Color(nsColor: .systemRed)
+    }
+
+    /// Info color - blue
+    static var info: Color {
+        Color(nsColor: .systemBlue)
+    }
+
+    // MARK: - Accent Aliases (using system colors)
+
+    static var accentGreen: Color { Color(nsColor: .systemGreen) }
+    static var accentRed: Color { Color(nsColor: .systemRed) }
+    static var accentOrange: Color { Color(nsColor: .systemOrange) }
+    static var accentPurple: Color { Color(nsColor: .systemPurple) }
+    static var accentYellow: Color { Color(nsColor: .systemYellow) }
+    static var accentCyan: Color { Color(nsColor: .systemCyan) }
+    static var accentPink: Color { Color(nsColor: .systemPink) }
+    static var accentBrown: Color { Color(nsColor: .systemBrown) }
+    static var accentIndigo: Color { Color(nsColor: .systemIndigo) }
+    static var accentTeal: Color { Color(nsColor: .systemTeal) }
+    static var accentMint: Color { Color(nsColor: .systemMint) }
+
+    // MARK: - Interactive Colors
+
+    /// Hover state background
+    static var hover: Color {
+        Color(nsColor: .controlAccentColor).opacity(0.1)
+    }
+
+    /// Selection background
+    static var selection: Color {
+        Color(nsColor: .selectedContentBackgroundColor)
+    }
+
+    /// Unemphasized selection (when window is not key)
+    static var selectionUnemphasized: Color {
+        Color(nsColor: .unemphasizedSelectedContentBackgroundColor)
+    }
+
+    /// Border/separator color
+    static var border: Color {
+        Color(nsColor: .separatorColor)
+    }
+
+    /// Grid color for tables
+    static var grid: Color {
+        Color(nsColor: .gridColor)
+    }
+
+    // MARK: - Link Colors
+
+    /// Link color
+    static var link: Color {
+        Color(nsColor: .linkColor)
+    }
+
+    /// Link hover color
+    static var linkHover: Color {
+        Color(nsColor: .controlAccentColor)
+    }
+
+    // MARK: - Shadow & Overlay Colors
+
+    static var shadow: Color {
+        Color.black.opacity(0.2)
+    }
+
+    static var overlay: Color {
+        Color(nsColor: .windowBackgroundColor).opacity(0.8)
+    }
+
+    static var overlayLight: Color {
+        Color.black.opacity(0.1)
+    }
+
+    static var overlayMedium: Color {
+        Color.black.opacity(0.3)
+    }
+
+    // MARK: - UI States
+
+    /// Chevron/disclosure arrow color
+    static var chevronColor: Color {
+        textSecondary
+    }
+
+    /// Button text on colored backgrounds - always white for vibrant system colors
+    /// System colors (blue, green, orange, red) are designed to have white text
+    static var buttonTextOnColor: Color {
+        Color.white
+    }
+
+    /// Calculate contrasting text color based on background
+    /// Returns white for dark backgrounds, labelColor for light backgrounds
+    static func contrastingTextColor(for background: Color) -> Color {
+        // For system colors used as backgrounds, white text is recommended
+        // This follows Apple HIG for buttons with colored backgrounds
+        Color.white
+    }
+
+    /// Get appropriate text color for a badge/button based on color scheme
+    /// In light mode, use darker text for better contrast on bright backgrounds
+    static func badgeTextColor(colorScheme: SwiftUI.ColorScheme) -> Color {
+        colorScheme == .dark ? Color.white : Color(nsColor: .labelColor)
+    }
+
+    /// Focus ring color
+    static var focus: Color {
+        accent
+    }
+
+    /// Border color for focused elements
+    static var borderFocus: Color {
+        accent
+    }
+
+    /// Code block background
+    static var codeBackground: Color {
+        backgroundSecondary.opacity(0.5)
+    }
+
+    /// Inline code background
+    static var inlineCodeBackground: Color {
+        backgroundSecondary.opacity(0.3)
+    }
+
+    // MARK: - Git Status Colors (Custom - these can be themed)
+    // These are app-specific semantic colors
+
+    static var gitAdded: Color {
+        if ThemeManager.shared.currentTheme == .custom {
+            return Color.Theme(ThemeManager.shared.colors).gitAdded
+        }
+        return Color(nsColor: .systemGreen)
+    }
+
+    static var gitModified: Color {
+        if ThemeManager.shared.currentTheme == .custom {
+            return Color.Theme(ThemeManager.shared.colors).gitModified
+        }
+        return Color(nsColor: .systemOrange)
+    }
+
+    static var gitDeleted: Color {
+        if ThemeManager.shared.currentTheme == .custom {
+            return Color.Theme(ThemeManager.shared.colors).gitDeleted
+        }
+        return Color(nsColor: .systemRed)
+    }
+
+    static var gitConflict: Color {
+        if ThemeManager.shared.currentTheme == .custom {
+            return Color.Theme(ThemeManager.shared.colors).gitConflict
+        }
+        return Color(nsColor: .systemPink)
+    }
+
+    static var gitRenamed: Color {
+        if ThemeManager.shared.currentTheme == .custom {
+            return Color.Theme(ThemeManager.shared.colors).branchRemote
+        }
+        return Color(nsColor: .systemBlue)
+    }
+
+    static var gitUntracked: Color {
+        Color(nsColor: .tertiaryLabelColor)
+    }
+
+    // MARK: - Branch Colors (Custom - these can be themed)
+
+    static var branchLocal: Color {
+        if ThemeManager.shared.currentTheme == .custom {
+            return Color.Theme(ThemeManager.shared.colors).branchLocal
+        }
+        return Color(nsColor: .systemGreen)
+    }
+
+    static var branchRemote: Color {
+        if ThemeManager.shared.currentTheme == .custom {
+            return Color.Theme(ThemeManager.shared.colors).branchRemote
+        }
+        return Color(nsColor: .systemBlue)
+    }
+
+    static var branchCurrent: Color {
+        if ThemeManager.shared.currentTheme == .custom {
+            return Color.Theme(ThemeManager.shared.colors).branchCurrent
+        }
+        return Color(nsColor: .systemOrange)
+    }
+
+    // MARK: - Graph Lane Colors (Custom - these can be themed)
+
+    static var laneColors: [Color] {
+        if ThemeManager.shared.currentTheme == .custom {
+            return Color.Theme(ThemeManager.shared.colors).laneColors
+        }
+        return [
+            Color(nsColor: .systemBlue),
+            Color(nsColor: .systemGreen),
+            Color(nsColor: .systemOrange),
+            Color(nsColor: .systemPurple),
+            Color(nsColor: .systemRed),
+            Color(nsColor: .systemCyan),
+            Color(nsColor: .systemPink),
+            Color(nsColor: .systemYellow)
+        ]
+    }
+
+    /// Static graph lane colors (for compile-time contexts)
+    static let graphLaneColors: [Color] = [
+        Color(nsColor: .systemBlue),
+        Color(nsColor: .systemGreen),
+        Color(nsColor: .systemOrange),
+        Color(nsColor: .systemPurple),
+        Color(nsColor: .systemRed),
+        Color(nsColor: .systemCyan),
+        Color(nsColor: .systemPink),
+        Color(nsColor: .systemYellow)
+    ]
+
+    // MARK: - Diff Colors (Kaleidoscope-style)
+
+    static var diffAddition: Color {
+        if ThemeManager.shared.currentTheme == .custom {
+            return Color.Theme(ThemeManager.shared.colors).diffAddition
+        }
+        return Color(nsColor: .systemGreen)
+    }
+
+    static var diffDeletion: Color {
+        if ThemeManager.shared.currentTheme == .custom {
+            return Color.Theme(ThemeManager.shared.colors).diffDeletion
+        }
+        return Color(nsColor: .systemRed)
+    }
+
+    static var diffChange: Color {
+        if ThemeManager.shared.currentTheme == .custom {
+            return Color.Theme(ThemeManager.shared.colors).diffChange
+        }
+        return Color(nsColor: .systemBlue)
+    }
+
+    static var diffAdditionBg: Color {
+        diffAddition.opacity(0.15)
+    }
+
+    static var diffDeletionBg: Color {
+        diffDeletion.opacity(0.15)
+    }
+
+    static var diffChangeBg: Color {
+        diffChange.opacity(0.15)
+    }
+
+    static var diffLineNumberBg: Color {
+        backgroundSecondary.opacity(0.5)
+    }
+
+    static var diffLineNumber: Color {
+        textMuted.opacity(0.8)
+    }
+}
+
+// MARK: - File Type Colors Extension
+
+extension AppTheme {
+    /// Swift file icon color (orange)
+    static var fileSwift: Color {
+        Color(nsColor: .systemOrange)
+    }
+
+    /// JavaScript file icon color (yellow)
+    static var fileJavaScript: Color {
+        Color(nsColor: .systemYellow)
+    }
+
+    /// TypeScript file icon color (blue)
+    static var fileTypeScript: Color {
+        Color(nsColor: .systemBlue)
+    }
+
+    /// Python file icon color (blue)
+    static var filePython: Color {
+        Color(nsColor: .systemBlue)
+    }
+
+    /// JSON file icon color (green)
+    static var fileJSON: Color {
+        Color(nsColor: .systemGreen)
+    }
+
+    /// Markdown file icon color (gray)
+    static var fileMarkdown: Color {
+        textMuted
+    }
+
+    /// HTML file icon color (orange)
+    static var fileHTML: Color {
+        Color(nsColor: .systemOrange)
+    }
+
+    /// CSS file icon color (blue)
+    static var fileCSS: Color {
+        Color(nsColor: .systemBlue)
+    }
+
+    /// Image file icon color (pink)
+    static var fileImage: Color {
+        Color(nsColor: .systemPink)
+    }
+
+    /// Archive file icon color (yellow)
+    static var fileArchive: Color {
+        Color(nsColor: .systemYellow)
+    }
+
+    /// Config file icon color (gray)
+    static var fileConfig: Color {
+        textMuted.opacity(0.8)
+    }
+
+    /// Default file icon color
+    static var fileDefault: Color {
+        textMuted
+    }
+}
+
+// MARK: - Syntax Highlighting Extension
+
+extension AppTheme {
+    /// Keyword color for syntax highlighting
+    static var syntaxKeyword: Color {
+        Color(nsColor: .systemPink)
+    }
+
+    /// String color for syntax highlighting
+    static var syntaxString: Color {
+        Color(nsColor: .systemGreen)
+    }
+
+    /// Comment color for syntax highlighting
+    static var syntaxComment: Color {
+        textMuted
+    }
+
+    /// Number color for syntax highlighting
+    static var syntaxNumber: Color {
+        Color(nsColor: .systemCyan)
+    }
+
+    /// Type color for syntax highlighting
+    static var syntaxType: Color {
+        Color(nsColor: .systemTeal)
+    }
+}
+
+// MARK: - Interactive Rebase Actions Extension
+
+extension AppTheme {
+    /// Color for 'pick' action in interactive rebase
+    static var actionPick: Color {
+        success
+    }
+
+    /// Color for 'reword' action in interactive rebase
+    static var actionReword: Color {
+        info
+    }
+
+    /// Color for 'edit' action in interactive rebase
+    static var actionEdit: Color {
+        warning
+    }
+
+    /// Color for 'squash' action in interactive rebase
+    static var actionSquash: Color {
+        accent
+    }
+
+    /// Color for 'drop' action in interactive rebase
+    static var actionDrop: Color {
+        error
+    }
+}
+
+// MARK: - Themed Color Extension (for custom themes only)
 
 extension Color {
-    /// Namespace for theme-aware colors
+    /// Namespace for theme-aware colors (custom themes)
     struct Theme {
         private let colors: ColorScheme
 
@@ -32,7 +526,7 @@ extension Color {
         var background: Color { colors.background.color }
         var backgroundSecondary: Color { colors.backgroundSecondary.color }
         var backgroundTertiary: Color { colors.backgroundTertiary.color }
-        var inputBackground: Color { colors.backgroundSecondary.color.opacity(0.8) } // Added
+        var inputBackground: Color { colors.backgroundSecondary.color.opacity(0.8) }
 
         // MARK: - Text Colors
         var text: Color { colors.text.color }
@@ -78,7 +572,7 @@ extension Color {
         var disabled: Color { textMuted.opacity(0.5) }
         var placeholder: Color { textMuted }
 
-        // MARK: - Common UI Colors (replacing hardcoded values)
+        // MARK: - Common UI Colors
         var separatorColor: Color { border }
         var hoverBackground: Color { hover }
         var activeBackground: Color { selection }
@@ -89,7 +583,7 @@ extension Color {
              info, warning, success]
         }
 
-        // MARK: - Diff Colors (Kaleidoscope-style)
+        // MARK: - Diff Colors
         var diffAddition: Color { colors.diffAddition.color }
         var diffDeletion: Color { colors.diffDeletion.color }
         var diffChange: Color { colors.diffChange.color }
@@ -104,348 +598,23 @@ extension Color {
     }
 }
 
-// MARK: - AppTheme (Legacy Support)
+// MARK: - Color Hex Extension
 
-/// Modern theme colors for consistent UI - now using dynamic theme system
-/// For new code, use Color.Theme with environment instead
-@MainActor
-enum AppTheme {
-    // MARK: - Primary Colors
-    static var accent: Color {
-        Color.Theme(ThemeManager.shared.colors).accent
+extension Color {
+    /// Initialize Color from hex string (e.g., "#FF0000" or "FF0000")
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let r, g, b: UInt64
+        switch hex.count {
+        case 6:
+            (r, g, b) = ((int >> 16) & 0xFF, (int >> 8) & 0xFF, int & 0xFF)
+        case 8:
+            (r, g, b) = ((int >> 24) & 0xFF, (int >> 16) & 0xFF, (int >> 8) & 0xFF)
+        default:
+            (r, g, b) = (0, 0, 0)
+        }
+        self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255, opacity: 1)
     }
-    static var accentGreen: Color {
-        Color.Theme(ThemeManager.shared.colors).success
-    }
-    static var accentRed: Color {
-        Color.Theme(ThemeManager.shared.colors).error
-    }
-    static var accentOrange: Color {
-        Color.Theme(ThemeManager.shared.colors).warning
-    }
-    static var accentPurple: Color {
-        Color.Theme(ThemeManager.shared.colors).accent
-    }
-    static var accentYellow: Color {
-        Color.Theme(ThemeManager.shared.colors).warning
-    }
-    static var accentCyan: Color {
-        Color.Theme(ThemeManager.shared.colors).info
-    }
-
-    // MARK: - Background Colors
-    static var background: Color {
-        Color.Theme(ThemeManager.shared.colors).background
-    }
-    static var backgroundSecondary: Color {
-        Color.Theme(ThemeManager.shared.colors).backgroundSecondary
-    }
-    static var backgroundTertiary: Color {
-        Color.Theme(ThemeManager.shared.colors).backgroundTertiary
-    }
-    static var panel: Color {
-        Color.Theme(ThemeManager.shared.colors).backgroundSecondary.opacity(0.5)
-    }
-    static var toolbar: Color {
-        Color.Theme(ThemeManager.shared.colors).backgroundSecondary
-    }
-    static var sidebar: Color {
-        Color.Theme(ThemeManager.shared.colors).backgroundSecondary
-    }
-
-    // MARK: - Text Colors
-    static var textPrimary: Color {
-        Color.Theme(ThemeManager.shared.colors).text
-    }
-    static var textSecondary: Color {
-        Color.Theme(ThemeManager.shared.colors).textSecondary
-    }
-    static var textMuted: Color {
-        Color.Theme(ThemeManager.shared.colors).textMuted
-    }
-
-    // MARK: - Interactive Colors
-    static var hover: Color {
-        Color.Theme(ThemeManager.shared.colors).hover
-    }
-    static var selection: Color {
-        Color.Theme(ThemeManager.shared.colors).selection
-    }
-    static var border: Color {
-        Color.Theme(ThemeManager.shared.colors).border
-    }
-
-    // MARK: - Semantic Colors
-    static var success: Color {
-        Color.Theme(ThemeManager.shared.colors).success
-    }
-    static var warning: Color {
-        Color.Theme(ThemeManager.shared.colors).warning
-    }
-    static var error: Color {
-        Color.Theme(ThemeManager.shared.colors).error
-    }
-    static var info: Color {
-        Color.Theme(ThemeManager.shared.colors).accent
-    }
-
-    // MARK: - Shadow & Overlay Colors
-    static var shadow: Color {
-        Color.Theme(ThemeManager.shared.colors).shadow
-    }
-    static var overlay: Color {
-        Color.Theme(ThemeManager.shared.colors).overlay
-    }
-    static var overlayLight: Color {
-        Color.Theme(ThemeManager.shared.colors).overlayLight
-    }
-
-    // MARK: - Branch/Lane Colors
-    static var laneColors: [Color] {
-        Color.Theme(ThemeManager.shared.colors).laneColors
-    }
-
-    // MARK: - Kaleidoscope-style Diff Colors
-    /// Professional diff colors - now using theme system for proper theme adaptation
-    static var diffAddition: Color {
-        Color.Theme(ThemeManager.shared.colors).diffAddition
-    }
-    static var diffDeletion: Color {
-        Color.Theme(ThemeManager.shared.colors).diffDeletion
-    }
-    static var diffChange: Color {
-        Color.Theme(ThemeManager.shared.colors).diffChange
-    }
-    static var diffAdditionBg: Color {
-        diffAddition.opacity(0.15)
-    }
-    static var diffDeletionBg: Color {
-        diffDeletion.opacity(0.15)
-    }
-    static var diffChangeBg: Color {
-        diffChange.opacity(0.15)
-    }
-    static var diffLineNumberBg: Color {
-        backgroundSecondary.opacity(0.5)
-    }
-    static var diffLineNumber: Color {
-        textMuted.opacity(0.6)
-    }
-}
-
-// MARK: - UI States Extension
-extension AppTheme {
-    /// Color for chevrons (disclosure arrows) - visible in all themes
-    static var chevronColor: Color {
-        textSecondary
-    }
-
-    /// Adaptive button text color on colored backgrounds (white/black depending on theme)
-    static var buttonTextOnColor: Color {
-        Color.Theme(ThemeManager.shared.colors).background
-    }
-
-    /// Accent color in pressed state (darker)
-    static var accentPressed: Color {
-        accent.opacity(0.8)
-    }
-
-    /// Accent color when disabled
-    static var accentDisabled: Color {
-        textMuted
-    }
-
-    /// Border color for focused elements
-    static var borderFocus: Color {
-        accent
-    }
-
-    /// Link color for hyperlinks
-    static var link: Color {
-        info
-    }
-
-    /// Link color on hover
-    static var linkHover: Color {
-        accent
-    }
-
-    /// Focus color for input fields
-    static var focus: Color {
-        accent
-    }
-
-    /// Background for code blocks
-    static var codeBackground: Color {
-        backgroundSecondary.opacity(0.5)
-    }
-
-    /// Background for input fields
-    static var inputBackground: Color {
-        backgroundSecondary.opacity(0.3)
-    }
-
-    /// Background for inline code
-    static var inlineCodeBackground: Color {
-        backgroundSecondary.opacity(0.3)
-    }
-}
-
-// MARK: - File Type Colors Extension
-extension AppTheme {
-    /// Swift file icon color (orange)
-    static var fileSwift: Color {
-        Color(red: 1.0, green: 0.55, blue: 0.26) // #FF8C42
-    }
-
-    /// JavaScript file icon color (yellow)
-    static var fileJavaScript: Color {
-        Color(red: 0.97, green: 0.87, blue: 0.31) // #F7DF1E
-    }
-
-    /// TypeScript file icon color (blue)
-    static var fileTypeScript: Color {
-        Color(red: 0.19, green: 0.47, blue: 0.78) // #3178C6
-    }
-
-    /// Python file icon color (blue)
-    static var filePython: Color {
-        Color(red: 0.22, green: 0.46, blue: 0.67) // #3776AB
-    }
-
-    /// JSON file icon color (green)
-    static var fileJSON: Color {
-        Color(red: 0.31, green: 0.79, blue: 0.69) // #4EC9B0
-    }
-
-    /// Markdown file icon color (gray)
-    static var fileMarkdown: Color {
-        textMuted
-    }
-
-    /// HTML file icon color (orange)
-    static var fileHTML: Color {
-        Color(red: 0.89, green: 0.30, blue: 0.15) // #E34C26
-    }
-
-    /// CSS file icon color (blue)
-    static var fileCSS: Color {
-        Color(red: 0.09, green: 0.45, blue: 0.71) // #1572B6
-    }
-
-    /// Image file icon color (pink)
-    static var fileImage: Color {
-        Color(red: 1.0, green: 0.42, blue: 0.71) // #FF6BB5
-    }
-
-    /// Archive file icon color (yellow)
-    static var fileArchive: Color {
-        Color(red: 0.97, green: 0.87, blue: 0.31) // #F7DF1E
-    }
-
-    /// Config file icon color (gray)
-    static var fileConfig: Color {
-        textMuted.opacity(0.8)
-    }
-
-    /// Default file icon color
-    static var fileDefault: Color {
-        textMuted
-    }
-}
-
-// MARK: - Syntax Highlighting Extension
-extension AppTheme {
-    /// Keyword color for syntax highlighting
-    static var syntaxKeyword: Color {
-        Color(red: 0.0, green: 0.48, blue: 1.0) // Blue
-    }
-
-    /// String color for syntax highlighting
-    static var syntaxString: Color {
-        Color(red: 0.2, green: 0.78, blue: 0.35) // Green
-    }
-
-    /// Comment color for syntax highlighting
-    static var syntaxComment: Color {
-        textMuted
-    }
-
-    /// Number color for syntax highlighting
-    static var syntaxNumber: Color {
-        Color(red: 0.31, green: 0.79, blue: 0.69) // Cyan
-    }
-
-    /// Type color for syntax highlighting
-    static var syntaxType: Color {
-        Color(red: 0.31, green: 0.79, blue: 0.69) // Jade green
-    }
-}
-
-// MARK: - Interactive Rebase Actions Extension
-extension AppTheme {
-    /// Color for 'pick' action in interactive rebase
-    static var actionPick: Color {
-        success
-    }
-
-    /// Color for 'reword' action in interactive rebase
-    static var actionReword: Color {
-        info
-    }
-
-    /// Color for 'edit' action in interactive rebase
-    static var actionEdit: Color {
-        warning
-    }
-
-    /// Color for 'squash' action in interactive rebase
-    static var actionSquash: Color {
-        accent
-    }
-
-    /// Color for 'drop' action in interactive rebase
-    static var actionDrop: Color {
-        error
-    }
-}
-
-// MARK: - Git & Branch Colors Extension
-extension AppTheme {
-    static var gitAdded: Color {
-        Color.Theme(ThemeManager.shared.colors).gitAdded
-    }
-    static var gitModified: Color {
-        Color.Theme(ThemeManager.shared.colors).gitModified
-    }
-    static var gitDeleted: Color {
-        Color.Theme(ThemeManager.shared.colors).gitDeleted
-    }
-    static var gitConflict: Color {
-        Color.Theme(ThemeManager.shared.colors).gitConflict
-    }
-    static var branchLocal: Color {
-        Color.Theme(ThemeManager.shared.colors).branchLocal
-    }
-    static var branchRemote: Color {
-        Color.Theme(ThemeManager.shared.colors).branchRemote
-    }
-    static var branchCurrent: Color {
-        Color.Theme(ThemeManager.shared.colors).branchCurrent
-    }
-}
-
-// MARK: - Graph Lane Colors
-extension AppTheme {
-    /// Theme-aware colors for commit graph lanes
-    static let graphLaneColors: [Color] = [
-        .blue,
-        .green,
-        .orange,
-        Color.purple.opacity(0.8),
-        .red,
-        Color.cyan.opacity(0.8),
-        Color.pink.opacity(0.8),
-        Color.yellow.opacity(0.8)
-    ]
 }

@@ -48,14 +48,11 @@ struct DSAsyncContent<Content: View, LoadingView: View, ErrorView: View, EmptyVi
         state: DSAsyncState<T>,
         retry: (() async -> Void)? = nil,
         @ViewBuilder content: @escaping (T) -> Content,
-        @ViewBuilder loadingView: @escaping () -> LoadingView = { DSLoadingState(message: "Loading...") },
+        @ViewBuilder loadingView: @escaping () -> LoadingView = { DSLoadingState() },
         @ViewBuilder errorView: @escaping (Error) -> ErrorView = { error in
-            DSErrorState(
-                message: error.localizedDescription,
-                action: nil
-            )
+            DSErrorState(message: error.localizedDescription)
         },
-        @ViewBuilder emptyView: @escaping () -> EmptyView = { DSEmptyState(message: "No data available") }
+        @ViewBuilder emptyView: @escaping () -> EmptyView = { DSEmptyState(icon: "tray", title: "No Data", description: "No data available") }
     ) where T: Collection {
         self.state = state
         self.retry = retry
@@ -69,12 +66,9 @@ struct DSAsyncContent<Content: View, LoadingView: View, ErrorView: View, EmptyVi
         state: DSAsyncState<T>,
         retry: (() async -> Void)? = nil,
         @ViewBuilder content: @escaping (T) -> Content,
-        @ViewBuilder loadingView: @escaping () -> LoadingView = { DSLoadingState(message: "Loading...") },
+        @ViewBuilder loadingView: @escaping () -> LoadingView = { DSLoadingState() },
         @ViewBuilder errorView: @escaping (Error) -> ErrorView = { error in
-            DSErrorState(
-                message: error.localizedDescription,
-                action: nil
-            )
+            DSErrorState(message: error.localizedDescription)
         }
     ) where EmptyView == Never {
         self.state = state
@@ -105,10 +99,8 @@ struct DSAsyncContent<Content: View, LoadingView: View, ErrorView: View, EmptyVi
                 if let retry = retry {
                     DSErrorState(
                         message: error.localizedDescription,
-                        action: {
-                            Task {
-                                await retry()
-                            }
+                        onRetry: {
+                            await retry()
                         }
                     ) as! ErrorView
                 } else {
@@ -146,20 +138,14 @@ struct DSStatefulView<Content: View>: View {
     var body: some View {
         Group {
             if isLoading {
-                DSLoadingState(message: "Loading...")
+                DSLoadingState()
             } else if let error = error {
                 DSErrorState(
                     message: error.localizedDescription,
-                    action: retry.map { retryAction in
-                        {
-                            Task {
-                                await retryAction()
-                            }
-                        }
-                    }
+                    onRetry: retry
                 )
             } else if isEmpty {
-                DSEmptyState(message: "No data available")
+                DSEmptyState(icon: "tray", title: "No Data", description: "No data available")
             } else {
                 content()
             }
@@ -386,7 +372,7 @@ private struct StatefulViewInteractivePreview: View {
         VStack(spacing: DesignTokens.Spacing.xl) {
             // State selector
             HStack(spacing: DesignTokens.Spacing.md) {
-                ForEach(0..<4) { index in
+                ForEach(Array(0..<4), id: \.self) { index in
                     DSButton(
                         variant: currentState == index ? .primary : .secondary,
                         size: .sm
@@ -416,7 +402,7 @@ private struct StatefulViewInteractivePreview: View {
                         .font(DesignTokens.Typography.headline)
                         .foregroundColor(AppTheme.success)
 
-                    ForEach(0..<5) { index in
+                    ForEach(Array(0..<5), id: \.self) { index in
                         HStack {
                             Text("Data item \(index + 1)")
                                 .font(DesignTokens.Typography.body)

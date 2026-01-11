@@ -12,15 +12,13 @@ struct DiffBreadcrumb: View {
     @Binding var selectedVersionB: String?
     let versions: [FileVersion]
 
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     private var pathComponents: [String] {
         filePath.components(separatedBy: "/").filter { !$0.isEmpty }
     }
 
     var body: some View {
-        let theme = Color.Theme(themeManager.colors)
-
         HStack(spacing: DesignTokens.Spacing.md) {
             // File path breadcrumb
             breadcrumbPath
@@ -35,7 +33,7 @@ struct DiffBreadcrumb: View {
         }
         .padding(.horizontal, DesignTokens.Spacing.lg)
         .padding(.vertical, DesignTokens.Spacing.md)
-        .background(theme.toolbar)
+        .background(AppTheme.toolbar)
     }
 
     // MARK: - Components
@@ -158,7 +156,7 @@ struct DiffBreadcrumb: View {
                 // Label badge
                 Text(label)
                     .font(DesignTokens.Typography.caption2.weight(.bold))
-                    .foregroundColor(.white)
+                    .foregroundStyle(AppTheme.buttonTextOnColor)
                     .frame(width: 20, height: 20)
                     .background(color)
                     .cornerRadius(DesignTokens.CornerRadius.sm)

@@ -111,7 +111,7 @@ private struct DSInternalTabButton: View {
                 if let badge = tab.badge, badge > 0 {
                     Text("\(badge)")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(.white)
+                        .foregroundStyle(AppTheme.buttonTextOnColor)
                         .padding(.horizontal, DesignTokens.Spacing.xs)
                         .padding(.vertical, DesignTokens.Spacing.xxs)
                         .background(AppTheme.accent)

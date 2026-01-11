@@ -7,7 +7,7 @@ struct FileChangesIndicator: View {
     let filesChanged: Int
     let compact: Bool
 
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     init(additions: Int, deletions: Int, filesChanged: Int, compact: Bool = false) {
         self.additions = additions

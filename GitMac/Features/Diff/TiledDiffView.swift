@@ -57,18 +57,17 @@ struct TiledDiffView: NSViewRepresentable {
         Coordinator(self)
     }
     
+    @MainActor
     class Coordinator: NSObject {
-        var parent: TiledDiffView
-        
+        var scrollPositionBinding: Binding<CGFloat>
+
         init(_ parent: TiledDiffView) {
-            self.parent = parent
+            self.scrollPositionBinding = parent.$scrollPosition
         }
-        
+
         @objc func scrollViewDidScroll(_ notification: Notification) {
             guard let clipView = notification.object as? NSClipView else { return }
-            DispatchQueue.main.async {
-                self.parent.scrollPosition = clipView.bounds.origin.y
-            }
+            scrollPositionBinding.wrappedValue = clipView.bounds.origin.y
         }
     }
 }
@@ -77,7 +76,7 @@ struct TiledDiffView: NSViewRepresentable {
 
 /// NSView that draws diff lines directly with CoreText
 class TiledDiffContentView: NSView {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var fileDiff: FileDiff? {
         didSet {

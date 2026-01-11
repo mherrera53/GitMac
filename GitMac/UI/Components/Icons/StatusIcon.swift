@@ -129,8 +129,8 @@ struct StatusIcon: View {
 // MARK: - Convenience Initializers
 
 extension StatusIcon {
-    /// Creates a StatusIcon from StagingFile.StagingFileStatus
-    init(stagingStatus: StagingFile.StagingFileStatus, size: IconSize = .medium, style: IconStyle = .badge) {
+    /// Creates a StatusIcon from StagingFileStatus
+    init(stagingStatus: StagingFileStatus, size: IconSize = .medium, style: IconStyle = .badge) {
         let mappedStatus: FileStatusType
         switch stagingStatus {
         case .added:

@@ -13,7 +13,7 @@ struct KaleidoscopeUnifiedView: View {
     @Binding var minimapScrollTrigger: UUID
     var contentVersion: Int = 0
 
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     @State private var visibleRange: Range<Int> = 0..<50
 
@@ -212,7 +212,7 @@ struct UnifiedLineRow: View {
     let line: UnifiedLine
     let showLineNumber: Bool
 
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     // Character-level highlighting (Kaleidoscope-style)
     private var highlightedContent: AttributedString {
@@ -306,7 +306,7 @@ struct UnifiedLineRow: View {
         case .a:
             Text("A")
                 .font(DesignTokens.Typography.caption2.weight(.bold))
-                .foregroundColor(.white)
+                .foregroundStyle(AppTheme.buttonTextOnColor)
                 .frame(width: 14, height: 14)
                 .background(theme.accent)
                 .cornerRadius(2)
@@ -314,7 +314,7 @@ struct UnifiedLineRow: View {
         case .b:
             Text("B")
                 .font(DesignTokens.Typography.caption2.weight(.bold))
-                .foregroundColor(.white)
+                .foregroundStyle(AppTheme.buttonTextOnColor)
                 .frame(width: 14, height: 14)
                 .background(theme.info)
                 .cornerRadius(2)

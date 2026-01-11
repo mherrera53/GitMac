@@ -126,7 +126,7 @@ struct EnhancedTerminalPanel: View {
                             Text("New Terminal")
                                 .font(DesignTokens.Typography.body)
                         }
-                        .foregroundColor(.white)
+                        .foregroundStyle(AppTheme.buttonTextOnColor)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 10)
                         .background(AppTheme.accent)
@@ -229,12 +229,12 @@ struct EnhancedTerminalPanel: View {
                 .background(AppTheme.border)
             
             // AI Input Bar
-            HStack(spacing: 12) {
+            HStack(spacing: DesignTokens.Spacing.md) {
                 // AI icon with subtle glow
                 Image(systemName: "brain.head.profile")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: DesignTokens.Size.iconMD, weight: .medium))
                     .foregroundColor(AppTheme.accent)
-                    .frame(width: 24, height: 24)
+                    .frame(width: DesignTokens.Size.iconXL, height: DesignTokens.Size.iconXL)
                     .background(
                         Circle()
                             .fill(AppTheme.accent.opacity(0.1))
@@ -245,10 +245,10 @@ struct EnhancedTerminalPanel: View {
                     .font(.system(size: 14))
                     .textFieldStyle(.plain)
                     .lineLimit(1...3)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, DesignTokens.Spacing.md)
+                    .padding(.vertical, DesignTokens.Spacing.sm)
                     .background(AppTheme.inputBackground)
-                    .cornerRadius(8)
+                    .cornerRadius(DesignTokens.CornerRadius.lg)
                     .onSubmit {
                         Task {
                             await translateInput()
@@ -268,7 +268,7 @@ struct EnhancedTerminalPanel: View {
                             }
                         }) {
                             Image(systemName: "arrow.up.circle.fill")
-                                .font(.system(size: 20))
+                                .font(.system(size: DesignTokens.Size.iconLG))
                                 .foregroundColor(nlInputText.isEmpty ? AppTheme.textMuted : AppTheme.accent)
                         }
                         .disabled(nlInputText.isEmpty)
@@ -276,8 +276,8 @@ struct EnhancedTerminalPanel: View {
                     }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+            .padding(.vertical, DesignTokens.Spacing.md)
             .background(AppTheme.backgroundSecondary)
             
             // AI Results (if any)
@@ -289,22 +289,22 @@ struct EnhancedTerminalPanel: View {
     
     @ViewBuilder
     private func aiResultView(result: NLCommandResponse) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: DesignTokens.Spacing.md) {
             // Divider
             Divider()
                 .background(AppTheme.border.opacity(0.5))
             
             // Result card
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
                 // Header
                 HStack {
                     Text(result.category.rawValue)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(AppTheme.accent)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, DesignTokens.Spacing.sm)
+                        .padding(.vertical, DesignTokens.Spacing.xs)
                         .background(AppTheme.accent.opacity(0.1))
-                        .cornerRadius(6)
+                        .cornerRadius(DesignTokens.CornerRadius.md)
                     
                     Spacer()
                     
@@ -319,23 +319,22 @@ struct EnhancedTerminalPanel: View {
                 }
                 
                 // Command
-                HStack(spacing: 8) {
+                HStack(spacing: DesignTokens.Spacing.sm) {
                     Button(action: {
                         executeCommand(result.command)
                     }) {
                         HStack(spacing: 6) {
                             Image(systemName: "play.circle.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(.white)
-                            
+                                .font(.system(size: DesignTokens.Size.iconMD))
+
                             Text(result.command)
                                 .font(.system(.body, design: .monospaced))
-                                .foregroundColor(.white)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
+                        .foregroundStyle(AppTheme.buttonTextOnColor)
+                        .padding(.horizontal, DesignTokens.Spacing.md)
+                        .padding(.vertical, DesignTokens.Spacing.sm)
                         .background(AppTheme.accent)
-                        .cornerRadius(8)
+                        .cornerRadius(DesignTokens.CornerRadius.lg)
                     }
                     .buttonStyle(PlainButtonStyle())
                     
@@ -351,7 +350,7 @@ struct EnhancedTerminalPanel: View {
                             .foregroundColor(AppTheme.textSecondary)
                             .frame(width: 32, height: 32)
                             .background(AppTheme.backgroundTertiary)
-                            .cornerRadius(6)
+                            .cornerRadius(DesignTokens.CornerRadius.md)
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
@@ -362,13 +361,13 @@ struct EnhancedTerminalPanel: View {
                     .foregroundColor(AppTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(16)
+            .padding(DesignTokens.Spacing.lg)
             .background(AppTheme.background)
-            .cornerRadius(12)
-            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+            .cornerRadius(DesignTokens.CornerRadius.xl)
+            .shadow(color: DesignTokens.Shadow.md.color, radius: DesignTokens.Shadow.md.radius, x: DesignTokens.Shadow.md.x, y: DesignTokens.Shadow.md.y)
         }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 12)
+        .padding(.horizontal, DesignTokens.Spacing.lg)
+        .padding(.bottom, DesignTokens.Spacing.md)
     }
     
     @ViewBuilder
@@ -377,12 +376,12 @@ struct EnhancedTerminalPanel: View {
             Divider()
                 .background(AppTheme.border)
             
-            HStack(spacing: 12) {
+            HStack(spacing: DesignTokens.Spacing.md) {
                 // Current working directory
                 if let selectedTabId = tabManager.selectedTabId,
                    let currentTab = tabManager.tabs.first(where: { $0.id == selectedTabId }) {
                     let cwd = currentTab.workingDirectory
-                    HStack(spacing: 4) {
+                    HStack(spacing: DesignTokens.Spacing.xs) {
                         Image(systemName: "folder")
                             .font(.system(size: 12))
                             .foregroundColor(AppTheme.textMuted)
@@ -434,10 +433,10 @@ struct EnhancedTerminalPanel: View {
                 .disabled(enhancedViewModel.currentInput.isEmpty)
                 .buttonStyle(PlainButtonStyle())
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+            .padding(.vertical, DesignTokens.Spacing.md)
             .background(AppTheme.backgroundSecondary.opacity(0.95))
-            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: -2)
+            .shadow(color: DesignTokens.Shadow.lg.color, radius: DesignTokens.Shadow.lg.radius, x: DesignTokens.Shadow.lg.x, y: -2)
         }
         .frame(height: 56)
     }
@@ -486,7 +485,7 @@ struct EnhancedTerminalPanel: View {
                 }
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, DesignTokens.Spacing.sm)
         .background(suggestionBackground)
         .frame(maxWidth: 500)
         .overlay(alignment: .topTrailing) {
@@ -497,7 +496,7 @@ struct EnhancedTerminalPanel: View {
                  Image(systemName: "xmark")
                      .font(.system(size: 10, weight: .bold))
                      .foregroundColor(AppTheme.textSecondary)
-                     .padding(8)
+                     .padding(DesignTokens.Spacing.sm)
                      .background(AppTheme.backgroundSecondary.opacity(0.8))
                      .clipShape(Circle())
              }
@@ -510,7 +509,7 @@ struct EnhancedTerminalPanel: View {
     }
 
     private var loadingIndicator: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: DesignTokens.Spacing.sm) {
             ProgressView()
                 .scaleEffect(0.7)
                 .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.accent))
@@ -519,7 +518,7 @@ struct EnhancedTerminalPanel: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(AppTheme.textSecondary)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, DesignTokens.Spacing.lg)
         .padding(.vertical, 10)
         .background(loadingBackground)
         .padding(.leading, 20)
@@ -527,20 +526,20 @@ struct EnhancedTerminalPanel: View {
     }
 
     private var suggestionBackground: some View {
-        RoundedRectangle(cornerRadius: 12)
+        RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xl)
             .fill(AppTheme.background.opacity(0.98))
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xl)
                     .stroke(AppTheme.accent.opacity(0.2), lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.3), radius: 20, x: 0, y: 8)
     }
 
     private var loadingBackground: some View {
-        RoundedRectangle(cornerRadius: 8)
+        RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
             .fill(AppTheme.background.opacity(0.95))
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                     .stroke(AppTheme.accent.opacity(0.3), lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.2), radius: 12, x: 0, y: 4)
@@ -554,7 +553,7 @@ struct EnhancedTerminalPanel: View {
                 applySuggestion(suggestion, to: viewModel, enhancedViewModel: enhancedViewModel)
             }
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: DesignTokens.Spacing.md) {
                 suggestionIcon(index: index, isFromAI: suggestion.isFromAI, enhancedViewModel: enhancedViewModel)
                 suggestionContent(suggestion: suggestion, index: index, enhancedViewModel: enhancedViewModel)
                 Spacer()
@@ -562,13 +561,13 @@ struct EnhancedTerminalPanel: View {
                     shortcutHint
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+            .padding(.vertical, DesignTokens.Spacing.md)
             .background(index == enhancedViewModel.selectedSuggestionIndex ? AppTheme.accent.opacity(0.08) : Color.clear)
         }
         .buttonStyle(.plain)
     }
-
+    
     private func suggestionIcon(index: Int, isFromAI: Bool, enhancedViewModel: GhosttyEnhancedViewModel) -> some View {
             Image(systemName: isFromAI ? "sparkles" : "terminal")
                 .font(.system(size: 12, weight: .medium))
@@ -591,17 +590,17 @@ struct EnhancedTerminalPanel: View {
     }
 
     private var shortcutHint: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: DesignTokens.Spacing.xs) {
             Image(systemName: "return")
                 .font(.system(size: 10, weight: .semibold))
             Text("enter")
                 .font(.system(size: 10, weight: .medium))
         }
         .foregroundColor(AppTheme.textMuted)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, DesignTokens.Spacing.sm)
+        .padding(.vertical, DesignTokens.Spacing.xs)
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(4)
+        .cornerRadius(DesignTokens.CornerRadius.sm)
     }
 
     private func applySuggestion(_ suggestion: AICommandSuggestion, to viewModel: GhosttyViewModel, enhancedViewModel: GhosttyEnhancedViewModel) {
@@ -931,7 +930,7 @@ struct AIAgentCommandPalette: View {
                                     Text(mode.name)
                                         .font(.system(size: 12, weight: .medium))
                                 }
-                                .foregroundColor(.white)
+                                .foregroundStyle(AppTheme.buttonTextOnColor)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
                                 .background(mode.color)

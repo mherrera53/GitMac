@@ -50,7 +50,7 @@ struct DSGenericIntegrationPanel<Plugin: IntegrationPlugin, LoginPrompt: View, S
         height: Binding<CGFloat>,
         onClose: @escaping () -> Void,
         @ViewBuilder loginPrompt: @escaping (Plugin.ViewModel) -> LoginPrompt,
-        @ViewBuilder settingsContent: ((Plugin.ViewModel) -> SettingsContent)? = nil
+        settingsContent: ((Plugin.ViewModel) -> SettingsContent)? = nil
     ) {
         self.plugin = plugin
         self._height = height

@@ -477,7 +477,7 @@ struct CodeReviewPanel: View {
                 }
                 .font(.caption)
                 .fontWeight(.medium)
-                .foregroundColor(.white)
+                .foregroundStyle(AppTheme.buttonTextOnColor)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(session.status.color)

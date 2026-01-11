@@ -1,361 +1,11 @@
 import SwiftUI
 
-// MARK: - Branch Panel Component
-
-struct BranchPanelView: View {
-    @Binding var branches: [Branch]
-    let currentBranch: Branch?
-    let onSelectBranch: (Branch) -> Void
-    let onCheckout: (Branch) -> Void
-
-    @State private var searchText = ""
-    @State private var expandedSections: Set<String> = ["local", "remote"]
-    @StateObject private var themeManager = ThemeManager.shared
-
-    var body: some View {
-        let theme = Color.Theme(themeManager.colors)
-
-        return VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("BRANCHES")
-                    .font(DesignTokens.Typography.caption2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(theme.text)
-
-                Spacer()
-
-                // TODO: Add create branch action when notification is defined
-            }
-            .padding(.horizontal, DesignTokens.Spacing.sm)
-            .padding(.vertical, DesignTokens.Spacing.xs)
-            .background(theme.backgroundSecondary)
-
-            Divider()
-
-            // Search
-            DSSearchField(
-                placeholder: "Filter branches...",
-                text: $searchText
-            )
-            .padding(DesignTokens.Spacing.sm)
-
-            // Branch tree
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Local branches
-                    BranchSection(
-                        title: "Local",
-                        icon: "laptopcomputer",
-                        count: localBranches.count,
-                        isExpanded: expandedSections.contains("local"),
-                        onToggle: { toggleSection("local") }
-                    )
-
-                    if expandedSections.contains("local") {
-                        ForEach(filteredLocalBranches) { branch in
-                            BranchPanelRow(
-                                branch: branch,
-                                isCurrent: branch.isCurrent,
-                                isSelected: false,
-                                onSelect: { onSelectBranch(branch) },
-                                onCheckout: { onCheckout(branch) }
-                            )
-                        }
-                    }
-
-                    // Remote branches
-                    BranchSection(
-                        title: "Remote",
-                        icon: "cloud",
-                        count: remoteBranches.count,
-                        isExpanded: expandedSections.contains("remote"),
-                        onToggle: { toggleSection("remote") }
-                    )
-
-                    if expandedSections.contains("remote") {
-                        ForEach(filteredRemoteBranches) { branch in
-                            BranchPanelRow(
-                                branch: branch,
-                                isCurrent: false,
-                                isSelected: false,
-                                onSelect: { onSelectBranch(branch) },
-                                onCheckout: { onCheckout(branch) }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        .frame(width: 260)
-        .background(theme.background)
-    }
-
-    private var localBranches: [Branch] {
-        branches.filter { !$0.isRemote }
-    }
-
-    private var remoteBranches: [Branch] {
-        branches.filter { $0.isRemote }
-    }
-
-    private var filteredLocalBranches: [Branch] {
-        if searchText.isEmpty {
-            return localBranches.sorted { $0.isCurrent && !$1.isCurrent }
-        }
-        return localBranches.filter {
-            $0.name.localizedCaseInsensitiveContains(searchText)
-        }
-    }
-
-    private var filteredRemoteBranches: [Branch] {
-        if searchText.isEmpty {
-            return remoteBranches
-        }
-        return remoteBranches.filter {
-            $0.name.localizedCaseInsensitiveContains(searchText)
-        }
-    }
-
-    private func toggleSection(_ section: String) {
-        if expandedSections.contains(section) {
-            expandedSections.remove(section)
-        } else {
-            expandedSections.insert(section)
-        }
-    }
-}
-
-struct BranchSection: View {
-    let title: String
-    let icon: String
-    let count: Int
-    let isExpanded: Bool
-    let onToggle: () -> Void
-
-    @StateObject private var themeManager = ThemeManager.shared
-
-    var body: some View {
-        let theme = Color.Theme(themeManager.colors)
-
-        return Button(action: onToggle) {
-            HStack(spacing: DesignTokens.Spacing.xs) {
-                Image(systemName: isExpanded ? "chevron.down.circle.fill" : "chevron.right.circle.fill")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(theme.textMuted)
-                    .symbolRenderingMode(.hierarchical)
-                    .frame(width: 14)
-
-                Image(systemName: enhancedIcon)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(AppTheme.accent)
-                    .symbolRenderingMode(.hierarchical)
-
-                Text(title)
-                    .font(DesignTokens.Typography.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(theme.text)
-
-                Spacer()
-
-                Text("\(count)")
-                    .font(DesignTokens.Typography.caption2.monospacedDigit())
-                    .fontWeight(.bold)
-                    .foregroundColor(theme.textSecondary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(theme.backgroundSecondary)
-                    .clipShape(Capsule())
-            }
-            .padding(.horizontal, DesignTokens.Spacing.sm)
-            .padding(.vertical, DesignTokens.Spacing.xs)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var enhancedIcon: String {
-        switch icon {
-        case "laptopcomputer":
-            return "desktopcomputer"
-        case "cloud":
-            return "cloud.fill"
-        default:
-            return icon
-        }
-    }
-}
-
-struct BranchPanelRow: View {
-    let branch: Branch
-    let isCurrent: Bool
-    let isSelected: Bool
-    let onSelect: () -> Void
-    let onCheckout: () -> Void
-
-    @State private var isHovered = false
-    @StateObject private var themeManager = ThemeManager.shared
-
-    var body: some View {
-        let theme = Color.Theme(themeManager.colors)
-
-        return HStack(spacing: DesignTokens.Spacing.xs) {
-            // Current indicator with enhanced visuals
-            if isCurrent {
-                Image(systemName: "star.circle.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(AppTheme.warning)
-                    .symbolRenderingMode(.multicolor)
-            } else {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.branchColor(0).opacity(0.3), Color.branchColor(0).opacity(0.1)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 10, height: 10)
-
-                    Circle()
-                        .strokeBorder(Color.branchColor(0), lineWidth: 1.5)
-                        .frame(width: 10, height: 10)
-                }
-                .opacity(isHovered ? 1.0 : 0.6)
-            }
-
-            // Branch name
-            Text(branch.displayName)
-                .font(DesignTokens.Typography.caption)
-                .fontWeight(isCurrent ? .bold : .medium)
-                .foregroundColor(isCurrent ? AppTheme.warning : theme.text)
-                .lineLimit(1)
-
-            Spacer()
-
-            // Ahead/Behind indicators with enhanced icons
-            if let upstream = branch.upstream, upstream.hasChanges {
-                HStack(spacing: 2) {
-                    if upstream.ahead > 0 {
-                        HStack(spacing: 2) {
-                            Image(systemName: "arrow.up.circle.fill")
-                                .font(.system(size: 9))
-                                .symbolRenderingMode(.hierarchical)
-                            Text("\(upstream.ahead)")
-                                .font(DesignTokens.Typography.caption2.monospacedDigit())
-                                .fontWeight(.semibold)
-                        }
-                        .foregroundColor(AppTheme.success)
-                    }
-
-                    if upstream.behind > 0 {
-                        HStack(spacing: 2) {
-                            Image(systemName: "arrow.down.circle.fill")
-                                .font(.system(size: 9))
-                                .symbolRenderingMode(.hierarchical)
-                            Text("\(upstream.behind)")
-                                .font(DesignTokens.Typography.caption2.monospacedDigit())
-                                .fontWeight(.semibold)
-                        }
-                        .foregroundColor(AppTheme.warning)
-                    }
-                }
-            }
-        }
-        .padding(.leading, DesignTokens.Spacing.lg)
-        .padding(.trailing, DesignTokens.Spacing.sm)
-        .padding(.vertical, DesignTokens.Spacing.xs)
-        .background(isSelected ? theme.selection : (isHovered ? theme.hover : Color.clear))
-        .onHover { hovering in
-            isHovered = hovering
-        }
-        .onTapGesture {
-            onSelect()
-        }
-        .contextMenu {
-            Button {
-                onCheckout()
-            } label: {
-                Label("Checkout", systemImage: "arrow.uturn.backward.circle.fill")
-                    .symbolRenderingMode(.hierarchical)
-            }
-
-            if !isCurrent {
-                Divider()
-
-                Button(role: .destructive) {
-                    // Delete branch action
-                } label: {
-                    Label("Delete Branch...", systemImage: "trash.circle.fill")
-                        .symbolRenderingMode(.multicolor)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Minimap Component
-
-struct GraphMinimapView: View {
-    let commits: [Commit]
-    let selectedIds: Set<String>
-    let onSelectCommit: (Commit) -> Void
-
-    @StateObject private var themeManager = ThemeManager.shared
-
-    var body: some View {
-        let theme = Color.Theme(themeManager.colors)
-
-        return VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("MAP")
-                    .font(DesignTokens.Typography.caption2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(theme.text)
-            }
-            .padding(.horizontal, DesignTokens.Spacing.xs)
-            .padding(.vertical, DesignTokens.Spacing.xs)
-            .background(theme.backgroundSecondary)
-
-            Divider()
-
-            // Minimap canvas
-            ScrollView {
-                Canvas { ctx, size in
-                    guard !commits.isEmpty else { return }
-
-                    let dotSize: CGFloat = 3
-                    let spacing: CGFloat = 4
-
-                    for (index, commit) in commits.enumerated() {
-                        let y = CGFloat(index) * spacing
-                        let x = size.width / 2
-
-                        let dotRect = CGRect(
-                            x: x - dotSize/2,
-                            y: y,
-                            width: dotSize,
-                            height: dotSize
-                        )
-
-                        let isSelected = selectedIds.contains(commit.sha)
-                        let color = isSelected ? AppTheme.accent : theme.textMuted
-
-                        ctx.fill(Circle().path(in: dotRect), with: .color(color))
-                    }
-                }
-                .frame(height: CGFloat(commits.count) * 4)
-            }
-        }
-        .frame(width: 60)
-        .background(theme.background)
-    }
-}
+// BranchPanelView, BranchSection, BranchPanelRow, and GraphMinimapView are now
+// defined in Components/ folder - do not redefine here
 
 // MARK: - Ghost Branches (integrated from GhostBranchesOverlay.swift)
 
+/// Shows nearby branches when hovering over a commit in the graph
 /// Shows nearby branches when hovering over a commit in the graph
 struct GhostBranchesOverlay: View {
     let commit: Commit
@@ -363,25 +13,22 @@ struct GhostBranchesOverlay: View {
     let repoPath: String
     @State private var nearbyBranches: [NearbyBranch] = []
     @State private var isLoading = false
-    @StateObject private var themeManager = ThemeManager.shared
 
     var body: some View {
-        let theme = Color.Theme(themeManager.colors)
-
         return Group {
             if !nearbyBranches.isEmpty {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                     Text("Nearby Branches")
                         .font(DesignTokens.Typography.caption2)
                         .fontWeight(.semibold)
-                        .foregroundColor(theme.text)
+                        .foregroundColor(AppTheme.textPrimary)
 
                     ForEach(nearbyBranches.prefix(5)) { branch in
                         NearbyBranchRow(branch: branch)
                     }
                 }
                 .padding(DesignTokens.Spacing.sm)
-                .background(theme.backgroundSecondary)
+                .background(AppTheme.backgroundSecondary)
                 .cornerRadius(DesignTokens.CornerRadius.md)
                 .shadow(color: .black.opacity(0.2), radius: DesignTokens.Spacing.xs)
             }
@@ -669,7 +316,7 @@ class GraphSettings: ObservableObject {
 }
 
 // MARK: - Color Extension for Branch Colors
-private extension Color {
+extension Color {
     @MainActor static func branchColor(_ index: Int) -> Color {
         let colors = AppTheme.graphLaneColors
         return colors[index % colors.count]
@@ -683,7 +330,6 @@ struct CommitGraphView: View {
     @StateObject private var detailVM = CommitDetailViewModel()
     @StateObject private var tracker = RemoteOperationTracker.shared
     @StateObject private var settings = GraphSettings()
-    @StateObject private var themeManager = ThemeManager.shared
     @State private var selectedIds: Set<String> = []
     @State private var lastSelectedId: String?
     @State private var hoveredId: String?
@@ -694,6 +340,17 @@ struct CommitGraphView: View {
     @State private var showMinimap = false
     @State private var showDetailPanel = false
     @State private var selectedFileDiff: FileDiff? = nil
+    @State private var dismissedOperationIds: Set<UUID> = []
+
+    private func isDismissedOperation(_ operation: RemoteOperation) -> Bool {
+        dismissedOperationIds.contains(operation.id)
+    }
+
+    private func dismissOperation(_ operation: RemoteOperation) {
+        _ = withAnimation(.easeOut(duration: 0.2)) {
+            dismissedOperationIds.insert(operation.id)
+        }
+    }
 
     private var selectedCommit: Commit? {
         guard let lastId = lastSelectedId else { return nil }
@@ -707,8 +364,8 @@ struct CommitGraphView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Remote operation status bar (if exists)
-            if let operation = lastOperationForCurrentBranch {
+            // Remote operation status bar (if exists and not dismissed)
+            if let operation = lastOperationForCurrentBranch, !isDismissedOperation(operation) {
                 remoteStatusBar(operation: operation)
             }
 
@@ -757,16 +414,21 @@ struct CommitGraphView: View {
                     Divider()
 
                     GraphMinimapView(
-                        commits: vm.timelineItems.compactMap { item in
+                        nodes: vm.timelineItems.compactMap { item in
                             if case .commit(let node) = item {
-                                return node.commit
+                                return node
                             }
                             return nil
                         },
-                        selectedIds: selectedIds,
-                        onSelectCommit: { commit in
-                            selectedIds = [commit.sha]
-                            lastSelectedId = commit.sha
+                        visibleRange: 0...max(vm.timelineItems.count - 1, 0),
+                        totalHeight: CGFloat(vm.timelineItems.count * 30),
+                        onSeek: { index in
+                            // Scroll to index
+                            if index < vm.timelineItems.count,
+                               case .commit(let node) = vm.timelineItems[index] {
+                                selectedIds = [node.commit.sha]
+                                lastSelectedId = node.commit.sha
+                            }
                         }
                     )
                     .transition(.move(edge: .trailing))
@@ -778,8 +440,6 @@ struct CommitGraphView: View {
 
                     CommitDetailPanel(
                         commit: commit,
-                        viewModel: detailVM,
-                        selectedFileDiff: $selectedFileDiff,
                         onClose: {
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 showDetailPanel = false
@@ -804,12 +464,6 @@ struct CommitGraphView: View {
                 Task { await vm.load(at: p) }
             }
         }
-        .onChange(of: themeManager.currentTheme) { _, _ in
-            themeRefreshTrigger = UUID()
-        }
-        .onChange(of: themeManager.customColors) { _, _ in
-            themeRefreshTrigger = UUID()
-        }
         .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { notification in
             if let path = notification.object as? String,
                path == appState.currentRepository?.path {
@@ -828,7 +482,7 @@ struct CommitGraphView: View {
     }
     
     private func remoteStatusBar(operation: RemoteOperation) -> some View {
-        let theme = Color.Theme(themeManager.colors)
+        // let theme = Color.Theme(themeManager.colors) // Removed
 
         return HStack(spacing: DesignTokens.Spacing.md) {
             // Status icon and info
@@ -837,7 +491,7 @@ struct CommitGraphView: View {
             // Time ago
             Text(operation.timestamp.formatted(.relative(presentation: .named)))
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(theme.text)
+                .foregroundColor(AppTheme.textPrimary) // Replaced theme.text
 
             Spacer()
 
@@ -857,15 +511,11 @@ struct CommitGraphView: View {
 
             // Dismiss button
             Button {
-                // Clear this specific operation from being shown
-                // (but keep in history)
-                withAnimation {
-                    tracker.lastOperation = nil
-                }
+                dismissOperation(operation)
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 18))
-                    .foregroundColor(theme.text)
+                    .foregroundColor(AppTheme.textSecondary)
                     .frame(width: 28, height: 28)
                     .contentShape(Rectangle())
             }
@@ -911,7 +561,7 @@ struct CommitGraphView: View {
 
     // MARK: - Graph Toolbar
     private var graphToolbar: some View {
-        let theme = Color.Theme(themeManager.colors)
+        // let theme = Color.Theme(themeManager.colors) // Removed
 
         return HStack(spacing: DesignTokens.Spacing.md) {
             // Search field using DS component
@@ -926,7 +576,7 @@ struct CommitGraphView: View {
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     Image(systemName: "person.fill")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(theme.textSecondary)
+                        .foregroundColor(AppTheme.textSecondary) // Replaced theme.textSecondary
                     Text(settings.filterAuthor)
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
@@ -947,8 +597,8 @@ struct CommitGraphView: View {
 
             Spacer()
 
-            // Git actions removed (now in main toolbar)
-
+            // CI/CD Status Badge
+            CICDToolbarBadge(repoPath: appState.currentRepository?.path)
 
             Spacer()
 
@@ -959,7 +609,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: settings.showBranches ? "point.3.connected.trianglepath.dotted" : "arrow.triangle.branch")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(settings.showBranches ? AppTheme.accent : theme.textMuted)
+                        .foregroundColor(settings.showBranches ? AppTheme.accent : AppTheme.textSecondary) // Replaced theme.textMuted
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -970,7 +620,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: settings.showTags ? "tag.circle.fill" : "tag.circle")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(settings.showTags ? AppTheme.warning : theme.textMuted)
+                        .foregroundColor(settings.showTags ? AppTheme.warning : AppTheme.textSecondary) // Replaced theme.textMuted
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -981,7 +631,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: settings.showStashes ? "archivebox.circle.fill" : "archivebox.circle")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(settings.showStashes ? AppTheme.warning : theme.textMuted)
+                        .foregroundColor(settings.showStashes ? AppTheme.warning : AppTheme.textSecondary) // Replaced theme.textMuted
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -1000,7 +650,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: "sidebar.left")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(showBranchPanel ? AppTheme.accent : theme.textMuted)
+                        .foregroundColor(showBranchPanel ? AppTheme.accent : AppTheme.textSecondary) // Replaced theme.textMuted
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -1013,7 +663,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: "map")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(showMinimap ? AppTheme.accent : theme.textMuted)
+                        .foregroundColor(showMinimap ? AppTheme.accent : AppTheme.textSecondary) // Replaced theme.textMuted
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -1026,7 +676,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: "sidebar.right")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(showDetailPanel ? AppTheme.accent : theme.textMuted)
+                        .foregroundColor(showDetailPanel ? AppTheme.accent : AppTheme.textSecondary) // Replaced theme.textMuted
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -1100,24 +750,24 @@ struct CommitGraphView: View {
             } label: {
                 Image(systemName: "slider.horizontal.3")
             }
-            .tint(theme.textSecondary)
+            .tint(AppTheme.textSecondary) // Replaced theme.textSecondary
             .help("Display Options")
             .menuStyle(.borderlessButton)
         }
         .padding(.horizontal, DesignTokens.Spacing.sm)
         .padding(.vertical, DesignTokens.Spacing.xs)
-        .background(theme.backgroundSecondary)
+        .background(AppTheme.backgroundSecondary) // Replaced theme.backgroundSecondary
     }
 
     private var graphHeader: some View {
-        let theme = Color.Theme(themeManager.colors)
+        // let theme = Color.Theme(themeManager.colors) // Removed
 
         return HStack(spacing: 0) {
             if settings.showBranchColumn {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.triangle.branch")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(theme.textMuted)
+                        .foregroundColor(AppTheme.textSecondary) // Replaced theme.textMuted
                         .symbolRenderingMode(.monochrome)
                     Text("BRANCH / TAG")
                 }
@@ -1128,7 +778,7 @@ struct CommitGraphView: View {
             HStack(spacing: 4) {
                 Image(systemName: "point.3.connected.trianglepath.dotted")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(theme.textMuted)
+                    .foregroundColor(AppTheme.textSecondary)
                     .symbolRenderingMode(.monochrome)
                 Text("GRAPH")
             }
@@ -1145,7 +795,7 @@ struct CommitGraphView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "person.circle.fill")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(theme.textMuted)
+                        .foregroundColor(AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                     Text("AUTHOR")
                 }
@@ -1156,7 +806,7 @@ struct CommitGraphView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(theme.textMuted)
+                        .foregroundColor(AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                     Text("DATE")
                 }
@@ -1167,7 +817,7 @@ struct CommitGraphView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "number.circle.fill")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(theme.textMuted)
+                        .foregroundColor(AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                     Text("SHA")
                 }
@@ -1177,9 +827,9 @@ struct CommitGraphView: View {
         }
         .font(DesignTokens.Typography.caption2)
         .fontWeight(.semibold)
-        .foregroundColor(theme.text)
+        .foregroundColor(AppTheme.textPrimary)
         .frame(height: 28)
-        .background(theme.backgroundSecondary)
+        .background(AppTheme.backgroundSecondary)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Graph Header")
     }
@@ -1394,14 +1044,13 @@ struct UncommittedChangesRow: View {
     let unstagedCount: Int
     let isSelected: Bool
     let isHovered: Bool
-    @StateObject private var themeManager = ThemeManager.shared
 
     private let H: CGFloat = 44
     private let W: CGFloat = 26
     private let R: CGFloat = 14
 
     var body: some View {
-        let theme = Color.Theme(themeManager.colors)
+        // let theme = Color.Theme(themeManager.colors) // Removed
 
         return HStack(spacing: 0) {
             // Label
@@ -1429,8 +1078,8 @@ struct UncommittedChangesRow: View {
                     // Dotted circle
                     let nodeRect = CGRect(x: myX - R, y: cy - R, width: R * 2, height: R * 2)
                     // Fill with background to hide line passing through
-                    ctx.fill(Circle().path(in: nodeRect), with: .color(theme.background))
-                    ctx.stroke(Circle().path(in: nodeRect), with: .color(.orange), style: StrokeStyle(lineWidth: 2, dash: [3, 3]))
+                    ctx.fill(Circle().path(in: nodeRect), with: .color(AppTheme.background))
+                    ctx.stroke(Circle().path(in: nodeRect), with: .color(.orange), style: StrokeStyle(lineWidth: 2, dash: [5, 6]))
                 }
                 .frame(width: 110, height: H)
 
@@ -1451,21 +1100,21 @@ struct UncommittedChangesRow: View {
                         .foregroundColor(AppTheme.warning)
                     Text("\(stagedCount) staged, \(unstagedCount) unstaged")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(theme.text)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
                 Spacer()
             }
             .padding(.horizontal, DesignTokens.Spacing.sm)
         }
         .frame(height: H)
-        .background(isSelected ? theme.selection : (isHovered ? theme.hover : Color.clear))
+        .background(isSelected ? AppTheme.accent.opacity(0.1) : (isHovered ? AppTheme.textSecondary.opacity(0.05) : Color.clear))
     }
 
     func drawDottedLine(_ ctx: GraphicsContext, from: CGPoint, to: CGPoint, color: Color) {
         var p = Path()
         p.move(to: from)
         p.addLine(to: to)
-        ctx.stroke(p, with: .color(color), style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [4, 3]))
+        ctx.stroke(p, with: .color(color), style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [5, 6]))
     }
 }
 
@@ -1474,7 +1123,6 @@ struct GraphStashRow: View {
     let stash: StashNode
     let isSelected: Bool
     let isHovered: Bool
-    @StateObject private var themeManager = ThemeManager.shared
 
     private let H: CGFloat = 44
     private let W: CGFloat = 26
@@ -1483,7 +1131,7 @@ struct GraphStashRow: View {
     private var stashColor: Color { AppTheme.info }
 
     var body: some View {
-        let theme = Color.Theme(themeManager.colors)
+        // let theme = Color.Theme(themeManager.colors) // Removed
 
         return HStack(spacing: 0) {
             // Label - stash badge
@@ -1512,7 +1160,7 @@ struct GraphStashRow: View {
                     connLine.move(to: CGPoint(x: stashX, y: cy))
                     connLine.addLine(to: CGPoint(x: mainLaneX, y: size.height)) // Connects down-left
                     ctx.stroke(connLine, with: .color(stashColor),
-                              style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [4, 4]))
+                              style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [5, 6]))
 
                     // 3) Stash node (Box)
                     let boxRect = CGRect(x: stashX - boxSize/2, y: cy - boxSize/2,
@@ -1535,7 +1183,7 @@ struct GraphStashRow: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                     Text(stash.stash.displayMessage)
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(theme.text)
+                        .foregroundColor(AppTheme.textPrimary)
                         .lineLimit(1)
 
                     HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
@@ -1546,7 +1194,7 @@ struct GraphStashRow: View {
                         if let branch = stash.stash.branchName {
                             Text("on \(branch)")
                                 .font(DesignTokens.Typography.caption2)
-                                .foregroundColor(theme.textMuted)
+                                .foregroundColor(AppTheme.textSecondary)
                         }
                     }
                 }
@@ -1555,13 +1203,13 @@ struct GraphStashRow: View {
 
                 Text(stash.stash.relativeDate)
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(theme.textMuted)
+                    .foregroundColor(AppTheme.textSecondary)
                     .frame(width: 70, alignment: .trailing)
             }
             .padding(.horizontal, DesignTokens.Spacing.sm)
         }
         .frame(height: H)
-        .background(isSelected ? theme.selection : (isHovered ? theme.hover : Color.clear))
+        .background(isSelected ? AppTheme.accent.opacity(0.1) : (isHovered ? AppTheme.textSecondary.opacity(0.05) : Color.clear))
         .contextMenu {
             Button {
                 NotificationCenter.default.post(name: .applyStash, object: stash.stash.index)
@@ -1586,16 +1234,13 @@ struct GraphStashRow: View {
 // MARK: - Stash Badge (Modern - solid background)
 struct StashBadge: View {
     let name: String
-    @StateObject private var themeManager = ThemeManager.shared
+    @Environment(\.colorScheme) private var colorScheme
     private var stashColor: Color { AppTheme.info }
 
     var body: some View {
-        _ = Color.Theme(themeManager.colors)
-
-        return HStack(spacing: DesignTokens.Spacing.xxs + 1) {
+        HStack(spacing: DesignTokens.Spacing.xxs + 1) {
             Image(systemName: "shippingbox.fill")
-                .font(.system(size: 9, weight: .medium)) // Inline indicator standard
-                .foregroundColor(AppTheme.warning)
+                .font(.system(size: 9, weight: .medium))
             Text(name)
                 .font(DesignTokens.Typography.caption2)
                 .fontWeight(.semibold)
@@ -1604,7 +1249,7 @@ struct StashBadge: View {
         .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
         .padding(.vertical, DesignTokens.Spacing.xxs + 1)
         .background(stashColor)
-        .foregroundColor(AppTheme.textPrimary)
+        .foregroundStyle(AppTheme.buttonTextOnColor) // White text on colored background for contrast
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.none + 3))
     }
 }
@@ -1628,7 +1273,7 @@ struct BranchBadge: View {
     let color: Color
     let isHead: Bool
     let isTag: Bool
-    @StateObject private var themeManager = ThemeManager.shared
+    @Environment(\.colorScheme) private var colorScheme
     @State private var isHovered = false
 
     init(name: String, color: Color, isHead: Bool = false, isTag: Bool = false) {
@@ -1639,7 +1284,7 @@ struct BranchBadge: View {
     }
 
     var body: some View {
-        // Simple, clean design like Xcode
+        // Simple, clean design like Xcode with proper contrast
         HStack(spacing: DesignTokens.Spacing.xxs) {
             Image(systemName: iconName)
                 .font(.system(size: 9, weight: .medium))
@@ -1649,24 +1294,34 @@ struct BranchBadge: View {
                 .font(DesignTokens.Typography.caption2)
                 .fontWeight(isHead ? .semibold : .regular)
                 .lineLimit(1)
+                .foregroundColor(textColor) // Use adaptive text color
         }
         .padding(.horizontal, DesignTokens.Spacing.xs + 2)
         .padding(.vertical, DesignTokens.Spacing.xxs + 1)
-        .background(color.opacity(0.15))
-        .foregroundColor(color)
+        .background(color.opacity(colorScheme == .dark ? 0.2 : 0.12))
         .cornerRadius(4)
         .overlay(
             RoundedRectangle(cornerRadius: 4)
-                .strokeBorder(color.opacity(0.3), lineWidth: 0.5)
+                .strokeBorder(color.opacity(0.4), lineWidth: 0.5)
         )
+    }
+
+    /// Adaptive text color - darker in light mode for better contrast
+    private var textColor: Color {
+        if colorScheme == .dark {
+            return color
+        } else {
+            // In light mode, use the primary text color for better readability
+            return Color(nsColor: .labelColor)
+        }
     }
 
     private var iconName: String {
         if isTag {
-            return "tag.circle.fill"  // Better tag icon
+            return "tag.circle.fill"
         }
         if isHead {
-            return "star.circle.fill"  // Star for HEAD branches
+            return "star.circle.fill"
         }
         return "arrow.triangle.branch"
     }
@@ -1686,7 +1341,6 @@ struct GraphRow: View {
     let isHovered: Bool
     let settings: GraphSettings
     let onHoverBranch: ((String?) -> Void)?
-    @StateObject private var themeManager = ThemeManager.shared
 
     private var H: CGFloat { settings.rowHeight }
     private var W: CGFloat { 26 }  // Lane spacing
@@ -1694,7 +1348,7 @@ struct GraphRow: View {
     private var LW: CGFloat { 2 }  // Line width
 
     var body: some View {
-        let theme = Color.Theme(themeManager.colors)
+        // let theme = Color.Theme(themeManager.colors) // Removed
 
         return HStack(spacing: 0) {
             // Branch label with badge
@@ -1746,7 +1400,7 @@ struct GraphRow: View {
                     let nodeRect = CGRect(x: myX - R, y: cy - R, width: R * 2, height: R * 2)
                     ctx.fill(Circle().path(in: nodeRect), with: .color(c))
                     // Add a white/background stroke to separate node from lines
-                    ctx.stroke(Circle().path(in: nodeRect), with: .color(theme.background), lineWidth: 2)
+                    ctx.stroke(Circle().path(in: nodeRect), with: .color(AppTheme.background), lineWidth: 2)
                 }
                 .frame(width: settings.graphColumnWidth, height: H)
 
@@ -1761,7 +1415,7 @@ struct GraphRow: View {
                         )
                         .background(
                             Circle()
-                                .fill(theme.background)
+                                .fill(AppTheme.background)
                         )
                         .offset(x: x(node.lane) - (settings.graphColumnWidth / 2))
                         .scaleEffect(isHovered ? 1.15 : 1.0)
@@ -1773,12 +1427,12 @@ struct GraphRow: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                 Text(node.commit.summary)
                     .font(settings.compactMode ? DesignTokens.Typography.caption : DesignTokens.Typography.callout)
-                    .foregroundColor(theme.text)
+                    .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(1)
                 if !settings.compactMode && !settings.showAuthorColumn {
                     Text(node.commit.author)
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(theme.textMuted)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1805,7 +1459,7 @@ struct GraphRow: View {
                     }
                     Text(node.commit.author)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(theme.text)
+                        .foregroundColor(AppTheme.textPrimary)
                         .lineLimit(1)
                 }
                 .frame(width: settings.authorColumnWidth, alignment: .leading)
@@ -1815,7 +1469,7 @@ struct GraphRow: View {
             if settings.showDateColumn {
                 Text(node.commit.relativeDate)
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(theme.textMuted)
+                    .foregroundColor(AppTheme.textSecondary)
                     .frame(width: settings.dateColumnWidth, alignment: .trailing)
             }
 
@@ -1823,13 +1477,13 @@ struct GraphRow: View {
             if settings.showSHAColumn {
                 Text(node.commit.shortSha)
                     .font(DesignTokens.Typography.caption2.monospaced())
-                    .foregroundColor(theme.textMuted)
+                    .foregroundColor(AppTheme.textSecondary)
                     .frame(width: settings.shaColumnWidth, alignment: .trailing)
                     .padding(.trailing, DesignTokens.Spacing.sm)
             }
         }
         .frame(height: H)
-        .background(isSelected ? theme.selection : (isHovered ? theme.hover : Color.clear))
+        .background(isSelected ? AppTheme.accent.opacity(0.1) : (isHovered ? AppTheme.textSecondary.opacity(0.05) : Color.clear))
         .opacity(settings.dimMergeCommits && node.isMerge ? 0.5 : 1.0)
         .onHover { hovering in
             if let label = node.branchLabel, hovering {
@@ -2523,90 +2177,7 @@ struct CommitContextMenu: View {
 
 // MARK: - File Changes Indicator
 /// Visual indicator showing file changes with count and add/delete bars
-struct FileChangesIndicator: View {
-    let additions: Int
-    let deletions: Int
-    let filesChanged: Int
-    let compact: Bool
-
-    @StateObject private var themeManager = ThemeManager.shared
-
-    init(additions: Int, deletions: Int, filesChanged: Int, compact: Bool = false) {
-        self.additions = additions
-        self.deletions = deletions
-        self.filesChanged = filesChanged
-        self.compact = compact
-    }
-
-    var body: some View {
-        let theme = Color.Theme(themeManager.colors)
-
-        return HStack(spacing: DesignTokens.Spacing.xs) {
-            // File count icon with enhanced visuals
-            HStack(spacing: DesignTokens.Spacing.xxs) {
-                Image(systemName: filesChanged > 1 ? "doc.on.doc.fill" : "doc.text.fill")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(filesChanged > 0 ? AppTheme.accent : theme.textMuted)
-                    .symbolRenderingMode(.hierarchical)
-
-                if filesChanged > 0 {
-                    Text("\(filesChanged)")
-                        .font(DesignTokens.Typography.caption2.monospacedDigit())
-                        .fontWeight(.semibold)
-                        .foregroundColor(theme.text)
-                }
-            }
-
-            if !compact && (additions > 0 || deletions > 0) {
-                // Visual bar (proportional to changes)
-                GeometryReader { geo in
-                    HStack(spacing: 1) {
-                        // Green bar for additions
-                        if additions > 0 {
-                            Rectangle()
-                                .fill(AppTheme.diffAddition)
-                                .frame(width: barWidth(for: additions, in: geo.size.width))
-                                .frame(height: 8)
-                        }
-
-                        // Red bar for deletions
-                        if deletions > 0 {
-                            Rectangle()
-                                .fill(AppTheme.diffDeletion)
-                                .frame(width: barWidth(for: deletions, in: geo.size.width))
-                                .frame(height: 8)
-                        }
-                    }
-                }
-                .frame(width: 60, height: 8)
-                .cornerRadius(2)
-            }
-
-            if !compact {
-                // Text indicators
-                HStack(spacing: DesignTokens.Spacing.xxs) {
-                    if additions > 0 {
-                        Text("+\(additions)")
-                            .font(DesignTokens.Typography.caption2.monospacedDigit())
-                            .foregroundColor(AppTheme.diffAddition)
-                    }
-
-                    if deletions > 0 {
-                        Text("-\(deletions)")
-                            .font(DesignTokens.Typography.caption2.monospacedDigit())
-                            .foregroundColor(AppTheme.diffDeletion)
-                    }
-                }
-            }
-        }
-    }
-
-    private func barWidth(for count: Int, in totalWidth: CGFloat) -> CGFloat {
-        let total = additions + deletions
-        guard total > 0 else { return 0 }
-        return totalWidth * (CGFloat(count) / CGFloat(total))
-    }
-}
+// FileChangesIndicator is defined in Features/CommitGraph/Components/FileChangesIndicator.swift
 
 // MARK: - Additional Notification Names
 extension Notification.Name {

@@ -1,12 +1,14 @@
 import SwiftUI
 import AppKit
+
+#if GHOSTTY_AVAILABLE && canImport(SwiftTerm)
 import SwiftTerm
 
 // MARK: - Embedded Terminal View (SwiftTerm-based)
 
 /// A real terminal emulator embedded in GitMac using SwiftTerm
 struct EmbeddedTerminalView: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     @EnvironmentObject var appState: AppState
     @State private var showAIChat = false
@@ -60,7 +62,7 @@ struct SwiftTermView: NSViewRepresentable {
         terminal.configureNativeColors()
         terminal.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
         terminal.nativeForegroundColor = NSColor.textPrimary
-        terminal.nativeBackgroundColor = NSColor(red: 0.1, green: 0.1, blue: 0.12, alpha: 1.0)
+        terminal.nativeBackgroundColor = NSColor.windowBackgroundColor
 
         // Set cursor style
         terminal.caretColor = NSColor.systemCyan
@@ -342,12 +344,31 @@ struct AIChatBubble: View {
     }
 }
 
+#else
+
+// MARK: - Stub when SwiftTerm not available
+struct EmbeddedTerminalView: View {
+    var body: some View {
+        VStack {
+            Spacer()
+            Text("SwiftTerm Terminal")
+                .font(.title2)
+            Text("SwiftTerm package not available")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Spacer()
+        }
+    }
+}
+
+#endif
+
 // MARK: - AIService Chat Extension
 
 extension AIService {
     func chat(messages: [(role: String, content: String)], systemPrompt: String) async throws -> String {
         // Use existing AI infrastructure
-        let combinedPrompt = messages.map { "\($0.role): \($0.content)" }.joined(separator: "\n\n")
-        return try await generateCommitMessage(diff: combinedPrompt, context: systemPrompt)
+        let combinedPrompt = systemPrompt + "\n\n" + messages.map { "\($0.role): \($0.content)" }.joined(separator: "\n\n")
+        return try await generateCommitMessage(diff: combinedPrompt)
     }
 }

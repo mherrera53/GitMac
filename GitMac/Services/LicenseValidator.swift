@@ -25,6 +25,7 @@ struct LicenseInfo: Codable {
 
 // MARK: - License Validator
 
+@MainActor
 class GitMacLicenseValidator: ObservableObject {
     @Published var isLicenseValid: Bool = false
     @Published var licenseInfo: LicenseInfo?
@@ -87,7 +88,7 @@ class GitMacLicenseValidator: ObservableObject {
         sysctlbyname("kern.uuid", nil, &size, nil, 0)
         var uuid = [CChar](repeating: 0, count: size)
         sysctlbyname("kern.uuid", &uuid, &size, nil, 0)
-        return String(cString: uuid)
+        return String(decoding: uuid.map { UInt8(bitPattern: $0) }, as: UTF8.self).trimmingCharacters(in: CharacterSet(["\0"]))
     }
 
     private func getDeviceName() -> String {

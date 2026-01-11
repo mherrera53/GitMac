@@ -22,7 +22,7 @@ struct KaleidoscopeSplitDiffView: View {
     @Binding var contentHeight: CGFloat
     @Binding var minimapScrollTrigger: UUID
 
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     // Virtualization state
     @State private var visibleRange: Range<Int> = 0..<50 // Initialize with first 50 items visible
@@ -30,6 +30,10 @@ struct KaleidoscopeSplitDiffView: View {
     // Scroll state management
     @State private var lastExternalScrollOffset: CGFloat = -1
     @State private var isHandlingMinimapClick = false
+    
+    @State private var leftScrollOffset: CGFloat = 0
+    @State private var rightScrollOffset: CGFloat = 0
+    @State private var fluidContentVersion: Int = 0
 
     // Layout Constants
     private let rowHeight: CGFloat = 24
@@ -40,18 +44,26 @@ struct KaleidoscopeSplitDiffView: View {
     var body: some View {
         GeometryReader { geometry in
             let theme = Color.Theme(themeManager.colors)
-            // Dynamic Layout Metrics
             let panelWidth = max(0, (geometry.size.width - gutterWidth) / 2)
             let overlap = min(240, max(18, panelWidth * 0.24))
             
-            let safeLower = max(0, min(visibleRange.lowerBound, pairedLines.count))
-            let safeUpper = max(safeLower, min(visibleRange.upperBound, pairedLines.count))
-            let safeRange = safeLower..<safeUpper
+            if isFluidMode {
+                fluidModeView(geometry: geometry, theme: theme, panelWidth: panelWidth, overlap: overlap)
+            } else {
+                blockModeView(geometry: geometry, theme: theme, panelWidth: panelWidth, overlap: overlap)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func blockModeView(geometry: GeometryProxy, theme: Color.Theme, panelWidth: CGFloat, overlap: CGFloat) -> some View {
+        let safeLower = max(0, min(visibleRange.lowerBound, pairedLines.count))
+        let safeUpper = max(safeLower, min(visibleRange.upperBound, pairedLines.count))
+        let safeRange = safeLower..<safeUpper
+        let topSpacerHeight = CGFloat(safeLower) * rowHeight
+        let bottomSpacerHeight = CGFloat(max(0, pairedLines.count - safeUpper)) * rowHeight
 
-            let topSpacerHeight = CGFloat(safeLower) * rowHeight
-            let bottomSpacerHeight = CGFloat(max(0, pairedLines.count - safeUpper)) * rowHeight
-
-            if geometry.size.width > 0 {
+        if geometry.size.width > 0 {
                 KaleidoscopeScrollContainer(
                     scrollOffset: $scrollOffset,
                     viewportHeight: $viewportHeight,
@@ -161,6 +173,48 @@ struct KaleidoscopeSplitDiffView: View {
             } else {
                 Color.clear
             }
+    }
+    
+    @ViewBuilder
+    private func fluidModeView(geometry: GeometryProxy, theme: Color.Theme, panelWidth: CGFloat, overlap: CGFloat) -> some View {
+        let leftLines = pairedLines.compactMap { $0.left }
+        let rightLines = pairedLines.compactMap { $0.right }
+        
+        HStack(spacing: 0) {
+            ScrollView {
+                LazyVStack(spacing: 0, pinnedViews: []) {
+                    ForEach(Array(leftLines.enumerated()), id: \.offset) { _, line in
+                        KaleidoscopeDiffLine(
+                            line: line,
+                            side: .left,
+                            showLineNumber: showLineNumbers,
+                            pairedLine: nil
+                        )
+                        .frame(height: rowHeight)
+                    }
+                }
+            }
+            .frame(width: panelWidth)
+            .background(theme.background)
+            
+            KaleidoscopeGutterView()
+                .frame(width: gutterWidth)
+            
+            ScrollView {
+                LazyVStack(spacing: 0, pinnedViews: []) {
+                    ForEach(Array(rightLines.enumerated()), id: \.offset) { _, line in
+                        KaleidoscopeDiffLine(
+                            line: line,
+                            side: .right,
+                            showLineNumber: showLineNumbers,
+                            pairedLine: nil
+                        )
+                        .frame(height: rowHeight)
+                    }
+                }
+            }
+            .frame(width: panelWidth)
+            .background(theme.background)
         }
     }
     
@@ -490,7 +544,7 @@ private struct KaleidoscopeScrollContainer<Content: View>: NSViewRepresentable {
 }
 
 private struct KaleidoscopeGutterView: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -516,7 +570,7 @@ struct KaleidoscopeDiffLine: View {
     let showLineNumber: Bool
     let pairedLine: DiffLine?
 
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     private var lineNumber: Int? {
         side == .left ? line.oldLineNumber : line.newLineNumber
@@ -643,7 +697,7 @@ struct KaleidoscopeHunkHeader: View {
     let header: String
     var onStageHunk: (() -> Void)? = nil
     var onDiscardHunk: (() -> Void)? = nil
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -684,25 +738,86 @@ struct KaleidoscopeHunkHeader: View {
 
 struct EmptyDiffLine: View {
     let showLineNumber: Bool
-    @StateObject private var themeManager = ThemeManager.shared
 
     var body: some View {
-        let theme = Color.Theme(themeManager.colors)
+        Color.clear
+            .frame(height: 24)
+    }
+}
 
-        HStack(spacing: 0) {
-            if showLineNumber {
-                Text("")
-                    .font(DesignTokens.Typography.commitHash)
-                    .frame(width: 50, alignment: .trailing)
-                    .padding(.trailing, DesignTokens.Spacing.xs)
-                    .background(theme.backgroundSecondary)
+// MARK: - Fluid Scroll View with Offset Tracking
+
+struct FluidScrollViewWithOffset<Content: View>: NSViewRepresentable {
+    @Binding var scrollOffset: CGFloat
+    let contentVersion: Int
+    @ViewBuilder let content: () -> Content
+    
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .noBorder
+        scrollView.drawsBackground = false
+        scrollView.verticalScrollElasticity = .allowed
+        scrollView.contentView.postsBoundsChangedNotifications = true
+        
+        let hostingView = NSHostingView(rootView: content())
+        scrollView.documentView = hostingView
+        
+        context.coordinator.scrollView = scrollView
+        context.coordinator.hostingView = hostingView
+        context.coordinator.lastContentVersion = contentVersion
+        
+        NotificationCenter.default.addObserver(
+            context.coordinator,
+            selector: #selector(Coordinator.scrollViewDidScroll(_:)),
+            name: NSView.boundsDidChangeNotification,
+            object: scrollView.contentView
+        )
+        
+        let fitting = hostingView.fittingSize
+        hostingView.frame = NSRect(x: 0, y: 0, width: scrollView.contentView.bounds.width, height: max(fitting.height, scrollView.contentView.bounds.height))
+        
+        return scrollView
+    }
+    
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard let hostingView = context.coordinator.hostingView else { return }
+        
+        if context.coordinator.lastContentVersion != contentVersion {
+            hostingView.rootView = content()
+            context.coordinator.lastContentVersion = contentVersion
+            
+            DispatchQueue.main.async {
+                let fitting = hostingView.fittingSize
+                hostingView.frame = NSRect(x: 0, y: 0, width: scrollView.contentView.bounds.width, height: max(fitting.height, scrollView.contentView.bounds.height))
+                scrollView.contentView.scroll(to: .zero)
+                context.coordinator.updateScrollOffset.wrappedValue = 0
             }
-
-            Rectangle()
-                .fill(theme.backgroundSecondary.opacity(0.3))
-                .frame(maxWidth: .infinity)
         }
-        .frame(height: 24)
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(updateScrollOffset: _scrollOffset)
+    }
+    
+    @MainActor
+    final class Coordinator: NSObject {
+        var updateScrollOffset: Binding<CGFloat>
+        var lastContentVersion: Int = -1
+        weak var scrollView: NSScrollView?
+        weak var hostingView: NSHostingView<Content>?
+        
+        init(updateScrollOffset: Binding<CGFloat>) {
+            self.updateScrollOffset = updateScrollOffset
+        }
+        
+        @objc func scrollViewDidScroll(_ notification: Notification) {
+            guard let scrollView = scrollView else { return }
+            let offset = scrollView.contentView.bounds.origin.y
+            updateScrollOffset.wrappedValue = offset
+        }
     }
 }
 
@@ -713,8 +828,10 @@ struct EmptyDiffLine: View {
 struct RowConnectionLine: View {
     var isFluidMode: Bool
     let width: CGFloat
+    @ObservedObject private var themeManager = ThemeManager.shared
     
     var body: some View {
+        let theme = Color.Theme(themeManager.colors)
         Canvas { context, size in
             let centerY = size.height / 2
             
@@ -733,12 +850,12 @@ struct RowConnectionLine: View {
                 
                 var ctx = context
                 ctx.opacity = 0.9
-                ctx.stroke(path, with: .color(Color(red: 0.2, green: 0.6, blue: 1.0)), 
+                ctx.stroke(path, with: .color(theme.info), 
                           style: StrokeStyle(lineWidth: 2, lineCap: .round))
                 
                 // Glow
                 ctx.opacity = 0.4
-                ctx.stroke(path, with: .color(Color(red: 0.2, green: 0.6, blue: 1.0)),
+                ctx.stroke(path, with: .color(theme.info),
                           style: StrokeStyle(lineWidth: 4, lineCap: .round))
             } else {
                 // Blocks: Structured curve
@@ -755,12 +872,12 @@ struct RowConnectionLine: View {
                 
                 var ctx = context
                 ctx.opacity = 0.85
-                ctx.stroke(path, with: .color(Color(red: 0.2, green: 0.6, blue: 1.0)),
+                ctx.stroke(path, with: .color(theme.info),
                           style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
                 
                 // Subtle glow
                 ctx.opacity = 0.3
-                ctx.stroke(path, with: .color(Color(red: 0.2, green: 0.6, blue: 1.0)),
+                ctx.stroke(path, with: .color(theme.info),
                           style: StrokeStyle(lineWidth: 3, lineCap: .round))
             }
         }

@@ -14,7 +14,7 @@ struct NotionPanel: View {
             iconColor: AppTheme.textPrimary,
             viewModel: viewModel,
             content: {
-                NotionContentView(viewModel: viewModel)
+                NotionPanelContentView(viewModel: viewModel)
             },
             loginView: {
                 NotionLoginPrompt(viewModel: viewModel)
@@ -275,9 +275,9 @@ struct NotionSettingsSheet: View {
     }
 }
 
-// MARK: - Content View
+// MARK: - Content View (renamed to avoid conflict with NotionContentView.swift)
 
-struct NotionContentView: View {
+struct NotionPanelContentView: View {
     @ObservedObject var viewModel: NotionViewModel
 
     var body: some View {
@@ -329,16 +329,16 @@ struct NotionContentView: View {
     }
 }
 
-// MARK: - Tasks List
+// MARK: - Tasks List (Simple version with hover state)
 
-struct NotionTasksListView: View {
+struct SimpleNotionTasksListView: View {
     let tasks: [NotionTask]
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: DesignTokens.Spacing.xs) {
                 ForEach(tasks) { task in
-                    NotionTaskRow(task: task)
+                    SimpleNotionTaskRow(task: task)
                 }
             }
             .padding(DesignTokens.Spacing.sm)
@@ -346,7 +346,7 @@ struct NotionTasksListView: View {
     }
 }
 
-struct NotionTaskRow: View {
+struct SimpleNotionTaskRow: View {
     let task: NotionTask
     @State private var isHovered = false
 

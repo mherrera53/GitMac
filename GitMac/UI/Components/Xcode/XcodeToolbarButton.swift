@@ -58,12 +58,13 @@ struct XcodeToolbarButton: View {
                 // Icon + label variant
                 VStack(spacing: DesignTokens.Spacing.xxs) {
                     Image(systemName: icon)
+                        .renderingMode(.template)
                         .font(.system(size: DesignTokens.Toolbar.iconSize, weight: .regular))
 
                     Text(label)
                         .font(.system(size: DesignTokens.Toolbar.labelSize, weight: .regular))
                 }
-                .foregroundColor(buttonColor)
+                .foregroundStyle(buttonColor)
                 .frame(
                     width: DesignTokens.Toolbar.iconLabelButtonSize.width,
                     height: DesignTokens.Toolbar.iconLabelButtonSize.height
@@ -73,8 +74,9 @@ struct XcodeToolbarButton: View {
             } else {
                 // Icon-only variant
                 Image(systemName: icon)
+                    .renderingMode(.template)
                     .font(.system(size: DesignTokens.Toolbar.iconSize, weight: .regular))
-                    .foregroundColor(buttonColor)
+                    .foregroundStyle(buttonColor)
                     .frame(
                         width: DesignTokens.Toolbar.iconOnlyButtonSize.width,
                         height: DesignTokens.Toolbar.iconOnlyButtonSize.height
@@ -189,13 +191,14 @@ struct XcodeToolbarButtonAsync: View {
                             .frame(height: DesignTokens.Toolbar.iconSize)
                     } else {
                         Image(systemName: icon)
+                            .renderingMode(.template)
                             .font(.system(size: DesignTokens.Toolbar.iconSize, weight: .regular))
                     }
 
                     Text(label)
                         .font(.system(size: DesignTokens.Toolbar.labelSize, weight: .regular))
                 }
-                .foregroundColor(buttonColor)
+                .foregroundStyle(buttonColor)
                 .frame(
                     width: DesignTokens.Toolbar.iconLabelButtonSize.width,
                     height: DesignTokens.Toolbar.iconLabelButtonSize.height
@@ -210,10 +213,11 @@ struct XcodeToolbarButtonAsync: View {
                             .scaleEffect(0.6)
                     } else {
                         Image(systemName: icon)
+                            .renderingMode(.template)
                             .font(.system(size: DesignTokens.Toolbar.iconSize, weight: .regular))
                     }
                 }
-                .foregroundColor(buttonColor)
+                .foregroundStyle(buttonColor)
                 .frame(
                     width: DesignTokens.Toolbar.iconOnlyButtonSize.width,
                     height: DesignTokens.Toolbar.iconOnlyButtonSize.height

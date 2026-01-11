@@ -4,7 +4,7 @@ import SwiftUI
 
 /// Main view for analyzing potential merge conflicts before they happen
 struct ConflictPreventionView: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = ConflictPreventionViewModel()
@@ -138,11 +138,12 @@ struct ConflictPreventionView: View {
                     .font(DesignTokens.Typography.caption2)
                     .foregroundColor(AppTheme.textPrimary)
 
-                DSPicker(selection: $selectedSourceBranch) {
+                Picker("", selection: $selectedSourceBranch) {
                     ForEach(viewModel.branches, id: \.self) { branch in
                         Text(branch).tag(branch)
                     }
                 }
+                .labelsHidden()
                 .frame(maxWidth: .infinity)
             }
 
@@ -156,11 +157,12 @@ struct ConflictPreventionView: View {
                     .font(DesignTokens.Typography.caption2)
                     .foregroundColor(AppTheme.textPrimary)
 
-                DSPicker(selection: $selectedTargetBranch) {
+                Picker("", selection: $selectedTargetBranch) {
                     ForEach(viewModel.branches, id: \.self) { branch in
                         Text(branch).tag(branch)
                     }
                 }
+                .labelsHidden()
                 .frame(maxWidth: .infinity)
             }
 

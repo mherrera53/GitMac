@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Stash list and management view
 struct StashListView: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = StashListViewModel()
@@ -67,6 +67,7 @@ struct StashListView: View {
                             files: viewModel.getFiles(for: stash),
                             stats: viewModel.getStats(for: stash),
                             onApply: { Task { await viewModel.applyStash(stash) } },
+                            onApplyFile: { file in Task { await viewModel.applyStashFile(stash, file: file) } },
                             onPop: { Task { await viewModel.popStash(stash) } },
                             onDrop: {
                                 stashToDelete = stash
@@ -306,12 +307,13 @@ class StashListViewModel: ObservableObject {
 // MARK: - Subviews
 
 struct StashRow: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     let stash: Stash
     let isSelected: Bool
     let files: [StashFile]
     let stats: (additions: Int, deletions: Int)
     var onApply: () -> Void = {}
+    var onApplyFile: (StashFile) -> Void = { _ in }
     var onPop: () -> Void = {}
     var onDrop: () -> Void = {}
 
@@ -320,6 +322,7 @@ struct StashRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
             // Main row
             HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
                 // Expand/collapse chevron
@@ -418,11 +421,38 @@ struct StashRow: View {
                 .padding(.leading, 18)
             }
             .padding(.top, DesignTokens.Spacing.xs)
+            .contentShape(Rectangle())
+            }
+            .contextMenu {
+                Button {
+                    onApply()
+                } label: {
+                    Label("Apply Stash", systemImage: "arrow.uturn.backward")
+                }
+                
+                Button {
+                    onPop()
+                } label: {
+                    Label("Pop Stash", systemImage: "arrow.up.doc")
+                }
+                
+                Divider()
+                
+                Button("Create Branch from Stash...") { }
+                
+                Divider()
+                
+                Button(role: .destructive) {
+                    onDrop()
+                } label: {
+                    Label("Drop Stash", systemImage: "trash")
+                }
+            }
 
             // Expanded file list as tree
             if isExpanded && !files.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
-                    StashFileTreeView(files: files)
+                    StashFileTreeView(files: files, onApplyFile: onApplyFile)
                 }
                 .padding(.leading, 16)
                 .padding(.top, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
@@ -434,19 +464,11 @@ struct StashRow: View {
         .cornerRadius(DesignTokens.CornerRadius.sm)
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
-        .contextMenu {
-            Button("Apply") { onApply() }
-            Button("Pop") { onPop() }
-            Divider()
-            Button("Create Branch from Stash...") { }
-            Divider()
-            Button("Drop", role: .destructive) { onDrop() }
-        }
     }
 }
 
 struct StashFileRow: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     let file: StashFile
 
     var directory: String {
@@ -493,13 +515,14 @@ struct StashFileRow: View {
 // MARK: - Stash File Tree
 
 struct StashFileTreeView: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     let files: [StashFile]
+    var onApplyFile: (StashFile) -> Void = { _ in }
 
     var body: some View {
         let tree = buildTree()
         ForEach(tree.children.sorted(by: { $0.name < $1.name })) { node in
-            StashTreeNodeView(node: node)
+            StashTreeNodeView(node: node, onApplyFile: onApplyFile)
         }
     }
 
@@ -566,8 +589,9 @@ class StashTreeNode: Identifiable, ObservableObject {
 }
 
 struct StashTreeNodeView: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     @ObservedObject var node: StashTreeNode
+    var onApplyFile: (StashFile) -> Void = { _ in }
     @State private var isExpanded = true
 
     var body: some View {
@@ -627,7 +651,7 @@ struct StashTreeNodeView: View {
             if isExpanded {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(node.children.sorted(by: sortNodes)) { child in
-                        StashTreeNodeView(node: child)
+                        StashTreeNodeView(node: child, onApplyFile: onApplyFile)
                             .padding(.leading, 16)
                     }
                 }
@@ -660,6 +684,14 @@ struct StashTreeNodeView: View {
         .contentShape(Rectangle())
         .contextMenu {
             Button {
+                onApplyFile(file)
+            } label: {
+                Label("Apply Stash to File", systemImage: "arrow.uturn.backward")
+            }
+            
+            Divider()
+            
+            Button {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(file.path, forType: .string)
             } label: {
@@ -691,7 +723,7 @@ struct StashTreeNodeView: View {
 }
 
 struct StashDetailView: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     let stash: Stash
     @ObservedObject var viewModel: StashListViewModel
     @State private var diff = ""
@@ -809,7 +841,9 @@ struct StashDetailView: View {
                     if showDiff {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 0) {
-                                StashFileTreeView(files: files)
+                                StashFileTreeView(files: files) { file in
+                                    Task { await viewModel.applyStashFile(stash, file: file) }
+                                }
                             }
                             .padding(.vertical, DesignTokens.Spacing.xs)
                         }
@@ -844,7 +878,7 @@ struct StashDetailView: View {
 }
 
 struct EmptyStashView: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     var body: some View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "archivebox")
@@ -867,7 +901,7 @@ struct EmptyStashView: View {
 }
 
 struct CreateStashSheet: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     @ObservedObject var viewModel: StashListViewModel
     @Environment(\.dismiss) private var dismiss
 

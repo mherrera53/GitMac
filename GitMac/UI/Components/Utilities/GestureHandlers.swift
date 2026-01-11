@@ -215,9 +215,8 @@ struct DSSwipeable: ViewModifier {
                                     offset = max(translation, -CGFloat(trailingActions.count * 60))
                                 }
                             }
-                            .onEnded { value in
+                            .onEnded { _ in
                                 isDragging = false
-                                let velocity = value.predictedEndTranslation.width
 
                                 withAnimation(DesignTokens.Animation.spring) {
                                     // Snap to actions or close
@@ -445,10 +444,10 @@ private struct MagnifiablePreview: View {
                 .frame(width: 200, height: 200)
                 .overlay(
                     VStack {
-                        DSIcon("photo.fill", size: .xl, color: .white)
+                        DSIcon("photo.fill", size: .xl, color: AppTheme.buttonTextOnColor)
                         Text("Pinch to Zoom")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(.white)
+                            .foregroundStyle(AppTheme.buttonTextOnColor)
                     }
                 )
                 .magnifiable(scale: $scale)

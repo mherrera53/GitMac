@@ -11,12 +11,18 @@ import GhosttyKit
 
 // MARK: - Enhanced Terminal View
 
+enum TerminalInputMode {
+    case direct       // Ghostty handles keyboard input directly
+    case externalBar  // External input bar sends commands, Ghostty is output-only
+}
+
 struct GhosttyEnhancedTerminalView: NSViewRepresentable {
     @ObservedObject var viewModel: GhosttyViewModel
     @ObservedObject var enhancedViewModel: GhosttyEnhancedViewModel
     let initialDirectory: String
     let aiEnabled: Bool
     let repoPath: String?
+    var inputMode: TerminalInputMode = .direct
 
     // Static initialization state
     private static var ghosttyInitialized = false
@@ -30,13 +36,6 @@ struct GhosttyEnhancedTerminalView: NSViewRepresentable {
 
         let result = ghostty_init(0, nil)
         ghosttyInitialized = (result == GHOSTTY_SUCCESS)
-
-        if ghosttyInitialized {
-            print("✅ Ghostty library initialized (Enhanced)")
-        } else {
-            print("❌ Ghostty initialization failed: \(result)")
-        }
-
         return ghosttyInitialized
     }
 
@@ -48,13 +47,11 @@ struct GhosttyEnhancedTerminalView: NSViewRepresentable {
         }
 
         let workingDir = initialDirectory
-        
+
         // Defer the viewModel update to avoid publishing during view updates
         DispatchQueue.main.async {
             viewModel.currentDirectory = workingDir
         }
-
-        print("🔧 Enhanced Terminal working directory: \(workingDir)")
 
         // Create container with enhanced tracking
         let container = EnhancedGhosttyContainerView(frame: NSMakeRect(0, 0, 800, 600))
@@ -62,6 +59,7 @@ struct GhosttyEnhancedTerminalView: NSViewRepresentable {
         container.enhancedViewModel = enhancedViewModel
         container.aiEnabled = aiEnabled
         container.repoPath = repoPath
+        container.inputMode = inputMode
 
         // Create Ghostty config
         let config = ghostty_config_new()
@@ -82,7 +80,6 @@ struct GhosttyEnhancedTerminalView: NSViewRepresentable {
         // Create Ghostty app
         let app = ghostty_app_new(&runtime_config, config)
         guard app != nil else {
-            print("❌ Failed to create Ghostty app")
             return container
         }
 
@@ -111,7 +108,6 @@ struct GhosttyEnhancedTerminalView: NSViewRepresentable {
         // Create surface
         let surface = ghostty_surface_new(app!, &surface_config)
         guard surface != nil else {
-            print("❌ Failed to create Ghostty surface")
             ghostty_app_free(app!)
             return container
         }
@@ -129,6 +125,7 @@ struct GhosttyEnhancedTerminalView: NSViewRepresentable {
     func updateNSView(_ nsView: EnhancedGhosttyContainerView, context: Context) {
         nsView.aiEnabled = aiEnabled
         nsView.repoPath = repoPath
+        nsView.inputMode = inputMode
     }
 
     func makeCoordinator() -> Coordinator {
@@ -167,23 +164,62 @@ class EnhancedGhosttyContainerView: NSView {
     var aiEnabled: Bool = true
     var repoPath: String?
     var surface: ghostty_surface_t?
+    var inputMode: TerminalInputMode = .direct
 
     // Track current input
     private var currentInputBuffer: String = ""
     private var lastCommandTime: Date?
 
-    override var acceptsFirstResponder: Bool { true }
+    // Cursor overlay to hide Ghostty cursor in external bar mode
+    private var cursorOverlay: NSView?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        self.wantsLayer = true
+        self.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        self.wantsLayer = true
+        self.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+    }
+
+    // Only accept first responder in direct input mode
+    override var acceptsFirstResponder: Bool {
+        inputMode == .direct
+    }
 
     override func becomeFirstResponder() -> Bool {
-        return true
+        return inputMode == .direct
     }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        window?.makeFirstResponder(self)
+        if inputMode == .direct {
+            window?.makeFirstResponder(self)
+        }
     }
 
     override func keyDown(with event: NSEvent) {
+        // In external bar mode, don't handle keyboard events - let them pass through
+        if inputMode == .externalBar {
+            // Only allow scroll-related keys (Page Up/Down, etc.)
+            let scrollKeys: Set<UInt16> = [116, 121, 115, 119] // Page Up, Page Down, Home, End
+            if scrollKeys.contains(event.keyCode) {
+                // Allow scroll keys to pass to Ghostty for scrolling
+                if let surface = surface {
+                    let mods: ghostty_input_mods_e = GHOSTTY_MODS_NONE
+                    var key = ghostty_input_key_s()
+                    key.action = GHOSTTY_ACTION_PRESS
+                    key.mods = mods
+                    key.keycode = UInt32(event.keyCode)
+                    _ = ghostty_surface_key(surface, key)
+                }
+            }
+            return
+        }
+
         // Intercept arrow keys and Enter when AI suggestions are visible
         if let enhanced = enhancedViewModel, !enhanced.aiSuggestions.isEmpty {
             // Arrow Up (126) - Navigate suggestions up
@@ -299,21 +335,33 @@ class EnhancedGhosttyContainerView: NSView {
     }
 
     override func scrollWheel(with event: NSEvent) {
-        // Pass scroll events to super - Ghostty's scroll API may not be available
-        // The terminal should handle scrolling internally
-        super.scrollWheel(with: event)
+        guard let surface = surface else {
+            super.scrollWheel(with: event)
+            return
+        }
+
+        // Get scroll delta
+        let deltaX = event.scrollingDeltaX
+        let deltaY = event.scrollingDeltaY
+
+        // Build modifiers
+        var mods: ghostty_input_scroll_mods_t = 0
+        let flags = event.modifierFlags
+        if flags.contains(.shift) { mods |= Int32(GHOSTTY_MODS_SHIFT.rawValue) }
+        if flags.contains(.control) { mods |= Int32(GHOSTTY_MODS_CTRL.rawValue) }
+        if flags.contains(.option) { mods |= Int32(GHOSTTY_MODS_ALT.rawValue) }
+        if flags.contains(.command) { mods |= Int32(GHOSTTY_MODS_SUPER.rawValue) }
+
+        // Send scroll event to Ghostty
+        ghostty_surface_mouse_scroll(surface, deltaX, deltaY, mods)
     }
 
     private func handleInputTracking(_ input: String, event: NSEvent) {
-        guard aiEnabled, let enhanced = enhancedViewModel else {
-            print("⚠️ InputTracking: AI disabled or no enhanced view model")
-            return
-        }
+        guard aiEnabled, let enhanced = enhancedViewModel else { return }
 
         // Check if Enter was pressed
         if event.keyCode == 36 || event.keyCode == 76 {
             if !currentInputBuffer.isEmpty {
-                print("✅ InputTracking: Command executed: '\(currentInputBuffer)'")
                 enhanced.trackCommand(currentInputBuffer)
                 currentInputBuffer = ""
                 lastCommandTime = Date()
@@ -321,7 +369,7 @@ class EnhancedGhosttyContainerView: NSView {
             return
         }
 
-        // Ignore arrow keys and navigation keys to prevent dirtying the buffer
+        // Ignore arrow keys and navigation keys
         let ignoredKeyCodes: Set<UInt16> = [
             123, 124, 125, 126, // Arrows
             116, 121, // Page Up/Down
@@ -329,7 +377,7 @@ class EnhancedGhosttyContainerView: NSView {
             53, // Esc
             48, // Tab
         ]
-        
+
         if ignoredKeyCodes.contains(event.keyCode) {
             return
         }
@@ -338,7 +386,6 @@ class EnhancedGhosttyContainerView: NSView {
         if event.keyCode == 51 {
             if !currentInputBuffer.isEmpty {
                 currentInputBuffer.removeLast()
-                print("⌫ InputTracking: Backspace, buffer now: '\(currentInputBuffer)'")
             }
         } else {
             // Only append printable characters
@@ -347,16 +394,13 @@ class EnhancedGhosttyContainerView: NSView {
             }
             if !printable.isEmpty {
                 currentInputBuffer += printable
-                print("⌨️ InputTracking: Added '\(printable)', buffer now: '\(currentInputBuffer)' (length: \(currentInputBuffer.count))")
             }
         }
 
         // Update AI suggestions
         if currentInputBuffer.count >= 2 {
-            print("🚀 InputTracking: Triggering AI update with buffer: '\(currentInputBuffer)'")
             enhanced.updateInput(currentInputBuffer, repoPath: repoPath)
         } else {
-            print("⏸️ InputTracking: Buffer too short, clearing suggestions")
             enhanced.aiSuggestions.removeAll()
         }
     }

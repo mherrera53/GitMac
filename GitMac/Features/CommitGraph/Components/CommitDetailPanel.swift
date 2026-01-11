@@ -5,7 +5,7 @@ struct CommitDetailPanel: View {
     let onClose: () -> Void
     var onOpenDiff: ((Commit) -> Void)? = nil
 
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var selectedTab: DetailTab = .info
 
     enum DetailTab: String, CaseIterable {
@@ -225,7 +225,7 @@ struct CommitDetailPanel: View {
 
             Text("View Detailed Diff")
                 .font(DesignTokens.Typography.body.weight(.semibold))
-                .foregroundColor(theme.textPrimary)
+                .foregroundColor(theme.text)
 
             Text("Open this commit in the full Kaleidoscope view to inspect changes.")
                 .font(DesignTokens.Typography.caption)
@@ -238,7 +238,7 @@ struct CommitDetailPanel: View {
             } label: {
                 Text("Open Diff")
                     .font(DesignTokens.Typography.callout.weight(.medium))
-                    .foregroundColor(.white)
+                    .foregroundStyle(AppTheme.buttonTextOnColor)
                     .padding(.horizontal, DesignTokens.Spacing.lg)
                     .padding(.vertical, DesignTokens.Spacing.sm)
                     .background(AppTheme.accent)

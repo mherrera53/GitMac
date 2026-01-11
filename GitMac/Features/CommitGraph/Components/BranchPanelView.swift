@@ -8,7 +8,7 @@ struct BranchPanelView: View {
 
     @State private var searchText = ""
     @State private var expandedSections: Set<String> = ["local", "remote"]
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -61,7 +61,7 @@ struct BranchPanelView: View {
 
                     if expandedSections.contains("local") {
                         ForEach(filteredLocalBranches) { branch in
-                            BranchRow(
+                            BranchPanelRow(
                                 branch: branch,
                                 isCurrent: branch.isCurrent,
                                 isSelected: false,
@@ -82,7 +82,7 @@ struct BranchPanelView: View {
 
                     if expandedSections.contains("remote") {
                         ForEach(filteredRemoteBranches) { branch in
-                            BranchRow(
+                            BranchPanelRow(
                                 branch: branch,
                                 isCurrent: false,
                                 isSelected: false,
@@ -140,7 +140,7 @@ struct BranchSection: View {
     let isExpanded: Bool
     let onToggle: () -> Void
 
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -193,7 +193,7 @@ struct BranchSection: View {
     }
 }
 
-struct BranchRow: View {
+struct BranchPanelRow: View {
     let branch: Branch
     let isCurrent: Bool
     let isSelected: Bool
@@ -201,7 +201,7 @@ struct BranchRow: View {
     let onCheckout: () -> Void
 
     @State private var isHovered = false
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -242,26 +242,26 @@ struct BranchRow: View {
             Spacer()
 
             // Ahead/Behind indicators with enhanced icons
-            if branch.ahead > 0 || branch.behind > 0 {
+            if let upstream = branch.upstream, (upstream.ahead > 0 || upstream.behind > 0) {
                 HStack(spacing: 2) {
-                    if branch.ahead > 0 {
+                    if upstream.ahead > 0 {
                         HStack(spacing: 2) {
                             Image(systemName: "arrow.up.circle.fill")
                                 .font(.system(size: 9))
                                 .symbolRenderingMode(.hierarchical)
-                            Text("\(branch.ahead)")
+                            Text("\(upstream.ahead)")
                                 .font(DesignTokens.Typography.caption2.monospacedDigit())
                                 .fontWeight(.semibold)
                         }
                         .foregroundColor(AppTheme.success)
                     }
 
-                    if branch.behind > 0 {
+                    if upstream.behind > 0 {
                         HStack(spacing: 2) {
                             Image(systemName: "arrow.down.circle.fill")
                                 .font(.system(size: 9))
                                 .symbolRenderingMode(.hierarchical)
-                            Text("\(branch.behind)")
+                            Text("\(upstream.behind)")
                                 .font(DesignTokens.Typography.caption2.monospacedDigit())
                                 .fontWeight(.semibold)
                         }

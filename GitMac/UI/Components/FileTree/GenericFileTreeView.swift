@@ -1,229 +1,218 @@
 import SwiftUI
 
-// MARK: - Generic File Tree View
+// MARK: - Lightweight Flat Tree Item (Memory Optimized)
 
-/// Generic tree view that can display any hierarchical file structure
+struct GenericFlatTreeItem: Identifiable, Equatable {
+    let id: String      // path serves as id
+    let name: String
+    let isFolder: Bool
+    let depth: Int
+
+    var path: String { id }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id && lhs.isFolder == rhs.isFolder && lhs.depth == rhs.depth
+    }
+}
+
+// MARK: - Generic File Tree View (Memory Optimized)
+
 struct GenericFileTreeView<T, NodeView: View>: View {
     let paths: [String]
     let dataProvider: (String) -> T?
     @Binding var selectedPath: String?
     let section: String
     var extensionFilter: String? = nil
-    @ViewBuilder let nodeView: (GenericTreeNode<T>, Bool, String) -> NodeView
+    let nodeView: (String, T?, Bool, Bool, String) -> NodeView  // path, data, isFolder, isSelected, section
 
-    @ObservedObject private var expansionState = TreeExpansionState.shared
-
-    var body: some View {
-        let tree = buildTree()
-        ForEach(tree.sortedChildren.filter { nodeMatchesFilter($0) }) { node in
-            GenericTreeNodeView(
-                node: node,
-                selectedPath: $selectedPath,
-                section: section,
-                extensionFilter: extensionFilter,
-                nodeView: nodeView
-            )
-        }
-    }
-
-    /// Check if a node or any of its descendants match the extension filter
-    private func nodeMatchesFilter(_ node: GenericTreeNode<T>) -> Bool {
-        guard let ext = extensionFilter else { return true }
-
-        if node.isFolder {
-            // Folder matches if any child matches
-            return node.children.contains { nodeMatchesFilter($0) }
-        } else {
-            // File matches if extension matches
-            let fileExt = (node.path as NSString).pathExtension.lowercased()
-            return fileExt == ext.lowercased()
-        }
-    }
-
-    private func buildTree() -> GenericTreeNode<T> {
-        let root = GenericTreeNode<T>(name: "", path: "", isFolder: true)
-
-        for path in paths {
-            addToTree(root: root, path: path)
-        }
-
-        return root
-    }
-
-    private func addToTree(root: GenericTreeNode<T>, path: String) {
-        let components = path.split(separator: "/").map(String.init)
-        var current = root
-
-        for (index, component) in components.enumerated() {
-            let isLast = index == components.count - 1
-            let currentPath = components[0...index].joined(separator: "/")
-
-            if isLast {
-                // This is a file
-                let data = dataProvider(currentPath)
-                let fileNode = GenericTreeNode<T>(
-                    name: component,
-                    path: currentPath,
-                    isFolder: false,
-                    data: data
-                )
-                current.addChild(fileNode)
-            } else {
-                // This is a folder - find or create
-                current = current.findOrCreateFolder(name: component, path: currentPath)
-            }
-        }
-    }
-}
-
-// MARK: - Generic Tree Node View (Recursive)
-
-struct GenericTreeNodeView<T, NodeView: View>: View {
-    @ObservedObject var node: GenericTreeNode<T>
-    @Binding var selectedPath: String?
-    let section: String
-    var extensionFilter: String? = nil
-    @ViewBuilder let nodeView: (GenericTreeNode<T>, Bool, String) -> NodeView
-
-    @ObservedObject private var expansionState = TreeExpansionState.shared
-    @State private var isHovered = false
-
-    private var isSelected: Bool {
-        selectedPath == node.path
-    }
-
-    private var isExpanded: Bool {
-        expansionState.isExpanded(node.path, section: section)
-    }
-
-    /// Filtered children based on extension filter
-    private var filteredChildren: [GenericTreeNode<T>] {
-        guard extensionFilter != nil else { return node.sortedChildren }
-        return node.sortedChildren.filter { nodeMatchesFilter($0) }
-    }
-
-    /// Check if a node or any of its descendants match the extension filter
-    private func nodeMatchesFilter(_ node: GenericTreeNode<T>) -> Bool {
-        guard let ext = extensionFilter else { return true }
-
-        if node.isFolder {
-            return node.children.contains { nodeMatchesFilter($0) }
-        } else {
-            let fileExt = (node.path as NSString).pathExtension.lowercased()
-            return fileExt == ext.lowercased()
-        }
-    }
+    // Only store flat items - no tree structure retained
+    @State private var flatItems: [GenericFlatTreeItem] = []
+    @State private var expandedPaths: Set<String> = []
 
     var body: some View {
         VStack(spacing: 0) {
-            // Node content with chevron for folders
-            HStack(spacing: 0) {
-                // Disclosure chevron with clickable area for folders (positioned right before folder icon)
-                if node.isFolder {
-                    Button(action: {
-                        // Toggle state immediately (no animation wrapper to prevent click lag)
-                        expansionState.toggle(node.path, section: section)
-                    }) {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(AppTheme.chevronColor)
-                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                            .animation(.easeInOut(duration: 0.15), value: isExpanded)
-                            .frame(width: 14, height: 14)
-                            .padding(.trailing, 2)
-                    }
-                    .buttonStyle(.plain)
-                    .contentShape(Rectangle())
-                    .onHover { hovering in
-                        if hovering {
-                            NSCursor.pointingHand.push()
-                        } else {
-                            NSCursor.pop()
-                        }
-                    }
-                    .help(isExpanded ? "Click to collapse" : "Click to expand")
-                } else {
-                    // Empty spacer for files to align with folder content
-                    Spacer()
-                        .frame(width: 16)
-                }
+            // Hidden trigger - forces view to render so .task fires
+            Text("\(paths.count)")
+                .font(.system(size: 0.1))
+                .foregroundColor(.clear)
+                .frame(height: 0.1)
 
-                // Node content
-                nodeView(node, isSelected, section)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .contentShape(Rectangle())
-            .onHover { isHovered = $0 }
-
-            // Children (if folder and expanded)
-            if node.isFolder && isExpanded {
-                ForEach(filteredChildren) { child in
-                    GenericTreeNodeView(
-                        node: child,
-                        selectedPath: $selectedPath,
-                        section: section,
-                        extensionFilter: extensionFilter,
-                        nodeView: nodeView
-                    )
-                    .padding(.leading, 16)
+            LazyVStack(spacing: 0, pinnedViews: []) {
+                ForEach(flatItems) { item in
+                    rowView(for: item)
                 }
             }
         }
+        .task(id: paths.count) { rebuildIfNeeded() }
+        .onChange(of: extensionFilter) { _, _ in rebuildIfNeeded() }
+    }
+
+    @ViewBuilder
+    private func rowView(for item: GenericFlatTreeItem) -> some View {
+        HStack(spacing: 0) {
+            // Indentation
+            if item.depth > 0 {
+                Spacer().frame(width: CGFloat(item.depth) * 16)
+            }
+
+            // Chevron for folders
+            if item.isFolder {
+                Button {
+                    toggleExpansion(item.path)
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(AppTheme.chevronColor)
+                        .rotationEffect(.degrees(expandedPaths.contains(item.path) ? 90 : 0))
+                        .frame(width: 14, height: 14)
+                        .padding(.trailing, 2)
+                }
+                .buttonStyle(.plain)
+            } else {
+                Spacer().frame(width: 16)
+            }
+
+            // Node content - data fetched on demand
+            nodeView(
+                item.path,
+                item.isFolder ? nil : dataProvider(item.path),
+                item.isFolder,
+                selectedPath == item.path,
+                section
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .contentShape(Rectangle())
+    }
+
+    private func rebuildIfNeeded() {
+        // Build tree structure temporarily, extract flat items, discard tree
+        let root = buildTreeStructure()
+        var expanded = Set<String>()
+        collectExpandedFolders(from: root, into: &expanded)
+        expandedPaths = expanded
+        flatItems = flattenToItems(root, depth: 0)
+        // root is deallocated here - no retained tree
+    }
+
+    private func toggleExpansion(_ path: String) {
+        TreeExpansionState.shared.toggle(path, section: section)
+        if expandedPaths.contains(path) {
+            expandedPaths.remove(path)
+        } else {
+            expandedPaths.insert(path)
+        }
+        rebuildIfNeeded()
+    }
+
+    // MARK: - Tree Building (Temporary, not retained)
+
+    private struct TempNode {
+        let name: String
+        let path: String
+        let isFolder: Bool
+        var children: [TempNode] = []
+    }
+
+    private func buildTreeStructure() -> [TempNode] {
+        var rootChildren: [String: TempNode] = [:]
+
+        for path in paths {
+            let components = path.split(separator: "/").map(String.init)
+            guard !components.isEmpty else { continue }
+
+            insertPath(components: components, at: 0, into: &rootChildren)
+        }
+
+        return Array(rootChildren.values).sorted { a, b in
+            if a.isFolder != b.isFolder { return a.isFolder }
+            return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
+        }
+    }
+
+    private func insertPath(components: [String], at index: Int, into nodes: inout [String: TempNode]) {
+        guard index < components.count else { return }
+
+        let name = components[index]
+        let currentPath = components[0...index].joined(separator: "/")
+        let isLast = index == components.count - 1
+
+        if isLast {
+            // File node
+            nodes[name] = TempNode(name: name, path: currentPath, isFolder: false)
+        } else {
+            // Folder node
+            if nodes[name] == nil {
+                nodes[name] = TempNode(name: name, path: currentPath, isFolder: true)
+            }
+            var folder = nodes[name]!
+            var folderChildren = Dictionary(uniqueKeysWithValues: folder.children.map { ($0.name, $0) })
+            insertPath(components: components, at: index + 1, into: &folderChildren)
+            folder.children = Array(folderChildren.values).sorted { a, b in
+                if a.isFolder != b.isFolder { return a.isFolder }
+                return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
+            }
+            nodes[name] = folder
+        }
+    }
+
+    private func collectExpandedFolders(from nodes: [TempNode], into paths: inout Set<String>) {
+        for node in nodes where node.isFolder {
+            if TreeExpansionState.shared.isExpanded(node.path, section: section) {
+                paths.insert(node.path)
+            }
+            collectExpandedFolders(from: node.children, into: &paths)
+        }
+    }
+
+    private func flattenToItems(_ nodes: [TempNode], depth: Int) -> [GenericFlatTreeItem] {
+        var result: [GenericFlatTreeItem] = []
+        result.reserveCapacity(nodes.count * 2)
+
+        for node in nodes {
+            guard nodeMatchesFilter(node) else { continue }
+
+            result.append(GenericFlatTreeItem(
+                id: node.path,
+                name: node.name,
+                isFolder: node.isFolder,
+                depth: depth
+            ))
+
+            if node.isFolder && expandedPaths.contains(node.path) {
+                result.append(contentsOf: flattenToItems(node.children, depth: depth + 1))
+            }
+        }
+        return result
+    }
+
+    private func nodeMatchesFilter(_ node: TempNode) -> Bool {
+        guard let ext = extensionFilter else { return true }
+        if node.isFolder {
+            return node.children.contains { nodeMatchesFilter($0) }
+        }
+        return (node.path as NSString).pathExtension.lowercased() == ext.lowercased()
     }
 }
 
 // MARK: - Convenience Extensions
 
-// StagingFile support (for ContentView staging)
 extension GenericFileTreeView {
-    /// Creates a file tree for StagingFile objects (requires StagingFile to be imported)
-    static func forStagingFiles<SF, NV: View>(
+    /// Creates a file tree for StagingFile objects
+    static func forStagingFiles<SF>(
         files: [SF],
         selectedPath: Binding<String?>,
         section: String,
         extensionFilter: String? = nil,
         pathExtractor: @escaping (SF) -> String,
-        @ViewBuilder nodeView: @escaping (GenericTreeNode<SF>, Bool, String) -> NV
-    ) -> GenericFileTreeView<SF, NV> {
+        @ViewBuilder nodeView: @escaping (String, SF?, Bool, Bool, String) -> NodeView
+    ) -> GenericFileTreeView<SF, NodeView> {
         let allPaths = files.map(pathExtractor)
+        let fileDict = Dictionary(uniqueKeysWithValues: files.map { (pathExtractor($0), $0) })
 
-        let dataProvider: (String) -> SF? = { path in
-            files.first { pathExtractor($0) == path }
-        }
-
-        return GenericFileTreeView<SF, NV>(
+        return GenericFileTreeView<SF, NodeView>(
             paths: allPaths,
-            dataProvider: dataProvider,
-            selectedPath: selectedPath,
-            section: section,
-            extensionFilter: extensionFilter,
-            nodeView: nodeView
-        )
-    }
-}
-
-// FileStatus support (for StagingAreaView)
-extension GenericFileTreeView where T == FileStatus {
-    /// Creates a file tree for FileStatus objects
-    static func forFileStatus(
-        files: [FileStatus],
-        untrackedPaths: [String],
-        selectedPath: Binding<String?>,
-        section: String,
-        extensionFilter: String? = nil,
-        @ViewBuilder nodeView: @escaping (GenericTreeNode<FileStatus>, Bool, String) -> NodeView
-    ) -> GenericFileTreeView<FileStatus, NodeView> {
-        // Combine all paths
-        let allPaths = files.map { $0.path } + untrackedPaths
-
-        // Data provider
-        let dataProvider: (String) -> FileStatus? = { path in
-            files.first { $0.path == path }
-        }
-
-        return GenericFileTreeView(
-            paths: allPaths,
-            dataProvider: dataProvider,
+            dataProvider: { fileDict[$0] },
             selectedPath: selectedPath,
             section: section,
             extensionFilter: extensionFilter,

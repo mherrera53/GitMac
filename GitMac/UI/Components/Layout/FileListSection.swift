@@ -31,14 +31,13 @@ struct FileListSection<HeaderActions: View, Content: View>: View {
                 style: style
             )
 
-            // Content - LazyVStack for performance with stable ID to prevent jumping
+            // Content - LazyVStack for performance
             if isExpanded {
                 ScrollView(showsIndicators: showScrollIndicators) {
                     LazyVStack(spacing: 0, pinnedViews: []) {
                         content()
                     }
-                    .id(count)  // Stable ID prevents view jumping
-                    .animation(.none, value: count)
+                    .drawingGroup()  // Batch rendering with Metal for better scroll performance
                 }
                 .frame(maxHeight: maxHeight)
             }

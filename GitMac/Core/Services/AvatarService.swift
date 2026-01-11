@@ -52,6 +52,35 @@ actor AvatarService {
                 usernameAccessOrder.append(key)
             }
         }
+
+        // Subscribe to memory pressure notifications
+        Task {
+            await Self.setupMemoryPressureObserver()
+        }
+    }
+
+    @MainActor
+    private static func setupMemoryPressureObserver() {
+        NotificationCenter.default.addObserver(
+            forName: MemoryPressureHandler.memoryPressureNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task {
+                await AvatarService.shared.clearInMemoryCaches()
+            }
+        }
+    }
+
+    /// Clear in-memory caches to reduce memory pressure
+    /// Disk cache is preserved for restart
+    func clearInMemoryCaches() {
+        avatarCache.removeAll()
+        avatarAccessOrder.removeAll()
+        githubUsernameCache.removeAll()
+        usernameAccessOrder.removeAll()
+        pendingRequests.values.forEach { $0.cancel() }
+        pendingRequests.removeAll()
     }
 
     // MARK: - LRU Cache Helpers

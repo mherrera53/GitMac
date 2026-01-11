@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Three-way merge conflict resolver
 struct ConflictResolverView: View {
-    @StateObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
 
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = ConflictResolverViewModel()

@@ -89,4 +89,27 @@ class TreeExpansionState: ObservableObject {
         expandedPaths.removeAll()
         collapsedPaths.removeAll()
     }
+
+    /// Get all expanded paths for a specific section
+    func expandedPaths(for section: String) -> Set<String> {
+        let prefix = section.isEmpty ? "" : "\(section):"
+        var result = Set<String>()
+
+        for key in expandedPaths {
+            if section.isEmpty {
+                // For empty section, include paths without section prefix
+                if !key.contains(":") {
+                    result.insert(key)
+                }
+            } else {
+                // For specific section, extract path from key
+                if key.hasPrefix(prefix) {
+                    let path = String(key.dropFirst(prefix.count))
+                    result.insert(path)
+                }
+            }
+        }
+
+        return result
+    }
 }

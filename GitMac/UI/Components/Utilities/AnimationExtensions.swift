@@ -503,7 +503,7 @@ private struct StaggeredAnimationPreview: View {
 
             if showItems {
                 DSVStack(spacing: DesignTokens.Spacing.md) {
-                    ForEach(0..<5) { index in
+                    ForEach(Array(0..<5), id: \.self) { index in
                         HStack {
                             Text("Item \(index + 1)")
                                 .font(DesignTokens.Typography.body)

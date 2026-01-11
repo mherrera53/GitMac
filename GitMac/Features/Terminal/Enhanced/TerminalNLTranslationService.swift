@@ -33,10 +33,10 @@ struct NLCommandResponse {
     let confidence: Double
     let alternatives: [String]
     let warnings: [String]
-    let category: CommandCategory
+    let category: TerminalCommandCategory
 }
 
-enum CommandCategory: String, CaseIterable {
+enum TerminalCommandCategory: String, CaseIterable {
     case git = "Git"
     case file = "File Management"
     case network = "Network"
@@ -102,7 +102,7 @@ class TerminalNLTranslationService {
         // Use OpenAI fallback
         // Note: AIService is defined in Core/Services/AIService.swift
         // We'll use a simple implementation for now
-        return "Command: \(input)\nExplanation: Use appropriate command for this action"
+        return "Command: \(command)\nExplanation: Use appropriate command for this action"
     }
     
     // MARK: - Pattern Matching
@@ -324,12 +324,12 @@ class TerminalNLTranslationService {
     private struct NLPattern {
         let regex: String?
         let templates: [String]
-        let category: CommandCategory
+        let category: TerminalCommandCategory
         let explanation: String
         let requiresInput: Bool
         let warnings: [String]
         
-        init(regex: String, templates: [String], category: CommandCategory, explanation: String, requiresInput: Bool = false, warnings: [String] = []) {
+        init(regex: String, templates: [String], category: TerminalCommandCategory, explanation: String, requiresInput: Bool = false, warnings: [String] = []) {
             self.regex = regex
             self.templates = templates
             self.category = category
@@ -430,7 +430,7 @@ class TerminalNLTranslationService {
             confidence: decoded.confidence,
             alternatives: decoded.alternatives,
             warnings: decoded.warnings,
-            category: CommandCategory(rawValue: decoded.category) ?? .other
+            category: TerminalCommandCategory(rawValue: decoded.category) ?? .other
         )
     }
     

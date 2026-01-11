@@ -2,7 +2,8 @@ import SwiftUI
 
 struct RepositorySelectorButton: View {
     @EnvironmentObject var appState: AppState
-    @StateObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject var recentReposManager: RecentRepositoriesManager
+    @ObservedObject private var themeManager = ThemeManager.shared
     @State private var showPicker = false
 
     var body: some View {
@@ -11,12 +12,12 @@ struct RepositorySelectorButton: View {
 
         return Menu {
             // Recent repositories
-            if !appState.recentRepositories.isEmpty {
+            if !recentReposManager.recentRepos.isEmpty {
                 Section("Recent") {
-                    ForEach(appState.recentRepositories.prefix(5)) { repo in
+                    ForEach(recentReposManager.recentRepos.prefix(5)) { repo in
                         Button {
                             Task {
-                                await appState.openRepository(path: repo.path)
+                                await appState.openRepository(at: repo.path)
                             }
                         } label: {
                             HStack {
@@ -73,7 +74,7 @@ struct RepositorySelectorButton: View {
         ) { result in
             if case .success(let urls) = result, let url = urls.first {
                 Task {
-                    await appState.openRepository(path: url.path)
+                    await appState.openRepository(at: url.path)
                 }
             }
         }

@@ -107,35 +107,35 @@ struct AnalyticsDashboard: View {
             GridItem(.flexible()),
             GridItem(.flexible())
         ], spacing: DesignTokens.Spacing.md) {
-            MetricCard(
+            AnalyticsMetricCard(
                 title: "Total Commits",
                 value: "\(viewModel.metrics.totalCommits)",
                 icon: "arrow.triangle.branch",
                 trend: viewModel.metrics.commitsTrend
             )
-            
-            MetricCard(
+
+            AnalyticsMetricCard(
                 title: "Contributors",
                 value: "\(viewModel.metrics.totalContributors)",
                 icon: "person.2.fill",
                 trend: nil
             )
-            
-            MetricCard(
+
+            AnalyticsMetricCard(
                 title: "Files",
                 value: formatNumber(viewModel.metrics.totalFiles),
                 icon: "doc.fill",
                 trend: nil
             )
-            
-            MetricCard(
+
+            AnalyticsMetricCard(
                 title: "Lines of Code",
                 value: formatNumber(viewModel.metrics.totalLines),
                 icon: "text.alignleft",
                 trend: viewModel.metrics.linesTrend
             )
-            
-            MetricCard(
+
+            AnalyticsMetricCard(
                 title: "Active Branches",
                 value: "\(viewModel.metrics.activeBranches)",
                 icon: "arrow.triangle.branch",
@@ -434,7 +434,7 @@ struct AnalyticsDashboard: View {
 
 // MARK: - Supporting Views
 
-struct MetricCard: View {
+struct AnalyticsMetricCard: View {
     let title: String
     let value: String
     let icon: String
