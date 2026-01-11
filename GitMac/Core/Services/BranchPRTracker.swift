@@ -140,6 +140,9 @@ class BranchPRTracker: ObservableObject {
 
     /// Merge a PR
     func mergePR(_ pr: GitHubPullRequest, method: MergeMethod) async throws {
+        let branchName = pr.head.ref
+
+        // API call waits for response - when it returns, PR is merged
         try await githubService.mergePullRequest(
             owner: owner,
             repo: repo,
@@ -147,14 +150,19 @@ class BranchPRTracker: ObservableObject {
             mergeMethod: method
         )
 
+        // Remove PR from local cache (API confirmed merge)
+        branchPRs.removeValue(forKey: branchName)
+        openPRs.removeAll { $0.number == pr.number }
+
+        // Post notifications to update UI
+        NotificationCenter.default.post(name: .pullRequestMerged, object: pr)
+        NotificationCenter.default.post(name: .branchPRsDidUpdate, object: nil)
+        NotificationCenter.default.post(name: .repositoryDidRefresh, object: repoPath)
+
         NotificationManager.shared.success(
             "PR #\(pr.number) merged",
             detail: "\(pr.title) merged with \(method.rawValue)"
         )
-
-        // Refresh PR list and repository
-        await refresh()
-        NotificationCenter.default.post(name: .repositoryDidRefresh, object: repoPath)
     }
 
     /// Clear all tracked data
@@ -172,4 +180,5 @@ class BranchPRTracker: ObservableObject {
 extension Notification.Name {
     static let branchPRsDidUpdate = Notification.Name("branchPRsDidUpdate")
     static let repositoryDidChange = Notification.Name("repositoryDidChange")
+    static let pullRequestMerged = Notification.Name("pullRequestMerged")
 }
