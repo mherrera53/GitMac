@@ -13,13 +13,14 @@ import CryptoKit
 // MARK: - Models
 
 struct Contributor: Identifiable, Hashable {
-    var id: String { email }
+    let id: String  // GitHub username or normalized name
     let name: String
     let email: String
     var commitCount: Int
     var lastCommitDate: Date?
     var avatarURL: URL?
-    
+    var githubUsername: String?
+
     // Gravatar URL from email
     var gravatarURL: URL? {
         let hash = email.lowercased().trimmingCharacters(in: CharacterSet.whitespaces).md5
@@ -111,38 +112,179 @@ class RepositoryActivityViewModel: ObservableObject {
     private func loadContributors(repoPath: String) async throws -> [Contributor] {
         // git shortlog -sne --all
         let result = await shell.execute(
-            "sh", arguments: ["-c", "git shortlog -sne --all 2>/dev/null | head -20"],
+            "sh", arguments: ["-c", "git shortlog -sne --all 2>/dev/null"],
             workingDirectory: repoPath
         )
-        
-        var contributors: [Contributor] = []
-        
+
+        // Parse raw contributors
+        var rawContributors: [(name: String, email: String, count: Int)] = []
+
         for line in result.output.components(separatedBy: "\n") where !line.isEmpty {
-            // Format: "   123\tName <email>"
             let trimmed = line.trimmingCharacters(in: CharacterSet.whitespaces)
             guard let tabIndex = trimmed.firstIndex(of: "\t") else { continue }
-            
+
             let countStr = String(trimmed[..<tabIndex]).trimmingCharacters(in: CharacterSet.whitespaces)
             let rest = String(trimmed[trimmed.index(after: tabIndex)...])
-            
+
             guard let count = Int(countStr) else { continue }
-            
-            // Parse "Name <email>"
+
             if let emailStart = rest.lastIndex(of: "<"),
                let emailEnd = rest.lastIndex(of: ">") {
                 let name = String(rest[..<emailStart]).trimmingCharacters(in: CharacterSet.whitespaces)
                 let email = String(rest[rest.index(after: emailStart)..<emailEnd])
-                
-                contributors.append(Contributor(
-                    name: name,
-                    email: email,
-                    commitCount: count,
-                    lastCommitDate: nil
-                ))
+                rawContributors.append((name, email, count))
             }
         }
-        
-        return contributors.sorted { $0.commitCount > $1.commitCount }
+
+        // Try to get GitHub info for unification
+        let (githubOwner, githubRepo) = await parseGitHubRemote(repoPath: repoPath)
+        let token = try? await KeychainManager.shared.getGitHubToken()
+
+        var emailToGitHubUser: [String: String] = [:]
+
+        if let owner = githubOwner, let repo = githubRepo, let token = token {
+            // Load GitHub contributors
+            let ghContributors = await fetchGitHubContributors(owner: owner, repo: repo, token: token)
+
+            // For each GitHub contributor, get their emails
+            for ghContrib in ghContributors.prefix(30) {
+                let emails = await fetchContributorEmails(owner: owner, repo: repo, username: ghContrib.login, token: token)
+                for email in emails {
+                    emailToGitHubUser[email.lowercased()] = ghContrib.login.lowercased()
+                }
+            }
+        }
+
+        // Build name -> GitHub username map
+        var nameToGitHubUser: [String: String] = [:]
+        for raw in rawContributors {
+            let normalizedName = raw.name.lowercased().trimmingCharacters(in: .whitespaces)
+            let email = raw.email.lowercased()
+            if let username = emailToGitHubUser[email] {
+                nameToGitHubUser[normalizedName] = username
+            }
+        }
+
+        // Unify contributors
+        var unifiedContributors: [String: (name: String, email: String, count: Int, ghUsername: String?)] = [:]
+
+        for raw in rawContributors {
+            let email = raw.email.lowercased()
+            let normalizedName = raw.name.lowercased().trimmingCharacters(in: .whitespaces)
+
+            let unifyKey: String
+            let ghUsername: String?
+
+            if let username = emailToGitHubUser[email] {
+                unifyKey = "gh:\(username)"
+                ghUsername = username
+            } else if let username = nameToGitHubUser[normalizedName] {
+                unifyKey = "gh:\(username)"
+                ghUsername = username
+            } else {
+                unifyKey = "name:\(normalizedName)"
+                ghUsername = nil
+            }
+
+            if var existing = unifiedContributors[unifyKey] {
+                existing.count += raw.count
+                unifiedContributors[unifyKey] = existing
+            } else {
+                unifiedContributors[unifyKey] = (raw.name, email, raw.count, ghUsername)
+            }
+        }
+
+        return unifiedContributors.map { key, value in
+            Contributor(
+                id: key,
+                name: value.name,
+                email: value.email,
+                commitCount: value.count,
+                lastCommitDate: nil,
+                avatarURL: nil,
+                githubUsername: value.ghUsername
+            )
+        }.sorted { $0.commitCount > $1.commitCount }
+    }
+
+    private func parseGitHubRemote(repoPath: String) async -> (owner: String?, repo: String?) {
+        let result = await shell.execute(
+            "git", arguments: ["remote", "get-url", "origin"],
+            workingDirectory: repoPath
+        )
+
+        guard result.isSuccess else { return (nil, nil) }
+
+        let url = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let match = url.range(of: "github.com[/:]([^/]+)/([^/.]+)", options: .regularExpression) {
+            let path = String(url[match])
+            let parts = path.replacingOccurrences(of: "github.com", with: "")
+                .replacingOccurrences(of: ":", with: "/")
+                .split(separator: "/")
+                .map(String.init)
+            if parts.count >= 2 {
+                return (parts[0], parts[1].replacingOccurrences(of: ".git", with: ""))
+            }
+        }
+        return (nil, nil)
+    }
+
+    private func fetchGitHubContributors(owner: String, repo: String, token: String) async -> [(login: String, avatarUrl: String)] {
+        guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/contributors?per_page=100") else {
+            return []
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+                return []
+            }
+
+            return json.compactMap { item -> (login: String, avatarUrl: String)? in
+                guard let login = item["login"] as? String,
+                      let avatarUrl = item["avatar_url"] as? String else { return nil }
+                return (login, avatarUrl)
+            }
+        } catch {
+            return []
+        }
+    }
+
+    private func fetchContributorEmails(owner: String, repo: String, username: String, token: String) async -> [String] {
+        guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/commits?author=\(username)&per_page=30") else {
+            return []
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+                return []
+            }
+
+            var emails = Set<String>()
+            for item in json {
+                if let commit = item["commit"] as? [String: Any],
+                   let author = commit["author"] as? [String: Any],
+                   let email = author["email"] as? String {
+                    emails.insert(email)
+                }
+            }
+            return Array(emails)
+        } catch {
+            return []
+        }
     }
     
     private func loadRecentCommits(repoPath: String, limit: Int) async throws -> [CommitActivity] {

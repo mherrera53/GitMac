@@ -994,7 +994,7 @@ struct CommitGraphView: View {
                 )
                 .draggable(CommitTransferable(commit: node.commit))
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Commit \(node.commit.shortSha) by \(node.commit.author): \(node.commit.summary)")
+                .accessibilityLabel("Commit \(node.commit.shortSha) by \(node.commit.author): \(node.commit.cleanSummary)")
                 .accessibilityHint("Double tap to view details, drag branch to create PR, context click for more actions")
             }
         case .stash(let stashNode):
@@ -1537,7 +1537,7 @@ struct GraphRow: View {
 
             // Commit message
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
-                Text(node.commit.summary)
+                Text(node.commit.cleanSummary)
                     .font(settings.compactMode ? DesignTokens.Typography.caption : DesignTokens.Typography.callout)
                     .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(1)
@@ -2240,7 +2240,10 @@ struct CommitContextMenu: View {
         }
 
         Button {
-            // Placeholder for multi cherry-pick
+            NotificationCenter.default.post(
+                name: .cherryPickCommit,
+                object: commits
+            )
         } label: {
             Label("Cherry-pick \(commits.count) Commits...", systemImage: "arrow.right.doc.on.clipboard")
         }

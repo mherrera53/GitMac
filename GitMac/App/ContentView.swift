@@ -11,12 +11,15 @@ struct ContentView: View {
     @State private var showOpenPanel = false
     @State private var showNewBranchSheet = false
     @State private var showMergeSheet = false
-    @State private var leftPanelWidth: CGFloat = 260
-    @State private var rightPanelWidth: CGFloat = 380
+    @State private var leftPanelWidth: CGFloat = DesignTokens.Layout.Sidebar.defaultWidth
+    @State private var rightPanelWidth: CGFloat = DesignTokens.Layout.StagingPanel.defaultWidth
     @State private var showRevertSheet = false
     @State private var revertCommits: [Commit] = []
+    @State private var showCherryPickSheet = false
+    @State private var cherryPickCommits: [Commit] = []
     @State private var showDetachedHeadAlert = false
     @State private var themeRefreshTrigger = UUID()
+    @State private var createBranchFromCommitSHA: String?
     @AppStorage("toolbarDisplayMode") private var toolbarDisplayMode: ToolbarDisplayMode = .iconAndText
 
     enum ToolbarDisplayMode: String, CaseIterable {
@@ -58,16 +61,31 @@ struct ContentView: View {
                 }
             }
             .sheet(isPresented: $showNewBranchSheet) {
-                CreateBranchSheet(isPresented: $showNewBranchSheet)
-                    .environmentObject(appState)
+                CreateBranchSheet(
+                    isPresented: $showNewBranchSheet,
+                    fromCommitSHA: createBranchFromCommitSHA
+                )
+                .environmentObject(appState)
+                .onDisappear {
+                    // Clear the commit SHA when sheet is dismissed
+                    createBranchFromCommitSHA = nil
+                }
             }
             .sheet(isPresented: $showRevertSheet) {
                 RevertView(targetCommits: revertCommits)
                     .environmentObject(appState)
             }
+            .sheet(isPresented: $showCherryPickSheet) {
+                CherryPickView(commits: cherryPickCommits)
+                    .environmentObject(appState)
+            }
             .sheet(isPresented: $showMergeSheet) {
                 MergeBranchSheet(isPresented: $showMergeSheet)
                     .environmentObject(appState)
+            }
+            .overlay(alignment: .bottomTrailing) {
+                // Git operation progress overlay
+                GitOperationProgressView()
             }
             .overlay {
                 if gitOperationHandler.isOperationInProgress {
@@ -124,8 +142,48 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .openRepository)) { _ in showOpenPanel = true }
             .onReceive(NotificationCenter.default.publisher(for: .cloneRepository)) { _ in showCloneSheet = true }
             .onReceive(NotificationCenter.default.publisher(for: .newBranch)) { _ in showNewBranchSheet = true }
+            .onReceive(NotificationCenter.default.publisher(for: .createBranchFromCommit)) { notification in
+                handleCreateBranchFromCommit(notification)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .cherryPickCommit)) { notification in
+                handleCherryPickNotification(notification)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .revertCommit)) { notification in
+                handleRevertNotification(notification)
+            }
             .modifier(GitOperationListeners())
             .modifier(NavigationListeners(columnVisibility: $columnVisibility, selectedFileDiff: $selectedFileDiff))
+    }
+
+    private func handleCherryPickNotification(_ notification: Notification) {
+        // Handle single commit SHA
+        if let sha = notification.object as? String {
+            // Find the commit in the repository
+            if let repo = appState.currentRepository,
+               let commit = repo.commits.first(where: { $0.sha == sha }) {
+                cherryPickCommits = [commit]
+                showCherryPickSheet = true
+            }
+        }
+        // Handle multiple commits
+        else if let commits = notification.object as? [Commit] {
+            cherryPickCommits = commits
+            showCherryPickSheet = true
+        }
+    }
+
+    private func handleRevertNotification(_ notification: Notification) {
+        if let commits = notification.object as? [Commit] {
+            revertCommits = commits
+            showRevertSheet = true
+        }
+    }
+
+    private func handleCreateBranchFromCommit(_ notification: Notification) {
+        if let commitSHA = notification.object as? String {
+            createBranchFromCommitSHA = commitSHA
+            showNewBranchSheet = true
+        }
     }
 
     struct GitOperationListeners: ViewModifier {

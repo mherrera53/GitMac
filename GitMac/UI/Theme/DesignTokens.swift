@@ -75,6 +75,31 @@ enum DesignTokens {
         static let branchName: Font = .system(size: 12, weight: .medium)
         static let diffLine: Font = .system(size: 12, design: .monospaced)
 
+        // Compact variants for smaller screens (14" MacBook)
+        static let compactCaption2: Font = .system(size: 9)
+        static let compactCaption: Font = .system(size: 10)
+        static let compactCallout: Font = .system(size: 11)
+        static let compactBody: Font = .system(size: 12)
+
+        // Git-specific compact variants
+        static let compactCommitHash: Font = .system(size: 10, design: .monospaced)
+        static let compactCommitMessage: Font = .system(size: 12)
+        static let compactBranchName: Font = .system(size: 11, weight: .medium)
+        static let compactDiffLine: Font = .system(size: 11, design: .monospaced)
+
+        // Adaptive font helpers
+        static func adaptiveCommitHash() -> Font {
+            NSScreen.main?.is14InchMacBook == true ? compactCommitHash : commitHash
+        }
+
+        static func adaptiveCommitMessage() -> Font {
+            NSScreen.main?.is14InchMacBook == true ? compactCommitMessage : commitMessage
+        }
+
+        static func adaptiveBranchName() -> Font {
+            NSScreen.main?.is14InchMacBook == true ? compactBranchName : branchName
+        }
+
         // MARK: - NSFont Helpers (for AppKit components)
 
         /// Convierte tokens de Font a NSFont para uso en componentes AppKit
@@ -150,29 +175,43 @@ enum DesignTokens {
     enum Layout {
         /// Sidebar metrics (left panel)
         enum Sidebar {
-            static let minWidth: CGFloat = 120
-            static let idealWidth: CGFloat = 180
-            static let maxWidth: CGFloat = 300
+            static let minWidth: CGFloat = 100
+            static let idealWidth: CGFloat = 140
+            static let maxWidth: CGFloat = 250
+
+            // Adaptive defaults based on screen size
+            static var defaultWidth: CGFloat {
+                NSScreen.main?.is14InchMacBook == true ? 140 : 180
+            }
         }
 
         /// Staging Panel metrics (right inspector)
         enum StagingPanel {
-            static let minWidth: CGFloat = 180
-            static let idealWidth: CGFloat = 260
-            static let maxWidth: CGFloat = 380
+            static let minWidth: CGFloat = 140
+            static let idealWidth: CGFloat = 200
+            static let maxWidth: CGFloat = 320
+
+            // Adaptive defaults based on screen size
+            static var defaultWidth: CGFloat {
+                NSScreen.main?.is14InchMacBook == true ? 200 : 260
+            }
         }
 
         /// Bottom Panel metrics
         enum BottomPanel {
-            static let minHeight: CGFloat = 100
-            static let maxHeight: CGFloat = 500
-            static let defaultHeight: CGFloat = 180
+            static let minHeight: CGFloat = 80
+            static let maxHeight: CGFloat = 400
+
+            // Adaptive defaults based on screen size
+            static var defaultHeight: CGFloat {
+                NSScreen.main?.is14InchMacBook == true ? 120 : 180
+            }
         }
 
         /// Window metrics - compact with all 3 panels
         enum Window {
-            static let minWidth: CGFloat = 580   // 120 + 100 + 180 + margins
-            static let minHeight: CGFloat = 380
+            static let minWidth: CGFloat = 520   // Optimized for 14" MacBook
+            static let minHeight: CGFloat = 340
         }
 
         /// CI/CD Panel metrics
@@ -227,10 +266,22 @@ enum DesignTokens {
         static let iconLG: CGFloat = 20
         static let iconXL: CGFloat = 24
 
+        // Compact icon variants (14" MacBook)
+        static let compactIconXS: CGFloat = 11
+        static let compactIconSM: CGFloat = 12
+        static let compactIconMD: CGFloat = 14
+        static let compactIconLG: CGFloat = 18
+        static let compactIconXL: CGFloat = 22
+
         // Buttons
         static let buttonHeightSM: CGFloat = 24
         static let buttonHeightMD: CGFloat = 28
         static let buttonHeightLG: CGFloat = 32
+
+        // Compact button variants
+        static let compactButtonHeightSM: CGFloat = 22
+        static let compactButtonHeightMD: CGFloat = 24
+        static let compactButtonHeightLG: CGFloat = 28
 
         // Avatars
         static let avatarXS: CGFloat = 16
@@ -238,6 +289,38 @@ enum DesignTokens {
         static let avatarMD: CGFloat = 24
         static let avatarLG: CGFloat = 32
         static let avatarXL: CGFloat = 40
+
+        // Compact avatar variants
+        static let compactAvatarXS: CGFloat = 14
+        static let compactAvatarSM: CGFloat = 18
+        static let compactAvatarMD: CGFloat = 22
+        static let compactAvatarLG: CGFloat = 28
+        static let compactAvatarXL: CGFloat = 36
+
+        // Adaptive helpers
+        static func adaptiveIcon(_ standard: CGFloat) -> CGFloat {
+            guard NSScreen.main?.is14InchMacBook == true else { return standard }
+            switch standard {
+            case iconXS: return compactIconXS
+            case iconSM: return compactIconSM
+            case iconMD: return compactIconMD
+            case iconLG: return compactIconLG
+            case iconXL: return compactIconXL
+            default: return standard - 2
+            }
+        }
+
+        static func adaptiveAvatar(_ standard: CGFloat) -> CGFloat {
+            guard NSScreen.main?.is14InchMacBook == true else { return standard }
+            switch standard {
+            case avatarXS: return compactAvatarXS
+            case avatarSM: return compactAvatarSM
+            case avatarMD: return compactAvatarMD
+            case avatarLG: return compactAvatarLG
+            case avatarXL: return compactAvatarXL
+            default: return standard - 4
+            }
+        }
     }
 
     // MARK: - Sizing (Alias for backwards compatibility)
@@ -406,5 +489,28 @@ extension View {
     /// Aplica espaciado estándar de padding
     func padding(_ size: DesignTokens.Spacing.Type) -> some View {
         self.padding(DesignTokens.Spacing.md)
+    }
+
+    /// Apply adaptive font based on screen size
+    func adaptiveFont(_ standard: Font, compact: Font) -> some View {
+        self.font(NSScreen.main?.is14InchMacBook == true ? compact : standard)
+    }
+}
+
+// MARK: - Screen Detection
+
+extension NSScreen {
+    /// Detects if the current screen is a 14" MacBook
+    /// 14" MacBook Pro: 3024 x 1964 (Retina) → 1512 x 982 (points)
+    var is14InchMacBook: Bool {
+        let width = frame.width
+        // 14" MBP typically has width around 1512 points
+        // Allow some tolerance for different configurations
+        return width >= 1470 && width <= 1600
+    }
+
+    /// Detects if screen is compact (any small screen)
+    var isCompactScreen: Bool {
+        frame.width <= 1600 || frame.height <= 1000
     }
 }

@@ -85,11 +85,32 @@ struct Commit: Identifiable, Equatable, Hashable {
         return formatter.string(from: authorDate)
     }
 
+    /// Summary cleaned of markdown code block syntax (backticks)
+    var cleanSummary: String {
+        var cleaned = summary.trimmingCharacters(in: .whitespaces)
+        // Remove leading/trailing triple backticks
+        while cleaned.hasPrefix("```") {
+            cleaned = String(cleaned.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+        }
+        while cleaned.hasSuffix("```") {
+            cleaned = String(cleaned.dropLast(3)).trimmingCharacters(in: .whitespaces)
+        }
+        // Remove single backticks at start/end
+        while cleaned.hasPrefix("`") && !cleaned.hasPrefix("``") {
+            cleaned = String(cleaned.dropFirst(1)).trimmingCharacters(in: .whitespaces)
+        }
+        while cleaned.hasSuffix("`") && !cleaned.hasSuffix("``") {
+            cleaned = String(cleaned.dropLast(1)).trimmingCharacters(in: .whitespaces)
+        }
+        return cleaned
+    }
+
     var gravatarURL: URL? {
         let email = authorEmail.lowercased().trimmingCharacters(in: .whitespaces)
         guard let data = email.data(using: .utf8) else { return nil }
         let hash = data.md5Hash
-        return URL(string: "https://www.gravatar.com/avatar/\(hash)?d=identicon&s=80")
+        // Use identicon fallback to always return an image
+        return URL(string: "https://www.gravatar.com/avatar/\(hash)?s=80&d=identicon")
     }
 
     static func == (lhs: Commit, rhs: Commit) -> Bool {

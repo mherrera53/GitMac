@@ -20,6 +20,12 @@ struct PushFetchButtons: View {
             if let status = cicdStatus.lastBuildStatus {
                 CICDBadge(status: status, isLoading: cicdStatus.isLoading)
             }
+
+            // Sync button (one-click pull + push)
+            if aheadCount > 0 || behindCount > 0 {
+                SyncButton(currentBranch: currentBranch)
+            }
+
             // Push button with enhanced icons
             Button(action: onPush) {
                 HStack(spacing: DesignTokens.Spacing.xs) {

@@ -25,6 +25,12 @@ class StoreManager: ObservableObject {
     private init() {
         updateListenerTask = listenForTransactions()
 
+        // Check license validator immediately for instant Pro access
+        if GitMacLicenseValidator.shared.hasProFeatures {
+            isProUser = true
+            subscriptionStatus = .lifetime
+        }
+
         Task {
             await loadProducts()
             await updateSubscriptionStatus()
@@ -98,11 +104,16 @@ class StoreManager: ObservableObject {
             }
         }
 
-        isProUser = foundActiveSubscription
+        // Check both StoreKit subscription AND GitMacLicenseValidator
+        let hasLicenseValidatorAccess = GitMacLicenseValidator.shared.hasProFeatures
+        isProUser = foundActiveSubscription || hasLicenseValidatorAccess
 
-        if !foundActiveSubscription {
+        if !foundActiveSubscription && !hasLicenseValidatorAccess {
             purchasedProductIDs.removeAll()
             subscriptionStatus = .inactive
+        } else if hasLicenseValidatorAccess && !foundActiveSubscription {
+            // License validator grants Pro access
+            subscriptionStatus = .lifetime
         }
     }
 
@@ -168,10 +179,11 @@ enum SubscriptionStatus {
     case unknown
     case inactive
     case active(expiresAt: Date)
+    case lifetime
 
     var isActive: Bool {
         switch self {
-        case .active:
+        case .active, .lifetime:
             return true
         default:
             return false
@@ -188,6 +200,8 @@ enum SubscriptionStatus {
             let formatter = DateFormatter()
             formatter.dateStyle = .medium
             return "Active until \(formatter.string(from: date))"
+        case .lifetime:
+            return "Lifetime License"
         }
     }
 }

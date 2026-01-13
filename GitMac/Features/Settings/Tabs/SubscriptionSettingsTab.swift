@@ -3,12 +3,13 @@ import SwiftUI
 struct SubscriptionSettingsView: View {
     @ObservedObject private var themeManager = ThemeManager.shared
     @StateObject private var storeManager = StoreManager.shared
+    @StateObject private var licenseValidator = GitMacLicenseValidator.shared
     @State private var showSubscriptionSheet = false
 
     var body: some View {
         Form {
             SettingsSection(title: "Current Plan") {
-                if storeManager.isProUser {
+                if licenseValidator.hasProFeatures {
                     HStack {
                         Image(systemName: "star.fill")
                             .foregroundColor(AppTheme.warning)
@@ -17,10 +18,17 @@ struct SubscriptionSettingsView: View {
                                 .foregroundColor(AppTheme.textPrimary)
                                 .fontWeight(.semibold)
                                 .foregroundColor(AppTheme.textPrimary)
-                            Text(storeManager.subscriptionStatus.description)
-                                .foregroundColor(AppTheme.textPrimary)
-                                .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.textSecondary)
+                            if let info = licenseValidator.licenseInfo {
+                                Text(info.is_lifetime ? "Lifetime License" : "Active")
+                                    .foregroundColor(AppTheme.textPrimary)
+                                    .font(DesignTokens.Typography.caption)
+                                    .foregroundColor(AppTheme.textSecondary)
+                            } else {
+                                Text("Pro Features Unlocked")
+                                    .foregroundColor(AppTheme.textPrimary)
+                                    .font(DesignTokens.Typography.caption)
+                                    .foregroundColor(AppTheme.textSecondary)
+                            }
                         }
                         Spacer()
                         DSButton("Manage", variant: .secondary, size: .sm) {
@@ -66,7 +74,7 @@ struct SubscriptionSettingsView: View {
                                 .foregroundColor(AppTheme.textSecondary)
                         }
                         Spacer()
-                        if storeManager.isProUser {
+                        if licenseValidator.hasProFeatures {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(AppTheme.success)
                         } else {

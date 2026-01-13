@@ -26,6 +26,9 @@ struct Repository: Identifiable, Equatable {
     // Working directory state
     var status: RepositoryStatus = RepositoryStatus()
 
+    // Default branch (detected from GitHub or git config)
+    var defaultBranch: String?
+
     init(path: String) {
         self.id = UUID()
         self.path = path
@@ -40,7 +43,9 @@ struct Repository: Identifiable, Equatable {
 
     /// The currently checked out branch
     var currentBranch: Branch? {
-        branches.first { $0.isHead }
+        let headBranches = branches.filter { $0.isHead }
+        assert(headBranches.count <= 1, "Multiple branches marked as HEAD: \(headBranches.map(\.name))")
+        return headBranches.first
     }
 
     /// All commits (loaded on demand)

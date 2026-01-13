@@ -223,14 +223,11 @@ struct InsightsView: View {
 
             ForEach(metrics.topContributors.prefix(5)) { contributor in
                 HStack {
-                    Circle()
-                        .fill(AppTheme.info.opacity(0.3))
-                        .frame(width: DesignTokens.Size.avatarLG, height: DesignTokens.Size.avatarLG)
-                        .overlay(
-                            Text(String(contributor.name.prefix(1)).uppercased())
-                                .font(DesignTokens.Typography.callout.bold())
-                                .foregroundColor(AppTheme.info)
-                        )
+                    AvatarImageView(
+                        email: contributor.email,
+                        size: DesignTokens.Size.avatarLG,
+                        fallbackInitial: String(contributor.name.prefix(1))
+                    )
 
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                         Text(contributor.name)
@@ -410,7 +407,7 @@ class InsightsViewModel: ObservableObject {
         let dateFormatter = ISO8601DateFormatter()
         let sinceString = dateFormatter.string(from: sinceDate)
 
-        // Get commits in time range
+        // Get commits in time range with SHA for GitHub lookup
         let commitsResult = await shell.execute(
             "git",
             arguments: ["log", "--since=\(sinceString)", "--format=%H|%an|%ae|%aI", "--no-merges"],
@@ -445,19 +442,8 @@ class InsightsViewModel: ObservableObject {
         let sortedDaily = dailyCommits.map { InsightMetrics.DailyCommit(date: $0.key, count: $0.value) }
             .sorted { $0.date < $1.date }
 
-        // Calculate contributors
-        var contributorCounts: [String: (name: String, email: String, count: Int)] = [:]
-        for commit in commits {
-            if let existing = contributorCounts[commit.email] {
-                contributorCounts[commit.email] = (existing.name, existing.email, existing.count + 1)
-            } else {
-                contributorCounts[commit.email] = (commit.author, commit.email, 1)
-            }
-        }
-
-        let topContributors = contributorCounts.values
-            .map { InsightMetrics.InsightContributor(name: $0.name, email: $0.email, commits: $0.count) }
-            .sorted { $0.commits > $1.commits }
+        // Unify contributors by normalized name (handles same person with different emails)
+        let topContributors = await unifyContributors(commits: commits, repoPath: repoPath)
 
         // Calculate trends (compare first half to second half)
         let midpoint = commits.count / 2
@@ -469,7 +455,7 @@ class InsightsViewModel: ObservableObject {
             totalCommits: commits.count,
             averageCycleTime: 3600 * 24 * 2, // Placeholder - would need PR data
             mergeRate: 0.85, // Placeholder
-            activeContributors: contributorCounts.count,
+            activeContributors: topContributors.count,
             commitsTrend: commitsTrend,
             cycleTimeTrend: nil,
             mergeRateTrend: nil,
@@ -481,5 +467,217 @@ class InsightsViewModel: ObservableObject {
         )
 
         isLoading = false
+    }
+
+    /// Unify contributors by looking up GitHub team and commit info
+    private func unifyContributors(
+        commits: [(sha: String, author: String, email: String, date: Date)],
+        repoPath: String
+    ) async -> [InsightMetrics.InsightContributor] {
+        // First, try to get GitHub remote info
+        let remoteResult = await shell.execute(
+            "git",
+            arguments: ["remote", "get-url", "origin"],
+            workingDirectory: repoPath
+        )
+
+        var githubOwner: String?
+        var githubRepo: String?
+
+        if remoteResult.isSuccess {
+            let url = remoteResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Parse github.com/owner/repo from URL
+            if let match = url.range(of: "github.com[/:]([^/]+)/([^/.]+)", options: .regularExpression) {
+                let path = String(url[match])
+                let parts = path.replacingOccurrences(of: "github.com", with: "")
+                    .replacingOccurrences(of: ":", with: "/")
+                    .split(separator: "/")
+                    .map(String.init)
+                if parts.count >= 2 {
+                    githubOwner = parts[0]
+                    githubRepo = parts[1].replacingOccurrences(of: ".git", with: "")
+                }
+            }
+        }
+
+        // Get GitHub token for API calls
+        let token = try? await KeychainManager.shared.getGitHubToken()
+
+        // Map email -> GitHub username (for unification)
+        var emailToGitHubUser: [String: String] = [:]
+
+        if let owner = githubOwner, let repo = githubRepo, let token = token {
+            // Step 1: Load all contributors from GitHub API (includes all emails associated with commits)
+            let contributors = await fetchGitHubContributors(owner: owner, repo: repo, token: token)
+
+            // Step 2: For each contributor, get their commits to find all their emails
+            for contributor in contributors.prefix(20) { // Limit to avoid rate limits
+                let emails = await fetchContributorEmails(
+                    owner: owner,
+                    repo: repo,
+                    username: contributor.login,
+                    token: token
+                )
+                for email in emails {
+                    emailToGitHubUser[email.lowercased()] = contributor.login.lowercased()
+                }
+            }
+
+            // Step 3: For any remaining unknown emails, look up via commit SHA
+            let unknownEmails = Set(commits.map { $0.email.lowercased() }).subtracting(emailToGitHubUser.keys)
+            for email in unknownEmails.prefix(10) {
+                if let commit = commits.first(where: { $0.email.lowercased() == email }) {
+                    if let (username, _) = await fetchGitHubCommitAuthor(
+                        owner: owner,
+                        repo: repo,
+                        sha: commit.sha,
+                        token: token
+                    ) {
+                        emailToGitHubUser[email] = username.lowercased()
+                    }
+                }
+            }
+        }
+
+        // Build a map: normalized name -> GitHub username (if any email for that name has a GitHub user)
+        var nameToGitHubUser: [String: String] = [:]
+        for commit in commits {
+            let normalizedName = commit.author.lowercased().trimmingCharacters(in: .whitespaces)
+            let email = commit.email.lowercased()
+            if let username = emailToGitHubUser[email] {
+                nameToGitHubUser[normalizedName] = username
+            }
+        }
+
+        // Group commits by unified identifier (GitHub username preferred)
+        var unifiedContributors: [String: (name: String, email: String, count: Int)] = [:]
+
+        for commit in commits {
+            let email = commit.email.lowercased()
+            let normalizedName = commit.author.lowercased().trimmingCharacters(in: .whitespaces)
+
+            // Priority: 1. GitHub username from email, 2. GitHub username from name, 3. normalized name
+            let unifyKey: String
+            if let username = emailToGitHubUser[email] {
+                unifyKey = "gh:\(username)"
+            } else if let username = nameToGitHubUser[normalizedName] {
+                unifyKey = "gh:\(username)"
+            } else {
+                unifyKey = "name:\(normalizedName)"
+            }
+
+            if var existing = unifiedContributors[unifyKey] {
+                existing.count += 1
+                unifiedContributors[unifyKey] = existing
+            } else {
+                unifiedContributors[unifyKey] = (
+                    name: commit.author,
+                    email: email,
+                    count: 1
+                )
+            }
+        }
+
+        return unifiedContributors.values
+            .map { InsightMetrics.InsightContributor(name: $0.name, email: $0.email, commits: $0.count) }
+            .sorted { $0.commits > $1.commits }
+    }
+
+    /// Fetch all contributors from GitHub repository
+    private func fetchGitHubContributors(owner: String, repo: String, token: String) async -> [(login: String, avatarUrl: String)] {
+        guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/contributors?per_page=100") else {
+            return []
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+                return []
+            }
+
+            return json.compactMap { item -> (login: String, avatarUrl: String)? in
+                guard let login = item["login"] as? String,
+                      let avatarUrl = item["avatar_url"] as? String else {
+                    return nil
+                }
+                return (login, avatarUrl)
+            }
+        } catch {
+            return []
+        }
+    }
+
+    /// Fetch all emails associated with a contributor's commits
+    private func fetchContributorEmails(owner: String, repo: String, username: String, token: String) async -> [String] {
+        guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/commits?author=\(username)&per_page=30") else {
+            return []
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+                return []
+            }
+
+            var emails = Set<String>()
+            for item in json {
+                if let commit = item["commit"] as? [String: Any],
+                   let author = commit["author"] as? [String: Any],
+                   let email = author["email"] as? String {
+                    emails.insert(email)
+                }
+            }
+            return Array(emails)
+        } catch {
+            return []
+        }
+    }
+
+    /// Fetch GitHub commit author info by SHA
+    private func fetchGitHubCommitAuthor(
+        owner: String,
+        repo: String,
+        sha: String,
+        token: String
+    ) async -> (username: String, avatarURL: URL)? {
+        guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/commits/\(sha)") else {
+            return nil
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let author = json["author"] as? [String: Any],
+                  let login = author["login"] as? String,
+                  let avatarURLString = author["avatar_url"] as? String,
+                  let avatarURL = URL(string: avatarURLString) else {
+                return nil
+            }
+
+            return (login, avatarURL)
+        } catch {
+            return nil
+        }
     }
 }

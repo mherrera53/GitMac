@@ -11,6 +11,9 @@ struct CreateBranchSheet: View {
     @EnvironmentObject var appState: AppState
     @Binding var isPresented: Bool
 
+    // Optional commit SHA to create branch from
+    var fromCommitSHA: String? = nil
+
     @State private var branchName = ""
     @State private var baseBranch = "HEAD"
     @State private var checkoutAfterCreate = true
@@ -61,14 +64,28 @@ struct CreateBranchSheet: View {
                         .foregroundColor(AppTheme.textPrimary)
                 }
 
-                // Current branch
-                HStack(spacing: 4) {
-                    Image(systemName: "arrow.triangle.branch")
-                        .font(.system(size: 10))
-                        .foregroundColor(AppTheme.success)
-                    Text(currentBranchName)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(AppTheme.textPrimary)
+                // Current branch or commit SHA
+                if let commitSHA = fromCommitSHA {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.turn.down.right")
+                            .font(.system(size: 10))
+                            .foregroundColor(AppTheme.warning)
+                        Text("from commit")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppTheme.textSecondary)
+                        Text(String(commitSHA.prefix(7)))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(AppTheme.textPrimary)
+                    }
+                } else {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.triangle.branch")
+                            .font(.system(size: 10))
+                            .foregroundColor(AppTheme.success)
+                        Text(currentBranchName)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(AppTheme.textPrimary)
+                    }
                 }
 
                 Spacer()
@@ -104,14 +121,34 @@ struct CreateBranchSheet: View {
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(AppTheme.textSecondary)
 
-                    Picker("", selection: $baseBranch) {
-                        Text("Current HEAD").tag("HEAD")
-                        ForEach(localBranches) { branch in
-                            Text(branch.name).tag(branch.name)
+                    if fromCommitSHA != nil {
+                        // Show locked display when creating from specific commit
+                        HStack {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(AppTheme.textMuted)
+                            Text(baseBranch)
+                                .font(.system(size: 13))
+                                .foregroundColor(AppTheme.textSecondary)
+                            Spacer()
                         }
+                        .padding(8)
+                        .background(AppTheme.backgroundTertiary.opacity(0.5))
+                        .cornerRadius(6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(AppTheme.border, lineWidth: 1)
+                        )
+                    } else {
+                        Picker("", selection: $baseBranch) {
+                            Text("Current HEAD").tag("HEAD")
+                            ForEach(localBranches) { branch in
+                                Text(branch.name).tag(branch.name)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
                     }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
                 }
 
                 // Checkout toggle
@@ -163,6 +200,12 @@ struct CreateBranchSheet: View {
         }
         .frame(width: 380, height: 350)
         .background(AppTheme.backgroundSecondary)
+        .onAppear {
+            // If creating from a specific commit, set the base branch to that commit SHA
+            if let commitSHA = fromCommitSHA {
+                baseBranch = commitSHA
+            }
+        }
     }
 
     private func createBranch() {

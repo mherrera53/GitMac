@@ -44,6 +44,12 @@ struct SettingsView: View {
                 }
                 .tag("workspace")
 
+            WorkspaceManagerTab()
+                .tabItem {
+                    Label("Manager", systemImage: "chart.bar.doc.horizontal")
+                }
+                .tag("manager")
+
             KeyboardShortcutsView()
                 .tabItem {
                     Label("Shortcuts", systemImage: "keyboard")

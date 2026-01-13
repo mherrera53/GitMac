@@ -221,15 +221,17 @@ struct CherryPickCommitRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             HStack {
-                Circle()
-                    .fill(AppTheme.accent)
-                    .frame(width: 8, height: 8)
+                AvatarImageView(
+                    email: commit.authorEmail,
+                    size: 20,
+                    fallbackInitial: String(commit.author.prefix(1))
+                )
 
                 Text(commit.shortSHA)
                     .font(.caption.monospaced())
                     .foregroundColor(AppTheme.textPrimary)
 
-                Text(commit.summary)
+                Text(commit.cleanSummary)
                     .lineLimit(1)
 
                 Spacer()

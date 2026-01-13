@@ -5,8 +5,13 @@ struct CommitDetailPanel: View {
     let onClose: () -> Void
     var onOpenDiff: ((Commit) -> Void)? = nil
 
+    @EnvironmentObject var appState: AppState
     @ObservedObject private var themeManager = ThemeManager.shared
     @State private var selectedTab: DetailTab = .info
+    @State private var changedFiles: [CommitFile] = []
+    @State private var isLoadingFiles = false
+
+    private let gitEngine = GitEngine()
 
     enum DetailTab: String, CaseIterable {
         case info = "Info"
@@ -31,17 +36,28 @@ struct CommitDetailPanel: View {
                             Button {
                                 selectedTab = tab
                             } label: {
-                                Text(tab.rawValue)
-                                    .font(DesignTokens.Typography.callout)
-                                    .fontWeight(selectedTab == tab ? .semibold : .regular)
-                                    .foregroundColor(
-                                        selectedTab == tab ? AppTheme.accent : theme.textSecondary
-                                    )
-                                    .padding(.horizontal, DesignTokens.Spacing.md)
-                                    .padding(.vertical, DesignTokens.Spacing.sm)
-                                    .background(
-                                        selectedTab == tab ? theme.backgroundSecondary : Color.clear
-                                    )
+                                HStack(spacing: 4) {
+                                    Text(tab.rawValue)
+                                        .font(DesignTokens.Typography.callout)
+                                        .fontWeight(selectedTab == tab ? .semibold : .regular)
+                                    if tab == .files && !changedFiles.isEmpty {
+                                        Text("\(changedFiles.count)")
+                                            .font(DesignTokens.Typography.caption2)
+                                            .foregroundColor(theme.textMuted)
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(theme.backgroundSecondary)
+                                            .cornerRadius(4)
+                                    }
+                                }
+                                .foregroundColor(
+                                    selectedTab == tab ? AppTheme.accent : theme.textSecondary
+                                )
+                                .padding(.horizontal, DesignTokens.Spacing.md)
+                                .padding(.vertical, DesignTokens.Spacing.sm)
+                                .background(
+                                    selectedTab == tab ? theme.backgroundSecondary : Color.clear
+                                )
                             }
                             .buttonStyle(.plain)
                         }
@@ -66,6 +82,9 @@ struct CommitDetailPanel: View {
                 }
                 .frame(width: 400)
                 .background(theme.background)
+                .task(id: commit.sha) {
+                    await loadFiles(for: commit)
+                }
             )
         } else {
             return AnyView(
@@ -79,6 +98,23 @@ struct CommitDetailPanel: View {
                 .frame(width: 400)
                 .background(theme.background)
             )
+        }
+    }
+
+    private func loadFiles(for commit: Commit) async {
+        guard let path = appState.currentRepository?.path else { return }
+        isLoadingFiles = true
+        defer { isLoadingFiles = false }
+
+        do {
+            let files = try await gitEngine.getCommitFiles(sha: commit.sha, at: path)
+            await MainActor.run {
+                changedFiles = files
+            }
+        } catch {
+            await MainActor.run {
+                changedFiles = []
+            }
         }
     }
 
@@ -103,35 +139,29 @@ struct CommitDetailPanel: View {
             }
 
             // Commit summary
-            Text(commit.summary)
+            Text(commit.cleanSummary)
                 .font(DesignTokens.Typography.body)
                 .fontWeight(.semibold)
                 .foregroundColor(theme.text)
                 .lineLimit(2)
 
-            // Metadata with enhanced icons
+            // Metadata with avatar
             HStack(spacing: DesignTokens.Spacing.sm) {
-                Label {
-                    Text(commit.author)
-                        .font(DesignTokens.Typography.caption)
-                        .foregroundColor(theme.textSecondary)
-                } icon: {
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(AppTheme.accent)
-                        .symbolRenderingMode(.hierarchical)
-                }
+                AvatarImageView(
+                    email: commit.authorEmail,
+                    size: 20,
+                    fallbackInitial: String(commit.author.prefix(1))
+                )
 
-                Label {
-                    Text(commit.shortSHA)
-                        .font(DesignTokens.Typography.caption.monospaced())
-                        .foregroundColor(theme.textSecondary)
-                } icon: {
-                    Image(systemName: "number.circle.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(theme.textMuted)
-                        .symbolRenderingMode(.hierarchical)
-                }
+                Text(commit.author)
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundColor(theme.textSecondary)
+
+                Spacer()
+
+                Text(commit.shortSHA)
+                    .font(DesignTokens.Typography.caption.monospaced())
+                    .foregroundColor(theme.textMuted)
             }
         }
         .padding(DesignTokens.Spacing.md)
@@ -196,29 +226,95 @@ struct CommitDetailPanel: View {
     }
 
     private func commitFilesView(commit: Commit, theme: Color.Theme) -> some View {
-        VStack {
-            Text("Files changed")
-                .font(DesignTokens.Typography.caption)
-                .foregroundColor(theme.textMuted)
-
-            if let filesChanged = commit.filesChanged, filesChanged > 0 {
-                FileChangesIndicator(
-                    additions: commit.additions ?? 0,
-                    deletions: commit.deletions ?? 0,
-                    filesChanged: filesChanged
-                )
-                .padding()
-            } else {
-                Text("No file change information")
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Changed Files")
                     .font(DesignTokens.Typography.caption)
+                    .fontWeight(.semibold)
                     .foregroundColor(theme.textMuted)
-                    .padding()
+                Spacer()
+                if !changedFiles.isEmpty {
+                    FileChangesIndicator(
+                        additions: changedFiles.reduce(0) { $0 + $1.additions },
+                        deletions: changedFiles.reduce(0) { $0 + $1.deletions },
+                        filesChanged: changedFiles.count,
+                        compact: true
+                    )
+                }
+            }
+            .padding(.horizontal, DesignTokens.Spacing.md)
+            .padding(.vertical, DesignTokens.Spacing.sm)
+
+            Divider()
+
+            if isLoadingFiles {
+                Spacer()
+                ProgressView()
+                    .scaleEffect(0.8)
+                Spacer()
+            } else if changedFiles.isEmpty {
+                Spacer()
+                VStack(spacing: 8) {
+                    Image(systemName: "doc.text")
+                        .font(.system(size: 24))
+                        .foregroundColor(theme.textMuted)
+                    Text("No files changed")
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundColor(theme.textMuted)
+                }
+                Spacer()
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(changedFiles) { file in
+                            commitFileRow(file: file, theme: theme)
+                        }
+                    }
+                }
             }
         }
     }
 
+    private func commitFileRow(file: CommitFile, theme: Color.Theme) -> some View {
+        HStack(spacing: 8) {
+            // Status icon
+            Image(systemName: file.status.icon)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(file.status.color)
+                .frame(width: 16)
+
+            // File name
+            Text((file.path as NSString).lastPathComponent)
+                .font(DesignTokens.Typography.caption)
+                .foregroundColor(theme.text)
+                .lineLimit(1)
+
+            Spacer()
+
+            // Additions/deletions
+            HStack(spacing: 4) {
+                if file.additions > 0 {
+                    Text("+\(file.additions)")
+                        .font(DesignTokens.Typography.caption2.monospaced())
+                        .foregroundColor(AppTheme.success)
+                }
+                if file.deletions > 0 {
+                    Text("-\(file.deletions)")
+                        .font(DesignTokens.Typography.caption2.monospaced())
+                        .foregroundColor(AppTheme.error)
+                }
+            }
+        }
+        .padding(.horizontal, DesignTokens.Spacing.md)
+        .padding(.vertical, DesignTokens.Spacing.xs)
+        .background(theme.background)
+    }
+
     private func commitDiffView(commit: Commit, theme: Color.Theme) -> some View {
         VStack(spacing: DesignTokens.Spacing.md) {
+            Spacer()
+
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 32))
                 .foregroundColor(theme.textMuted)
@@ -227,13 +323,13 @@ struct CommitDetailPanel: View {
                 .font(DesignTokens.Typography.body.weight(.semibold))
                 .foregroundColor(theme.text)
 
-            Text("Open this commit in the full Kaleidoscope view to inspect changes.")
+            Text("Open this commit in the full diff view to inspect changes.")
                 .font(DesignTokens.Typography.caption)
                 .foregroundColor(theme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
-             Button {
+            Button {
                 onOpenDiff?(commit)
             } label: {
                 Text("Open Diff")
@@ -245,9 +341,10 @@ struct CommitDetailPanel: View {
                     .cornerRadius(DesignTokens.CornerRadius.md)
             }
             .buttonStyle(.plain)
+
+            Spacer()
         }
         .padding()
-        .frame(maxHeight: .infinity)
     }
 
     private func infoRow(label: String, value: String, theme: Color.Theme) -> some View {
