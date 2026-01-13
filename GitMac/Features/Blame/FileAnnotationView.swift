@@ -239,31 +239,28 @@ struct AnnotationRow: View {
     }
     
     // MARK: - Commit Info
-    
+
     private var commitInfo: some View {
         HStack(spacing: 8) {
-            // Author avatar (first letter)
-            Text(annotation.author.prefix(1).uppercased())
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(AppTheme.textPrimary)
-                .frame(width: 24, height: 24)
-                .background(
-                    Circle()
-                        .fill(authorColor)
-                )
-            
+            // Author avatar
+            AvatarImageView(
+                email: annotation.email,
+                size: 24,
+                fallbackInitial: String(annotation.author.prefix(1))
+            )
+
             // Author name
             Text(annotation.author)
                 .frame(width: 120, alignment: .leading)
                 .lineLimit(1)
                 .truncationMode(.tail)
-            
+
             // Commit SHA
             Text(annotation.shortSHA)
                 .font(.system(.caption, design: .monospaced))
                 .foregroundColor(AppTheme.textPrimary)
                 .frame(width: 60, alignment: .leading)
-            
+
             // Date
             Text(annotation.relativeDate)
                 .font(.caption)

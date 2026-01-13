@@ -148,6 +148,7 @@ class HistoryViewModel: ObservableObject {
         var lines: [BlameLine] = []
         var currentSha = ""
         var currentAuthor = ""
+        var currentEmail = ""
         var currentDate = Date()
         var lineNumber = 0
 
@@ -161,7 +162,7 @@ class HistoryViewModel: ObservableObject {
                 lines.append(BlameLine(
                     commitSHA: currentSha,
                     author: currentAuthor,
-                    email: "",
+                    email: currentEmail,
                     date: currentDate,
                     message: "",
                     lineNumber: lineNumber,
@@ -172,6 +173,10 @@ class HistoryViewModel: ObservableObject {
                 currentSha = String(line.prefix(40))
             } else if line.hasPrefix("author ") {
                 currentAuthor = String(line.dropFirst(7))
+            } else if line.hasPrefix("author-mail ") {
+                // Extract email from <email@example.com> format
+                let mailPart = String(line.dropFirst(12))
+                currentEmail = mailPart.trimmingCharacters(in: CharacterSet(charactersIn: "<>"))
             } else if line.hasPrefix("author-time ") {
                 if let timestamp = TimeInterval(line.dropFirst(12)) {
                     currentDate = Date(timeIntervalSince1970: timestamp)
@@ -257,17 +262,19 @@ struct FileCommitRow: View {
                     .background(AppTheme.accent.opacity(0.1))
                     .cornerRadius(4)
 
-                Text(commit.summary)
+                Text(commit.cleanSummary)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(1)
             }
 
             HStack {
-                Image(systemName: "person.fill")
-                    .font(.system(size: 10))
-                    .foregroundColor(AppTheme.textSecondary)
-                
+                AvatarImageView(
+                    email: commit.authorEmail,
+                    size: 16,
+                    fallbackInitial: String(commit.author.prefix(1))
+                )
+
                 Text(commit.author)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(AppTheme.textSecondary)
@@ -424,40 +431,42 @@ struct BlameLineRow: View {
 
     // Reuse BlameView layout constants
     private enum Layout {
-        static let authorIndicatorWidth: CGFloat = DesignTokens.Spacing.xxs + 1  // 3px color bar
+        static let avatarSize: CGFloat = 18
         static let shaColumnWidth: CGFloat = 60      // Width for 7-char SHA
         static let authorColumnWidth: CGFloat = 100  // Typical author name length
         static let dateColumnWidth: CGFloat = 50     // Relative date format ("2h ago")
         static let lineNumberWidth: CGFloat = 40     // Line numbers up to 9999
-        static let blameInfoWidth: CGFloat = 240     // Total width of blame metadata section
+        static let blameInfoWidth: CGFloat = 270     // Total width of blame metadata section
     }
 
     var body: some View {
         HStack(spacing: 0) {
             // Blame info
             HStack(spacing: DesignTokens.Spacing.sm) {
-                Rectangle()
-                    .fill(color)
-                    .frame(width: Layout.authorIndicatorWidth)
+                AvatarImageView(
+                    email: line.email,
+                    size: Layout.avatarSize,
+                    fallbackInitial: String(line.author.prefix(1))
+                )
 
                 Text(line.shortSHA)
-                    .font(.system(size: 11, weight: .bold, design: .monospaced)) // Monospaced & Bold
-                    .foregroundColor(AppTheme.accent) // Accent color
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(AppTheme.accent)
                     .frame(width: Layout.shaColumnWidth, alignment: .leading)
 
                 Text(line.author)
-                    .font(.system(size: 11, weight: .medium)) // Medium weight
-                    .foregroundColor(AppTheme.textSecondary) // Secondary text color
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(AppTheme.textSecondary)
                     .frame(width: Layout.authorColumnWidth, alignment: .leading)
                     .lineLimit(1)
 
                 Text(line.relativeDate)
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textMuted) // Muted text color
+                    .foregroundColor(AppTheme.textMuted)
                     .frame(width: Layout.dateColumnWidth, alignment: .trailing)
             }
             .frame(width: Layout.blameInfoWidth)
-            .padding(.vertical, 1)  // Precise 1px padding for tight row spacing
+            .padding(.vertical, 1)
             .background(isHovered ? AppTheme.textSecondary.opacity(0.1) : Color.clear)
 
             Divider()

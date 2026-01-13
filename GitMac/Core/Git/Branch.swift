@@ -2,7 +2,9 @@ import Foundation
 
 /// Represents a Git branch
 struct Branch: Identifiable, Equatable, Hashable {
-    let id: UUID
+    /// Stable ID includes isHead so SwiftUI detects checkout changes
+    var id: String { "\(fullName)-\(isHead)" }
+
     let name: String
     let fullName: String
     let isRemote: Bool
@@ -22,7 +24,6 @@ struct Branch: Identifiable, Equatable, Hashable {
         targetSHA: String,
         upstream: UpstreamInfo? = nil
     ) {
-        self.id = UUID()
         self.name = name
         self.fullName = fullName
         self.isRemote = isRemote
@@ -44,9 +45,21 @@ struct Branch: Identifiable, Equatable, Hashable {
         return name
     }
 
+    /// Check if this is the main/default branch
+    /// Note: This requires the repository context to be set
+    /// Use isMainBranch(in:) to check against a specific repository
     var isMainBranch: Bool {
-        let mainNames = ["main", "master", "develop", "development"]
-        return mainNames.contains(name.lowercased())
+        // Fallback when no repository context is available
+        let commonMainNames = ["main", "master"]
+        return commonMainNames.contains(name.lowercased())
+    }
+
+    /// Check if this is the main/default branch for a specific repository
+    func isMainBranch(in repository: Repository?) -> Bool {
+        guard let repo = repository, let defaultBranch = repo.defaultBranch else {
+            return isMainBranch
+        }
+        return name.lowercased() == defaultBranch.lowercased()
     }
 
     /// Alias for isHead - whether this is the current checked out branch
@@ -61,7 +74,7 @@ struct Branch: Identifiable, Equatable, Hashable {
     }
 
     static func == (lhs: Branch, rhs: Branch) -> Bool {
-        lhs.fullName == rhs.fullName
+        lhs.fullName == rhs.fullName && lhs.isHead == rhs.isHead
     }
 
     func hash(into hasher: inout Hasher) {

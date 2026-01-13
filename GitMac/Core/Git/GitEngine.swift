@@ -76,6 +76,7 @@ actor GitEngine {
         async let remotes = getRemotes(at: path)
         async let stashes = getStashes(at: path)
         async let status = getStatus(at: path)
+        async let defaultBranch = getDefaultBranch(at: path)
 
         repo.head = try? await head
         repo.branches = (try? await branches) ?? []
@@ -84,8 +85,85 @@ actor GitEngine {
         repo.remotes = (try? await remotes) ?? []
         repo.stashes = (try? await stashes) ?? []
         repo.status = (try? await status) ?? RepositoryStatus()
+        repo.defaultBranch = await defaultBranch
 
         return repo
+    }
+
+    /// Get default/main branch for the repository
+    /// Uses multiple strategies:
+    /// 1. gh CLI to detect GitHub's default branch
+    /// 2. git symbolic-ref for origin/HEAD
+    /// 3. Fallback to common names
+    func getDefaultBranch(at path: String) async -> String {
+        // Strategy 1: Use gh CLI to get default branch from GitHub
+        let ghResult = await shellExecutor.execute(
+            "gh",
+            arguments: ["repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name"],
+            workingDirectory: path
+        )
+
+        if ghResult.exitCode == 0 {
+            let branchName = ghResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !branchName.isEmpty && !branchName.contains("error") && !branchName.contains("not found") {
+                return branchName
+            }
+        }
+
+        // Strategy 2: Check git's symbolic-ref for origin/HEAD
+        let symbolicResult = await shellExecutor.execute(
+            "git",
+            arguments: ["symbolic-ref", "refs/remotes/origin/HEAD"],
+            workingDirectory: path
+        )
+
+        if symbolicResult.exitCode == 0 {
+            let ref = symbolicResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Output is like "refs/remotes/origin/main"
+            if let branchName = ref.split(separator: "/").last {
+                return String(branchName)
+            }
+        }
+
+        // Strategy 3: Try to set origin/HEAD if not set
+        let setHeadResult = await shellExecutor.execute(
+            "git",
+            arguments: ["remote", "set-head", "origin", "-a"],
+            workingDirectory: path
+        )
+
+        if setHeadResult.exitCode == 0 {
+            // Try reading symbolic-ref again
+            let retryResult = await shellExecutor.execute(
+                "git",
+                arguments: ["symbolic-ref", "refs/remotes/origin/HEAD"],
+                workingDirectory: path
+            )
+
+            if retryResult.exitCode == 0 {
+                let ref = retryResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let branchName = ref.split(separator: "/").last {
+                    return String(branchName)
+                }
+            }
+        }
+
+        // Strategy 4: Check git config for init.defaultBranch
+        let configResult = await shellExecutor.execute(
+            "git",
+            arguments: ["config", "--get", "init.defaultBranch"],
+            workingDirectory: path
+        )
+
+        if configResult.exitCode == 0 {
+            let branchName = configResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !branchName.isEmpty {
+                return branchName
+            }
+        }
+
+        // Fallback: Return "main" as most repos use it now
+        return "main"
     }
 
     // MARK: - Reference Operations
@@ -153,8 +231,7 @@ actor GitEngine {
             throw GitError.commandFailed("git for-each-ref", result.stderr)
         }
 
-        _ = try? await getHeadSHA(at: path)
-
+        // Note: %(HEAD) marker from git outputs "*" for the current branch
         return result.stdout
             .components(separatedBy: .newlines)
             .filter { !$0.isEmpty }
@@ -172,7 +249,7 @@ actor GitEngine {
                     name: name,
                     fullName: "refs/heads/\(name)",
                     isRemote: false,
-                    isHead: isHead,  // Only use git's HEAD marker, not SHA comparison
+                    isHead: isHead,
                     trackingBranch: upstream,
                     targetSHA: sha,
                     upstream: trackInfo

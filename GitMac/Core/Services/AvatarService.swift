@@ -256,7 +256,47 @@ actor AvatarService {
             return URL(string: "https://avatars.githubusercontent.com/\(username)?size=80")
         }
 
+        // Search GitHub for user by email
+        if let avatarURL = await searchGitHubUserByEmail(email: emailLower, token: token) {
+            repoAuthorsCache[emailLower] = avatarURL
+            return avatarURL
+        }
+
         return nil
+    }
+
+    /// Search GitHub for a user by their email address
+    private func searchGitHubUserByEmail(email: String, token: String) async -> URL? {
+        // Use GitHub search API to find user by email
+        let query = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? email
+        guard let url = URL(string: "https://api.github.com/search/users?q=\(query)+in:email") else { return nil }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let items = json["items"] as? [[String: Any]],
+                  let firstUser = items.first,
+                  let avatarUrl = firstUser["avatar_url"] as? String,
+                  let avatarURL = URL(string: avatarUrl) else {
+                return nil
+            }
+
+            // Cache the username for future use
+            if let username = firstUser["login"] as? String {
+                setGithubUsername(username, for: email)
+            }
+
+            return avatarURL
+        } catch {
+            return nil
+        }
     }
 
     /// Load commit authors from a GitHub repository

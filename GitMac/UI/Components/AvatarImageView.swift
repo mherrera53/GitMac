@@ -113,7 +113,8 @@ struct AvatarImageView: View {
 
     private func gravatarURL() -> URL? {
         guard !emailHash.isEmpty else { return nil }
-        return URL(string: "https://www.gravatar.com/avatar/\(emailHash)?s=\(pixelSize)&d=404")
+        // Use identicon as fallback instead of 404 - always returns an image
+        return URL(string: "https://www.gravatar.com/avatar/\(emailHash)?s=\(pixelSize)&d=identicon")
     }
 
     private func loadAvatar() async {

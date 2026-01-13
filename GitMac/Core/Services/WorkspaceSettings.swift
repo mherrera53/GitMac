@@ -75,7 +75,7 @@ class WorkspaceSettingsManager: ObservableObject {
 
 // MARK: - Workspace Configuration
 
-struct WorkspaceConfig: Codable {
+struct WorkspaceConfig: Codable, Equatable, Hashable {
     // MARK: - Repository Info
     var displayName: String?  // Custom display name/alias for the repo
     var repositoryColor: String?  // Hex color for visual identification

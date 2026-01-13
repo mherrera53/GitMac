@@ -33,6 +33,9 @@ struct MarkdownView: View {
     /// Threshold for switching to fast renderer
     private static let fastRenderThreshold = 500
 
+    /// Threshold for switching to ultra-fast chunked renderer
+    private static let ultraFastRenderThreshold = 3000
+
     init(content: String, fileName: String? = nil) {
         self.content = content
         self.fileName = fileName
@@ -50,6 +53,9 @@ struct MarkdownView: View {
             if hasMermaid {
                 // Use mixed renderer for Mermaid content
                 MermaidMarkdownView(content: content, isDarkMode: isDarkMode)
+            } else if lineCount > Self.ultraFastRenderThreshold {
+                // Ultra-fast chunked renderer for very large files
+                ChunkedMarkdownView(content: content, isDarkMode: isDarkMode)
             } else if lineCount > Self.fastRenderThreshold {
                 FastMarkdownView(content: content, isDarkMode: isDarkMode)
             } else {
@@ -74,7 +80,11 @@ struct MarkdownView: View {
                     .foregroundColor(AppTheme.accent)
             }
 
-            if lineCount > Self.fastRenderThreshold {
+            if lineCount > Self.ultraFastRenderThreshold {
+                Label("Chunked mode", systemImage: "bolt.horizontal.fill")
+                    .font(.caption)
+                    .foregroundColor(AppTheme.accent)
+            } else if lineCount > Self.fastRenderThreshold {
                 Label("Fast mode", systemImage: "bolt.fill")
                     .font(.caption)
                     .foregroundColor(AppTheme.warning)
@@ -243,6 +253,113 @@ private struct MermaidSegmentView: View {
 }
 
 // RectCorner is defined in UI/Components/Utilities/ViewModifiers.swift
+
+// MARK: - Chunked Markdown View (For Very Large Files 3000+ lines)
+
+/// Ultra-fast chunked markdown renderer for files with 3000+ lines
+/// Splits content into chunks and uses LazyVStack for virtualized rendering
+/// Only renders visible chunks, dramatically reducing memory and CPU usage
+struct ChunkedMarkdownView: View {
+    let content: String
+    let isDarkMode: Bool
+
+    /// Number of lines per chunk - balance between rendering speed and scroll smoothness
+    private static let linesPerChunk = 150
+
+    /// Pre-computed chunks for efficient rendering
+    private var chunks: [MarkdownChunk] {
+        let lines = content.components(separatedBy: "\n")
+        var result: [MarkdownChunk] = []
+        var currentIndex = 0
+        var chunkId = 0
+
+        while currentIndex < lines.count {
+            let endIndex = min(currentIndex + Self.linesPerChunk, lines.count)
+            let chunkLines = lines[currentIndex..<endIndex]
+            let chunkContent = chunkLines.joined(separator: "\n")
+
+            result.append(MarkdownChunk(
+                id: chunkId,
+                content: chunkContent,
+                startLine: currentIndex + 1,
+                endLine: endIndex
+            ))
+
+            currentIndex = endIndex
+            chunkId += 1
+        }
+
+        return result
+    }
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                ForEach(chunks) { chunk in
+                    ChunkView(chunk: chunk, isDarkMode: isDarkMode)
+                }
+            }
+            .padding(DesignTokens.Spacing.lg)
+        }
+    }
+}
+
+/// Represents a chunk of markdown content
+private struct MarkdownChunk: Identifiable {
+    let id: Int
+    let content: String
+    let startLine: Int
+    let endLine: Int
+}
+
+/// View that renders a single chunk of markdown
+private struct ChunkView: NSViewRepresentable {
+    let chunk: MarkdownChunk
+    let isDarkMode: Bool
+
+    func makeNSView(context: Context) -> NSTextView {
+        let textView = NSTextView()
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.drawsBackground = false
+        textView.textContainerInset = .zero
+
+        // Performance optimizations
+        textView.isAutomaticSpellingCorrectionEnabled = false
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
+        textView.isAutomaticLinkDetectionEnabled = true
+        textView.usesFontPanel = false
+        textView.usesRuler = false
+        textView.allowsUndo = false
+
+        // Non-contiguous layout for this chunk
+        textView.layoutManager?.allowsNonContiguousLayout = true
+
+        // Make it size to content
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.textContainer?.widthTracksTextView = true
+        textView.textContainer?.heightTracksTextView = false
+
+        return textView
+    }
+
+    func updateNSView(_ textView: NSTextView, context: Context) {
+        let attributed = FastMarkdownRenderer.render(chunk.content, isDarkMode: isDarkMode)
+        textView.textStorage?.setAttributedString(attributed)
+
+        // Calculate intrinsic height
+        if let layoutManager = textView.layoutManager,
+           let textContainer = textView.textContainer {
+            layoutManager.ensureLayout(for: textContainer)
+            let size = layoutManager.usedRect(for: textContainer).size
+            textView.frame.size.height = size.height
+            textView.invalidateIntrinsicContentSize()
+        }
+    }
+}
 
 // MARK: - Fast Markdown View (For Large Files)
 

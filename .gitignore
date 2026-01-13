@@ -36,3 +36,6 @@ Frameworks/
 GHOSTTY_*.md
 TERMINAL_INTEGRATION_STEPS.md
 build/
+
+# License configuration (contains device-specific Pro activation)
+GitMac/Services/LicenseValidator.swift

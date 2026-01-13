@@ -14,17 +14,13 @@ struct GraphMinimapView: View {
 
         return VStack(spacing: 0) {
             // Header
-            HStack {
-                Text("OVERVIEW")
-                    .font(DesignTokens.Typography.caption2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(theme.text)
-
-                Spacer()
-            }
-            .padding(.horizontal, DesignTokens.Spacing.sm)
-            .padding(.vertical, DesignTokens.Spacing.xs)
-            .background(theme.backgroundSecondary)
+            Text("MAP")
+                .font(DesignTokens.Typography.caption2)
+                .fontWeight(.semibold)
+                .foregroundColor(theme.text)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, DesignTokens.Spacing.xs)
+                .background(theme.backgroundSecondary)
 
             Divider()
 
@@ -36,16 +32,17 @@ struct GraphMinimapView: View {
 
                     // Commit dots
                     Canvas { ctx, size in
-                        let scale = size.height / max(totalHeight, 1)
+                        let nodeCount = max(nodes.count, 1)
+                        let rowHeight = size.height / CGFloat(nodeCount)
 
                         for (index, node) in nodes.enumerated() {
-                            let y = CGFloat(index) * 3 * scale // Simplified positioning
-                            let x = CGFloat(node.lane) * 4 + 4
+                            let y = CGFloat(index) * rowHeight + rowHeight / 2
+                            let x = CGFloat(node.lane) * 6 + 8
 
-                            let dotSize: CGFloat = 2
+                            let dotSize: CGFloat = max(2, min(rowHeight * 0.6, 4))
                             let dotRect = CGRect(
                                 x: x - dotSize/2,
-                                y: y,
+                                y: y - dotSize/2,
                                 width: dotSize,
                                 height: dotSize
                             )

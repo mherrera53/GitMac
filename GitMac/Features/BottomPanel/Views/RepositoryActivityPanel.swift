@@ -293,15 +293,11 @@ struct RepositoryActivityPanel: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
                 // Header
                 HStack(spacing: DesignTokens.Spacing.md) {
-                    AsyncImage(url: contributor.gravatarURL) { image in
-                        image.resizable()
-                    } placeholder: {
-                        Image(systemName: "person.circle.fill")
-                            .resizable()
-                            .foregroundColor(AppTheme.textSecondary)
-                    }
-                    .frame(width: 64, height: 64)
-                    .clipShape(Circle())
+                    AvatarImageView(
+                        email: contributor.email,
+                        size: 64,
+                        fallbackInitial: String(contributor.name.prefix(1))
+                    )
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text(contributor.name)
@@ -443,15 +439,11 @@ struct ContributorRow: View {
     
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.sm) {
-            AsyncImage(url: contributor.gravatarURL) { image in
-                image.resizable()
-            } placeholder: {
-                Image(systemName: "person.circle.fill")
-                    .resizable()
-                    .foregroundColor(AppTheme.textSecondary)
-            }
-            .frame(width: 32, height: 32)
-            .clipShape(Circle())
+            AvatarImageView(
+                email: contributor.email,
+                size: 32,
+                fallbackInitial: String(contributor.name.prefix(1))
+            )
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(contributor.name)

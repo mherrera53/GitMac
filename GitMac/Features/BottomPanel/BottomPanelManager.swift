@@ -14,7 +14,8 @@ class BottomPanelManager: ObservableObject {
     @Published var openTabs: [BottomPanelTab] = []
     @Published var activeTabId: UUID?
     @Published var isPanelVisible: Bool = false
-    @Published var panelHeight: CGFloat = 300
+    @Published var panelHeight: CGFloat = 180  // Will be updated in init based on screen size
+    @Published var autoCollapseEnabled: Bool = false
 
     private let userDefaults = UserDefaults.standard
     private let openTabsKey = "bottomPanelOpenTabs"
@@ -23,6 +24,14 @@ class BottomPanelManager: ObservableObject {
     private let heightKey = "bottomPanelHeight"
 
     private init() {
+        // Configure auto-collapse for compact screens
+        if NSScreen.main?.is14InchMacBook == true {
+            autoCollapseEnabled = true
+            isPanelVisible = false  // Start collapsed on 14" MacBook
+            panelHeight = 120  // Compact height for 14"
+        } else {
+            panelHeight = 180  // Standard height
+        }
         restoreState()
     }
 
