@@ -231,8 +231,6 @@ struct SidebarBranchRow: View {
     }
 
     private func performCheckout() async {
-        guard let path = appState.currentRepository?.path else { return }
-
         // Check for uncommitted changes
         if let status = appState.currentRepository?.status {
             let hasChanges = !status.staged.isEmpty || !status.unstaged.isEmpty || !status.untracked.isEmpty
@@ -243,97 +241,23 @@ struct SidebarBranchRow: View {
             }
         }
 
-        // No changes, proceed with checkout
-        let shell = ShellExecutor()
-        let result: ShellResult
-
-        if branch.isRemote {
-            // For remote branches: create local tracking branch
-            // origin/feature/foo -> feature/foo
-            let localName = branch.displayName
-            result = await shell.execute(
-                "git",
-                arguments: ["checkout", "-b", localName, "--track", branch.name],
-                workingDirectory: path
-            )
-        } else {
-            // For local branches: simple checkout
-            result = await shell.execute(
-                "git",
-                arguments: ["checkout", branch.name],
-                workingDirectory: path
-            )
-        }
-
-        if result.isSuccess {
-            await appState.refresh()
-            NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
-            NotificationManager.shared.success("Checked out", detail: branch.isRemote ? branch.displayName : branch.name)
-        } else {
-            NotificationManager.shared.error("Checkout failed", detail: result.stderr)
+        // No changes, proceed with checkout using GitService
+        do {
+            try await appState.gitService.checkoutBranch(branch)
+            let targetName = branch.isRemote ? branch.displayName : branch.name
+            NotificationManager.shared.success("Checked out", detail: targetName)
+        } catch {
+            NotificationManager.shared.error("Checkout failed", detail: error.localizedDescription)
         }
     }
 
     private func performCheckoutWithAutoStash() async {
-        guard let path = appState.currentRepository?.path else { return }
-
-        let shell = ShellExecutor()
-
-        // 1. Stash changes (including untracked files with -u)
-        let stashResult = await shell.execute(
-            "git",
-            arguments: ["stash", "push", "-u", "-m", "Auto-stash for checkout to \(branch.name)"],
-            workingDirectory: path
-        )
-
-        let didStash = stashResult.isSuccess && !stashResult.stdout.contains("No local changes")
-
-        // 2. Perform checkout
-        let checkoutResult: ShellResult
-        let targetName: String
-
-        if branch.isRemote {
-            // For remote branches: create local tracking branch
-            targetName = branch.displayName
-            checkoutResult = await shell.execute(
-                "git",
-                arguments: ["checkout", "-b", targetName, "--track", branch.name],
-                workingDirectory: path
-            )
-        } else {
-            // For local branches: simple checkout
-            targetName = branch.name
-            checkoutResult = await shell.execute(
-                "git",
-                arguments: ["checkout", branch.name],
-                workingDirectory: path
-            )
-        }
-
-        if checkoutResult.isSuccess {
-            // 3. Pop stash if we stashed something
-            if didStash {
-                _ = await shell.execute(
-                    "git",
-                    arguments: ["stash", "pop"],
-                    workingDirectory: path
-                )
-            }
-
-            // 4. Refresh UI to update graph and branch indicator
-            await appState.refresh()
-            NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+        do {
+            try await appState.gitService.checkoutBranchWithAutoStash(branch)
+            let targetName = branch.isRemote ? branch.displayName : branch.name
             NotificationManager.shared.success("Checked out", detail: targetName)
-        } else {
-            // Checkout failed - restore stash if we made one
-            if didStash {
-                _ = await shell.execute(
-                    "git",
-                    arguments: ["stash", "pop"],
-                    workingDirectory: path
-                )
-            }
-            NotificationManager.shared.error("Checkout failed", detail: checkoutResult.stderr)
+        } catch {
+            NotificationManager.shared.error("Checkout failed", detail: error.localizedDescription)
         }
     }
 

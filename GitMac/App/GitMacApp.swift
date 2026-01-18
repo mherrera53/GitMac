@@ -1,10 +1,69 @@
 import SwiftUI
 
+@MainActor
+class OllamaProcessManager: ObservableObject {
+    static let shared = OllamaProcessManager()
+    
+    @Published private(set) var isRunning = false
+    private var ollamaProcess: Process?
+    
+    private init() {}
+    
+    func startIfNeeded() async {
+        let provider = await AIService.shared.getCurrentProvider()
+        
+        guard provider == .ollama else { return }
+        
+        let (isConnected, _) = await AIService.shared.testOllamaConnection()
+        guard !isConnected else {
+            isRunning = true
+            return
+        }
+        
+        await startOllama()
+    }
+    
+    private func startOllama() async {
+        guard !isRunning else { return }
+        
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["ollama", "serve"]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        
+        process.terminationHandler = { [weak self] _ in
+            Task { @MainActor in
+                self?.isRunning = false
+            }
+        }
+        
+        do {
+            try process.run()
+            ollamaProcess = process
+            isRunning = true
+            
+            try await Task.sleep(nanoseconds: 2_000_000_000)
+        } catch {
+            print("Failed to start Ollama: \(error)")
+        }
+    }
+    
+    func stop() {
+        ollamaProcess?.terminate()
+        ollamaProcess = nil
+        isRunning = false
+    }
+}
+
 @main
 struct GitMacApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var recentReposManager = RecentRepositoriesManager.shared
     @StateObject private var themeManager = ThemeManager.shared
+    @StateObject private var ollamaManager = OllamaProcessManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -64,6 +123,8 @@ struct GitMacApp: App {
                 .task {
                     // Restore previous session on launch
                     await appState.restoreSession()
+                    // Start Ollama if configured as default provider
+                    await ollamaManager.startIfNeeded()
                 }
                 .onAppear {
                     configureWindow()
@@ -76,10 +137,15 @@ struct GitMacApp: App {
         .commands {
             GitMacCommands()
         }
-        .onChange(of: scenePhase) { _, newPhase in
+        .onChange(of: scenePhase) { oldPhase, newPhase in
             if newPhase == .background || newPhase == .inactive {
                 // Save session when app goes to background or becomes inactive
                 appState.saveSession()
+            } else if newPhase == .active {
+                // Check Ollama status when app becomes active
+                Task {
+                    await ollamaManager.startIfNeeded()
+                }
             }
         }
 
@@ -653,6 +719,8 @@ extension Notification.Name {
     static let toggleSidebar = Notification.Name("toggle_sidebar")
     static let repositoryDidRefresh = Notification.Name("repositoryDidRefresh")
     static let branchDidCheckout = Notification.Name("branchDidCheckout")
+    /// Posted when branch ahead/behind status changes (after commit, push, pull)
+    static let branchDidChange = Notification.Name("branchDidChange")
 
     // CI/CD Triggers
     static let gitPushCompleted = Notification.Name("gitPushCompleted")

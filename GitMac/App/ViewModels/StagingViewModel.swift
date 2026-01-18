@@ -142,6 +142,10 @@ class StagingViewModel: ObservableObject {
                 let commit = try await engine.commit(message: message, at: path)
                 let shortSHA = String(commit.sha.prefix(7))
                 await loadStatus(at: path)
+
+                // Notify that branch ahead/behind changed (for push button to update)
+                NotificationCenter.default.post(name: .branchDidChange, object: path)
+
                 onSuccess()
                 NotificationManager.shared.success("Commit completed", detail: "SHA: \(shortSHA)")
             } catch {
@@ -157,6 +161,10 @@ class StagingViewModel: ObservableObject {
             let commit = try await engine.commit(message: message, at: path)
             let shortSHA = String(commit.sha.prefix(7))
             await loadStatus(at: path)
+
+            // Notify that branch ahead/behind changed (for push button to update)
+            NotificationCenter.default.post(name: .branchDidChange, object: path)
+
             NotificationManager.shared.success("Commit completed", detail: "SHA: \(shortSHA)")
             return true
         } catch {
