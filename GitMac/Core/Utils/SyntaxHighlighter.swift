@@ -540,7 +540,7 @@ struct HighlightedDiffLineView: View {
                 Text(line.newLineNumber.map { "\($0)" } ?? " ")
                     .frame(width: 50, alignment: .trailing)
             }
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
             .padding(.horizontal, 8)
             .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
             
@@ -582,7 +582,7 @@ struct HunkHeaderView: View {
         HStack {
             Text(hunk.header)
                 .font(.system(.caption, design: .monospaced))
-                .foregroundColor(AppTheme.syntaxKeyword)
+                .foregroundStyle(AppTheme.syntaxKeyword)
             Spacer()
         }
         .padding(.horizontal, 12)

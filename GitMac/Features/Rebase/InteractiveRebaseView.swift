@@ -50,7 +50,7 @@ struct InteractiveRebaseView: View {
         HStack {
             Image(systemName: "arrow.up.arrow.down.circle.fill")
                 .font(.system(size: 32))
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text("Interactive Rebase")
@@ -59,7 +59,7 @@ struct InteractiveRebaseView: View {
                 
                 Text("Reorder, squash, or edit commits before rebasing onto \(targetBranch)")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             
             Spacer()
@@ -152,9 +152,9 @@ struct InteractiveRebaseView: View {
         VStack(spacing: 12) {
             Image(systemName: "tray")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Text("No commits to rebase")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -226,10 +226,10 @@ struct RebaseInstructionItem: View {
         HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.caption)
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
             Text(text)
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
     }
 }
@@ -243,20 +243,20 @@ struct RebaseStatBadge: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .foregroundColor(color)
+                .foregroundStyle(color)
             
             VStack(alignment: .leading, spacing: 0) {
                 Text("\(count)")
                     .font(.system(size: 16, weight: .bold))
                 Text(label)
                     .font(.system(size: 9))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(color.opacity(0.1))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
     }
 }
 
@@ -275,7 +275,7 @@ struct RebaseItemRow: View {
             // Index
             Text("\(index)")
                 .font(.system(.caption, design: .monospaced))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .frame(width: 30, alignment: .trailing)
             
             // Action picker
@@ -290,7 +290,7 @@ struct RebaseItemRow: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: item.action.icon)
-                        .foregroundColor(item.action.color)
+                        .foregroundStyle(item.action.color)
                     Text(item.action.displayName)
                         .font(.caption)
                         .fontWeight(.semibold)
@@ -299,7 +299,7 @@ struct RebaseItemRow: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(item.action.color.opacity(0.15))
-                .cornerRadius(6)
+                .clipShape(.rect(cornerRadius: 6))
             }
             .menuStyle(.borderlessButton)
             
@@ -307,7 +307,7 @@ struct RebaseItemRow: View {
             HStack(spacing: 8) {
                 Text(item.commit.shortSHA)
                     .font(.system(.body, design: .monospaced))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 Text(item.commit.message)
                     .lineLimit(1)
@@ -316,7 +316,7 @@ struct RebaseItemRow: View {
                 
                 Text(item.commit.author)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             
             // Delete button (on hover)
@@ -325,7 +325,7 @@ struct RebaseItemRow: View {
                     onDelete()
                 } label: {
                     Image(systemName: "trash")
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                 }
                 .buttonStyle(.borderless)
                 .help("Drop this commit")
@@ -532,6 +532,6 @@ struct RebaseInstructionHint: View {
             Text(text)
                 .font(.system(size: 10))
         }
-        .foregroundColor(AppTheme.textPrimary)
+        .foregroundStyle(AppTheme.textPrimary)
     }
 }

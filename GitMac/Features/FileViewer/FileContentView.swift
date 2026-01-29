@@ -52,7 +52,7 @@ struct FileContentView: View {
     private var fileHeader: some View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: fileType.icon)
-                .foregroundColor(fileType.iconColor)
+                .foregroundStyle(fileType.iconColor)
 
             Text(fileName)
                 .font(.system(.body, design: .monospaced))
@@ -60,19 +60,19 @@ struct FileContentView: View {
 
             Text("(\(fileType.displayName))")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Spacer()
 
             if lineCount > 500 {
                 Label("Fast mode", systemImage: "bolt.fill")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
             }
 
             Text("\(lineCount) lines")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .padding(.horizontal, DesignTokens.Spacing.lg)
         .padding(.vertical, DesignTokens.Spacing.xs + 6)

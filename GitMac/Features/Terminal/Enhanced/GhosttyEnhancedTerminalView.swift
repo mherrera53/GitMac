@@ -5,6 +5,7 @@
 //  Enhanced terminal view with input tracking for AI suggestions
 //
 
+#if GHOSTTY_AVAILABLE
 import SwiftUI
 import AppKit
 import GhosttyKit
@@ -405,3 +406,4 @@ class EnhancedGhosttyContainerView: NSView {
         }
     }
 }
+#endif

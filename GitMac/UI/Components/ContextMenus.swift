@@ -227,11 +227,11 @@ struct ToastView: View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(type.color)
+                .foregroundStyle(type.color)
 
             Text(message)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

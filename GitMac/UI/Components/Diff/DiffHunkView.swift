@@ -39,7 +39,7 @@ struct FastHunkHeader: View {
                 // Hunk header text
                 Text(header)
                     .font(headerFont)
-                    .foregroundColor(headerColor)
+                    .foregroundStyle(headerColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Hover actions

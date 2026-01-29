@@ -11,13 +11,13 @@ struct JiraConnectedView: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
             HStack {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 Text("Connected")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 if !projects.isEmpty {
                     Text("\(projects.count) projects")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 DSButton("Disconnect", variant: .danger, size: .sm, action: onDisconnect)
             }
@@ -26,18 +26,18 @@ struct JiraConnectedView: View {
                 ForEach(projects.prefix(5)) { project in
                     HStack {
                         Text(project.key)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .font(DesignTokens.Typography.caption.monospaced())
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         Text(project.name)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
                 if projects.count > 5 {
                     Text("and \(projects.count - 5) more...")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
         }
@@ -63,7 +63,7 @@ struct JiraLoginSettingsView: View {
 
         if let error = error {
             Text(error)
-                .foregroundColor(AppTheme.error)
+                .foregroundStyle(AppTheme.error)
                 .font(DesignTokens.Typography.caption)
         }
 
@@ -76,7 +76,7 @@ struct JiraLoginSettingsView: View {
                         .scaleEffect(0.8)
                 } else {
                     Text("Connect")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
 

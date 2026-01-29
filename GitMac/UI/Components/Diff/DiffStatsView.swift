@@ -55,9 +55,9 @@ struct DiffStatsView: View {
             if additions > 0 {
                 HStack(spacing: 1) {
                     Text("+")
-                        .foregroundColor(AppTheme.diffAddition)
+                        .foregroundStyle(AppTheme.diffAddition)
                     Text("\(additions)")
-                        .foregroundColor(AppTheme.diffAddition)
+                        .foregroundStyle(AppTheme.diffAddition)
                 }
                 .font(.system(size: size.fontSize, weight: .medium, design: .monospaced))
             }
@@ -65,9 +65,9 @@ struct DiffStatsView: View {
             if deletions > 0 {
                 HStack(spacing: 1) {
                     Text("−")
-                        .foregroundColor(AppTheme.diffDeletion)
+                        .foregroundStyle(AppTheme.diffDeletion)
                     Text("\(deletions)")
-                        .foregroundColor(AppTheme.diffDeletion)
+                        .foregroundStyle(AppTheme.diffDeletion)
                 }
                 .font(.system(size: size.fontSize, weight: .medium, design: .monospaced))
             }
@@ -83,30 +83,30 @@ struct DiffStatsView: View {
                 HStack(spacing: size.spacing) {
                     Image(systemName: "plus")
                         .font(.system(size: size.fontSize - 1, weight: .bold))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Text("\(additions)")
                         .font(.system(size: size.fontSize, weight: .semibold, design: .monospaced))
                 }
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .padding(.horizontal, size.fontSize * 0.8)
                 .padding(.vertical, size.fontSize * 0.4)
                 .background(AppTheme.diffAddition)
-                .cornerRadius(4)
+                .clipShape(.rect(cornerRadius: 4))
             }
 
             if deletions > 0 {
                 HStack(spacing: size.spacing) {
                     Image(systemName: "minus")
                         .font(.system(size: size.fontSize - 1, weight: .bold))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Text("\(deletions)")
                         .font(.system(size: size.fontSize, weight: .semibold, design: .monospaced))
                 }
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .padding(.horizontal, size.fontSize * 0.8)
                 .padding(.vertical, size.fontSize * 0.4)
                 .background(AppTheme.diffDeletion)
-                .cornerRadius(4)
+                .clipShape(.rect(cornerRadius: 4))
             }
         }
     }
@@ -120,10 +120,10 @@ struct DiffStatsView: View {
                 HStack(spacing: size.spacing) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: size.fontSize))
-                        .foregroundColor(AppTheme.diffAddition)
+                        .foregroundStyle(AppTheme.diffAddition)
                     Text("\(additions) addition\(additions == 1 ? "" : "s")")
                         .font(.system(size: size.fontSize, weight: .medium))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
 
@@ -131,10 +131,10 @@ struct DiffStatsView: View {
                 HStack(spacing: size.spacing) {
                     Image(systemName: "minus.circle.fill")
                         .font(.system(size: size.fontSize))
-                        .foregroundColor(AppTheme.diffDeletion)
+                        .foregroundStyle(AppTheme.diffDeletion)
                     Text("\(deletions) deletion\(deletions == 1 ? "" : "s")")
                         .font(.system(size: size.fontSize, weight: .medium))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
         }

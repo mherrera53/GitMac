@@ -11,6 +11,11 @@ struct RightStagingPanel: View {
     @StateObject private var stashDetailVM = StashDetailViewModel()
     @ObservedObject private var themeManager = ThemeManager.shared
 
+    /// Whether the panel is showing the WIP staging area (no commit or stash selected)
+    private var isShowingWIP: Bool {
+        appState.selectedCommit == nil && appState.selectedStash == nil
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if let selectedCommit = appState.selectedCommit {
@@ -39,8 +44,9 @@ struct RightStagingPanel: View {
                 )
             }
         }
-        .task {
-            if let path = appState.currentRepository?.path {
+        .task(id: isShowingWIP) {
+            // Fires immediately when switching to WIP mode
+            if isShowingWIP, let path = appState.currentRepository?.path {
                 await stagingVM.loadStatus(at: path)
             }
         }
@@ -49,13 +55,10 @@ struct RightStagingPanel: View {
                 Task { await stagingVM.loadStatus(at: path) }
             }
         }
-        .onReceive(Timer.publish(every: 2.0, on: .main, in: .common).autoconnect()) { _ in
-            // Auto-refresh WIP changes every 2 seconds
-            if let path = appState.currentRepository?.path {
-                Task {
-                    await stagingVM.loadStatus(at: path)
-                }
-            }
+        // FileWatcher-driven refresh: fires within ~0.5s of any file/index change
+        .onChange(of: appState.statusChangeCounter) { _, _ in
+            guard isShowingWIP, let path = appState.currentRepository?.path else { return }
+            Task { await stagingVM.loadStatus(at: path) }
         }
         .onReceive(NotificationCenter.default.publisher(for: .fileSavedInEditor)) { _ in
             // Refresh staging when a file is saved in the editor
@@ -72,15 +75,11 @@ struct RightStagingPanel: View {
                 }
             }
         }
-        .onChange(of: appState.selectedCommit) { _, newCommit in
-            // Single-click: only load the file list, not the diff
-            if let commit = newCommit, let path = appState.currentRepository?.path {
-                Task {
-                    await commitDetailVM.loadCommitFiles(sha: commit.sha, at: path)
-                }
-            }
-            // Clear diff when commit changes
+        .onChange(of: appState.selectedCommit) { _, _ in
+            // Clear diff when commit selection changes
             selectedFileDiff = nil
+            // Reset view model so new commit loads fresh
+            commitDetailVM.reset()
         }
         .onReceive(NotificationCenter.default.publisher(for: .loadFirstFileDiff)) { _ in
             // Double-click: load diff for first file

@@ -36,28 +36,28 @@ struct StagingSectionWithTree: View {
                 } label: {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
 
                 Text(title)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
 
                 Text("\(count)")
                     .font(.system(size: 10))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(AppTheme.backgroundTertiary)
-                    .cornerRadius(4)
+                    .clipShape(.rect(cornerRadius: 4))
 
                 Spacer()
 
                 Button(action: onAction) {
                     Image(systemName: actionIcon)
                         .font(.system(size: 14))
-                        .foregroundColor(actionColor)
+                        .foregroundStyle(actionColor)
                 }
                 .buttonStyle(.plain)
                 .help(isStaged ? "Unstage All" : "Stage All")
@@ -73,7 +73,7 @@ struct StagingSectionWithTree: View {
                         if filteredFiles.isEmpty {
                             Text(isStaged ? "No staged changes" : "No unstaged changes")
                                 .font(.system(size: 11))
-                                .foregroundColor(AppTheme.textMuted)
+                                .foregroundStyle(AppTheme.textMuted)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
                         } else if viewMode == .tree {
@@ -173,10 +173,10 @@ struct StagingRowContent: View {
         HStack(spacing: 8) {
             Image(systemName: "folder.fill")
                 .font(.system(size: 13))
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
             Text(fileName)
                 .font(.system(size: 11))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .lineLimit(1)
             Spacer()
         }
@@ -199,7 +199,7 @@ struct StagingRowContent: View {
                 FileTypeIcon(fileName: fileName, size: .small)
                 Text(fileName)
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
                 Spacer()
 
@@ -211,7 +211,7 @@ struct StagingRowContent: View {
                     Button { onStage(f) } label: {
                         Image(systemName: isStaged ? "minus.circle.fill" : "plus.circle.fill")
                             .font(.system(size: 14))
-                            .foregroundColor(isStaged ? AppTheme.error : AppTheme.success)
+                            .foregroundStyle(isStaged ? AppTheme.error : AppTheme.success)
                     }
                     .buttonStyle(.plain)
                 }
@@ -272,13 +272,13 @@ struct ClickableFileRow: View {
                 // Status icon
                 Image(systemName: file.status.icon)
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(file.status.color)
+                    .foregroundStyle(file.status.color)
                     .frame(width: 14)
 
                 // File path
                 Text(file.path)
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
 
@@ -288,7 +288,7 @@ struct ClickableFileRow: View {
                     Button(action: onStage) {
                         Image(systemName: isStaged ? "minus.circle" : "plus.circle")
                             .font(.system(size: 12))
-                            .foregroundColor(isStaged ? AppTheme.error : AppTheme.success)
+                            .foregroundStyle(isStaged ? AppTheme.error : AppTheme.success)
                     }
                     .buttonStyle(.plain)
                 }
@@ -610,18 +610,18 @@ struct StagingSection<Content: View>: View {
             HStack {
                 Text(title)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                 Spacer()
                 Text("\(count)")
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(AppTheme.backgroundTertiary)
-                    .cornerRadius(4)
+                    .clipShape(.rect(cornerRadius: 4))
                 Button(action: onAction) {
                     Image(systemName: actionIcon)
-                        .foregroundColor(actionColor)
+                        .foregroundStyle(actionColor)
                 }
                 .buttonStyle(.plain)
                 .disabled(count == 0)

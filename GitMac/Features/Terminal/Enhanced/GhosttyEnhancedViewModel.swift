@@ -296,6 +296,7 @@ class GhosttyEnhancedViewModel: ObservableObject {
         isLoadingAI = false
     }
 
+    #if GHOSTTY_AVAILABLE
     func applySuggestion(_ suggestion: AICommandSuggestion, to viewModel: GhosttyViewModel) {
         let cmd = suggestion.command
         let input = currentInput
@@ -325,6 +326,7 @@ class GhosttyEnhancedViewModel: ObservableObject {
         aiSuggestions.removeAll()
         currentInput = cmd
     }
+    #endif
 
     // MARK: - Suggestion Navigation
 
@@ -338,11 +340,13 @@ class GhosttyEnhancedViewModel: ObservableObject {
         selectedSuggestionIndex = max(selectedSuggestionIndex - 1, 0)
     }
 
+    #if GHOSTTY_AVAILABLE
     func applySelectedSuggestion(to viewModel: GhosttyViewModel) {
         guard selectedSuggestionIndex < aiSuggestions.count else { return }
         let suggestion = aiSuggestions[selectedSuggestionIndex]
         applySuggestion(suggestion, to: viewModel)
     }
+    #endif
 
     // MARK: - Active AI (Warp-style error suggestions)
 
@@ -437,12 +441,14 @@ class GhosttyEnhancedViewModel: ObservableObject {
         ]
     }
 
+    #if GHOSTTY_AVAILABLE
     func executeWorkflow(_ workflow: TerminalWorkflow, in viewModel: GhosttyViewModel) {
         // For now, just execute the command directly
         // TODO: Handle parameter substitution
         viewModel.writeInput(workflow.command + "\n")
         trackCommand(workflow.command)
     }
+    #endif
 
     func searchWorkflows(_ query: String) -> [TerminalWorkflow] {
         guard !query.isEmpty else { return workflows }

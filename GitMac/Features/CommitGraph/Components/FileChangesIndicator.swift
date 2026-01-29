@@ -24,12 +24,12 @@ struct FileChangesIndicator: View {
             HStack(spacing: DesignTokens.Spacing.xxs) {
                 Image(systemName: "doc.fill")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(theme.textMuted)
+                    .foregroundStyle(theme.textMuted)
 
                 if filesChanged > 0 {
                     Text("\(filesChanged)")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(theme.text)
+                        .foregroundStyle(theme.text)
                 }
             }
 
@@ -55,7 +55,7 @@ struct FileChangesIndicator: View {
                     }
                 }
                 .frame(width: 60, height: 8)
-                .cornerRadius(2)
+                .clipShape(.rect(cornerRadius: 2))
             }
 
             if !compact {
@@ -64,13 +64,13 @@ struct FileChangesIndicator: View {
                     if additions > 0 {
                         Text("+\(additions)")
                             .font(DesignTokens.Typography.caption2.monospacedDigit())
-                            .foregroundColor(AppTheme.diffAddition)
+                            .foregroundStyle(AppTheme.diffAddition)
                     }
 
                     if deletions > 0 {
                         Text("-\(deletions)")
                             .font(DesignTokens.Typography.caption2.monospacedDigit())
-                            .foregroundColor(AppTheme.diffDeletion)
+                            .foregroundStyle(AppTheme.diffDeletion)
                     }
                 }
             }

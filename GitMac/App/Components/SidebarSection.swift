@@ -20,11 +20,11 @@ struct SidebarSection<Content: View>: View {
                 HStack(spacing: 6) {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .frame(width: 12)
                     Text(title)
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     Spacer()
                 }
                 .padding(.horizontal, 12)

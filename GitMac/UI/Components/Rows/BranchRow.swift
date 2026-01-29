@@ -63,10 +63,10 @@ struct BranchRow: View {
             // Drag preview
             HStack(spacing: 8) {
                 Image(systemName: branchIcon)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                 Text(branch.name)
                     .fontWeight(.medium)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -110,7 +110,7 @@ struct BranchRow: View {
                 Rectangle()
                     .fill(AppTheme.accent)
                     .frame(height: 3)
-                    .cornerRadius(1.5)
+                    .clipShape(.rect(cornerRadius: 1.5))
                     .padding(.horizontal, 4)
                     .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .top)))
             }
@@ -123,7 +123,7 @@ struct BranchRow: View {
     private var branchContent: some View {
         // Branch type icon
         Image(systemName: branchIcon)
-            .foregroundColor(branchColor)
+            .foregroundStyle(branchColor)
             .frame(width: 16)
 
         // Branch name and info
@@ -138,7 +138,7 @@ struct BranchRow: View {
                 if showCurrentIndicator && branch.isCurrent {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.caption)
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
                 }
 
                 // PR badge
@@ -152,15 +152,15 @@ struct BranchRow: View {
                     .padding(.horizontal, 5)
                     .padding(.vertical, 2)
                     .background(prBadgeColor(for: pr).opacity(0.2))
-                    .foregroundColor(prBadgeColor(for: pr))
-                    .cornerRadius(4)
+                    .foregroundStyle(prBadgeColor(for: pr))
+                    .clipShape(.rect(cornerRadius: 4))
                 }
             }
 
             if showUpstream, let upstream = branch.upstream {
                 Text("↑ " + upstream.name)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .lineLimit(1)
             }
         }
@@ -174,22 +174,22 @@ struct BranchRow: View {
                     HStack(spacing: 2) {
                         Image(systemName: "arrow.up")
                             .font(.caption2)
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                         Text("\(ahead)")
                             .font(.caption.monospacedDigit())
                     }
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 }
 
                 if behind > 0 {
                     HStack(spacing: 2) {
                         Image(systemName: "arrow.down")
                             .font(.caption2)
-                            .foregroundColor(AppTheme.warning)
+                            .foregroundStyle(AppTheme.warning)
                         Text("\(behind)")
                             .font(.caption.monospacedDigit())
                     }
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
                 }
             }
         }

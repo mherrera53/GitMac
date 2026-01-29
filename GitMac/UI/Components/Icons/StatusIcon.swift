@@ -51,14 +51,14 @@ struct StatusIcon: View {
     private var badgeView: some View {
         Image(systemName: statusIcon)
             .font(.system(size: size.dimension, weight: size.fontWeight))
-            .foregroundColor(statusColor)
+            .foregroundStyle(statusColor)
             .symbolRenderingMode(status == .unmerged ? .multicolor : .hierarchical)
     }
 
     private var inlineView: some View {
         Image(systemName: statusIcon)
             .font(.system(size: size.dimension, weight: size.fontWeight))
-            .foregroundColor(statusColor)
+            .foregroundStyle(statusColor)
             .symbolRenderingMode(status == .unmerged ? .multicolor : .hierarchical)
     }
 
@@ -71,7 +71,7 @@ struct StatusIcon: View {
     private var circleView: some View {
         Image(systemName: statusIcon)
             .font(.system(size: size.dimension, weight: size.fontWeight))
-            .foregroundColor(statusColor)
+            .foregroundStyle(statusColor)
             .symbolRenderingMode(status == .unmerged ? .multicolor : .hierarchical)
     }
 

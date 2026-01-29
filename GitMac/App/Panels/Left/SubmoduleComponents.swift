@@ -23,7 +23,7 @@ struct SubmoduleSidebarSection: View {
                         .scaleEffect(0.7)
                     Text("Loading...")
                         .font(.system(size: 10))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     Spacer()
                 }
                 .padding(.horizontal, 12)
@@ -33,14 +33,14 @@ struct SubmoduleSidebarSection: View {
                     HStack {
                         Image(systemName: "cube.transparent")
                             .font(.system(size: 11))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                         Text("No submodules")
                             .font(.system(size: 10))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                         Spacer()
                         Image(systemName: "plus.circle")
                             .font(.system(size: 11))
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
@@ -56,11 +56,11 @@ struct SubmoduleSidebarSection: View {
                         HStack {
                             Text("View all \(viewModel.submodules.count) submodules")
                                 .font(.system(size: 10))
-                                .foregroundColor(AppTheme.accent)
+                                .foregroundStyle(AppTheme.accent)
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 9))
-                                .foregroundColor(AppTheme.accent)
+                                .foregroundStyle(AppTheme.accent)
                         }
                         .padding(.horizontal, DesignTokens.Spacing.md)
                         .padding(.vertical, DesignTokens.Spacing.xs)
@@ -94,11 +94,11 @@ struct SubmoduleSidebarRow: View {
         HStack(spacing: 8) {
             Image(systemName: submodule.status == .initialized ? "cube.fill" : "cube.transparent")
                 .font(.system(size: 11))
-                .foregroundColor(submodule.status == .initialized ? AppTheme.accent : AppTheme.textMuted)
+                .foregroundStyle(submodule.status == .initialized ? AppTheme.accent : AppTheme.textMuted)
 
             Text(submodule.displayName)
                 .font(.system(size: 11))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .lineLimit(1)
 
             Spacer()

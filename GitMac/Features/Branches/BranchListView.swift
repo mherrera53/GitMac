@@ -315,11 +315,11 @@ struct BranchListView: View {
         } label: {
             HStack {
                 Image(systemName: "network")
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
                 Text(remote)
                     .fontWeight(.medium)
                 Text("(\(groupedRemoteBranches[remote]?.count ?? 0))")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
@@ -821,7 +821,7 @@ struct RemoteBranchRow: View {
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: "cloud")
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
                 .frame(width: DesignTokens.Size.iconMD)
 
             Text(branch.displayName)
@@ -964,14 +964,14 @@ struct RebaseSheet: View {
 
                 Text("This will replay your commits on top of the target branch.")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 HStack {
                     Image(systemName: "exclamationmark.triangle")
-                        .foregroundColor(AppTheme.warning)
+                        .foregroundStyle(AppTheme.warning)
                     Text("Warning: This rewrites commit history")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.warning)
+                        .foregroundStyle(AppTheme.warning)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1034,19 +1034,19 @@ struct CreatePullRequestSheet: View {
                     VStack(alignment: .leading) {
                         Text("From")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Text(branch.name)
                             .fontWeight(.medium)
                     }
                     .frame(minWidth: 100)
 
                     Image(systemName: "arrow.right")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     VStack(alignment: .leading) {
                         Text("To")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         if defaultBaseBranch != nil {
                             // Fixed base branch from drag-drop
                             Text(baseBranch ?? "")
@@ -1054,8 +1054,8 @@ struct CreatePullRequestSheet: View {
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                                 .background(AppTheme.success.opacity(0.15))
-                                .foregroundColor(AppTheme.success)
-                                .cornerRadius(4)
+                                .foregroundStyle(AppTheme.success)
+                                .clipShape(.rect(cornerRadius: 4))
                         } else {
                             // Selectable base branch from context menu
                             DSPicker(
@@ -1087,11 +1087,11 @@ struct CreatePullRequestSheet: View {
                                 Text(isGeneratingAI ? "Generating..." : "Generate with AI")
                                     .font(.system(size: 11, weight: .medium))
                             }
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(AppTheme.accent.opacity(0.1))
-                            .cornerRadius(6)
+                            .clipShape(.rect(cornerRadius: 6))
                         }
                         .buttonStyle(.plain)
                         .disabled(isGeneratingAI)
@@ -1107,7 +1107,7 @@ struct CreatePullRequestSheet: View {
 
                 if let error = error {
                     Text(error)
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                         .font(DesignTokens.Typography.caption)
                 }
             }

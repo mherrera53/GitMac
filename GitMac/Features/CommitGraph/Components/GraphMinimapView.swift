@@ -18,7 +18,7 @@ struct GraphMinimapView: View {
                 Text("OVERVIEW")
                     .font(DesignTokens.Typography.caption2)
                     .fontWeight(.semibold)
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
 
                 Spacer()
             }

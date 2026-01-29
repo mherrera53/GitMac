@@ -61,7 +61,7 @@ struct RepositoryTabsView: View {
                 Button(action: { appState.goBack() }) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(appState.canGoBack ? AppTheme.textSecondary : AppTheme.textMuted.opacity(0.3))
+                        .foregroundStyle(appState.canGoBack ? AppTheme.textSecondary : AppTheme.textMuted.opacity(0.3))
                         .frame(width: 18, height: 28)
                 }
                 .buttonStyle(.plain)
@@ -71,7 +71,7 @@ struct RepositoryTabsView: View {
                 Button(action: { appState.goForward() }) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(appState.canGoForward ? AppTheme.textSecondary : AppTheme.textMuted.opacity(0.3))
+                        .foregroundStyle(appState.canGoForward ? AppTheme.textSecondary : AppTheme.textMuted.opacity(0.3))
                         .frame(width: 18, height: 28)
                 }
                 .buttonStyle(.plain)
@@ -81,7 +81,7 @@ struct RepositoryTabsView: View {
             .padding(.trailing, 4)
 
             // Horizontal Slider for Groups
-            ScrollView(.horizontal, showsIndicators: false) {
+            ScrollView(.horizontal) {
                 HStack(spacing: 4) { // Spacing between groups
                     ForEach(groupedTabs) { group in
                         GroupContainer(group: group, appState: appState)
@@ -93,7 +93,7 @@ struct RepositoryTabsView: View {
                     }) {
                         Image(systemName: "plus")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                             .frame(width: 28, height: 28)
                             .background(AppTheme.backgroundSecondary.opacity(0.3))
                             .clipShape(Circle())
@@ -104,6 +104,7 @@ struct RepositoryTabsView: View {
                 }
                 .padding(.horizontal, 4)
             }
+            .scrollIndicators(.hidden)
             .frame(maxWidth: .infinity) // Take all available horizontal space
 
             // Dropdown for recent repos
@@ -137,7 +138,7 @@ private struct GroupContainer: View {
                     
                     Text(name)
                         .font(.system(size: 7, weight: .bold))
-                        .foregroundColor(groupColor.opacity(0.8))
+                        .foregroundStyle(groupColor.opacity(0.8))
                 }
                 .padding(.leading, 4)
                 .padding(.trailing, 1)
@@ -190,7 +191,7 @@ private struct CompactTabPill: View {
                 // Repo name
                 Text(tab.repository.name)
                     .font(.system(size: 11, weight: isActive ? .medium : .regular))
-                    .foregroundColor(isActive ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    .foregroundStyle(isActive ? AppTheme.textPrimary : AppTheme.textSecondary)
                     .lineLimit(1)
                     .fixedSize() // Allow text to determine width, but compress if needed in future
                 
@@ -199,7 +200,7 @@ private struct CompactTabPill: View {
                     Button(action: onClose) {
                         Image(systemName: "xmark")
                             .font(.system(size: 8, weight: .bold))
-                            .foregroundColor(isActive ? AppTheme.textPrimary.opacity(0.7) : AppTheme.textMuted)
+                            .foregroundStyle(isActive ? AppTheme.textPrimary.opacity(0.7) : AppTheme.textMuted)
                     }
                     .buttonStyle(.plain)
                     .padding(.leading, 2)
@@ -270,7 +271,7 @@ private struct TabsOverflowMenu: View {
         } label: {
             Image(systemName: "chevron.down")
                 .font(.system(size: 9, weight: .semibold))
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
                 .frame(width: 20, height: 28)
         }
         .menuStyle(.borderlessButton)

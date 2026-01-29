@@ -255,14 +255,14 @@ struct EnhancedHistoryBlameView: View {
                 Button(action: onClose) {
                     Image(systemName: "xmark")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
 
                 Spacer()
 
                 Text(showHistory ? "History" : "Blame")
                     .font(.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -296,7 +296,7 @@ struct EnhancedHistoryBlameView: View {
                     VStack {
                         Text("Changes in \(commit.shortSHA)")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
 
                         // Show diff for selected commit
                         KaleidoscopeDiffView(
@@ -309,7 +309,7 @@ struct EnhancedHistoryBlameView: View {
                 } else {
                     VStack {
                         Text("Select a commit to view changes")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -317,7 +317,7 @@ struct EnhancedHistoryBlameView: View {
         }
         .frame(width: 1000, height: 700)
         .background(AppTheme.background)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(radius: 20)
     }
 }
@@ -331,22 +331,22 @@ struct CommitRowView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(commit.message)
                 .font(.system(.body, design: .monospaced))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             HStack {
                 Text(commit.shortSHA)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 Spacer()
 
                 Text(commit.author)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 Text(commit.authorDate, style: .relative)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
         }
         .padding(.vertical, 4)
@@ -359,7 +359,7 @@ struct BlameListView: View {
     var body: some View {
         List {
             Text("Blame information for \(path)")
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
     }
 }

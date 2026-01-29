@@ -27,12 +27,12 @@ struct TerminalNLInputView: View {
             // Input header
             HStack {
                 Image(systemName: "brain.head.profile")
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .font(.system(size: 16, weight: .medium))
                 
                 Text("AI Command")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 Spacer()
                 
@@ -68,7 +68,7 @@ struct TerminalNLInputView: View {
                 }) {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(inputText.isEmpty ? AppTheme.textMuted : AppTheme.accent)
+                        .foregroundStyle(inputText.isEmpty ? AppTheme.textMuted : AppTheme.accent)
                 }
                 .disabled(inputText.isEmpty || isTranslating)
                 .buttonStyle(PlainButtonStyle())
@@ -82,7 +82,7 @@ struct TerminalNLInputView: View {
             }
         }
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
     }
     
@@ -111,12 +111,12 @@ struct TerminalNLInputView: View {
                             
                             Text(result.command)
                                 .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(AppTheme.accent.opacity(0.1))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                     }
                     .buttonStyle(PlainButtonStyle())
                     
@@ -125,18 +125,18 @@ struct TerminalNLInputView: View {
                     // Category badge
                     Text(result.category.rawValue)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(AppTheme.backgroundTertiary)
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                     
                     // Confidence indicator
                     HStack(spacing: 4) {
                         ForEach(0..<5) { index in
                             Image(systemName: "star.fill")
                                 .font(.system(size: 8))
-                                .foregroundColor(Double(index) < result.confidence * 5 ? AppTheme.accent : AppTheme.border)
+                                .foregroundStyle(Double(index) < result.confidence * 5 ? AppTheme.accent : AppTheme.border)
                         }
                     }
                 }
@@ -144,19 +144,19 @@ struct TerminalNLInputView: View {
                 // Explanation
                 Text(result.explanation)
                     .font(.system(size: 12))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 
                 // Warnings
                 if !result.warnings.isEmpty {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(AppTheme.warning)
+                            .foregroundStyle(AppTheme.warning)
                             .font(.system(size: 12))
                         
                         Text(result.warnings.joined(separator: " "))
                             .font(.system(size: 12))
-                            .foregroundColor(AppTheme.warning)
+                            .foregroundStyle(AppTheme.warning)
                     }
                     .padding(.top, 4)
                 }
@@ -175,7 +175,7 @@ struct TerminalNLInputView: View {
                             Text("Alternatives (\(result.alternatives.count))")
                                 .font(.system(size: 11, weight: .medium))
                         }
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                     }
                     .buttonStyle(PlainButtonStyle())
                     .padding(.top, 4)
@@ -198,11 +198,11 @@ struct TerminalNLInputView: View {
                             Text("Copy")
                                 .font(.system(size: 11, weight: .medium))
                         }
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(AppTheme.backgroundTertiary)
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                     }
                     .buttonStyle(PlainButtonStyle())
                     
@@ -218,11 +218,11 @@ struct TerminalNLInputView: View {
                             Text("Explain")
                                 .font(.system(size: 11, weight: .medium))
                         }
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(AppTheme.backgroundTertiary)
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                     }
                     .buttonStyle(PlainButtonStyle())
                     
@@ -253,22 +253,22 @@ struct TerminalNLInputView: View {
                     HStack {
                         Image(systemName: "terminal")
                             .font(.system(size: 11))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                         
                         Text(alternative)
                             .font(.system(size: 12, design: .monospaced))
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         
                         Spacer()
                         
                         Image(systemName: "arrow.right.circle")
                             .font(.system(size: 12))
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 6)
                     .background(AppTheme.backgroundTertiary)
-                    .cornerRadius(4)
+                    .clipShape(.rect(cornerRadius: 4))
                 }
                 .buttonStyle(PlainButtonStyle())
             }
@@ -289,19 +289,19 @@ struct TerminalNLInputView: View {
             
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: "info.circle.fill")
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .font(.system(size: 14))
                     .padding(.top, 2)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Command Explanation")
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     // This would be populated by the explanation service
                     Text("Loading explanation...")
                         .font(.system(size: 12))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .opacity(0.7)
                 }
                 
@@ -314,7 +314,7 @@ struct TerminalNLInputView: View {
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(PlainButtonStyle())
             }
@@ -369,7 +369,7 @@ struct NLTextFieldStyle: TextFieldStyle {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(Color(nsColor: .windowBackgroundColor))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(Color(nsColor: .separatorColor), lineWidth: 1)

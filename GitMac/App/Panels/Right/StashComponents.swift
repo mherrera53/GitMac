@@ -79,18 +79,18 @@ struct StashDetailFileRow: View {
                 // Status icon
                 Image(systemName: statusIcon)
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(file.statusColor)
+                    .foregroundStyle(file.statusColor)
                     .frame(width: 14)
 
                 // File icon
                 Image(systemName: fileIcon(for: file.filename))
                     .font(.system(size: 10))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
 
                 // File path
                 Text(file.filename)
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
 
@@ -100,7 +100,7 @@ struct StashDetailFileRow: View {
                 if file.path != file.filename {
                     Text(String(file.path.dropLast(file.filename.count + 1)))
                         .font(.system(size: 10))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .lineLimit(1)
                         .truncationMode(.head)
                 }

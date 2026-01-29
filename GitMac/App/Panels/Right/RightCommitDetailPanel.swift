@@ -16,12 +16,12 @@ struct RightCommitDetailPanel: View {
                 HStack {
                     Text("Commit Details")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     Spacer()
                     Button(action: onClose) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 16))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                     .buttonStyle(.borderless)
                     .frame(width: 24, height: 24)
@@ -31,7 +31,7 @@ struct RightCommitDetailPanel: View {
                 // Commit message
                 Text(commit.message)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(3)
 
                 // Author and date
@@ -39,25 +39,25 @@ struct RightCommitDetailPanel: View {
                     AuthorAvatar(name: commit.author, size: 20)
                     Text(commit.author)
                         .font(.system(size: 12))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Spacer()
                     Text(commit.relativeDate)
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
 
                 // SHA
                 HStack {
                     Text(String(commit.sha.prefix(8)))
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                     Button {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(commit.sha, forType: .string)
                     } label: {
                         Image(systemName: "doc.on.doc")
                             .font(.system(size: 10))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                     .buttonStyle(.plain)
                     Spacer()
@@ -73,15 +73,15 @@ struct RightCommitDetailPanel: View {
                 HStack {
                     Text("Changed Files")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     Spacer()
                     Text("\(viewModel.changedFiles.count)")
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(AppTheme.backgroundTertiary)
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
@@ -105,12 +105,30 @@ struct RightCommitDetailPanel: View {
                                     onSelect: { loadCommitFileDiff(file) }
                                 )
                             }
-                            if viewModel.changedFiles.isEmpty {
+                            if viewModel.changedFiles.isEmpty && viewModel.errorMessage == nil {
                                 Text("No files changed")
                                     .font(.system(size: 11))
-                                    .foregroundColor(AppTheme.textMuted)
+                                    .foregroundStyle(AppTheme.textMuted)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
+                            }
+                            if let error = viewModel.errorMessage {
+                                VStack(spacing: 8) {
+                                    Image(systemName: "exclamationmark.triangle")
+                                        .foregroundStyle(AppTheme.warning)
+                                    Text(error)
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(AppTheme.textMuted)
+                                        .multilineTextAlignment(.center)
+                                    Button("Retry") {
+                                        guard let path = appState.currentRepository?.path else { return }
+                                        Task { await viewModel.loadCommitFiles(sha: commit.sha, at: path) }
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
                             }
                         }
                     }

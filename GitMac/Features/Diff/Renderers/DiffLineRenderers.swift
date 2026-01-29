@@ -22,14 +22,14 @@ struct DiffLineRow: View {
             if showLineNumber {
                 Text(lineNumber.map { String($0) } ?? "")
                     .font(DesignTokens.Typography.commitHash)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .frame(width: 40, alignment: .trailing)
                     .padding(.trailing, DesignTokens.Spacing.sm)
             }
 
             Text(line.content)
                 .font(DesignTokens.Typography.diffLine)
-                .foregroundColor(textColor)
+                .foregroundStyle(textColor)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -75,20 +75,20 @@ struct InlineDiffLineRow: View {
                         .frame(width: 40, alignment: .trailing)
                 }
                 .font(DesignTokens.Typography.commitHash)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .padding(.trailing, DesignTokens.Spacing.sm)
             }
 
             // Indicator
             Text(lineIndicator)
                 .font(DesignTokens.Typography.diffLine)
-                .foregroundColor(indicatorColor)
+                .foregroundStyle(indicatorColor)
                 .frame(width: 16)
 
             // Content
             Text(line.content)
                 .font(DesignTokens.Typography.diffLine)
-                .foregroundColor(textColor)
+                .foregroundStyle(textColor)
                 .textSelection(.enabled)
         }
         .padding(.vertical, 1)
@@ -149,17 +149,17 @@ struct HunkLineRow: View {
                         .frame(width: 35, alignment: .trailing)
                 }
                 .font(DesignTokens.Typography.commitHash)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
                 .padding(.trailing, DesignTokens.Spacing.sm)
                 .background(lineNumberBackground)
             }
 
             Text(linePrefix)
-                .foregroundColor(prefixColor)
+                .foregroundStyle(prefixColor)
                 .frame(width: 16)
 
             Text(line.content)
-                .foregroundColor(textColor)
+                .foregroundStyle(textColor)
                 .textSelection(.enabled)
         }
         .font(DesignTokens.Typography.diffLine)
@@ -223,7 +223,7 @@ struct HunkHeaderRow: View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: "text.alignleft")
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
             Text(header)
                 .font(DesignTokens.Typography.commitHash)
 
@@ -237,7 +237,7 @@ struct HunkHeaderRow: View {
                     HStack(spacing: DesignTokens.Spacing.xs) {
                         Image(systemName: "trash")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                         Text("Discard Hunk")
                             .font(DesignTokens.Typography.caption2.weight(.medium))
                     }
@@ -246,12 +246,12 @@ struct HunkHeaderRow: View {
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.vertical, DesignTokens.Spacing.xs)
                 .background(AppTheme.error.opacity(0.15))
-                .foregroundColor(AppTheme.error)
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .foregroundStyle(AppTheme.error)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 .help("Discard all changes in this hunk")
             }
         }
-        .foregroundColor(AppTheme.accent)
+        .foregroundStyle(AppTheme.accent)
         .padding(.vertical, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
         .padding(.horizontal, DesignTokens.Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -269,7 +269,7 @@ struct EmptyLineRow: View {
             if showLineNumber {
                 Text("")
                     .font(DesignTokens.Typography.commitHash)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .frame(width: 45, alignment: .trailing)
                     .padding(.trailing, DesignTokens.Spacing.sm)
                     .background(AppTheme.backgroundSecondary)

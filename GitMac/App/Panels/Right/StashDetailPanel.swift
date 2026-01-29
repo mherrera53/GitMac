@@ -19,16 +19,16 @@ struct StashDetailPanel: View {
                     HStack(spacing: 4) {
                         Image(systemName: "shippingbox.fill")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(stashColor)
+                            .foregroundStyle(stashColor)
                         Text("Stash Details")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                     Spacer()
                     Button(action: onClose) {
                         Image(systemName: "xmark")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                     .buttonStyle(.plain)
                 }
@@ -36,7 +36,7 @@ struct StashDetailPanel: View {
                 // Stash message
                 Text(stash.displayMessage)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(3)
 
                 // Branch and date
@@ -48,19 +48,19 @@ struct StashDetailPanel: View {
                             Text(branch)
                         }
                         .font(.system(size: 12))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     }
                     Spacer()
                     Text(stash.relativeDate)
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
 
                 // Reference
                 HStack {
                     Text(stash.reference)
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(stashColor)
+                        .foregroundStyle(stashColor)
                     Spacer()
                 }
             }
@@ -74,15 +74,15 @@ struct StashDetailPanel: View {
                 HStack {
                     Text("Stashed Files")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     Spacer()
                     Text("\(viewModel.stashFiles.count)")
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(AppTheme.backgroundTertiary)
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
@@ -113,7 +113,7 @@ struct StashDetailPanel: View {
                             if viewModel.stashFiles.isEmpty {
                                 Text("No files in stash")
                                     .font(.system(size: 11))
-                                    .foregroundColor(AppTheme.textMuted)
+                                    .foregroundStyle(AppTheme.textMuted)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
                             }

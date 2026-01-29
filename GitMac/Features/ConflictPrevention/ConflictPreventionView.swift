@@ -36,7 +36,7 @@ struct ConflictPreventionView: View {
             }
         }
         .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
         .task {
             await loadBranches()
         }
@@ -54,19 +54,19 @@ struct ConflictPreventionView: View {
                 Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                     .font(DesignTokens.Typography.caption2)
                     .fontWeight(.semibold)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .frame(width: 16)
             }
             .buttonStyle(.plain)
 
             Image(systemName: "exclamationmark.shield")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
 
             Text("CONFLICT PREVENTION")
                 .font(DesignTokens.Typography.caption)
                 .fontWeight(.semibold)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Spacer()
 
@@ -81,7 +81,7 @@ struct ConflictPreventionView: View {
                     .font(DesignTokens.Typography.caption)
             }
             .buttonStyle(.plain)
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
             .disabled(viewModel.isAnalyzing)
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
@@ -101,7 +101,7 @@ struct ConflictPreventionView: View {
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
                 Text("\(analysis.potentialConflicts.count)")
                     .font(DesignTokens.Typography.caption2)
                     .fontWeight(.semibold)
@@ -109,13 +109,13 @@ struct ConflictPreventionView: View {
             .padding(.horizontal, DesignTokens.Spacing.xs + 2)
             .padding(.vertical, DesignTokens.Spacing.xxs)
             .background(AppTheme.error.opacity(0.2))
-            .foregroundColor(AppTheme.error)
-            .cornerRadius(DesignTokens.CornerRadius.sm)
+            .foregroundStyle(AppTheme.error)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         } else {
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 Text("Safe")
                     .font(DesignTokens.Typography.caption2)
                     .fontWeight(.semibold)
@@ -123,8 +123,8 @@ struct ConflictPreventionView: View {
             .padding(.horizontal, DesignTokens.Spacing.xs + 2)
             .padding(.vertical, DesignTokens.Spacing.xxs)
             .background(AppTheme.success.opacity(0.2))
-            .foregroundColor(AppTheme.success)
-            .cornerRadius(DesignTokens.CornerRadius.sm)
+            .foregroundStyle(AppTheme.success)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         }
     }
 
@@ -136,7 +136,7 @@ struct ConflictPreventionView: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                 Text("From")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Picker("", selection: $selectedSourceBranch) {
                     ForEach(viewModel.branches, id: \.self) { branch in
@@ -149,13 +149,13 @@ struct ConflictPreventionView: View {
 
             Image(systemName: "arrow.right")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             // Target branch
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                 Text("Into")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Picker("", selection: $selectedTargetBranch) {
                     ForEach(viewModel.branches, id: \.self) { branch in
@@ -186,7 +186,7 @@ struct ConflictPreventionView: View {
 
             Text("Analyzing potential conflicts...")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity)
         .padding(DesignTokens.Spacing.xl)
@@ -201,10 +201,10 @@ struct ConflictPreventionView: View {
             HStack {
                 if analysis.hasConflicts {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(AppTheme.warning)
+                        .foregroundStyle(AppTheme.warning)
                 } else {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
                 }
 
                 Text(analysis.summary)
@@ -214,7 +214,7 @@ struct ConflictPreventionView: View {
 
                 Text("Analyzed \(analysis.analyzedAt, style: .relative) ago")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             .padding(DesignTokens.Spacing.md)
             .background(analysis.hasConflicts ? AppTheme.warning.opacity(0.1) : AppTheme.success.opacity(0.1))
@@ -240,7 +240,7 @@ struct ConflictPreventionView: View {
             Image(systemName: "exclamationmark.triangle")
                 // TODO: Replace with appropriate Typography token when available for large icons
                 .font(.system(size: DesignTokens.Size.iconXL))
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
 
             Text("Analysis Failed")
                 .font(DesignTokens.Typography.callout)
@@ -248,7 +248,7 @@ struct ConflictPreventionView: View {
 
             Text(error)
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
@@ -262,15 +262,15 @@ struct ConflictPreventionView: View {
             Image(systemName: "shield.checkered")
                 // TODO: Replace with appropriate Typography token when available for large icons
                 .font(.system(size: DesignTokens.Size.iconXL))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Select branches to analyze")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Detect potential merge conflicts before they happen")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(.secondary.opacity(0.7))
+                .foregroundStyle(.secondary.opacity(0.7))
         }
         .frame(maxWidth: .infinity)
         .padding(DesignTokens.Spacing.xl)
@@ -319,7 +319,7 @@ struct ConflictRowView: View {
                 Image(systemName: conflict.severity.icon)
                     .font(.system(size: DesignTokens.Size.iconSM))
                     .fontDesign(.default)
-                    .foregroundColor(severityColor)
+                    .foregroundStyle(severityColor)
                     .frame(width: 20)
 
                 // File info
@@ -333,7 +333,7 @@ struct ConflictRowView: View {
                         // Line range
                         Text("Lines \(conflict.sourceLines.lowerBound)-\(conflict.sourceLines.upperBound)")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
 
                         // Authors
                         if let sourceAuthor = conflict.sourceAuthor {
@@ -345,11 +345,11 @@ struct ConflictRowView: View {
                                         Text(String(sourceAuthor.prefix(1)).uppercased())
                                             .font(DesignTokens.Typography.caption2)
                                             .fontWeight(.bold)
-                                            .foregroundColor(AppTheme.info)
+                                            .foregroundStyle(AppTheme.info)
                                     )
                                 Text(sourceAuthor)
                                     .font(DesignTokens.Typography.caption2)
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
                             }
                         }
 
@@ -357,7 +357,7 @@ struct ConflictRowView: View {
                            let targetAuthor = conflict.targetAuthor {
                             Text("vs")
                                 .font(DesignTokens.Typography.caption2)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
 
                             HStack(spacing: DesignTokens.Spacing.xxs) {
                                 Circle()
@@ -367,11 +367,11 @@ struct ConflictRowView: View {
                                         Text(String(targetAuthor.prefix(1)).uppercased())
                                             .font(DesignTokens.Typography.caption2)
                                             .fontWeight(.bold)
-                                            .foregroundColor(AppTheme.accentPurple)
+                                            .foregroundStyle(AppTheme.accentPurple)
                                     )
                                 Text(targetAuthor)
                                     .font(DesignTokens.Typography.caption2)
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
                             }
                         }
                     }
@@ -386,8 +386,8 @@ struct ConflictRowView: View {
                     .padding(.horizontal, DesignTokens.Spacing.xs + 2)
                     .padding(.vertical, DesignTokens.Spacing.xxs)
                     .background(severityColor.opacity(0.2))
-                    .foregroundColor(severityColor)
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .foregroundStyle(severityColor)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
                 // Expand button
                 if conflict.overlappingContent != nil {
@@ -396,7 +396,7 @@ struct ConflictRowView: View {
                     } label: {
                         Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -418,7 +418,7 @@ struct ConflictRowView: View {
                         Text(conflict.sourceBranch)
                             .font(DesignTokens.Typography.caption2)
                             .fontWeight(.medium)
-                            .foregroundColor(AppTheme.info)
+                            .foregroundStyle(AppTheme.info)
 
                         Text(content.sourceContent)
                             .font(DesignTokens.Typography.caption)
@@ -433,7 +433,7 @@ struct ConflictRowView: View {
                         Text(conflict.targetBranch)
                             .font(DesignTokens.Typography.caption2)
                             .fontWeight(.medium)
-                            .foregroundColor(AppTheme.accentPurple)
+                            .foregroundStyle(AppTheme.accentPurple)
 
                         Text(content.targetContent)
                             .font(DesignTokens.Typography.caption)
@@ -520,7 +520,7 @@ struct ConflictPreventionBadge: View {
             } else if let hasConflicts = hasConflicts {
                 Image(systemName: hasConflicts ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(hasConflicts ? AppTheme.warning : AppTheme.success)
+                    .foregroundStyle(hasConflicts ? AppTheme.warning : AppTheme.success)
             }
         }
         .task {

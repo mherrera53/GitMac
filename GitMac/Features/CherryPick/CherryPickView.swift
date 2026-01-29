@@ -15,7 +15,7 @@ struct CherryPickView: View {
             // Header
             HStack {
                 Image(systemName: "arrow.right.doc.on.clipboard")
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
 
                 Text("Cherry-Pick")
                     .font(.headline)
@@ -27,8 +27,8 @@ struct CherryPickView: View {
                     .padding(.horizontal, DesignTokens.Spacing.sm)
                     .padding(.vertical, DesignTokens.Spacing.xxs)
                     .background(AppTheme.accent.opacity(0.2))
-                    .foregroundColor(AppTheme.accent)
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
+                    .foregroundStyle(AppTheme.accent)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
             }
             .padding()
             .background(AppTheme.accent.opacity(0.1))
@@ -42,7 +42,7 @@ struct CherryPickView: View {
                     GroupBox("Target Branch") {
                         HStack {
                             Image(systemName: "arrow.triangle.branch")
-                                .foregroundColor(AppTheme.success)
+                                .foregroundStyle(AppTheme.success)
 
                             Text(appState.currentRepository?.currentBranch?.name ?? "HEAD")
                                 .fontWeight(.medium)
@@ -51,7 +51,7 @@ struct CherryPickView: View {
 
                             Text("current")
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                         }
                     }
 
@@ -84,11 +84,11 @@ struct CherryPickView: View {
                         GroupBox("Note") {
                             HStack {
                                 Image(systemName: "info.circle")
-                                    .foregroundColor(AppTheme.accent)
+                                    .foregroundStyle(AppTheme.accent)
 
                                 Text("Changes will be staged but not committed. You can review and modify before committing.")
                                     .font(DesignTokens.Typography.caption)
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
                             }
                         }
                     }
@@ -115,7 +115,7 @@ struct CherryPickView: View {
                 if let error = viewModel.error {
                     Text(error)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                         .lineLimit(1)
                 }
 
@@ -227,7 +227,7 @@ struct CherryPickCommitRow: View {
 
                 Text(commit.shortSHA)
                     .font(.caption.monospaced())
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Text(commit.summary)
                     .lineLimit(1)
@@ -238,7 +238,7 @@ struct CherryPickCommitRow: View {
                     withAnimation { isExpanded.toggle() }
                 } label: {
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 .buttonStyle(.borderless)
             }
@@ -256,13 +256,13 @@ struct CherryPickCommitRow: View {
                     if commit.message.count > commit.summary.count {
                         Text("Message")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
 
                         Text(commit.message)
                             .font(DesignTokens.Typography.caption)
                             .padding(DesignTokens.Spacing.sm)
                             .background(Color(nsColor: .textBackgroundColor))
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                     }
                 }
                 .font(DesignTokens.Typography.caption)
@@ -295,7 +295,7 @@ struct QuickCherryPickSheet: View {
                     HStack {
                         Text(commit.shortSHA)
                             .font(DesignTokens.Typography.commitHash)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
 
                         Text(commit.summary)
                             .lineLimit(2)
@@ -303,30 +303,28 @@ struct QuickCherryPickSheet: View {
 
                     Text(commit.author)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
 
             // Target branch picker
-            if let repo = appState.currentRepository {
-                DSPicker(
-                    items: repo.branches.filter { !$0.isRemote },
-                    selection: $targetBranch
-                ) { branch in
-                    HStack {
-                        if branch.isCurrent {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(AppTheme.success)
-                        }
-                        Text(branch.name)
+            DSPicker(
+                items: appState.sortedLocalBranches,
+                selection: $targetBranch
+            ) { branch in
+                HStack {
+                    if branch.isCurrent {
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(AppTheme.success)
                     }
+                    Text(branch.name)
                 }
             }
 
             if let error = error {
                 Text(error)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
 
             HStack {
@@ -544,14 +542,14 @@ struct SourceBranchStep: View {
 
             Text("Choose the branch containing commits you want to cherry-pick")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             if let repo = appState.currentRepository {
                 List(selection: $sourceBranch) {
                     ForEach(repo.branches) { branch in
                         HStack {
                             Image(systemName: "arrow.triangle.branch")
-                                .foregroundColor(branch.isRemote ? AppTheme.warning : AppTheme.accent)
+                                .foregroundStyle(branch.isRemote ? AppTheme.warning : AppTheme.accent)
 
                             Text(branch.name)
 
@@ -560,7 +558,7 @@ struct SourceBranchStep: View {
                             if branch.isCurrent {
                                 Text("current")
                                     .font(DesignTokens.Typography.caption2)
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
                             }
                         }
                         .tag(branch)
@@ -599,7 +597,7 @@ struct SelectCommitsStep: View {
 
             Text("Choose which commits to cherry-pick")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             if isLoading {
                 ProgressView()
@@ -623,7 +621,7 @@ struct SelectCommitsStep: View {
                                 HStack {
                                     Text(commit.shortSHA)
                                         .font(DesignTokens.Typography.commitHash)
-                                        .foregroundColor(AppTheme.textPrimary)
+                                        .foregroundStyle(AppTheme.textPrimary)
 
                                     Text(commit.summary)
                                         .lineLimit(1)
@@ -631,7 +629,7 @@ struct SelectCommitsStep: View {
 
                                 Text(commit.author)
                                     .font(DesignTokens.Typography.caption)
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
                             }
                         }
                     }
@@ -646,7 +644,7 @@ struct SelectCommitsStep: View {
 
                 Text("\(selectedCommits.count) selected")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Button("Next") { onNext() }
                     .buttonStyle(.borderedProminent)
@@ -673,13 +671,13 @@ struct ConfirmStep: View {
             VStack(spacing: DesignTokens.Spacing.md) {
                 Image(systemName: "arrow.right.doc.on.clipboard")
                     .font(DesignTokens.Typography.iconXXXXL)
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
 
                 Text("\(selectedCount) commit(s) from \(sourceBranch?.name ?? "unknown")")
                     .font(.title3)
 
                 Text("will be applied to the current branch")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             .padding()
 

@@ -47,7 +47,7 @@ struct ContributionGraphView: View {
             ForEach(uniqueMonths, id: \.self) { month in
                 Text(monthName(month))
                     .font(.system(size: 9))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .frame(width: calculateMonthWidth(month), alignment: .leading)
             }
         }
@@ -59,7 +59,7 @@ struct ContributionGraphView: View {
                 if day % 2 == 1 {
                     Text(dayName(day))
                         .font(.system(size: 9))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .frame(width: 20, height: cellSize, alignment: .trailing)
                 } else {
                     Spacer()
@@ -93,7 +93,7 @@ struct ContributionGraphView: View {
             
             Text("Less")
                 .font(.system(size: 9))
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             
             ForEach([0.0, 0.25, 0.5, 0.75, 1.0], id: \.self) { intensity in
                 RoundedRectangle(cornerRadius: 2)
@@ -103,7 +103,7 @@ struct ContributionGraphView: View {
             
             Text("More")
                 .font(.system(size: 9))
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
         }
     }
     

@@ -27,7 +27,7 @@ struct RepositorySelectorButton: View {
                                 Spacer()
                                 if repo.path == currentRepo?.path {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(AppTheme.success)
+                                        .foregroundStyle(AppTheme.success)
                                         .symbolRenderingMode(.multicolor)
                                 }
                             }
@@ -48,23 +48,23 @@ struct RepositorySelectorButton: View {
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: currentRepo != nil ? "folder.fill.badge.gearshape" : "folder.badge.questionmark")
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(currentRepo != nil ? AppTheme.accent : theme.textMuted)
+                    .foregroundStyle(currentRepo != nil ? AppTheme.accent : theme.textMuted)
                     .symbolRenderingMode(.hierarchical)
 
                 Text(currentRepo?.name ?? "No Repository")
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
                     .lineLimit(1)
 
                 Image(systemName: "chevron.down.circle.fill")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(theme.textMuted)
+                    .foregroundStyle(theme.textMuted)
                     .symbolRenderingMode(.hierarchical)
             }
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .padding(.vertical, DesignTokens.Spacing.xs)
             .background(theme.backgroundTertiary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
         .menuStyle(.borderlessButton)
         .fileImporter(

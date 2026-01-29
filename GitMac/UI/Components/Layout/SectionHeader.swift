@@ -34,11 +34,11 @@ struct SectionHeader<Actions: View>: View {
                     HStack(spacing: style.spacing) {
                         Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                             .font(style.chevronFont)
-                            .foregroundColor(AppTheme.chevronColor)
+                            .foregroundStyle(AppTheme.chevronColor)
 
                         Image(systemName: icon)
                             .font(style.iconFont)
-                            .foregroundColor(color)
+                            .foregroundStyle(color)
 
                         Text(title)
                             .font(style.titleFont)
@@ -46,7 +46,7 @@ struct SectionHeader<Actions: View>: View {
 
                         Text("(\(count))")
                             .font(style.countFont)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
 
                         Spacer()
                     }
@@ -56,7 +56,7 @@ struct SectionHeader<Actions: View>: View {
                 HStack(spacing: style.spacing) {
                     Image(systemName: icon)
                         .font(style.iconFont)
-                        .foregroundColor(color)
+                        .foregroundStyle(color)
 
                     Text(title)
                         .font(style.titleFont)
@@ -64,7 +64,7 @@ struct SectionHeader<Actions: View>: View {
 
                     Text("(\(count))")
                         .font(style.countFont)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
 
                     Spacer()
                 }

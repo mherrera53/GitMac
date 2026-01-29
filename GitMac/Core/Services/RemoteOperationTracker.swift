@@ -227,14 +227,14 @@ struct RemoteStatusBadge: View {
     private var compactView: some View {
         Image(systemName: operation.icon)
             .font(.system(size: 12))
-            .foregroundColor(operation.color)
+            .foregroundStyle(operation.color)
             .help(operation.displayMessage)
     }
     
     private var fullView: some View {
         HStack(spacing: 6) {
             Image(systemName: operation.icon)
-                .foregroundColor(operation.color)
+                .foregroundStyle(operation.color)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(operation.type.displayName)
@@ -243,7 +243,7 @@ struct RemoteStatusBadge: View {
                 
                 Text(operation.success ? "Exitoso" : "Falló")
                     .font(.caption2)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             
             if let count = operation.commitCount, count > 0 {
@@ -252,13 +252,13 @@ struct RemoteStatusBadge: View {
                     .padding(.horizontal, 4)
                     .padding(.vertical, 2)
                     .background(operation.color.opacity(0.2))
-                    .cornerRadius(3)
+                    .clipShape(.rect(cornerRadius: 3))
             }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(operation.color.opacity(0.1))
-        .cornerRadius(6)
+        .clipShape(.rect(cornerRadius: 6))
         .help(operation.displayMessage)
     }
 }
@@ -292,7 +292,7 @@ struct CommitGraphWithStatus: View {
             
             Text(operation.timestamp.formatted(.relative(presentation: .named)))
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Spacer()
             
@@ -316,7 +316,7 @@ struct CommitGraphWithStatus: View {
         .overlay(
             Rectangle()
                 .frame(height: 1)
-                .foregroundColor(operation.color.opacity(0.3)),
+                .foregroundStyle(operation.color.opacity(0.3)),
             alignment: .bottom
         )
     }
@@ -341,7 +341,7 @@ struct RemoteOperationsPanel: View {
                         tracker.clearHistory()
                     } label: {
                         Image(systemName: "trash")
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                     }
                     .buttonStyle(.borderless)
                     .help("Clear History")
@@ -365,10 +365,10 @@ struct RemoteOperationsPanel: View {
         VStack(spacing: 12) {
             Image(systemName: "arrow.up.arrow.down.circle")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text("No remote operations yet")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -393,7 +393,7 @@ struct RemoteOperationRow: View {
             // Icon
             Image(systemName: operation.icon)
                 .font(.system(size: 20))
-                .foregroundColor(operation.color)
+                .foregroundStyle(operation.color)
                 .frame(width: 32)
             
             // Info
@@ -403,17 +403,17 @@ struct RemoteOperationRow: View {
                         .fontWeight(.medium)
                     
                     Text("→")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     Text("\(operation.remote)/\(operation.branch)")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 .font(.body)
                 
                 if !operation.success, let error = operation.error {
                     Text(error)
                         .font(.caption)
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                         .lineLimit(1)
                 }
             }
@@ -424,12 +424,12 @@ struct RemoteOperationRow: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text(operation.timestamp.formatted(date: .omitted, time: .shortened))
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 if let count = operation.commitCount, count > 0 {
                     Text("\(count) commits")
                         .font(.caption2)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
         }

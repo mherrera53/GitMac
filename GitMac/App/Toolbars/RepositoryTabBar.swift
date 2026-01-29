@@ -10,13 +10,14 @@ struct RepositoryTabBar: View {
     var body: some View {
         HStack(spacing: 0) {
             // Tabs
-            ScrollView(.horizontal, showsIndicators: false) {
+            ScrollView(.horizontal) {
                 HStack(spacing: 1) {
                     ForEach(appState.openTabs) { tab in
                         SingleRepoTab(tab: tab)
                     }
                 }
             }
+            .scrollIndicators(.hidden)
             .frame(maxWidth: .infinity, alignment: .leading)
 
             // Repository info (current branch, status)
@@ -27,16 +28,16 @@ struct RepositoryTabBar: View {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.triangle.branch")
                                 .font(.system(size: 10))
-                                .foregroundColor(AppTheme.accent)
+                                .foregroundStyle(AppTheme.accent)
                             Text(branch.name)
                                 .font(.system(size: 10, weight: .medium))
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .lineLimit(1)
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
                         .background(AppTheme.backgroundSecondary)
-                        .cornerRadius(3)
+                        .clipShape(.rect(cornerRadius: 3))
                     }
 
                     // Uncommitted changes indicator
@@ -44,15 +45,15 @@ struct RepositoryTabBar: View {
                         HStack(spacing: 3) {
                             Image(systemName: "circle.fill")
                                 .font(.system(size: 5))
-                                .foregroundColor(AppTheme.warning)
+                                .foregroundStyle(AppTheme.warning)
                             Text("\(repo.status.staged.count + repo.status.unstaged.count)")
                                 .font(.system(size: 10, weight: .medium))
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                         .padding(.horizontal, 5)
                         .padding(.vertical, 3)
                         .background(AppTheme.warning.opacity(0.15))
-                        .cornerRadius(3)
+                        .clipShape(.rect(cornerRadius: 3))
                     }
                 }
                 .padding(.horizontal, 8)
@@ -64,7 +65,7 @@ struct RepositoryTabBar: View {
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .frame(width: 32, height: 32)
             }
             .buttonStyle(.plain)
@@ -131,7 +132,7 @@ struct SingleRepoTab: View {
                 // Repo name - compact
                 Text(tab.repository.name)
                     .font(.system(size: 11, weight: isActive ? .medium : .regular))
-                    .foregroundColor(isActive ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    .foregroundStyle(isActive ? AppTheme.textPrimary : AppTheme.textSecondary)
                     .lineLimit(1)
 
                 // Close button (show on hover or if active)
@@ -141,7 +142,7 @@ struct SingleRepoTab: View {
                     } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                     .buttonStyle(.plain)
                 }

@@ -14,17 +14,17 @@ struct TaigaLoginView: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             HStack {
                 Image(systemName: "ticket.fill")
-                    .foregroundColor(SwiftUI.Color(hex: "4DC8A8"))
+                    .foregroundStyle(SwiftUI.Color(hex: "4DC8A8"))
                 Text("Connect to Taiga")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
 
             Text("Link your Taiga account to sync user stories, tasks, and issues.")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             DSTextField(placeholder: "Username or Email", text: $username)
 
@@ -44,7 +44,7 @@ struct TaigaLoginView: View {
 
             if let error = error {
                 Text(error)
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                     .font(DesignTokens.Typography.caption)
             }
         }
@@ -66,11 +66,11 @@ struct TaigaConnectedView: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             HStack {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 Text("Connected to Taiga")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .fontWeight(.medium)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 DSButton("Disconnect", variant: .danger, size: .sm) {
                     onDisconnect()
@@ -82,10 +82,10 @@ struct TaigaConnectedView: View {
 
                 Picker("Project for this repository", selection: $selectedProjectId) {
                     Text("None").tag(nil as Int?)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     ForEach(projects) { project in
                         Text(project.name).tag(Optional(project.id))
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
                 .onChange(of: selectedProjectId) { _, newValue in
@@ -99,15 +99,15 @@ struct TaigaConnectedView: View {
                 if let projectName = config.taigaProjectName {
                     HStack {
                         Image(systemName: "folder.fill")
-                            .foregroundColor(SwiftUI.Color(hex: "4DC8A8"))
+                            .foregroundStyle(SwiftUI.Color(hex: "4DC8A8"))
                         Text("Linked to: \(projectName)")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .font(DesignTokens.Typography.caption)
                     }
                 }
             } else {
                 Text("Select a repository to assign a project")
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .font(DesignTokens.Typography.caption)
             }
         }

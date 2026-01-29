@@ -49,7 +49,29 @@ struct BranchTransferable: Transferable, Codable {
 
 // MARK: - Ghost Branches (integrated from GhostBranchesOverlay.swift)
 
-/// Shows nearby branches when hovering over a commit in the graph
+/// Cache for commit distance results to avoid repeated git process spawns
+private actor CommitDistanceCache {
+    static let shared = CommitDistanceCache()
+    private var cache: [String: (ahead: Int, behind: Int)] = [:]
+    private var repoPath: String?
+
+    func get(from: String, to: String) -> (ahead: Int, behind: Int)? {
+        cache["\(from):\(to)"]
+    }
+
+    func set(from: String, to: String, value: (ahead: Int, behind: Int)) {
+        cache["\(from):\(to)"] = value
+    }
+
+    /// Clear cache when repository changes
+    func invalidate(forRepo path: String) {
+        if repoPath != path {
+            cache.removeAll()
+            repoPath = path
+        }
+    }
+}
+
 /// Shows nearby branches when hovering over a commit in the graph
 struct GhostBranchesOverlay: View {
     let commit: Commit
@@ -65,7 +87,7 @@ struct GhostBranchesOverlay: View {
                     Text("Nearby Branches")
                         .font(DesignTokens.Typography.caption2)
                         .fontWeight(.semibold)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     ForEach(nearbyBranches.prefix(5)) { branch in
                         NearbyBranchRow(branch: branch)
@@ -73,7 +95,7 @@ struct GhostBranchesOverlay: View {
                 }
                 .padding(DesignTokens.Spacing.sm)
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 .shadow(color: .black.opacity(0.2), radius: DesignTokens.Spacing.xs)
             }
         }
@@ -84,14 +106,16 @@ struct GhostBranchesOverlay: View {
 
     private func findNearbyBranches() async {
         isLoading = true
+        await CommitDistanceCache.shared.invalidate(forRepo: repoPath)
 
         var nearby: [NearbyBranch] = []
 
         for branch in allBranches {
+            guard !Task.isCancelled else { return }
             // Skip if this commit IS the branch tip
             guard branch.targetSHA != commit.sha else { continue }
 
-            // Check distance to this branch
+            // Check distance to this branch (cached)
             if let distance = await getCommitDistance(from: commit.sha, to: branch.targetSHA) {
                 if distance.ahead <= 10 || distance.behind <= 10 {
                     nearby.append(NearbyBranch(
@@ -105,12 +129,18 @@ struct GhostBranchesOverlay: View {
             }
         }
 
+        guard !Task.isCancelled else { return }
         // Sort by total distance
         nearbyBranches = nearby.sorted { ($0.ahead + $0.behind) < ($1.ahead + $1.behind) }
         isLoading = false
     }
 
     private func getCommitDistance(from: String, to: String) async -> (ahead: Int, behind: Int)? {
+        // Check cache first - avoids spawning git process
+        if let cached = await CommitDistanceCache.shared.get(from: from, to: to) {
+            return cached
+        }
+
         let executor = ShellExecutor()
         let result = await executor.execute(
             "git",
@@ -125,7 +155,9 @@ struct GhostBranchesOverlay: View {
               let ahead = Int(parts[0]),
               let behind = Int(parts[1]) else { return nil }
 
-        return (ahead, behind)
+        let distance = (ahead: ahead, behind: behind)
+        await CommitDistanceCache.shared.set(from: from, to: to, value: distance)
+        return distance
     }
 }
 
@@ -153,7 +185,7 @@ struct NearbyBranchRow: View {
             // Branch icon with color
             Image(systemName: "arrow.triangle.branch")
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(branch.isCurrent ? AppTheme.success : AppTheme.accent)
+                .foregroundStyle(branch.isCurrent ? AppTheme.success : AppTheme.accent)
 
             // Branch name
             Text(branch.name)
@@ -172,7 +204,7 @@ struct NearbyBranchRow: View {
                         Text("\(branch.ahead)")
                             .font(DesignTokens.Typography.caption2)
                     }
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 }
 
                 if branch.behind > 0 {
@@ -182,7 +214,7 @@ struct NearbyBranchRow: View {
                         Text("\(branch.behind)")
                             .font(DesignTokens.Typography.caption2)
                     }
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
                 }
             }
         }
@@ -377,6 +409,8 @@ struct CommitGraphView: View {
     @State private var selectedIds: Set<String> = []
     @State private var lastSelectedId: String?
     @State private var hoveredId: String?
+    @State private var debouncedHoveredId: String?  // Debounced version for ghost branches
+    @State private var hoverDebounceTask: Task<Void, Never>?
     @State private var hoveredBranch: String?
     @State private var showSettings = false
     @State private var themeRefreshTrigger = UUID()
@@ -483,7 +517,7 @@ struct CommitGraphView: View {
                     .transition(.move(edge: .trailing))
                 }
 
-                // Detail Panel (right sidebar)
+                // Detail Panel (right sidebar within graph)
                 if showDetailPanel, let commit = selectedCommit {
                     Divider()
 
@@ -495,7 +529,6 @@ struct CommitGraphView: View {
                             }
                         },
                         onOpenDiff: { selectedCommit in
-                            // Set appState.selectedCommit to open diff in the right panel
                             appState.selectedCommit = selectedCommit
                         }
                     )
@@ -572,7 +605,7 @@ struct CommitGraphView: View {
             // Time ago
             Text(operation.timestamp.formatted(.relative(presentation: .named)))
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textPrimary) // Replaced theme.text
+                .foregroundStyle(AppTheme.textPrimary) // Replaced theme.text
 
             Spacer()
 
@@ -596,7 +629,7 @@ struct CommitGraphView: View {
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 18))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .frame(width: 28, height: 28)
                     .contentShape(Rectangle())
             }
@@ -610,7 +643,7 @@ struct CommitGraphView: View {
                 operation.color.opacity(0.08)
                 Rectangle()
                     .frame(height: DesignTokens.Spacing.xxs)
-                    .foregroundColor(operation.color.opacity(0.4))
+                    .foregroundStyle(operation.color.opacity(0.4))
             }
         )
     }
@@ -657,7 +690,7 @@ struct CommitGraphView: View {
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     Image(systemName: "person.fill")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textSecondary) // Replaced theme.textSecondary
+                        .foregroundStyle(AppTheme.textSecondary) // Replaced theme.textSecondary
                     Text(settings.filterAuthor)
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
@@ -665,15 +698,15 @@ struct CommitGraphView: View {
                         settings.filterAuthor = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                     }
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.vertical, DesignTokens.Spacing.xs)
                 .background(AppTheme.info.opacity(0.2))
-                .foregroundColor(AppTheme.info)
-                .cornerRadius(DesignTokens.CornerRadius.xl)
+                .foregroundStyle(AppTheme.info)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
             }
 
             Spacer()
@@ -690,7 +723,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: settings.showBranches ? "point.3.connected.trianglepath.dotted" : "arrow.triangle.branch")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(settings.showBranches ? AppTheme.accent : AppTheme.textSecondary) // Replaced theme.textMuted
+                        .foregroundStyle(settings.showBranches ? AppTheme.accent : AppTheme.textSecondary) // Replaced theme.textMuted
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -701,7 +734,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: settings.showTags ? "tag.circle.fill" : "tag.circle")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(settings.showTags ? AppTheme.warning : AppTheme.textSecondary) // Replaced theme.textMuted
+                        .foregroundStyle(settings.showTags ? AppTheme.warning : AppTheme.textSecondary) // Replaced theme.textMuted
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -712,7 +745,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: settings.showStashes ? "archivebox.circle.fill" : "archivebox.circle")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(settings.showStashes ? AppTheme.warning : AppTheme.textSecondary) // Replaced theme.textMuted
+                        .foregroundStyle(settings.showStashes ? AppTheme.warning : AppTheme.textSecondary) // Replaced theme.textMuted
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -731,7 +764,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: "sidebar.left")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(showBranchPanel ? AppTheme.accent : AppTheme.textSecondary) // Replaced theme.textMuted
+                        .foregroundStyle(showBranchPanel ? AppTheme.accent : AppTheme.textSecondary) // Replaced theme.textMuted
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -744,7 +777,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: "map")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(showMinimap ? AppTheme.accent : AppTheme.textSecondary) // Replaced theme.textMuted
+                        .foregroundStyle(showMinimap ? AppTheme.accent : AppTheme.textSecondary) // Replaced theme.textMuted
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -757,11 +790,12 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: "sidebar.right")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(showDetailPanel ? AppTheme.accent : AppTheme.textSecondary) // Replaced theme.textMuted
+                        .foregroundStyle(showDetailPanel ? AppTheme.accent : AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
                 .help("Toggle detail panel")
+
             }
 
             Divider()
@@ -848,7 +882,7 @@ struct CommitGraphView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.triangle.branch")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary) // Replaced theme.textMuted
+                        .foregroundStyle(AppTheme.textSecondary) // Replaced theme.textMuted
                         .symbolRenderingMode(.monochrome)
                     Text("BRANCH / TAG")
                 }
@@ -859,7 +893,7 @@ struct CommitGraphView: View {
             HStack(spacing: 4) {
                 Image(systemName: "point.3.connected.trianglepath.dotted")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .symbolRenderingMode(.monochrome)
                 Text("GRAPH")
             }
@@ -876,7 +910,7 @@ struct CommitGraphView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "person.circle.fill")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                     Text("AUTHOR")
                 }
@@ -887,7 +921,7 @@ struct CommitGraphView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                     Text("DATE")
                 }
@@ -898,7 +932,7 @@ struct CommitGraphView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "number.circle.fill")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                     Text("SHA")
                 }
@@ -908,7 +942,7 @@ struct CommitGraphView: View {
         }
         .font(DesignTokens.Typography.caption2)
         .fontWeight(.semibold)
-        .foregroundColor(AppTheme.textPrimary)
+        .foregroundStyle(AppTheme.textPrimary)
         .frame(height: 28)
         .background(AppTheme.backgroundSecondary)
         .accessibilityElement(children: .combine)
@@ -981,9 +1015,22 @@ struct CommitGraphView: View {
                     commit: node.commit,
                     branches: vm.branches,
                     repoPath: appState.currentRepository?.path ?? "",
-                    isHovered: hoveredId == node.commit.sha
+                    isHovered: debouncedHoveredId == node.commit.sha
                 )
-                .onHover { h in hoveredId = h ? node.commit.sha : nil }
+                .onHover { h in
+                    hoveredId = h ? node.commit.sha : nil
+                    // Debounce ghost branches: wait 400ms before spawning git commands
+                    hoverDebounceTask?.cancel()
+                    if h {
+                        hoverDebounceTask = Task {
+                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            guard !Task.isCancelled else { return }
+                            debouncedHoveredId = node.commit.sha
+                        }
+                    } else {
+                        debouncedHoveredId = nil
+                    }
+                }
                 .onTapGesture {
                     handleSelection(item: item)
                 }
@@ -1093,6 +1140,8 @@ struct CommitGraphView: View {
                 // WIP selected - clear commit/stash to show staging area
                 appState.selectedCommit = nil
                 appState.selectedStash = nil
+                // Bump status counter to force immediate staging reload
+                appState.bumpStatusChange()
             }
         }
     }
@@ -1185,7 +1234,7 @@ struct UncommittedChangesRow: View {
                 Image(systemName: "pencil")
                     .font(DesignTokens.Typography.callout)
                     .fontWeight(.bold)
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
                     .offset(x: -43)
             }
 
@@ -1195,10 +1244,10 @@ struct UncommittedChangesRow: View {
                     Text("Uncommitted changes")
                         .font(DesignTokens.Typography.callout)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.warning)
+                        .foregroundStyle(AppTheme.warning)
                     Text("\(stagedCount) staged, \(unstagedCount) unstaged")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 Spacer()
             }
@@ -1272,7 +1321,7 @@ struct GraphStashRow: View {
                 // Box icon
                 Image(systemName: "shippingbox.fill")
                     .font(.system(size: 8, weight: .bold)) // Graph badge font - intentionally small
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .offset(x: -5) // Adjust based on stashX calculation
             }
 
@@ -1281,18 +1330,18 @@ struct GraphStashRow: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                     Text(stash.stash.displayMessage)
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
 
                     HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
                         Text(stash.stash.reference)
                             .font(DesignTokens.Typography.caption2.monospaced())
-                            .foregroundColor(stashColor)
+                            .foregroundStyle(stashColor)
 
                         if let branch = stash.stash.branchName {
                             Text("on \(branch)")
                                 .font(DesignTokens.Typography.caption2)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                     }
                 }
@@ -1301,7 +1350,7 @@ struct GraphStashRow: View {
 
                 Text(stash.stash.relativeDate)
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .frame(width: 70, alignment: .trailing)
             }
             .padding(.horizontal, DesignTokens.Spacing.sm)
@@ -1390,18 +1439,18 @@ struct BranchBadge: View {
         HStack(spacing: DesignTokens.Spacing.xxs) {
             Image(systemName: iconName)
                 .font(.system(size: 9, weight: .medium))
-                .foregroundColor(color)
+                .foregroundStyle(color)
 
             Text(name)
                 .font(DesignTokens.Typography.caption2)
                 .fontWeight(isHead ? .semibold : .regular)
                 .lineLimit(1)
-                .foregroundColor(textColor)
+                .foregroundStyle(textColor)
         }
         .padding(.horizontal, DesignTokens.Spacing.xs + 2)
         .padding(.vertical, DesignTokens.Spacing.xxs + 1)
         .background(isDragTargeted ? AppTheme.accent.opacity(0.3) : color.opacity(colorScheme == .dark ? 0.2 : 0.12))
-        .cornerRadius(4)
+        .clipShape(.rect(cornerRadius: 4))
         .overlay(
             RoundedRectangle(cornerRadius: 4)
                 .strokeBorder(isDragTargeted ? AppTheme.accent : color.opacity(0.4), lineWidth: isDragTargeted ? 2 : 0.5)
@@ -1539,12 +1588,12 @@ struct GraphRow: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                 Text(node.commit.summary)
                     .font(settings.compactMode ? DesignTokens.Typography.caption : DesignTokens.Typography.callout)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
                 if !settings.compactMode && !settings.showAuthorColumn {
                     Text(node.commit.author)
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1571,7 +1620,7 @@ struct GraphRow: View {
                     }
                     Text(node.commit.author)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
                 }
                 .frame(width: settings.authorColumnWidth, alignment: .leading)
@@ -1581,7 +1630,7 @@ struct GraphRow: View {
             if settings.showDateColumn {
                 Text(node.commit.relativeDate)
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .frame(width: settings.dateColumnWidth, alignment: .trailing)
             }
 
@@ -1589,7 +1638,7 @@ struct GraphRow: View {
             if settings.showSHAColumn {
                 Text(node.commit.shortSha)
                     .font(DesignTokens.Typography.caption2.monospaced())
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .frame(width: settings.shaColumnWidth, alignment: .trailing)
                     .padding(.trailing, DesignTokens.Spacing.sm)
             }

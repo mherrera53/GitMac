@@ -451,20 +451,20 @@ struct CodeReviewPanel: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(session.title)
                         .font(.headline)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     HStack(spacing: DesignTokens.Spacing.sm) {
                         Label(session.headBranch, systemImage: "arrow.triangle.branch")
                             .font(.caption)
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                         
                         Image(systemName: "arrow.right")
                             .font(.caption2)
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                         
                         Label(session.baseBranch, systemImage: "arrow.triangle.branch")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                 }
                 
@@ -481,7 +481,7 @@ struct CodeReviewPanel: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(session.status.color)
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
             .padding()
             .background(AppTheme.backgroundSecondary)
@@ -502,11 +502,11 @@ struct CodeReviewPanel: View {
                         VStack(spacing: DesignTokens.Spacing.md) {
                             Image(systemName: "text.bubble")
                                 .font(.system(size: 32))
-                                .foregroundColor(AppTheme.textMuted)
+                                .foregroundStyle(AppTheme.textMuted)
                             
                             Text("No comments yet")
                                 .font(.subheadline)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, DesignTokens.Spacing.xxl)
@@ -567,7 +567,7 @@ struct ReviewCommentView: View {
                 } placeholder: {
                     Image(systemName: "person.circle.fill")
                         .resizable()
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .frame(width: 24, height: 24)
                 .clipShape(Circle())
@@ -575,29 +575,29 @@ struct ReviewCommentView: View {
                 Text(comment.author)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 Text(comment.timestamp, style: .relative)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                 
                 Spacer()
                 
                 // File and line info
                 Text("\(comment.filePath.components(separatedBy: "/").last ?? ""):\(comment.lineRange)")
                     .font(.caption.monospaced())
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 
                 if comment.isResolved {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
                 }
             }
             
             // Comment content
             Text(comment.content)
                 .font(.body)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             // Suggested code
             if let suggestion = comment.suggestedCode {
@@ -605,14 +605,14 @@ struct ReviewCommentView: View {
                     Text("Suggested change:")
                         .font(.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     
                     Text(suggestion)
                         .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .padding(8)
                         .background(AppTheme.backgroundTertiary)
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                 }
             }
             
@@ -629,16 +629,16 @@ struct ReviewCommentView: View {
                                 Text(reply.author)
                                     .font(.caption)
                                     .fontWeight(.medium)
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
                                 
                                 Text(reply.timestamp, style: .relative)
                                     .font(.caption2)
-                                    .foregroundColor(AppTheme.textMuted)
+                                    .foregroundStyle(AppTheme.textMuted)
                             }
                             
                             Text(reply.content)
                                 .font(.caption)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                         }
                     }
                     .padding(.leading, DesignTokens.Spacing.md)
@@ -661,7 +661,7 @@ struct ReviewCommentView: View {
                 }
                 .font(.caption)
             }
-            .foregroundColor(AppTheme.accent)
+            .foregroundStyle(AppTheme.accent)
             
             // Reply input
             if isReplying {
@@ -686,7 +686,7 @@ struct ReviewCommentView: View {
         }
         .padding()
         .background(comment.isResolved ? AppTheme.success.opacity(0.05) : AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                 .stroke(comment.isResolved ? AppTheme.success.opacity(0.3) : AppTheme.border, lineWidth: 1)

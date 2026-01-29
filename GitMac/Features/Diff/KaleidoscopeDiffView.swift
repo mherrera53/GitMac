@@ -121,11 +121,11 @@ struct KaleidoscopeDiffView: View {
                                     .controlSize(.small)
                                 Text("Loading commits…")
                                     .font(DesignTokens.Typography.body.weight(.semibold))
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
                             }
                             Text("If this takes too long, check repository access or try refreshing.")
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                         .padding(DesignTokens.Spacing.md)
                         .frame(width: 320, alignment: .topLeading)
@@ -240,11 +240,11 @@ struct KaleidoscopeDiffView: View {
                     Text("Swap A/B")
                         .font(DesignTokens.Typography.caption.weight(.medium))
                 }
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.vertical, DesignTokens.Spacing.xs)
                 .background(AppTheme.accent.opacity(0.1))
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
             .buttonStyle(.plain)
 
@@ -287,7 +287,7 @@ struct KaleidoscopeDiffView: View {
             if let file = selectedFile {
                 Text((file.displayPath as NSString).lastPathComponent)
                     .font(DesignTokens.Typography.body.weight(.semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
 
                 DiffStatsView.badges(
@@ -318,7 +318,7 @@ struct KaleidoscopeDiffView: View {
         }
         .padding(3)
         .background(AppTheme.backgroundTertiary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     }
 
     @ViewBuilder
@@ -422,15 +422,15 @@ struct KaleidoscopeDiffView: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
 
             Text("No file selected")
                 .font(DesignTokens.Typography.title3)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Select a file from the list to view changes")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -486,7 +486,7 @@ struct KaleidoscopeDiffView: View {
 
     @ViewBuilder
     private var changesOnlyView: some View {
-        ScrollView {
+        ScrollView([.horizontal, .vertical]) {
             if let file = selectedFile {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
                     ForEach(file.hunks) { hunk in
@@ -504,7 +504,7 @@ struct KaleidoscopeDiffView: View {
             // Hunk header
             Text(hunk.header)
                 .font(DesignTokens.Typography.caption.monospaced())
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
                 .padding(DesignTokens.Spacing.sm)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(AppTheme.accent.opacity(0.08))
@@ -515,7 +515,7 @@ struct KaleidoscopeDiffView: View {
             }
         }
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
     }
 
     @ViewBuilder
@@ -523,11 +523,11 @@ struct KaleidoscopeDiffView: View {
         HStack(spacing: DesignTokens.Spacing.xs) {
             Image(systemName: line.type == .addition ? "plus" : "minus")
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(line.type == .addition ? AppTheme.diffAddition : AppTheme.diffDeletion)
+                .foregroundStyle(line.type == .addition ? AppTheme.diffAddition : AppTheme.diffDeletion)
 
             Text(line.content)
                 .font(DesignTokens.Typography.diffLine)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .padding(.horizontal, DesignTokens.Spacing.sm)
         .padding(.vertical, 4)
@@ -810,17 +810,17 @@ struct CommitHistorySidebar: View {
     private var headerView: some View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: "clock.arrow.circlepath")
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
             Text("History")
                 .font(DesignTokens.Typography.headline.weight(.semibold))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Spacer()
             Text("\(totalChanges)")
                 .font(DesignTokens.Typography.caption.monospaced())
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
                 .padding(.horizontal, DesignTokens.Spacing.xs)
                 .background(AppTheme.backgroundTertiary)
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         }
         .padding(DesignTokens.Spacing.md)
     }
@@ -828,7 +828,7 @@ struct CommitHistorySidebar: View {
     private var searchBarView: some View {
         HStack(spacing: DesignTokens.Spacing.xs) {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             TextField("Filter Commits", text: $filterText)
                 .textFieldStyle(.plain)
             if !filterText.isEmpty {
@@ -838,7 +838,7 @@ struct CommitHistorySidebar: View {
         }
         .padding(DesignTokens.Spacing.sm)
         .background(AppTheme.backgroundTertiary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.sm)
     }
@@ -905,24 +905,24 @@ struct CommitHistoryRow: View {
                 Button { onSelectA() } label: {
                     Text("A").font(.caption2.bold()).frame(width: 20, height: 20)
                         .background(isSelectedA ? AppTheme.accent : AppTheme.backgroundTertiary)
-                        .foregroundColor(isSelectedA ? .white : AppTheme.textMuted).cornerRadius(4)
+                        .foregroundStyle(isSelectedA ? .white : AppTheme.textMuted).clipShape(.rect(cornerRadius: 4))
                 }.buttonStyle(.plain)
                 Button { onSelectB() } label: {
                     Text("B").font(.caption2.bold()).frame(width: 20, height: 20)
                         .background(isSelectedB ? AppTheme.info : AppTheme.backgroundTertiary)
-                        .foregroundColor(isSelectedB ? .white : AppTheme.textMuted).cornerRadius(4)
+                        .foregroundStyle(isSelectedB ? .white : AppTheme.textMuted).clipShape(.rect(cornerRadius: 4))
                 }.buttonStyle(.plain)
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(commit.author).font(.caption.weight(.medium)).foregroundColor(AppTheme.textPrimary)
-                Text(commit.summary).font(.caption).foregroundColor(AppTheme.textSecondary).lineLimit(1)
-                Text(commit.shortSHA).font(.caption2.monospaced()).foregroundColor(AppTheme.textMuted)
+                Text(commit.author).font(.caption.weight(.medium)).foregroundStyle(AppTheme.textPrimary)
+                Text(commit.summary).font(.caption).foregroundStyle(AppTheme.textSecondary).lineLimit(1)
+                Text(commit.shortSHA).font(.caption2.monospaced()).foregroundStyle(AppTheme.textMuted)
             }
         }
         .padding(DesignTokens.Spacing.sm)
         .background(isHovered ? AppTheme.hover : Color.clear)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         .onHover { isHovered = $0 }
     }
 }
@@ -972,7 +972,7 @@ struct ViewModeButton: View {
         Button(action: action) {
             Text(mode.rawValue)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(isSelected ? .white : AppTheme.textSecondary)
+                .foregroundStyle(isSelected ? .white : AppTheme.textSecondary)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 6)
                 .background(
@@ -999,7 +999,7 @@ struct ToolbarToggle: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(isActive ? AppTheme.accent : AppTheme.textSecondary)
+                .foregroundStyle(isActive ? AppTheme.accent : AppTheme.textSecondary)
                 .frame(width: 32, height: 32)
                 .background(
                     RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.sm)

@@ -21,15 +21,15 @@ struct GroupManagementSheet: View {
             HStack {
                 Image(systemName: "folder.badge.gearshape")
                     .font(DesignTokens.Typography.iconXL)
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 Text("Manage Groups")
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -43,14 +43,14 @@ struct GroupManagementSheet: View {
                         VStack(spacing: DesignTokens.Spacing.md) {
                             Image(systemName: "folder.badge.questionmark")
                                 .font(DesignTokens.Typography.iconXXXL)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                             Text("No groups yet")
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, DesignTokens.Spacing.xxl)
                     } else {
-                        ForEach(groupsService.groups.sorted(by: { $0.sortOrder < $1.sortOrder })) { group in
+                        ForEach(groupsService.sortedGroups) { group in
                             GroupManagementRow(group: group, onEdit: {
                                 editingGroup = group
                             }, onDelete: {
@@ -102,10 +102,10 @@ struct GroupManagementRow: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                 Text(group.name)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Text("\(group.repos.count) repositories")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             Spacer()
             if isHovered {
@@ -113,13 +113,13 @@ struct GroupManagementRow: View {
                     Button { onEdit() } label: {
                         Image(systemName: "pencil")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.plain)
                     Button { onDelete() } label: {
                         Image(systemName: "trash")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                     }
                     .buttonStyle(.plain)
                 }
@@ -127,7 +127,7 @@ struct GroupManagementRow: View {
         }
         .padding(DesignTokens.Spacing.md)
         .background(isHovered ? AppTheme.hover : Color.clear)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         .onHover { isHovered = $0 }
     }
 }
@@ -150,11 +150,11 @@ struct CreateGroupSheet: View {
             HStack {
                 Text("Create Group")
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -166,13 +166,13 @@ struct CreateGroupSheet: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Group Name")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     DSTextField(placeholder: "Work Projects", text: $groupName)
                 }
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Color")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: DesignTokens.Spacing.md) {
                         ForEach(availableColors, id: \.1) { _, hex in
                             ColorPickerButton(
@@ -235,11 +235,11 @@ struct EditGroupSheet: View {
             HStack {
                 Text("Edit Group")
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -251,13 +251,13 @@ struct EditGroupSheet: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Group Name")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     DSTextField(placeholder: "Work Projects", text: $groupName)
                 }
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Color")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: DesignTokens.Spacing.md) {
                         ForEach(availableColors, id: \.1) { _, hex in
                             ColorPickerButton(

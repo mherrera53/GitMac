@@ -57,7 +57,7 @@ struct DSLinkButton: View {
                         .underline(isHovered && !isDisabled)
                 }
             }
-            .foregroundColor(foregroundColor)
+            .foregroundStyle(foregroundColor)
             .padding(.horizontal, DesignTokens.Spacing.xxs)
             .padding(.vertical, DesignTokens.Spacing.xxs)
         }
@@ -141,11 +141,11 @@ struct DSLinkButton: View {
     VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
         Text("GitMac")
             .font(DesignTokens.Typography.title2)
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
 
         Text("A modern Git client for macOS with powerful features.")
             .font(DesignTokens.Typography.body)
-            .foregroundColor(AppTheme.textSecondary)
+            .foregroundStyle(AppTheme.textSecondary)
 
         HStack(spacing: DesignTokens.Spacing.md) {
             DSLinkButton(title: "Documentation", iconName: "book") {
@@ -169,7 +169,7 @@ struct DSLinkButton: View {
     HStack(spacing: DesignTokens.Spacing.xs) {
         Text("Read more about Git workflows")
             .font(DesignTokens.Typography.body)
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
 
         DSLinkButton(title: "here", iconName: "arrow.up.right.square") {
             print("External link")

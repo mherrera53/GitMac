@@ -28,7 +28,7 @@ struct MergeBranchSheet: View {
             HStack {
                 Text("Merge Branch")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
 
                 if isLoadingBranches {
@@ -42,7 +42,7 @@ struct MergeBranchSheet: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
@@ -57,7 +57,7 @@ struct MergeBranchSheet: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Merge Branch")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
 
                     Picker("", selection: $selectedBranch) {
                         Text("Select a branch...").tag("")
@@ -74,27 +74,27 @@ struct MergeBranchSheet: View {
                 if !selectedBranch.isEmpty {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.triangle.merge")
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                         Text("Merge '\(selectedBranch)' into '\(currentBranchName)'")
                             .font(.system(size: 12))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .padding(10)
                     .background(AppTheme.backgroundSecondary)
-                    .cornerRadius(6)
+                    .clipShape(.rect(cornerRadius: 6))
                 }
 
                 // Options
                 Toggle(isOn: $noFastForward) {
                     Text("Create merge commit (no fast-forward)")
                         .font(.system(size: 12))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
 
                 if let error = errorMessage {
                     Text(error)
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                 }
             }
             .padding(16)
@@ -109,7 +109,7 @@ struct MergeBranchSheet: View {
                     isPresented = false
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
                 Spacer()
 

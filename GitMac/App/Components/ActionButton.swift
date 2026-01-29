@@ -23,11 +23,11 @@ struct ActionButton: View {
                     .font(.system(size: 10))
                 Spacer()
             }
-            .foregroundColor(isHovered ? AppTheme.textPrimary : AppTheme.textMuted)
+            .foregroundStyle(isHovered ? AppTheme.textPrimary : AppTheme.textMuted)
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
             .background(isHovered ? AppTheme.hover : Color.clear)
-            .cornerRadius(DesignTokens.CornerRadius.sm)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }

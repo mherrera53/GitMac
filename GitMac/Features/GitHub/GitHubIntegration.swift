@@ -408,14 +408,14 @@ struct GitHubIntegrationView: View {
         VStack(spacing: 20) {
             Image(systemName: "chevron.left.forwardslash.chevron.right")
                 .font(.system(size: 64))
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
             
             Text("Connect to GitHub")
                 .font(.title)
                 .fontWeight(.bold)
             
             Text("Access pull requests, issues, and more")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Button {
                 github.authenticate()
@@ -449,7 +449,7 @@ struct GitHubIntegrationView: View {
                             .font(.headline)
                         Text("@\(user.login)")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
                 
@@ -488,7 +488,7 @@ struct GitHubIntegrationView: View {
             // Toolbar
             HStack {
                 Text("\(github.pullRequests.count) pull requests")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 Spacer()
                 
@@ -523,7 +523,7 @@ struct GitHubIntegrationView: View {
             // Toolbar
             HStack {
                 Text("\(github.issues.count) issues")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 Spacer()
                 
@@ -555,9 +555,9 @@ struct GitHubIntegrationView: View {
         VStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Text(message)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -571,7 +571,7 @@ struct PullRequestRow: View {
     var body: some View {
         HStack {
             Image(systemName: pr.state == "open" ? "circle.fill" : "checkmark.circle.fill")
-                .foregroundColor(pr.state == "open" ? .green : .purple)
+                .foregroundStyle(pr.state == "open" ? .green : .purple)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(pr.title)
@@ -579,7 +579,7 @@ struct PullRequestRow: View {
                 
                 Text("#\(pr.number) by @\(pr.user.login)")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             
             Spacer()
@@ -594,7 +594,7 @@ struct GitHubIssueRow: View {
     var body: some View {
         HStack {
             Image(systemName: issue.state == "open" ? "circle.fill" : "checkmark.circle.fill")
-                .foregroundColor(issue.state == "open" ? .green : .purple)
+                .foregroundStyle(issue.state == "open" ? .green : .purple)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(issue.title)
@@ -608,11 +608,11 @@ struct GitHubIssueRow: View {
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(SwiftUI.Color(hex: label.color).opacity(0.3))
-                            .cornerRadius(4)
+                            .clipShape(.rect(cornerRadius: 4))
                     }
                 }
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             }
             
             Spacer()

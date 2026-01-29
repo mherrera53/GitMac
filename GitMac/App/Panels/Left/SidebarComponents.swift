@@ -54,12 +54,12 @@ struct SidebarBranchRow: View {
             // Icon: cloud for remote, branch for local
             Image(systemName: branch.isRemote ? "cloud" : "arrow.triangle.branch")
                 .font(.system(size: 12))
-                .foregroundColor(branchIconColor)
+                .foregroundStyle(branchIconColor)
 
             // Branch name (show display name for remote to strip origin/)
             Text(branch.isRemote ? branch.displayName : branch.name)
                 .font(.system(size: 12))
-                .foregroundColor(branch.isCurrent ? AppTheme.textPrimary : AppTheme.textSecondary)
+                .foregroundStyle(branch.isCurrent ? AppTheme.textPrimary : AppTheme.textSecondary)
                 .lineLimit(1)
 
             Spacer()
@@ -67,7 +67,7 @@ struct SidebarBranchRow: View {
             if branch.isCurrent {
                 Image(systemName: "checkmark")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
             }
         }
         .padding(.horizontal, 12)
@@ -140,7 +140,7 @@ struct SidebarBranchRow: View {
                 } label: {
                     HStack {
                         Image(systemName: pr.draft ? "doc.text" : (pr.state == "open" ? "arrow.triangle.pull" : "checkmark.circle.fill"))
-                            .foregroundColor(pr.draft ? .gray : (pr.state == "open" ? .green : .purple))
+                            .foregroundStyle(pr.draft ? .gray : (pr.state == "open" ? .green : .purple))
                         Text("PR #\(pr.number): \(pr.title)")
                     }
                 }
@@ -270,7 +270,33 @@ struct SidebarBranchRow: View {
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
             NotificationManager.shared.success("Checked out", detail: branch.isRemote ? branch.displayName : branch.name)
         } else {
-            NotificationManager.shared.error("Checkout failed", detail: result.stderr)
+            let errorDetail = result.stderr
+            if errorDetail.contains("already exists") {
+                // Local branch already exists for remote - just checkout the local one
+                let localCheckout = await shell.execute(
+                    "git", arguments: ["checkout", branch.displayName],
+                    workingDirectory: path
+                )
+                if localCheckout.isSuccess {
+                    await appState.refresh()
+                    NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+                    NotificationManager.shared.success("Checked out", detail: branch.displayName)
+                } else {
+                    NotificationManager.shared.error("Checkout failed", detail: localCheckout.stderr)
+                }
+            } else if errorDetail.contains("pathspec") || errorDetail.contains("did not match") {
+                NotificationManager.shared.errorWithFix(
+                    "Branch not found",
+                    detail: errorDetail,
+                    fixTitle: "Fetch All",
+                    fixHint: "Fetch from all remotes to update branch list",
+                    fixAction: {
+                        NotificationCenter.default.post(name: .fetch, object: nil)
+                    }
+                )
+            } else {
+                NotificationManager.shared.error("Checkout failed", detail: errorDetail)
+            }
         }
     }
 
@@ -288,12 +314,64 @@ struct SidebarBranchRow: View {
 
         let didStash = stashResult.isSuccess && !stashResult.stdout.contains("No local changes")
 
+        // If stash failed, show which files are blocking and offer options
+        if !stashResult.isSuccess {
+            let dirtyFiles = await getDirtyFileList(at: path, shell: shell)
+            let fileList = dirtyFiles.prefix(8).joined(separator: "\n")
+            let extra = dirtyFiles.count > 8 ? "\n...and \(dirtyFiles.count - 8) more" : ""
+
+            if stashResult.stderr.contains("could not write index") {
+                // Index corruption - offer rebuild
+                NotificationManager.shared.errorWithFix(
+                    "Checkout failed",
+                    detail: "Cannot stash: index file is corrupt.\nFiles with changes:\n\(fileList)\(extra)",
+                    fixTitle: "Rebuild Index",
+                    fixHint: "Run 'git read-tree HEAD' to rebuild the index, then retry checkout",
+                    fixAction: {
+                        Task {
+                            let rebuildResult = await shell.execute(
+                                "git", arguments: ["read-tree", "HEAD"], workingDirectory: path
+                            )
+                            if rebuildResult.isSuccess {
+                                NotificationManager.shared.success("Index rebuilt", detail: "Try checking out again")
+                                await appState.refresh()
+                            } else {
+                                NotificationManager.shared.errorSimple("Rebuild failed", detail: rebuildResult.stderr)
+                            }
+                        }
+                    }
+                )
+            } else {
+                NotificationManager.shared.errorWithFix(
+                    "Checkout failed",
+                    detail: "Cannot stash changes: \(stashResult.stderr)\n\nFiles with changes:\n\(fileList)\(extra)",
+                    fixTitle: "Force Checkout",
+                    fixHint: "Discard local changes and checkout (destructive)",
+                    fixAction: {
+                        Task {
+                            let forceResult = await shell.execute(
+                                "git", arguments: ["checkout", "-f", branch.isRemote ? branch.displayName : branch.name],
+                                workingDirectory: path
+                            )
+                            if forceResult.isSuccess {
+                                await appState.refresh()
+                                NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+                                NotificationManager.shared.success("Checked out (forced)", detail: branch.isRemote ? branch.displayName : branch.name)
+                            } else {
+                                NotificationManager.shared.errorSimple("Force checkout failed", detail: forceResult.stderr)
+                            }
+                        }
+                    }
+                )
+            }
+            return
+        }
+
         // 2. Perform checkout
         let checkoutResult: ShellResult
         let targetName: String
 
         if branch.isRemote {
-            // For remote branches: create local tracking branch
             targetName = branch.displayName
             checkoutResult = await shell.execute(
                 "git",
@@ -301,7 +379,6 @@ struct SidebarBranchRow: View {
                 workingDirectory: path
             )
         } else {
-            // For local branches: simple checkout
             targetName = branch.name
             checkoutResult = await shell.execute(
                 "git",
@@ -313,28 +390,104 @@ struct SidebarBranchRow: View {
         if checkoutResult.isSuccess {
             // 3. Pop stash if we stashed something
             if didStash {
-                _ = await shell.execute(
+                let popResult = await shell.execute(
                     "git",
                     arguments: ["stash", "pop"],
                     workingDirectory: path
                 )
+
+                if !popResult.isSuccess {
+                    // Stash pop failed - likely merge conflicts
+                    let conflictFiles = await getConflictFiles(at: path, shell: shell)
+                    let conflictList = conflictFiles.prefix(8).joined(separator: "\n")
+                    let extra = conflictFiles.count > 8 ? "\n...and \(conflictFiles.count - 8) more" : ""
+
+                    await appState.refresh()
+                    NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+                    // Switch to WIP/staging view so user can see conflicts
+                    appState.selectedCommit = nil
+                    appState.selectedStash = nil
+                    appState.bumpStatusChange()
+                    NotificationManager.shared.errorWithFix(
+                        "Checked out '\(targetName)' with conflicts",
+                        detail: "Your stashed changes conflict with this branch.\n\nConflicting files:\n\(conflictList)\(extra)\n\nChanges are saved in stash. Resolve in the staging panel.",
+                        fixTitle: "Open Terminal",
+                        fixHint: "Or resolve conflicts manually, then run 'git stash drop'",
+                        fixAction: {
+                            NotificationCenter.default.post(
+                                name: Notification.Name("openTerminal"),
+                                object: nil
+                            )
+                        }
+                    )
+                    return
+                }
             }
 
-            // 4. Refresh UI to update graph and branch indicator
+            // 4. Refresh UI
             await appState.refresh()
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
             NotificationManager.shared.success("Checked out", detail: targetName)
         } else {
-            // Checkout failed - restore stash if we made one
+            // Checkout failed - restore stash
             if didStash {
                 _ = await shell.execute(
-                    "git",
-                    arguments: ["stash", "pop"],
-                    workingDirectory: path
+                    "git", arguments: ["stash", "pop"], workingDirectory: path
                 )
             }
-            NotificationManager.shared.error("Checkout failed", detail: checkoutResult.stderr)
+
+            // Show error with file list
+            let errorDetail = checkoutResult.stderr
+            if errorDetail.contains("would be overwritten") || errorDetail.contains("uncommitted changes") {
+                let dirtyFiles = await getDirtyFileList(at: path, shell: shell)
+                let fileList = dirtyFiles.prefix(8).joined(separator: "\n")
+                let extra = dirtyFiles.count > 8 ? "\n...and \(dirtyFiles.count - 8) more" : ""
+                NotificationManager.shared.errorWithFix(
+                    "Checkout failed",
+                    detail: "Uncommitted changes would be overwritten:\n\(fileList)\(extra)",
+                    fixTitle: "Commit or Stash First",
+                    fixHint: "Commit or stash your changes before switching branches",
+                    fixAction: {
+                        // Show staging panel
+                        appState.selectedCommit = nil
+                        appState.selectedStash = nil
+                        appState.bumpStatusChange()
+                    }
+                )
+            } else {
+                NotificationManager.shared.error("Checkout failed", detail: errorDetail)
+            }
         }
+    }
+
+    /// Get list of dirty (modified/staged/untracked) files
+    private func getDirtyFileList(at path: String, shell: ShellExecutor) async -> [String] {
+        let result = await shell.execute(
+            "git", arguments: ["status", "--porcelain", "--short"],
+            workingDirectory: path
+        )
+        guard result.isSuccess else { return [] }
+        return result.stdout.components(separatedBy: .newlines)
+            .filter { !$0.isEmpty }
+            .map { line in
+                // Format: "XY filename" - extract just filename with status indicator
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                let status = String(trimmed.prefix(2)).trimmingCharacters(in: .whitespaces)
+                let file = String(trimmed.dropFirst(3))
+                return "  \(status) \(file)"
+            }
+    }
+
+    /// Get list of files with merge conflicts
+    private func getConflictFiles(at path: String, shell: ShellExecutor) async -> [String] {
+        let result = await shell.execute(
+            "git", arguments: ["diff", "--name-only", "--diff-filter=U"],
+            workingDirectory: path
+        )
+        guard result.isSuccess else { return [] }
+        return result.stdout.components(separatedBy: .newlines)
+            .filter { !$0.isEmpty }
+            .map { "  \($0)" }
     }
 
     private func mergePR(_ pr: GitHubPullRequest, method: MergeMethod) async {
@@ -362,16 +515,16 @@ struct RemoteSidebarRow: View {
             HStack(spacing: 8) {
                 Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                     .font(.system(size: 9))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .frame(width: 12)
 
                 Image(systemName: "network")
                     .font(.system(size: 12))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 Text(remote.name)
                     .font(.system(size: 12))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 Spacer()
             }
@@ -400,11 +553,11 @@ struct StashSidebarRow: View {
         HStack(spacing: 8) {
             Image(systemName: "archivebox")
                 .font(.system(size: 12))
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
 
             Text(stash.message)
                 .font(.system(size: 12))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .lineLimit(1)
 
             Spacer()
@@ -425,11 +578,11 @@ struct TagSidebarRow: View {
         HStack(spacing: 8) {
             Image(systemName: "tag")
                 .font(.system(size: 12))
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
 
             Text(tag.name)
                 .font(.system(size: 12))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .lineLimit(1)
 
             Spacer()
@@ -458,11 +611,11 @@ struct SidebarRepoRow: View {
         HStack(spacing: 6) {
             Image(systemName: "folder.fill")
                 .font(.system(size: 10))
-                .foregroundColor(isActive ? AppTheme.accent : AppTheme.info)
+                .foregroundStyle(isActive ? AppTheme.accent : AppTheme.info)
 
             Text(repoName)
                 .font(.system(size: 10))
-                .foregroundColor(isActive ? AppTheme.accent : AppTheme.textSecondary)
+                .foregroundStyle(isActive ? AppTheme.accent : AppTheme.textSecondary)
                 .lineLimit(1)
 
             if let badge = groupBadge {
@@ -477,7 +630,7 @@ struct SidebarRepoRow: View {
                 } label: {
                     Image(systemName: isFavorite ? "star.fill" : "star")
                         .font(.system(size: 9))
-                        .foregroundColor(isFavorite ? .yellow : AppTheme.textMuted)
+                        .foregroundStyle(isFavorite ? .yellow : AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
@@ -491,7 +644,7 @@ struct SidebarRepoRow: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
         .background(isHovered ? AppTheme.hover : (isActive ? AppTheme.hover.opacity(0.5) : Color.clear))
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         .onHover { isHovered = $0 }
         .onTapGesture {
             Task {
@@ -560,11 +713,11 @@ struct SidebarRecentRepoRow: View {
         HStack(spacing: 8) {
             Image(systemName: "folder.fill.badge.gearshape")
                 .font(.system(size: 11))
-                .foregroundColor(isActive ? AppTheme.accent : AppTheme.info)
+                .foregroundStyle(isActive ? AppTheme.accent : AppTheme.info)
 
             Text(repo.name)
                 .font(.system(size: 11))
-                .foregroundColor(isActive ? AppTheme.accent : AppTheme.textSecondary)
+                .foregroundStyle(isActive ? AppTheme.accent : AppTheme.textSecondary)
                 .lineLimit(1)
 
             Spacer()

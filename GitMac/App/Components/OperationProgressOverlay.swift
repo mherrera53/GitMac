@@ -23,7 +23,7 @@ struct OperationProgressOverlay: View {
 
                 Text(message)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             .padding(32)
             .background(

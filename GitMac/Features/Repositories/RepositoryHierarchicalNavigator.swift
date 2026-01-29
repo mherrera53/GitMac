@@ -50,7 +50,7 @@ struct RepositoryBreadcrumbBar: View {
     let onNavigate: (Int) -> Void
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        ScrollView(.horizontal) {
             HStack(spacing: 4) {
                 ForEach(Array(navigationPath.enumerated()), id: \.offset) { index, level in
                     Button(action: { onNavigate(index) }) {
@@ -60,23 +60,24 @@ struct RepositoryBreadcrumbBar: View {
                             Text(level.title)
                                 .font(.system(size: 11, weight: index == navigationPath.count - 1 ? .semibold : .regular))
                         }
-                        .foregroundColor(index == navigationPath.count - 1 ? AppTheme.textPrimary : AppTheme.textSecondary)
+                        .foregroundStyle(index == navigationPath.count - 1 ? AppTheme.textPrimary : AppTheme.textSecondary)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 4)
                         .background(index == navigationPath.count - 1 ? AppTheme.hover.opacity(0.5) : Color.clear)
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                     }
                     .buttonStyle(.plain)
 
                     if index < navigationPath.count - 1 {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 8))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                 }
             }
             .padding(.horizontal, 8)
         }
+        .scrollIndicators(.hidden)
         .frame(height: 24)
         .background(AppTheme.backgroundSecondary)
         .overlay(alignment: .bottom) {
@@ -96,7 +97,7 @@ struct RepositoryActionBar: View {
     let onManageGroups: () -> Void
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        ScrollView(.horizontal) {
             HStack(spacing: 6) {
                 ActionBarButton(icon: "folder.badge.plus", title: "Open", action: onOpenRepo)
                 ActionBarButton(icon: "arrow.down.circle", title: "Clone", action: onCloneRepo)
@@ -109,6 +110,7 @@ struct RepositoryActionBar: View {
             }
             .padding(.horizontal, 8)
         }
+        .scrollIndicators(.hidden)
         .frame(height: 28)
         .background(AppTheme.backgroundSecondary)
         .overlay(alignment: .bottom) {
@@ -134,11 +136,11 @@ struct ActionBarButton: View {
                 Text(title)
                     .font(.system(size: 10))
             }
-            .foregroundColor(isHovered ? AppTheme.textPrimary : AppTheme.textSecondary)
+            .foregroundStyle(isHovered ? AppTheme.textPrimary : AppTheme.textSecondary)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(isHovered ? AppTheme.hover : Color.clear)
-            .cornerRadius(4)
+            .clipShape(.rect(cornerRadius: 4))
         }
         .buttonStyle(.plain)
         .onHover { hovering in
@@ -229,7 +231,7 @@ struct RepositoryHierarchicalNavigator: View {
             }
         }
 
-        ForEach(groupsService.groups.sorted(by: { $0.sortOrder < $1.sortOrder })) { group in
+        ForEach(groupsService.sortedGroups) { group in
             if !group.repos.isEmpty {
                 NavigationCategoryRow(
                     icon: "folder.fill",
@@ -265,10 +267,10 @@ struct RepositoryHierarchicalNavigator: View {
             VStack(spacing: 8) {
                 Image(systemName: "folder.badge.questionmark")
                     .font(.system(size: 24))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                 Text("No repositories yet")
                     .font(.system(size: 10))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 20)
@@ -357,31 +359,31 @@ struct NavigationCategoryRow: View {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 14))
-                    .foregroundColor(iconColor)
+                    .foregroundStyle(iconColor)
                     .frame(width: 20)
 
                 Text(title)
                     .font(.system(size: 12))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
                 Text("\(count)")
                     .font(.system(size: 10))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(AppTheme.backgroundSecondary)
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(isHovered ? AppTheme.hover : Color.clear)
-            .cornerRadius(6)
+            .clipShape(.rect(cornerRadius: 6))
         }
         .buttonStyle(.plain)
         .onHover { hovering in

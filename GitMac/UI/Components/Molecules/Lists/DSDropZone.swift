@@ -40,13 +40,13 @@ struct DSDropZone: View {
             VStack(spacing: DesignTokens.Spacing.xs) {
                 Text(title)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .fontWeight(.medium)
 
                 if let subtitle = subtitle {
                     Text(subtitle)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -58,7 +58,7 @@ struct DSDropZone: View {
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                 .strokeBorder(borderColor, style: StrokeStyle(lineWidth: 2, dash: [8, 4]))
         )
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
         .animation(DesignTokens.Animation.fastEasing, value: isTargeted)
         .onDrop(of: acceptedTypes, isTargeted: $isTargeted) { providers in
             onDrop(providers)

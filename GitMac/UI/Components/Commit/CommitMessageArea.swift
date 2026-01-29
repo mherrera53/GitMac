@@ -43,15 +43,15 @@ struct CommitMessageArea: View {
             if hasConflicts {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(AppTheme.warning)
+                        .foregroundStyle(AppTheme.warning)
                     Text("Resolve merge conflicts before committing")
                         .font(.caption)
-                        .foregroundColor(AppTheme.warning)
+                        .foregroundStyle(AppTheme.warning)
                     Spacer()
                 }
                 .padding(8)
                 .background(AppTheme.warning.opacity(0.1))
-                .cornerRadius(4)
+                .clipShape(.rect(cornerRadius: 4))
             }
 
             // Text editor
@@ -68,19 +68,19 @@ struct CommitMessageArea: View {
                 HStack(spacing: 4) {
                     Image(systemName: "info.circle")
                         .font(.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Text(validationHint)
                         .font(.caption)
                     Spacer()
                 }
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             }
 
             // Character count
             HStack {
                 Text("\(message.count) characters")
                     .font(.caption2)
-                    .foregroundColor(message.count < 3 ? AppTheme.warning : AppTheme.textSecondary)
+                    .foregroundStyle(message.count < 3 ? AppTheme.warning : AppTheme.textSecondary)
 
                 Spacer()
             }
@@ -228,7 +228,7 @@ struct SimpleCommitInput: View {
             HStack {
                 Text("\(message.count) characters")
                     .font(.caption2)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 

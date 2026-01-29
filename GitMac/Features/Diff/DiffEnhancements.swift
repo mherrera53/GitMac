@@ -474,7 +474,7 @@ struct DiffPreferencesView: View {
                         TextField("", value: $manager.preferences.wordDiffTimeBudgetMs, format: .number)
                             .frame(width: 60)
                         Text("ms")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
             }
@@ -487,7 +487,7 @@ struct DiffPreferencesView: View {
                     TextField("", value: $manager.preferences.lfmFileSizeThresholdMB, format: .number)
                         .frame(width: 60)
                     Text("MB")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
 
                 HStack {
@@ -503,7 +503,7 @@ struct DiffPreferencesView: View {
                     TextField("", value: $manager.preferences.lfmMaxLineLengthThreshold, format: .number)
                         .frame(width: 80)
                     Text("chars")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
 
                 HStack {
@@ -523,7 +523,7 @@ struct DiffPreferencesView: View {
                         .frame(width: 150)
                     Text("\(Int(manager.preferences.additionBackgroundOpacity * 100))%")
                         .frame(width: 40)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
 
                 HStack {
@@ -533,7 +533,7 @@ struct DiffPreferencesView: View {
                         .frame(width: 150)
                     Text("\(Int(manager.preferences.deletionBackgroundOpacity * 100))%")
                         .frame(width: 40)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
 
                 DSToggle("High Contrast Colors", isOn: $manager.preferences.useHighContrastColors)
@@ -554,7 +554,7 @@ struct DiffPreferencesView: View {
                 Button("Reset to Defaults") {
                     manager.reset()
                 }
-                .foregroundColor(AppTheme.error)
+                .foregroundStyle(AppTheme.error)
             }
         }
         .formStyle(.grouped)
@@ -589,14 +589,14 @@ struct IntralineDiffLineView: View {
                         .frame(width: 35, alignment: .trailing)
                 }
                 .font(DesignTokens.Typography.commitHash)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
                 .padding(.trailing, DesignTokens.Spacing.sm)
                 .background(lineNumberBackground)
             }
 
             // Prefix
             Text(prefix)
-                .foregroundColor(prefixColor)
+                .foregroundStyle(prefixColor)
                 .frame(width: 16)
                 .font(DesignTokens.Typography.diffLine)
 
@@ -605,7 +605,7 @@ struct IntralineDiffLineView: View {
                 intralineContent(segments: segmentsForLine(intraline))
             } else {
                 Text(line.content)
-                    .foregroundColor(textColor)
+                    .foregroundStyle(textColor)
                     .font(DesignTokens.Typography.diffLine)
             }
 
@@ -633,7 +633,7 @@ struct IntralineDiffLineView: View {
             ForEach(segments) { segment in
                 Text(segment.text)
                     .font(DesignTokens.Typography.diffLine)
-                    .foregroundColor(colorForSegment(segment))
+                    .foregroundStyle(colorForSegment(segment))
                     .background(backgroundForSegment(segment))
             }
         }
@@ -727,13 +727,13 @@ struct SyntaxHighlightedLineView: View {
                         .frame(width: 35, alignment: .trailing)
                 }
                 .font(DesignTokens.Typography.commitHash)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
                 .padding(.trailing, DesignTokens.Spacing.sm)
             }
 
             // Prefix
             Text(prefix)
-                .foregroundColor(prefixColor)
+                .foregroundStyle(prefixColor)
                 .frame(width: 16)
                 .font(DesignTokens.Typography.diffLine)
 
@@ -742,7 +742,7 @@ struct SyntaxHighlightedLineView: View {
                 AttributedText(highlighted)
             } else {
                 Text(line.content)
-                    .foregroundColor(textColor)
+                    .foregroundStyle(textColor)
                     .font(DesignTokens.Typography.diffLine)
             }
 

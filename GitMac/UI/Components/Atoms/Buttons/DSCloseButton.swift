@@ -31,7 +31,7 @@ struct DSCloseButton: View {
             Image(systemName: "xmark")
                 .font(.system(size: iconSizeForSize, weight: .medium))
                 .frame(width: buttonSizeForSize, height: buttonSizeForSize)
-                .foregroundColor(foregroundColor)
+                .foregroundStyle(foregroundColor)
                 .background(backgroundColor)
                 .clipShape(Circle())
         }
@@ -137,7 +137,7 @@ struct DSCloseButton: View {
         HStack {
             Text("Modal Title")
                 .font(DesignTokens.Typography.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Spacer()
 
@@ -154,18 +154,18 @@ struct DSCloseButton: View {
             .frame(height: 200)
     }
     .frame(width: 300)
-    .cornerRadius(DesignTokens.CornerRadius.lg)
+    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 }
 
 #Preview("Close Button on Tab") {
     HStack(spacing: DesignTokens.Spacing.xs) {
         Image(systemName: "doc.text")
             .font(.system(size: DesignTokens.Size.iconSM))
-            .foregroundColor(AppTheme.textSecondary)
+            .foregroundStyle(AppTheme.textSecondary)
 
         Text("Document.swift")
             .font(DesignTokens.Typography.body)
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
 
         DSCloseButton(size: .sm) {
             print("Close tab")
@@ -174,6 +174,6 @@ struct DSCloseButton: View {
     .padding(.horizontal, DesignTokens.Spacing.sm)
     .padding(.vertical, DesignTokens.Spacing.xs)
     .background(AppTheme.backgroundSecondary)
-    .cornerRadius(DesignTokens.CornerRadius.md)
+    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     .padding()
 }

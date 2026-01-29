@@ -24,11 +24,11 @@ struct PanelHeader<Selector: View, Actions: View>: View {
             HStack(spacing: 12) {
                 // Logo
                 Image(systemName: icon)
-                    .foregroundColor(iconColor)
+                    .foregroundStyle(iconColor)
 
                 Text(title)
                     .font(DesignTokens.Typography.body.weight(.semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 // Custom selector
                 selector()
@@ -44,7 +44,7 @@ struct PanelHeader<Selector: View, Actions: View>: View {
                         .font(DesignTokens.Typography.caption2.weight(.bold))
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             }
             .padding(.horizontal, DesignTokens.Spacing.md)
             .padding(.vertical, DesignTokens.Spacing.sm)
@@ -127,7 +127,7 @@ struct PanelHeaderActions: View {
                         .font(DesignTokens.Typography.caption)
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             }
 
             if let settings = onSettings {
@@ -136,7 +136,7 @@ struct PanelHeaderActions: View {
                         .font(DesignTokens.Typography.caption)
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             }
         }
     }

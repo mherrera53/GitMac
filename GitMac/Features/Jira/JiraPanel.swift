@@ -33,7 +33,7 @@ struct JiraPanel: View {
 
                     Text("Jira")
                         .font(DesignTokens.Typography.headline)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Spacer()
 
@@ -120,18 +120,18 @@ struct JiraIssueRow: View {
             if let issueType = issue.fields.issuetype {
                 Image(systemName: issueTypeIcon(issueType.name))
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(issueTypeColor(issueType.name))
+                    .foregroundStyle(issueTypeColor(issueType.name))
             }
 
             // Issue key
             Text(issue.key)
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             // Issue summary
             Text(issue.fields.summary)
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .lineLimit(2)
 
             Spacer()
@@ -140,18 +140,18 @@ struct JiraIssueRow: View {
             if let priority = issue.fields.priority {
                 Text(priority.name)
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(priorityColor(priority.name))
+                    .foregroundStyle(priorityColor(priority.name))
             }
 
             // Status badge
             if let status = issue.fields.status {
                 Text(status.name)
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(statusColor(status))
+                    .foregroundStyle(statusColor(status))
                     .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                     .padding(.vertical, DesignTokens.Spacing.xxs)
                     .background(statusColor(status).opacity(0.2))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
 
             // Insert button (shown on hover)
@@ -172,7 +172,7 @@ struct JiraIssueRow: View {
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.sm)
         .background(isHovered ? AppTheme.backgroundSecondary : Color.clear)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         .onHover { hovering in
             withAnimation(DesignTokens.Animation.fastEasing) {
                 isHovered = hovering
@@ -238,12 +238,12 @@ struct JiraSettingsSheet: View {
             HStack {
                 Text("Jira Settings")
                     .font(DesignTokens.Typography.headline) // Was: .system(size: 15, weight: .semibold)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(DesignTokens.Typography.callout) // Was: .system(size: 12, weight: .medium)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
@@ -256,21 +256,21 @@ struct JiraSettingsSheet: View {
                 if viewModel.isAuthenticated {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                         Text("Connected to Jira")
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
 
                     Button("Disconnect") {
                         viewModel.logout()
                         dismiss()
                     }
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                 } else {
                     Text("Not connected to Jira")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
             .padding(DesignTokens.Spacing.lg)

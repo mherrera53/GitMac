@@ -91,11 +91,11 @@ struct DiffToolbar: View {
             HStack(spacing: DesignTokens.Spacing.sm) {
                 Image(systemName: "doc.fill")
                     .font(.system(size: 14))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
 
                 Text(filename)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
@@ -190,7 +190,7 @@ struct DiffToolbar: View {
             }
             .padding(3)
             .background(AppTheme.backgroundTertiary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
 
             // Preview button - opens preview modal
             if let onPreview = onPreviewTap {
@@ -232,7 +232,7 @@ struct DiffToolbar: View {
                 Button(action: onClose) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 18))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
                 .help("Close")
@@ -260,7 +260,7 @@ struct ToolbarButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isActive ? AppTheme.accent : AppTheme.textSecondary)
+                .foregroundStyle(isActive ? AppTheme.accent : AppTheme.textSecondary)
                 .frame(width: 28, height: 28)
                 .background(
                     RoundedRectangle(cornerRadius: 4)
@@ -287,7 +287,7 @@ struct DiffModeIconButton: View {
         Button(action: action) {
             Image(systemName: mode.icon)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(isSelected ? .white : AppTheme.textSecondary)
+                .foregroundStyle(isSelected ? .white : AppTheme.textSecondary)
                 .frame(width: 26, height: 24)
                 .background(
                     RoundedRectangle(cornerRadius: 4)
@@ -313,11 +313,11 @@ struct DiffModeButton: View {
             HStack(spacing: 4) {
                 Image(systemName: mode.icon)
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(isSelected ? .white : AppTheme.textSecondary)
+                    .foregroundStyle(isSelected ? .white : AppTheme.textSecondary)
                 Text(mode.rawValue)
                     .font(.system(size: 11, weight: .medium))
             }
-            .foregroundColor(isSelected ? .white : AppTheme.textSecondary)
+            .foregroundStyle(isSelected ? .white : AppTheme.textSecondary)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(
@@ -344,11 +344,11 @@ extension DiffToolbar {
             HStack(spacing: DesignTokens.Spacing.sm) {
                 Image(systemName: "doc.fill")
                     .font(.system(size: 14))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
 
                 Text(filename)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }

@@ -35,7 +35,7 @@ struct TaigaTicketsPanel: View {
 
                     Text("Taiga")
                         .font(DesignTokens.Typography.headline)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Spacer()
 

@@ -35,7 +35,7 @@ struct TaigaIssueRow: View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             // Type icon
             Image(systemName: "ladybug.fill")
-                .foregroundColor(SwiftUI.Color(hex: issue.typeExtraInfo?.color ?? "ff6b6b"))
+                .foregroundStyle(SwiftUI.Color(hex: issue.typeExtraInfo?.color ?? "ff6b6b"))
                 .font(DesignTokens.Typography.callout)
 
             // TG Reference badge
@@ -46,11 +46,11 @@ struct TaigaIssueRow: View {
                     .font(DesignTokens.Typography.caption2)
                     .fontWeight(.bold)
                     .fontDesign(.monospaced)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .padding(.horizontal, DesignTokens.Spacing.xs)
                     .padding(.vertical, 1)
                     .background(AppTheme.error)
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
             .buttonStyle(.plain)
             .help("Click to copy \(taigaRef)")
@@ -58,7 +58,7 @@ struct TaigaIssueRow: View {
             // Subject
             Text(issue.subject)
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .lineLimit(1)
 
             Spacer()
@@ -74,7 +74,7 @@ struct TaigaIssueRow: View {
                 } label: {
                     Image(systemName: "arrow.right.doc.on.clipboard")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
                 .help("Insert into commit")
@@ -87,8 +87,8 @@ struct TaigaIssueRow: View {
                     .padding(.horizontal, DesignTokens.Spacing.xs)
                     .padding(.vertical, 2)
                     .background(SwiftUI.Color(hex: type.color).opacity(0.2))
-                    .foregroundColor(SwiftUI.Color(hex: type.color))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .foregroundStyle(SwiftUI.Color(hex: type.color))
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
 
             // Status badge
@@ -98,8 +98,8 @@ struct TaigaIssueRow: View {
                     .padding(.horizontal, DesignTokens.Spacing.xs)
                     .padding(.vertical, 2)
                     .background(SwiftUI.Color(hex: status.color).opacity(0.2))
-                    .foregroundColor(SwiftUI.Color(hex: status.color))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .foregroundStyle(SwiftUI.Color(hex: status.color))
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
         }
         .padding(.vertical, DesignTokens.Spacing.xs)

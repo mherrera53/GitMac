@@ -15,6 +15,76 @@ struct GenericFlatTreeItem: Identifiable, Equatable {
     }
 }
 
+// MARK: - Styled File Tree Row (Extracted for performance - SwiftUI can skip body when inputs unchanged)
+
+private struct FileTreeRow<Content: View>: View {
+    let item: GenericFlatTreeItem
+    let isExpanded: Bool
+    let isSelected: Bool
+    let onToggle: () -> Void
+    @ViewBuilder let content: Content
+
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: 0) {
+            // Indentation with subtle indent guides
+            if item.depth > 0 {
+                HStack(spacing: 0) {
+                    ForEach(0..<item.depth, id: \.self) { level in
+                        Rectangle()
+                            .fill(AppTheme.chevronColor.opacity(0.15))
+                            .frame(width: 1)
+                            .padding(.leading, level == 0 ? 8 : 15)
+                    }
+                }
+                Spacer().frame(width: 6)
+            }
+
+            // Chevron for folders
+            if item.isFolder {
+                Button(action: onToggle) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.chevronColor)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                        .animation(.easeInOut(duration: 0.15), value: isExpanded)
+                        .frame(width: 14, height: 14)
+                        .padding(.trailing, 2)
+                }
+                .buttonStyle(.plain)
+            } else {
+                Spacer().frame(width: 16)
+            }
+
+            // Node content
+            content
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 2)
+        .padding(.horizontal, 4)
+        .background(rowBackground)
+        .clipShape(.rect(cornerRadius: 4))
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            if isHovered != hovering {
+                isHovered = hovering
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var rowBackground: some View {
+        if isSelected {
+            AppTheme.accent.opacity(0.15)
+        } else if isHovered {
+            AppTheme.chevronColor.opacity(0.08)
+        } else {
+            Color.clear
+        }
+    }
+}
+
 // MARK: - Generic File Tree View (Memory Optimized)
 
 struct GenericFileTreeView<T, NodeView: View>: View {
@@ -34,55 +104,31 @@ struct GenericFileTreeView<T, NodeView: View>: View {
             // Hidden trigger - forces view to render so .task fires
             Text("\(paths.count)")
                 .font(.system(size: 0.1))
-                .foregroundColor(.clear)
+                .foregroundStyle(.clear)
                 .frame(height: 0.1)
 
-            LazyVStack(spacing: 0, pinnedViews: []) {
+            LazyVStack(spacing: 1, pinnedViews: []) {
                 ForEach(flatItems) { item in
-                    rowView(for: item)
+                    FileTreeRow(
+                        item: item,
+                        isExpanded: expandedPaths.contains(item.path),
+                        isSelected: selectedPath == item.path,
+                        onToggle: { toggleExpansion(item.path) },
+                        content: {
+                            nodeView(
+                                item.path,
+                                item.isFolder ? nil : dataProvider(item.path),
+                                item.isFolder,
+                                selectedPath == item.path,
+                                section
+                            )
+                        }
+                    )
                 }
             }
         }
         .task(id: paths.count) { rebuildIfNeeded() }
         .onChange(of: extensionFilter) { _, _ in rebuildIfNeeded() }
-    }
-
-    @ViewBuilder
-    private func rowView(for item: GenericFlatTreeItem) -> some View {
-        HStack(spacing: 0) {
-            // Indentation
-            if item.depth > 0 {
-                Spacer().frame(width: CGFloat(item.depth) * 16)
-            }
-
-            // Chevron for folders
-            if item.isFolder {
-                Button {
-                    toggleExpansion(item.path)
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(AppTheme.chevronColor)
-                        .rotationEffect(.degrees(expandedPaths.contains(item.path) ? 90 : 0))
-                        .frame(width: 14, height: 14)
-                        .padding(.trailing, 2)
-                }
-                .buttonStyle(.plain)
-            } else {
-                Spacer().frame(width: 16)
-            }
-
-            // Node content - data fetched on demand
-            nodeView(
-                item.path,
-                item.isFolder ? nil : dataProvider(item.path),
-                item.isFolder,
-                selectedPath == item.path,
-                section
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .contentShape(Rectangle())
     }
 
     private func rebuildIfNeeded() {

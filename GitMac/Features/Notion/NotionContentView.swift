@@ -91,7 +91,7 @@ struct NotionTaskRow: View {
             leadingIcon: {
                 Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(isDone ? AppTheme.success : AppTheme.textSecondary)
+                    .foregroundStyle(isDone ? AppTheme.success : AppTheme.textSecondary)
             },
             statusBadge: {
                 if let status = task.status {
@@ -103,7 +103,7 @@ struct NotionTaskRow: View {
                     Link(destination: URL(string: url)!) {
                         Image(systemName: "arrow.up.right.square")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                     .help("Open in Notion")
                 }

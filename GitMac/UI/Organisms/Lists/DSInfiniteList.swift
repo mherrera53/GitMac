@@ -45,7 +45,7 @@ struct DSInfiniteList<Item: Identifiable, Content: View>: View {
 
                         Text("Loading more...")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, DesignTokens.Spacing.md)
@@ -102,7 +102,7 @@ struct DSInfiniteList<Item: Identifiable, Content: View>: View {
 
                     Text("\(commits.count) commits")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .padding(DesignTokens.Spacing.md)
                 .background(Color(.controlBackgroundColor))
@@ -124,20 +124,20 @@ struct DSInfiniteList<Item: Identifiable, Content: View>: View {
                         HStack {
                             Text(commit.hash)
                                 .font(DesignTokens.Typography.commitHash)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
 
                             Text("•")
                                 .foregroundStyle(.tertiary)
 
                             Text(commit.author)
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     .padding(.vertical, DesignTokens.Spacing.sm)
                     .padding(.horizontal, DesignTokens.Spacing.md)
                     .background(Color(.controlBackgroundColor))
-                    .cornerRadius(DesignTokens.CornerRadius.md)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 }
             }
             .frame(width: 400, height: 500)
@@ -205,7 +205,7 @@ struct DSInfiniteList<Item: Identifiable, Content: View>: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(DesignTokens.Spacing.sm)
                     .background(Color.gray.opacity(0.1))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
             .frame(width: 300, height: 400)
             .onAppear {

@@ -172,7 +172,7 @@ struct WorkflowsView: View {
                 notConfiguredView
             } else {
                 // Filters usando HStack con botones DS
-                ScrollView(.horizontal, showsIndicators: false) {
+                ScrollView(.horizontal) {
                     HStack(spacing: DesignTokens.Spacing.xs) {
                         ForEach(WorkflowFilter.allCases, id: \.self) { filter in
                             FilterButton(
@@ -188,6 +188,7 @@ struct WorkflowsView: View {
                     .padding(.horizontal, DesignTokens.Spacing.sm)
                     .padding(.vertical, DesignTokens.Spacing.sm)
                 }
+                .scrollIndicators(.hidden)
 
                 // Search usando DSSearchField
                 DSSearchField(
@@ -235,7 +236,7 @@ struct WorkflowsView: View {
                     if let lastUpdate = viewModel.lastUpdate {
                         Text("Updated \(lastUpdate, style: .relative) ago")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                 }
                 .padding(DesignTokens.Spacing.sm)

@@ -52,9 +52,9 @@ struct DSToolbarButton: View {
                 }
             }
             .frame(width: DesignTokens.Size.buttonHeightMD, height: DesignTokens.Size.buttonHeightMD)
-            .foregroundColor(foregroundColor)
+            .foregroundStyle(foregroundColor)
             .background(backgroundColor)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                     .stroke(borderColor, lineWidth: isActive ? 1.5 : 0)

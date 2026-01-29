@@ -383,7 +383,7 @@ struct PresenceIndicatorView: View {
                 if !presenceService.activeUsers.isEmpty {
                     Text("\(presenceService.activeUsers.count) online")
                         .font(.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     
                     // User avatars
                     HStack(spacing: -4) {
@@ -393,7 +393,7 @@ struct PresenceIndicatorView: View {
                             } placeholder: {
                                 Image(systemName: "person.circle.fill")
                                     .resizable()
-                                    .foregroundColor(AppTheme.textSecondary)
+                                    .foregroundStyle(AppTheme.textSecondary)
                             }
                             .frame(width: 20, height: 20)
                             .clipShape(Circle())
@@ -406,7 +406,7 @@ struct PresenceIndicatorView: View {
                         if presenceService.activeUsers.count > 3 {
                             Text("+\(presenceService.activeUsers.count - 3)")
                                 .font(.caption2)
-                                .foregroundColor(AppTheme.textMuted)
+                                .foregroundStyle(AppTheme.textMuted)
                                 .frame(width: 20, height: 20)
                                 .background(AppTheme.backgroundTertiary)
                                 .clipShape(Circle())
@@ -417,7 +417,7 @@ struct PresenceIndicatorView: View {
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .padding(.vertical, DesignTokens.Spacing.xs)
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.sm)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         }
     }
     
@@ -442,7 +442,7 @@ struct ActiveUsersPanel: View {
             HStack {
                 Text("Team Online")
                     .font(.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 Spacer()
                 
@@ -456,11 +456,11 @@ struct ActiveUsersPanel: View {
                     VStack(spacing: DesignTokens.Spacing.sm) {
                         Image(systemName: "person.2.slash")
                             .font(.title)
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                         
                         Text("No team members online")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -472,14 +472,14 @@ struct ActiveUsersPanel: View {
             } else {
                 Text("Enable presence to see team members")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .frame(maxWidth: .infinity)
                     .padding()
             }
         }
         .padding()
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     }
 }
 
@@ -495,7 +495,7 @@ struct ActiveUserRow: View {
                 } placeholder: {
                     Image(systemName: "person.circle.fill")
                         .resizable()
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .frame(width: 32, height: 32)
                 .clipShape(Circle())
@@ -513,17 +513,17 @@ struct ActiveUserRow: View {
                 Text(user.name)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 if let file = user.currentFile {
                     Text(file.components(separatedBy: "/").last ?? file)
                         .font(.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .lineLimit(1)
                 } else if let repo = user.currentRepository {
                     Text(repo.components(separatedBy: "/").last ?? repo)
                         .font(.caption)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .lineLimit(1)
                 }
             }
@@ -533,10 +533,10 @@ struct ActiveUserRow: View {
             // Host name
             Text(user.hostName)
                 .font(.caption2)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
         }
         .padding(DesignTokens.Spacing.sm)
         .background(AppTheme.backgroundTertiary.opacity(0.5))
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
     }
 }

@@ -32,11 +32,11 @@ struct GeneralSettingsView: View {
                     HStack {
                         Image(systemName: "paintbrush.fill")
                         Text("Customize Colors...")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Spacer()
                         if themeManager.currentTheme == .custom {
                             Image(systemName: "checkmark")
-                                .foregroundColor(AppTheme.success)
+                                .foregroundStyle(AppTheme.success)
                         }
                     }
                 }

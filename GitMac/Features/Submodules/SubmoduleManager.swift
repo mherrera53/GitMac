@@ -141,7 +141,7 @@ struct SubmoduleListView: View {
                 Text("SUBMODULES")
                     .font(DesignTokens.Typography.caption)
                     .fontWeight(.semibold)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 Spacer()
 
@@ -153,14 +153,14 @@ struct SubmoduleListView: View {
                             .font(DesignTokens.Typography.caption)
                     }
                     .buttonStyle(.plain)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                     Button { showAddSheet = true } label: {
                         Image(systemName: "plus")
                             .font(DesignTokens.Typography.caption)
                     }
                     .buttonStyle(.plain)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                 }
             }
             .padding(.horizontal, DesignTokens.Spacing.md)
@@ -176,10 +176,10 @@ struct SubmoduleListView: View {
                 VStack(spacing: DesignTokens.Spacing.sm) {
                     Image(systemName: "shippingbox")
                         .font(DesignTokens.Typography.title)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Text("No submodules")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, DesignTokens.Spacing.lg)
@@ -252,7 +252,7 @@ struct SubmoduleRow: View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: submodule.status.icon)
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(submodule.status.color)
+                .foregroundStyle(submodule.status.color)
 
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                 HStack(spacing: DesignTokens.Spacing.xs) {
@@ -267,7 +267,7 @@ struct SubmoduleRow: View {
                             .padding(.horizontal, DesignTokens.Spacing.xs)
                             .padding(.vertical, 1)
                             .background(AppTheme.info.opacity(0.2))
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                     }
                 }
 
@@ -280,7 +280,7 @@ struct SubmoduleRow: View {
                         .font(DesignTokens.Typography.caption2)
                         .fontDesign(.monospaced)
                 }
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
             }
 
             Spacer()
@@ -290,7 +290,7 @@ struct SubmoduleRow: View {
                     Button { Task { await onUpdate() } } label: {
                         Image(systemName: "arrow.down.circle")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.info)
+                            .foregroundStyle(AppTheme.info)
                     }
                     .buttonStyle(.plain)
                     .help("Update submodule")
@@ -298,7 +298,7 @@ struct SubmoduleRow: View {
                     Button { Task { await onSync() } } label: {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.info)
+                            .foregroundStyle(AppTheme.info)
                     }
                     .buttonStyle(.plain)
                     .help("Sync URL")
@@ -306,7 +306,7 @@ struct SubmoduleRow: View {
                     Button { Task { await onRemove() } } label: {
                         Image(systemName: "trash")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                     }
                     .buttonStyle(.plain)
                     .help("Remove submodule")
@@ -344,7 +344,7 @@ struct AddSubmoduleSheet: View {
                     Text("Repository URL")
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     DSTextField(placeholder: "https://github.com/user/repo.git", text: $url)
                 }
 
@@ -352,7 +352,7 @@ struct AddSubmoduleSheet: View {
                     Text("Path (relative to repo root)")
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     DSTextField(placeholder: "libs/mylib", text: $path)
                 }
 
@@ -360,7 +360,7 @@ struct AddSubmoduleSheet: View {
                     Text("Branch (optional)")
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     DSTextField(placeholder: "main", text: $branch)
                 }
             }

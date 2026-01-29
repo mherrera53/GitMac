@@ -58,7 +58,7 @@ struct DSIconButton: View {
                 }
             }
             .frame(width: buttonSizeForSize, height: buttonSizeForSize)
-            .foregroundColor(foregroundColor)
+            .foregroundStyle(foregroundColor)
             .background(backgroundColor)
             .clipShape(Circle())
             .overlay(

@@ -55,18 +55,18 @@ struct ImagePreviewView: View {
             // Header
             HStack {
                 Image(systemName: "photo")
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 Text(filename)
                     .font(DesignTokens.Typography.headline)
                 Spacer()
                 if imageSize != .zero {
                     Text("\(Int(imageSize.width)) × \(Int(imageSize.height))")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .padding(.horizontal, DesignTokens.Spacing.sm)
                         .padding(.vertical, DesignTokens.Spacing.xs)
                         .background(AppTheme.textSecondary.opacity(0.2))
-                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
             }
 
@@ -80,7 +80,7 @@ struct ImagePreviewView: View {
                         // Checkerboard pattern for transparent images
                         CheckerboardPattern()
                     )
-                    .cornerRadius(DesignTokens.CornerRadius.md)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                     .shadow(color: .black.opacity(0.2), radius: DesignTokens.Spacing.xs, x: 0, y: DesignTokens.Spacing.xxs)
                     .onAppear {
                         imageSize = nsImage.size
@@ -89,9 +89,9 @@ struct ImagePreviewView: View {
                 VStack(spacing: DesignTokens.Spacing.sm) {
                     Image(systemName: "exclamationmark.triangle")
                         .font(DesignTokens.Typography.largeTitle)
-                        .foregroundColor(AppTheme.warning)
+                        .foregroundStyle(AppTheme.warning)
                     Text("Could not load image")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 .frame(height: 200)
             }
@@ -101,7 +101,7 @@ struct ImagePreviewView: View {
                let fileSize = attrs[.size] as? Int64 {
                 Text(ByteCountFormatter.string(fromByteCount: fileSize, countStyle: .file))
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
     }
@@ -142,7 +142,7 @@ struct PDFPreviewView: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             HStack {
                 Image(systemName: "doc.richtext")
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                 Text(filename)
                     .font(DesignTokens.Typography.headline)
                 Spacer()
@@ -157,18 +157,18 @@ struct PDFPreviewView: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(maxWidth: 600, maxHeight: 800)
                         .background(AppTheme.textPrimary)
-                        .cornerRadius(DesignTokens.CornerRadius.md)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                         .shadow(color: .black.opacity(0.2), radius: DesignTokens.Spacing.xs, x: 0, y: DesignTokens.Spacing.xxs)
 
                     Text("\(pdfDoc.pageCount) page(s)")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             } else {
                 VStack(spacing: DesignTokens.Spacing.sm) {
                     Image(systemName: "doc.richtext")
                         .font(DesignTokens.Typography.iconXXXXL)
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                     Text("PDF Document")
                         .font(DesignTokens.Typography.headline)
                     Button("Open in Preview") {
@@ -242,17 +242,17 @@ struct GenericBinaryView: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: fileIcon)
                 .font(DesignTokens.Typography.iconXXXXL)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text(fileTypeName)
                 .font(DesignTokens.Typography.headline)
 
             Text(filename)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Cannot display diff for binary files")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxHeight: 300)
     }

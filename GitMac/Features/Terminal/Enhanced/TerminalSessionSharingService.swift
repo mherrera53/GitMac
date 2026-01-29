@@ -295,12 +295,12 @@ struct SessionSharingSheet: View {
                     .font(.system(size: 16, weight: .medium))
                 Text("\(session.commands.count) commands")
                     .font(.system(size: 13))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
 
             // Export Options
             VStack(spacing: 12) {
@@ -314,7 +314,7 @@ struct SessionSharingSheet: View {
                     }
                     .padding()
                     .background(AppTheme.backgroundSecondary)
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
 
@@ -327,12 +327,12 @@ struct SessionSharingSheet: View {
                         Spacer()
                         if showCopied {
                             Image(systemName: "checkmark")
-                                .foregroundColor(AppTheme.success)
+                                .foregroundStyle(AppTheme.success)
                         }
                     }
                     .padding()
                     .background(AppTheme.backgroundSecondary)
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
             }
@@ -342,7 +342,7 @@ struct SessionSharingSheet: View {
             Button("Done") {
                 dismiss()
             }
-            .foregroundColor(AppTheme.accent)
+            .foregroundStyle(AppTheme.accent)
         }
         .padding()
         .frame(width: 400, height: 300)

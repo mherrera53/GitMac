@@ -20,15 +20,15 @@ struct JiraLoginPrompt: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "square.stack.3d.up.fill")
                 .font(DesignTokens.Typography.iconXXXL)
-                .foregroundColor(SwiftUI.Color(hex: "0052CC"))
+                .foregroundStyle(SwiftUI.Color(hex: "0052CC"))
 
             Text("Connect to Jira")
                 .font(DesignTokens.Typography.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Enter your Jira Cloud credentials")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
 
             VStack(spacing: DesignTokens.Spacing.sm) {
@@ -45,7 +45,7 @@ struct JiraLoginPrompt: View {
             if let error = error {
                 Text(error)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
 
             Button {

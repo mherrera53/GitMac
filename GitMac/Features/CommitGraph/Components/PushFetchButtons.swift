@@ -25,13 +25,13 @@ struct PushFetchButtons: View {
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     Image(systemName: aheadCount > 0 ? "arrow.up.square.fill" : "arrow.up.circle")
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(aheadCount > 0 ? AppTheme.success : theme.textMuted)
+                        .foregroundStyle(aheadCount > 0 ? AppTheme.success : theme.textMuted)
                         .symbolRenderingMode(.hierarchical)
 
                     Text("Push")
                         .font(DesignTokens.Typography.callout)
                         .fontWeight(aheadCount > 0 ? .semibold : .regular)
-                        .foregroundColor(theme.text)
+                        .foregroundStyle(theme.text)
 
                     if aheadCount > 0 {
                         ZStack {
@@ -57,7 +57,7 @@ struct PushFetchButtons: View {
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.vertical, DesignTokens.Spacing.xs)
                 .background(theme.backgroundTertiary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             }
             .buttonStyle(.plain)
             .disabled(aheadCount == 0 || currentBranch == nil)
@@ -68,24 +68,24 @@ struct PushFetchButtons: View {
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     Image(systemName: behindCount > 0 ? "arrow.down.square.fill" : "arrow.down.circle")
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(behindCount > 0 ? AppTheme.warning : theme.textMuted)
+                        .foregroundStyle(behindCount > 0 ? AppTheme.warning : theme.textMuted)
                         .symbolRenderingMode(.hierarchical)
 
                     Text("Fetch")
                         .font(DesignTokens.Typography.callout)
                         .fontWeight(behindCount > 0 ? .semibold : .regular)
-                        .foregroundColor(theme.text)
+                        .foregroundStyle(theme.text)
 
                     if let lastFetch = lastFetchDate {
                         Text("(\(relativeTime(from: lastFetch)))")
                             .font(DesignTokens.Typography.caption2.monospacedDigit())
-                            .foregroundColor(theme.textMuted)
+                            .foregroundStyle(theme.textMuted)
                     }
                 }
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.vertical, DesignTokens.Spacing.xs)
                 .background(theme.backgroundTertiary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             }
             .buttonStyle(.plain)
             .help("Fetch from remote")
@@ -143,12 +143,12 @@ struct CICDToolbarBadge: View {
                         }
                         Text(status.shortLabel)
                             .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 4)
                     .background(status.color.opacity(0.12))
-                    .cornerRadius(4)
+                    .clipShape(.rect(cornerRadius: 4))
                 }
                 .buttonStyle(.plain)
                 .help("CI/CD: \(status.label) - Click to view")
@@ -185,12 +185,12 @@ struct CICDBadge: View {
             }
             Text(status.label)
                 .font(.system(size: 10, weight: .medium))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(status.color.opacity(0.15))
-        .cornerRadius(6)
+        .clipShape(.rect(cornerRadius: 6))
         .help("Last build: \(status.label)")
     }
 }

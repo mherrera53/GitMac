@@ -28,17 +28,17 @@ struct InitRepositorySheet: View {
             HStack {
                 Image(systemName: "plus.circle.fill")
                     .font(DesignTokens.Typography.iconXL)
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 Text("Initialize Repository")
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Button {
                     dismiss()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -52,7 +52,7 @@ struct InitRepositorySheet: View {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                         Text("Repository Name")
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         DSTextField(placeholder: "my-project", text: $repositoryName)
                             .disabled(isCreating)
                     }
@@ -60,7 +60,7 @@ struct InitRepositorySheet: View {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                         Text("Location")
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         HStack(spacing: DesignTokens.Spacing.sm) {
                             DSTextField(placeholder: "/path/to/parent/directory", text: $localPath)
                                 .disabled(isCreating)
@@ -70,7 +70,7 @@ struct InitRepositorySheet: View {
                         if !repositoryName.isEmpty {
                             Text("Will create: \(localPath)/\(repositoryName)")
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.textMuted)
+                                .foregroundStyle(AppTheme.textMuted)
                         }
                     }
 
@@ -79,7 +79,7 @@ struct InitRepositorySheet: View {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                         Text("Initial Branch")
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         DSTextField(placeholder: "main", text: $initialBranch)
                             .disabled(isCreating)
                     }
@@ -87,7 +87,7 @@ struct InitRepositorySheet: View {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                         Text("Initial Files")
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         Toggle("Create README.md", isOn: $createReadme)
                             .disabled(isCreating)
                         Toggle("Create .gitignore", isOn: $createGitignore)
@@ -106,14 +106,14 @@ struct InitRepositorySheet: View {
                     if let error = error {
                         HStack(spacing: DesignTokens.Spacing.sm) {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(AppTheme.error)
+                                .foregroundStyle(AppTheme.error)
                             Text(error)
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.error)
+                                .foregroundStyle(AppTheme.error)
                         }
                         .padding(DesignTokens.Spacing.md)
                         .background(AppTheme.error.opacity(0.1))
-                        .cornerRadius(DesignTokens.CornerRadius.md)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                     }
 
                     if isCreating {
@@ -121,7 +121,7 @@ struct InitRepositorySheet: View {
                             ProgressView().scaleEffect(0.8)
                             Text("Creating repository...")
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                     }
                 }

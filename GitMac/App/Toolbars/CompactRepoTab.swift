@@ -29,7 +29,7 @@ struct CompactRepoTab: View {
                 // Repo name
                 Text(tab.repository.name)
                     .font(.system(size: 11, weight: isActive ? .semibold : .regular))
-                    .foregroundColor(isActive ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    .foregroundStyle(isActive ? AppTheme.textPrimary : AppTheme.textSecondary)
                     .lineLimit(1)
 
                 // Close button (on hover)
@@ -37,7 +37,7 @@ struct CompactRepoTab: View {
                     Button(action: onClose) {
                         Image(systemName: "xmark")
                             .font(.system(size: 8, weight: .bold))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                     .buttonStyle(.plain)
                 }

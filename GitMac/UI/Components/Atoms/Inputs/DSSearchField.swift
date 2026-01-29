@@ -33,7 +33,7 @@ struct DSSearchField: View {
             // Search icon
             Image(systemName: "magnifyingglass")
                 .font(.system(size: DesignTokens.Sizing.Icon.md))
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
                 .frame(width: 20)
 
             // Text field
@@ -41,12 +41,12 @@ struct DSSearchField: View {
                 if text.isEmpty {
                     Text(placeholder)
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(placeholderColor)
+                        .foregroundStyle(placeholderColor)
                 }
                 TextField("", text: $text)
                     .textFieldStyle(.plain)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(foregroundColor)
+                    .foregroundStyle(foregroundColor)
                     .disabled(disabled)
                     .focused($isFocused)
                     .onSubmit {
@@ -61,7 +61,7 @@ struct DSSearchField: View {
                 }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: DesignTokens.Sizing.Icon.md))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .frame(width: 20)
                 }
                 .buttonStyle(.plain)
@@ -71,7 +71,7 @@ struct DSSearchField: View {
         .padding(.horizontal, DesignTokens.Spacing.sm)
         .padding(.vertical, DesignTokens.Spacing.sm)
         .background(backgroundColor)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                 .stroke(borderColor, lineWidth: 1)

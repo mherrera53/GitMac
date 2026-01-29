@@ -24,18 +24,18 @@ struct CommitFileRow: View {
             // Status icon
             Image(systemName: file.status.icon)
                 .font(.system(size: 10, weight: .bold))
-                .foregroundColor(file.status.color)
+                .foregroundStyle(file.status.color)
                 .frame(width: 16)
 
             // File icon
             Image(systemName: "doc.fill")
                 .font(.system(size: 12))
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
 
             // Filename
             Text(filename)
                 .font(.system(size: 12))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .lineLimit(1)
 
             Spacer()
@@ -44,12 +44,12 @@ struct CommitFileRow: View {
             if file.additions > 0 {
                 Text("+\(file.additions)")
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
             }
             if file.deletions > 0 {
                 Text("-\(file.deletions)")
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
         }
         .padding(.horizontal, 12)
@@ -139,7 +139,7 @@ struct AuthorAvatar: View {
                 .fill(color)
             Text(String(name.prefix(1)).uppercased())
                 .font(.system(size: size * 0.45, weight: .semibold))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(width: size, height: size)
     }
@@ -166,16 +166,16 @@ struct CommitSection: View {
                 HStack(spacing: 6) {
                     Image(systemName: "ticket.fill")
                         .font(.system(size: 10))
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
 
                     Text(ref)
                         .font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
 
                     if let subject = linkedTaigaSubject {
                         Text(subject)
                             .font(.system(size: 10))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                             .lineLimit(1)
                     }
 
@@ -194,7 +194,7 @@ struct CommitSection: View {
                     } label: {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .font(.system(size: 10))
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                     }
                     .menuStyle(.borderlessButton)
                     .frame(width: 20)
@@ -206,7 +206,7 @@ struct CommitSection: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 10))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                     .buttonStyle(.plain)
                     .help("Remove Taiga link")
@@ -214,19 +214,19 @@ struct CommitSection: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(AppTheme.success.opacity(0.1))
-                .cornerRadius(4)
+                .clipShape(.rect(cornerRadius: 4))
             }
 
             ZStack(alignment: .topLeading) {
                 if commitMessage.isEmpty {
                     Text("Commit message...")
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 10)
                 }
                 TextEditor(text: $commitMessage)
                     .font(.system(size: 12))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .scrollContentBackground(.hidden)
                     .background(Color.clear)
                     .frame(minHeight: 60, maxHeight: 100)
@@ -236,7 +236,7 @@ struct CommitSection: View {
                     if let error = aiError {
                         Text(error)
                             .font(.system(size: 9))
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                             .lineLimit(1)
                     }
                     Spacer()
@@ -250,7 +250,7 @@ struct CommitSection: View {
                         } else {
                             Image(systemName: "sparkles")
                                 .font(.system(size: 10))
-                                .foregroundColor(AppTheme.accent)
+                                .foregroundStyle(AppTheme.accent)
                                 .padding(6)
                                 .background(AppTheme.background.opacity(0.8))
                                 .clipShape(Circle())
@@ -264,7 +264,7 @@ struct CommitSection: View {
             }
             .padding(4)
             .background(AppTheme.backgroundTertiary)
-            .cornerRadius(6)
+            .clipShape(.rect(cornerRadius: 6))
 
             // Commit buttons row
             HStack(spacing: 8) {
@@ -278,8 +278,8 @@ struct CommitSection: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background(canCommit && !commitMessage.isEmpty ? AppTheme.success : AppTheme.backgroundTertiary)
-                    .foregroundColor(canCommit && !commitMessage.isEmpty ? AppTheme.textPrimary : AppTheme.textMuted)
-                    .cornerRadius(6)
+                    .foregroundStyle(canCommit && !commitMessage.isEmpty ? AppTheme.textPrimary : AppTheme.textMuted)
+                    .clipShape(.rect(cornerRadius: 6))
                 }
                 .buttonStyle(.plain)
                 .disabled(!canCommit || commitMessage.isEmpty)
@@ -295,8 +295,8 @@ struct CommitSection: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(canCommit && !commitMessage.isEmpty ? AppTheme.accent : AppTheme.backgroundTertiary)
-                        .foregroundColor(canCommit && !commitMessage.isEmpty ? .white : AppTheme.textMuted)
-                        .cornerRadius(6)
+                        .foregroundStyle(canCommit && !commitMessage.isEmpty ? .white : AppTheme.textMuted)
+                        .clipShape(.rect(cornerRadius: 6))
                     }
                     .buttonStyle(.plain)
                     .disabled(!canCommit || commitMessage.isEmpty)

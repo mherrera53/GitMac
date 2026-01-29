@@ -29,7 +29,7 @@ struct DSIntegrationPanel<ViewModel: IntegrationViewModel, Content: View, LoginV
 
                 Text(title)
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -80,7 +80,7 @@ struct DSIntegrationPanel<ViewModel: IntegrationViewModel, Content: View, LoginV
         }
         .frame(width: 400, height: 600)
         .background(AppTheme.background)
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
     }
 }
 
@@ -116,7 +116,7 @@ struct DSIntegrationBottomPanel<ViewModel: IntegrationViewModel, Content: View, 
 
                 Text(title)
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -208,7 +208,7 @@ private class MockIntegrationViewModel: IntegrationViewModel {
         content: {
             VStack {
                 Text("Issue content goes here")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         },
@@ -254,7 +254,7 @@ private class MockIntegrationViewModel: IntegrationViewModel {
                 content: {
                     VStack {
                         Text("Task content goes here")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 },

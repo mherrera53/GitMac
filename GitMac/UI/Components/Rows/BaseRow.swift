@@ -41,7 +41,7 @@ struct BaseRow<Content: View>: View {
         .padding(.horizontal, style.horizontalPadding)
         .padding(.vertical, style.verticalPadding)
         .background(backgroundColor)
-        .cornerRadius(style.cornerRadius)
+        .clipShape(.rect(cornerRadius: style.cornerRadius))
         .contentShape(Rectangle())
         .onTapGesture {
             onSelect?()
@@ -97,7 +97,7 @@ struct DataRow<Data: RowData>: View {
         // Leading icon
         if showLeadingIcon, let icon = data.leadingIcon {
             Image(systemName: icon.systemName)
-                .foregroundColor(icon.color)
+                .foregroundStyle(icon.color)
                 .frame(width: icon.size, height: icon.size)
         }
 
@@ -109,7 +109,7 @@ struct DataRow<Data: RowData>: View {
             if let secondary = data.secondaryText {
                 Text(secondary)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
             }
         }
@@ -128,23 +128,23 @@ struct DataRow<Data: RowData>: View {
         case .text(let text, let color):
             Text(text)
                 .font(.caption)
-                .foregroundColor(color)
+                .foregroundStyle(color)
 
         case .badge(let text, let color):
             Text(text)
                 .font(.caption.bold())
-                .foregroundColor(color)
+                .foregroundStyle(color)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(color.opacity(0.2))
-                .cornerRadius(4)
+                .clipShape(.rect(cornerRadius: 4))
 
         case .stats(let additions, let deletions):
             DiffStatsView(additions: additions, deletions: deletions)
 
         case .icon(let systemName, let color):
             Image(systemName: systemName)
-                .foregroundColor(color)
+                .foregroundStyle(color)
 
         case .custom(let view):
             view
@@ -189,7 +189,7 @@ extension BaseRow {
         ) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .foregroundColor(iconColor)
+                    .foregroundStyle(iconColor)
                 Text(text)
             }
         }
@@ -225,7 +225,7 @@ struct BaseRow_Previews: PreviewProvider {
             ]) {
                 HStack {
                     Image(systemName: "doc.fill")
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                     Text("Row with hover actions")
                 }
             }

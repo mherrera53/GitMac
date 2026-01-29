@@ -35,14 +35,14 @@ struct CreateBranchSheet: View {
             HStack {
                 Text("Create New Branch")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Button {
                     isPresented = false
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
@@ -55,20 +55,20 @@ struct CreateBranchSheet: View {
                 HStack(spacing: 4) {
                     Image(systemName: "folder.fill")
                         .font(.system(size: 10))
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                     Text(repoName)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
 
                 // Current branch
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.triangle.branch")
                         .font(.system(size: 10))
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
                     Text(currentBranchName)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
 
                 Spacer()
@@ -85,13 +85,13 @@ struct CreateBranchSheet: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Branch Name")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
 
                     DSTextField(placeholder: "feature/my-branch", text: $branchName)
                         .font(.system(size: 13))
                         .padding(8)
                         .background(AppTheme.backgroundSecondary)
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
                                 .stroke(AppTheme.border, lineWidth: 1)
@@ -102,7 +102,7 @@ struct CreateBranchSheet: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Based On")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
 
                     Picker("", selection: $baseBranch) {
                         Text("Current HEAD").tag("HEAD")
@@ -118,13 +118,13 @@ struct CreateBranchSheet: View {
                 Toggle(isOn: $checkoutAfterCreate) {
                     Text("Checkout after creating")
                         .font(.system(size: 12))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
 
                 if let error = errorMessage {
                     Text(error)
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                 }
             }
             .padding(16)
@@ -139,7 +139,7 @@ struct CreateBranchSheet: View {
                     isPresented = false
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
                 Spacer()
 

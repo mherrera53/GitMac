@@ -208,7 +208,7 @@ struct KaleidoscopeSplitDiffView: View {
         let rightLines = pairedLines.compactMap { $0.right }
         
         HStack(spacing: 0) {
-            ScrollView {
+            ScrollView([.horizontal, .vertical]) {
                 LazyVStack(spacing: 0, pinnedViews: []) {
                     ForEach(Array(leftLines.enumerated()), id: \.offset) { _, line in
                         KaleidoscopeDiffLine(
@@ -221,13 +221,15 @@ struct KaleidoscopeSplitDiffView: View {
                     }
                 }
             }
+            .scrollIndicators(.visible, axes: .vertical)
+            .scrollIndicators(.hidden, axes: .horizontal)
             .frame(width: panelWidth)
             .background(theme.background)
-            
+
             KaleidoscopeGutterView()
                 .frame(width: gutterWidth)
-            
-            ScrollView {
+
+            ScrollView([.horizontal, .vertical]) {
                 LazyVStack(spacing: 0, pinnedViews: []) {
                     ForEach(Array(rightLines.enumerated()), id: \.offset) { _, line in
                         KaleidoscopeDiffLine(
@@ -768,7 +770,7 @@ struct KaleidoscopeDiffLine: View {
             if showLineNumber {
                 Text(lineNumber.map { String($0) } ?? "")
                     .font(DesignTokens.Typography.commitHash)
-                    .foregroundColor(theme.textMuted)
+                    .foregroundStyle(theme.textMuted)
                     .frame(width: 50, alignment: .trailing)
                     .padding(.trailing, DesignTokens.Spacing.xs)
                     .background(lineNumberBackground(theme: theme))
@@ -777,13 +779,13 @@ struct KaleidoscopeDiffLine: View {
             // Change indicator
             Text(changeIndicator)
                 .font(DesignTokens.Typography.diffLine)
-                .foregroundColor(indicatorColor(theme: theme))
+                .foregroundStyle(indicatorColor(theme: theme))
                 .frame(width: 20)
 
             // Content with character-level highlighting
             Text(highlightedContent)
                 .font(DesignTokens.Typography.diffLine)
-                .foregroundColor(textColor(theme: theme))
+                .foregroundStyle(textColor(theme: theme))
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.trailing, DesignTokens.Spacing.sm)
@@ -850,11 +852,11 @@ struct KaleidoscopeHunkHeader: View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: "text.alignleft")
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(theme.accent)
+                .foregroundStyle(theme.accent)
 
             Text(header)
                 .font(DesignTokens.Typography.commitHash)
-                .foregroundColor(theme.accent)
+                .foregroundStyle(theme.accent)
 
             Spacer()
 
@@ -926,7 +928,7 @@ struct HunkActionButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isHovered ? color : color.opacity(0.7))
+                .foregroundStyle(isHovered ? color : color.opacity(0.7))
                 .frame(width: 22, height: 22)
                 .background(
                     RoundedRectangle(cornerRadius: 4)
@@ -944,7 +946,7 @@ struct HunkActionButton: View {
             if showTooltip {
                 Text(tooltip)
                     .font(.system(size: 11))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(
@@ -1040,10 +1042,10 @@ struct DiffSelectionActionBar: View {
             HStack(spacing: 6) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 14))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 Text("\(selectedCount) line\(selectedCount == 1 ? "" : "s") selected")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
 
             Divider()
@@ -1063,7 +1065,7 @@ struct DiffSelectionActionBar: View {
                     Text("Stage")
                         .font(.system(size: 12, weight: .medium))
                 }
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(
@@ -1083,7 +1085,7 @@ struct DiffSelectionActionBar: View {
                 if showStageTooltip {
                     Text("Stage selected lines (⌘+S)")
                         .font(.system(size: 11))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.85)))
@@ -1107,7 +1109,7 @@ struct DiffSelectionActionBar: View {
                     Text("Discard")
                         .font(.system(size: 12, weight: .medium))
                 }
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(
@@ -1127,7 +1129,7 @@ struct DiffSelectionActionBar: View {
                 if showDiscardTooltip {
                     Text("Discard selected lines (⌘+D)")
                         .font(.system(size: 11))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.85)))
@@ -1141,7 +1143,7 @@ struct DiffSelectionActionBar: View {
             Button(action: onClearSelection) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 16))
-                    .foregroundColor(clearHovered ? AppTheme.textPrimary : AppTheme.textMuted)
+                    .foregroundStyle(clearHovered ? AppTheme.textPrimary : AppTheme.textMuted)
             }
             .buttonStyle(.plain)
             .onHover { hovering in
@@ -1154,7 +1156,7 @@ struct DiffSelectionActionBar: View {
                 if showClearTooltip {
                     Text("Clear selection (Esc)")
                         .font(.system(size: 11))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.85)))

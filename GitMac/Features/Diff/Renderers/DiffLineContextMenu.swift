@@ -34,7 +34,7 @@ extension View {
                 // Hint for hunk-level actions
                 Label("Hover over hunk header for Stage/Discard", systemImage: "info.circle")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
     }
@@ -90,7 +90,7 @@ extension View {
                 if onStageLine == nil && onDiscardLine == nil {
                     Label("Hover over hunk header for Stage/Discard", systemImage: "info.circle")
                         .font(.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
         }

@@ -33,12 +33,13 @@ struct FileListSection<HeaderActions: View, Content: View>: View {
 
             // Content - LazyVStack for performance
             if isExpanded {
-                ScrollView(showsIndicators: showScrollIndicators) {
+                ScrollView {
                     LazyVStack(spacing: 0, pinnedViews: []) {
                         content()
                     }
                     .drawingGroup()  // Batch rendering with Metal for better scroll performance
                 }
+                .scrollIndicators(showScrollIndicators ? .visible : .hidden)
                 .frame(maxHeight: maxHeight)
             }
         }
@@ -176,7 +177,7 @@ struct FileListSection_Previews: PreviewProvider {
                     ForEach(sampleFiles, id: \.self) { file in
                         HStack {
                             Image(systemName: "doc.fill")
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                             Text(file)
                                 .font(.system(.body, design: .monospaced))
                             Spacer()

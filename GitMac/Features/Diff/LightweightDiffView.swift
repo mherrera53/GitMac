@@ -183,14 +183,14 @@ struct AdaptiveDiffView: View {
                     // Performance notice
                     HStack {
                         Image(systemName: "bolt.fill")
-                            .foregroundColor(AppTheme.warning)
+                            .foregroundStyle(AppTheme.warning)
                         Text("Large file - using optimized view")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Spacer()
                         Text("\(fileDiff.hunks.reduce(0) { $0 + $1.lines.count }) lines")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                     .padding(.horizontal, DesignTokens.Spacing.md)
                     .padding(.vertical, DesignTokens.Spacing.xs)

@@ -115,7 +115,7 @@ struct DSActionBar: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Leading Alignment")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             DSActionBar(
                 actions: [
                     DSActionItem(label: "Cancel", variant: .ghost) {},
@@ -124,13 +124,13 @@ struct DSActionBar: View {
                 alignment: .leading
             )
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
 
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Trailing Alignment (Default)")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             DSActionBar(
                 actions: [
                     DSActionItem(label: "Cancel", variant: .ghost) {},
@@ -139,13 +139,13 @@ struct DSActionBar: View {
                 alignment: .trailing
             )
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
 
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Center Alignment")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             DSActionBar(
                 actions: [
                     DSActionItem(label: "Cancel", variant: .ghost) {},
@@ -154,13 +154,13 @@ struct DSActionBar: View {
                 alignment: .center
             )
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
 
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Space Between")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             DSActionBar(
                 actions: [
                     DSActionItem(label: "Cancel", variant: .ghost) {},
@@ -169,7 +169,7 @@ struct DSActionBar: View {
                 alignment: .spaceBetween
             )
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
     }
     .padding()
@@ -180,20 +180,20 @@ struct DSActionBar: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Single Action")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             DSActionBar(
                 actions: [
                     DSActionItem(label: "Save Changes", icon: "checkmark", variant: .primary) {}
                 ]
             )
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
 
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Two Actions")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             DSActionBar(
                 actions: [
                     DSActionItem(label: "Cancel", variant: .ghost) {},
@@ -201,13 +201,13 @@ struct DSActionBar: View {
                 ]
             )
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
 
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Multiple Actions with Icons")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             DSActionBar(
                 actions: [
                     DSActionItem(label: "Cancel", icon: "xmark", variant: .ghost) {},
@@ -216,13 +216,13 @@ struct DSActionBar: View {
                 ]
             )
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
 
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Destructive Action")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             DSActionBar(
                 actions: [
                     DSActionItem(label: "Cancel", variant: .ghost) {},
@@ -230,7 +230,7 @@ struct DSActionBar: View {
                 ]
             )
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
     }
     .padding()
@@ -241,7 +241,7 @@ struct DSActionBar: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Commit Actions")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             DSActionBar(
                 actions: [
                     DSActionItem(label: "Cancel", variant: .ghost) {
@@ -253,13 +253,13 @@ struct DSActionBar: View {
                 ]
             )
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
 
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Branch Actions")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             DSActionBar(
                 actions: [
                     DSActionItem(label: "Cancel", variant: .ghost) {
@@ -271,13 +271,13 @@ struct DSActionBar: View {
                 ]
             )
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
 
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Merge Actions")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             DSActionBar(
                 actions: [
                     DSActionItem(label: "Cancel", variant: .ghost) {
@@ -293,13 +293,13 @@ struct DSActionBar: View {
                 alignment: .spaceBetween
             )
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
 
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Stash Actions")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             DSActionBar(
                 actions: [
                     DSActionItem(label: "Cancel", variant: .ghost) {
@@ -311,7 +311,7 @@ struct DSActionBar: View {
                 ]
             )
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
     }
     .padding()

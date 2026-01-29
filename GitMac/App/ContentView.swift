@@ -560,24 +560,24 @@ struct CollapsedBottomPanelBar: View {
             // Drag handle indicator
             Image(systemName: "chevron.up")
                 .font(.system(size: 8, weight: .bold))
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
 
             // Show open tabs icons
             if !panelManager.openTabs.isEmpty {
                 ForEach(panelManager.openTabs.prefix(4)) { tab in
                     Image(systemName: tab.type.icon)
                         .font(.system(size: 9))
-                        .foregroundColor(panelManager.activeTabId == tab.id ? AppTheme.accent : AppTheme.textMuted)
+                        .foregroundStyle(panelManager.activeTabId == tab.id ? AppTheme.accent : AppTheme.textMuted)
                 }
                 if panelManager.openTabs.count > 4 {
                     Text("+\(panelManager.openTabs.count - 4)")
                         .font(.system(size: 9))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
             } else {
                 Text("Terminal")
                     .font(.system(size: 10))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
 
             Spacer()
@@ -588,7 +588,7 @@ struct CollapsedBottomPanelBar: View {
             } label: {
                 Image(systemName: "terminal")
                     .font(.system(size: 9))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             .buttonStyle(.plain)
         }

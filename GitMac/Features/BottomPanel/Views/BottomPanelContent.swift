@@ -94,6 +94,7 @@ struct GhosttyWithAIInput: View {
 
 // MARK: - Ghostty Connector (holds reference to NSView)
 
+#if GHOSTTY_AVAILABLE
 @MainActor
 class GhosttyConnector: ObservableObject {
     weak var ghosttyView: GhosttyPureNSView?
@@ -103,6 +104,14 @@ class GhosttyConnector: ObservableObject {
         ghosttyView?.sendText(text)
     }
 }
+#else
+@MainActor
+class GhosttyConnector: ObservableObject {
+    func sendText(_ text: String) {
+        print("[Connector] Ghostty not available")
+    }
+}
+#endif
 
 
 // AIInputBar has been moved to Features/Terminal/Views/TerminalInputBar.swift
@@ -594,16 +603,16 @@ struct PlaceholderPanelContent: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: icon)
                 .font(DesignTokens.Typography.iconXXXXL)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
 
             Text(title)
                 .font(DesignTokens.Typography.title3)
                 .fontWeight(.medium)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text(message)
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(AppTheme.background)
@@ -616,15 +625,15 @@ struct EmptyPanelView: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: "tray")
                 .font(DesignTokens.Typography.iconXXXXL)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
 
             Text("No panels open")
                 .font(DesignTokens.Typography.headline)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             Text("Click the + button or toolbar icons to add panels")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(AppTheme.panel)
@@ -870,15 +879,15 @@ struct WarpBlockView: View {
                 // Directory
                 Text((block.workingDirectory as NSString).lastPathComponent)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
 
                 Text("›")
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
 
                 // Command
                 Text(block.command)
                     .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(isCollapsed ? 1 : nil)
 
                 Spacer()
@@ -895,7 +904,7 @@ struct WarpBlockView: View {
                             } label: {
                                 Image(systemName: isCollapsed ? "chevron.down" : "chevron.up")
                                     .font(.system(size: 10, weight: .medium))
-                                    .foregroundColor(AppTheme.textMuted)
+                                    .foregroundStyle(AppTheme.textMuted)
                             }
                             .buttonStyle(.plain)
                         }
@@ -906,7 +915,7 @@ struct WarpBlockView: View {
                         } label: {
                             Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
                                 .font(.system(size: 10, weight: .medium))
-                                .foregroundColor(isCopied ? AppTheme.success : AppTheme.textMuted)
+                                .foregroundStyle(isCopied ? AppTheme.success : AppTheme.textMuted)
                         }
                         .buttonStyle(.plain)
                     }
@@ -929,7 +938,7 @@ struct WarpBlockView: View {
                     ForEach(block.output) { line in
                         Text(line.text)
                             .font(.system(size: 12, design: .monospaced))
-                            .foregroundColor(line.type == .stderr ? AppTheme.error : AppTheme.textPrimary)
+                            .foregroundStyle(line.type == .stderr ? AppTheme.error : AppTheme.textPrimary)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -946,13 +955,13 @@ struct WarpBlockView: View {
                     Text("Exit \(block.exitCode)")
                         .font(.system(size: 10, weight: .medium))
                 }
-                .foregroundColor(AppTheme.error)
+                .foregroundStyle(AppTheme.error)
                 .padding(.horizontal, 12)
                 .padding(.bottom, 6)
             }
         }
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
                 .stroke(isHovered ? AppTheme.accent.opacity(0.3) : AppTheme.border.opacity(0.3), lineWidth: 1)
@@ -1033,12 +1042,12 @@ struct MultilineInputBar: View {
                 // Directory indicator
                 Text((workingDirectory as NSString).lastPathComponent)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .padding(.bottom, 6)
 
                 Text("$")
                     .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .padding(.bottom, 6)
 
                 // Input area
@@ -1051,10 +1060,10 @@ struct MultilineInputBar: View {
                                 .opacity(0)
                             Text(ghostText)
                                 .font(.system(size: 13, design: .monospaced))
-                                .foregroundColor(AppTheme.textMuted.opacity(0.4))
+                                .foregroundStyle(AppTheme.textMuted.opacity(0.4))
                             Text(" ⇥")
                                 .font(.system(size: 9))
-                                .foregroundColor(AppTheme.textMuted.opacity(0.3))
+                                .foregroundStyle(AppTheme.textMuted.opacity(0.3))
                         }
                         .padding(.top, 6)
                     }
@@ -1063,7 +1072,7 @@ struct MultilineInputBar: View {
                     if text.isEmpty {
                         Text("Enter command...")
                             .font(.system(size: 13, design: .monospaced))
-                            .foregroundColor(AppTheme.textMuted.opacity(0.5))
+                            .foregroundStyle(AppTheme.textMuted.opacity(0.5))
                             .padding(.top, 6)
                     }
 
@@ -1094,7 +1103,7 @@ struct MultilineInputBar: View {
                     } label: {
                         Image(systemName: "paperplane.fill")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                     }
                     .buttonStyle(.plain)
                     .padding(.bottom, 6)

@@ -24,7 +24,7 @@ struct FileTypeIcon: View {
     var body: some View {
         Image(systemName: iconName)
             .font(.system(size: size.dimension))
-            .foregroundColor(iconColor)
+            .foregroundStyle(iconColor)
     }
 
     // MARK: - Icon Selection

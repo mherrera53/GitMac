@@ -67,15 +67,15 @@ struct WorkspaceConfigView: View {
                     HStack(spacing: 8) {
                         Image(systemName: section.icon)
                             .frame(width: 16)
-                            .foregroundColor(selectedSection == section ? AppTheme.accent : AppTheme.textSecondary)
+                            .foregroundStyle(selectedSection == section ? AppTheme.accent : AppTheme.textSecondary)
                         Text(section.rawValue)
-                            .foregroundColor(selectedSection == section ? AppTheme.textPrimary : AppTheme.textSecondary)
+                            .foregroundStyle(selectedSection == section ? AppTheme.textPrimary : AppTheme.textSecondary)
                         Spacer()
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(selectedSection == section ? AppTheme.accent.opacity(0.15) : Color.clear)
-                    .cornerRadius(6)
+                    .clipShape(.rect(cornerRadius: 6))
                 }
                 .buttonStyle(.plain)
             }
@@ -122,14 +122,14 @@ struct WorkspaceConfigView: View {
                 )
                 Text("Custom name to display instead of folder name")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             SettingsSection(title: "Repository Path") {
                 HStack {
                     Text(repoPath)
                         .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                     Spacer()
@@ -138,7 +138,7 @@ struct WorkspaceConfigView: View {
                         NSPasteboard.general.setString(repoPath, forType: .string)
                     } label: {
                         Image(systemName: "doc.on.doc")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.plain)
                     .help("Copy path")
@@ -173,7 +173,7 @@ struct WorkspaceConfigView: View {
                 }
                 Text("Color used to identify this repository in tabs and lists")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
         }
     }
@@ -194,7 +194,7 @@ struct WorkspaceConfigView: View {
                 )
                 Text("Branch used for comparisons, badges, and as default PR target")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             SettingsSection(title: "Default Remote") {
@@ -207,7 +207,7 @@ struct WorkspaceConfigView: View {
                 )
                 Text("Default remote for push/pull operations")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             SettingsSection(title: "Git Identity (Override Global)") {
@@ -229,7 +229,7 @@ struct WorkspaceConfigView: View {
                 }
                 Text("Override global git config for this repository only")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             SettingsSection(title: "Signing") {
@@ -255,7 +255,7 @@ struct WorkspaceConfigView: View {
                     HStack {
                         Text("Feature:")
                             .frame(width: 70, alignment: .leading)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         DSTextField(
                             placeholder: "feature/",
                             text: Binding(
@@ -267,7 +267,7 @@ struct WorkspaceConfigView: View {
                     HStack {
                         Text("Bugfix:")
                             .frame(width: 70, alignment: .leading)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         DSTextField(
                             placeholder: "bugfix/",
                             text: Binding(
@@ -279,7 +279,7 @@ struct WorkspaceConfigView: View {
                     HStack {
                         Text("Release:")
                             .frame(width: 70, alignment: .leading)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         DSTextField(
                             placeholder: "release/",
                             text: Binding(
@@ -291,7 +291,7 @@ struct WorkspaceConfigView: View {
                     HStack {
                         Text("Hotfix:")
                             .frame(width: 70, alignment: .leading)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         DSTextField(
                             placeholder: "hotfix/",
                             text: Binding(
@@ -303,7 +303,7 @@ struct WorkspaceConfigView: View {
                 }
                 Text("Used when creating new branches to suggest naming")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             SettingsSection(title: "Automation") {
@@ -333,7 +333,7 @@ struct WorkspaceConfigView: View {
                 .frame(height: 100)
                 .padding(8)
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(6)
+                .clipShape(.rect(cornerRadius: 6))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
                         .stroke(AppTheme.border, lineWidth: 1)
@@ -341,7 +341,7 @@ struct WorkspaceConfigView: View {
 
                 Text("Template for new commit messages. Use {branch} for branch name, {issue} for issue number.")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             SettingsSection(title: "Validation") {
@@ -354,7 +354,7 @@ struct WorkspaceConfigView: View {
                 .toggleStyle(.switch)
                 Text("Warn if commit message doesn't contain issue reference (e.g., #123, JIRA-456)")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
         }
     }
@@ -375,7 +375,7 @@ struct WorkspaceConfigView: View {
                 )
                 Text("Default target branch when creating pull requests")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             SettingsSection(title: "PR Title Prefix") {
@@ -388,7 +388,7 @@ struct WorkspaceConfigView: View {
                 )
                 Text("Prefix added to PR titles by default")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             SettingsSection(title: "Default Reviewers") {
@@ -405,7 +405,7 @@ struct WorkspaceConfigView: View {
                 )
                 Text("GitHub usernames separated by commas")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
         }
     }
@@ -482,7 +482,7 @@ struct WorkspaceConfigView: View {
 
             Text("Configure integrations in Settings > Integrations")
                 .font(.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .padding(.top, 8)
         }
     }
@@ -494,10 +494,10 @@ struct WorkspaceConfigView: View {
             Text(title)
                 .font(.title2)
                 .fontWeight(.semibold)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Text(subtitle)
                 .font(.subheadline)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding(.bottom, 8)
     }
@@ -505,55 +505,55 @@ struct WorkspaceConfigView: View {
     private func integrationRow(icon: String, color: Color, name: String, value: String?, onClear: @escaping () -> Void) -> some View {
         HStack {
             Image(systemName: icon)
-                .foregroundColor(color)
+                .foregroundStyle(color)
                 .frame(width: 20)
 
             Text(name)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Spacer()
 
             if let value = value, !value.isEmpty {
                 Text(value)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(AppTheme.backgroundSecondary)
-                    .cornerRadius(4)
+                    .clipShape(.rect(cornerRadius: 4))
 
                 Button {
                     onClear()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             } else {
                 Text("Not configured")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
         .background(AppTheme.backgroundSecondary.opacity(0.5))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
     }
 
     private var emptyStateView: some View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: "folder.badge.questionmark")
                 .font(DesignTokens.Typography.iconXXXL)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             Text("No Repository Open")
                 .font(DesignTokens.Typography.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Open a repository to configure workspace settings")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(AppTheme.background)

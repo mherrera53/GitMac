@@ -37,11 +37,11 @@ struct DSEmptyState: View {
             VStack(spacing: DesignTokens.Spacing.sm) {
                 Text(title)
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Text(description)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .multilineTextAlignment(.center)
             }
 

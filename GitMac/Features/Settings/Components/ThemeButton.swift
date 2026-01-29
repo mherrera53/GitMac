@@ -11,7 +11,7 @@ struct ThemeButton: View {
             VStack(spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: theme.icon)
                     .font(DesignTokens.Typography.iconXXL)
-                    .foregroundColor(isSelected ? .white : iconColor)
+                    .foregroundStyle(isSelected ? .white : iconColor)
                     .frame(width: DesignTokens.Spacing.xxl + DesignTokens.Spacing.lg, height: DesignTokens.Spacing.xxl + DesignTokens.Spacing.lg)
                     .background(
                         RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
@@ -19,9 +19,9 @@ struct ThemeButton: View {
                     )
 
                 Text(theme.displayName)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
             }
         }
         .buttonStyle(.plain)

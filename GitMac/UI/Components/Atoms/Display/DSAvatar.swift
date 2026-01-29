@@ -69,7 +69,7 @@ struct DSAvatar: View {
 
                 Text(initials)
                     .font(.system(size: size.fontSize, weight: .medium))
-                    .foregroundColor(backgroundColor != nil ? AppTheme.textPrimary : AppTheme.accent)
+                    .foregroundStyle(backgroundColor != nil ? AppTheme.textPrimary : AppTheme.accent)
             }
         }
         .frame(width: size.dimension, height: size.dimension)

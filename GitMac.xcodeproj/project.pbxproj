@@ -2724,7 +2724,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG GHOSTTY_AVAILABLE $(inherited)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -2751,7 +2751,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/Frameworks/GhosttyKit.xcframework/macos-arm64_x86_64/Headers",
 				);
 				INFOPLIST_FILE = GitMac/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
@@ -2762,7 +2761,6 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/Frameworks/GhosttyKit.xcframework/macos-arm64_x86_64",
 					"$(SRCROOT)/GitMac/Features/BottomPanel/Views",
 					"$(SRCROOT)/GitMac/Features/BottomPanel/ViewModels",
 					"$(SRCROOT)/GitMac/Core/Services/AI",
@@ -2774,7 +2772,6 @@
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",
-					"-lghostty",
 					"-framework",
 					Metal,
 					"-framework",
@@ -2847,7 +2844,7 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "GHOSTTY_AVAILABLE $(inherited)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited)";
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -2874,7 +2871,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/Frameworks/GhosttyKit.xcframework/macos-arm64_x86_64/Headers",
 				);
 				INFOPLIST_FILE = GitMac/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
@@ -2885,7 +2881,6 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/Frameworks/GhosttyKit.xcframework/macos-arm64_x86_64",
 					"$(SRCROOT)/GitMac/Features/BottomPanel/Views",
 					"$(SRCROOT)/GitMac/Features/BottomPanel/ViewModels",
 					"$(SRCROOT)/GitMac/Core/Services/AI",
@@ -2897,7 +2892,6 @@
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-lc++",
-					"-lghostty",
 					"-framework",
 					Metal,
 					"-framework",

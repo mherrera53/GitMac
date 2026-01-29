@@ -27,11 +27,11 @@ struct DSTooltip<Content: View>: View {
                     VStack {
                         Text(tooltip)
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .padding(.horizontal, DesignTokens.Spacing.sm)
                             .padding(.vertical, DesignTokens.Spacing.xs)
                             .background(AppTheme.backgroundTertiary)
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                             .shadow(color: AppTheme.shadow, radius: 4, x: 0, y: 2)
                             .offset(y: -40)
                             .transition(.opacity)
@@ -60,8 +60,8 @@ struct DSTooltip<Content: View>: View {
                     .padding(.horizontal, DesignTokens.Spacing.md)
                     .padding(.vertical, DesignTokens.Spacing.sm)
                     .background(AppTheme.accent)
-                    .foregroundColor(AppTheme.buttonTextOnColor)
-                    .cornerRadius(DesignTokens.CornerRadius.md)
+                    .foregroundStyle(AppTheme.buttonTextOnColor)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             }
             .buttonStyle(.plain)
         }
@@ -82,7 +82,7 @@ struct DSTooltip<Content: View>: View {
 
         Text("Hover over the items above to see tooltips")
             .font(DesignTokens.Typography.caption)
-            .foregroundColor(AppTheme.textMuted)
+            .foregroundStyle(AppTheme.textMuted)
     }
     .padding()
     .frame(width: 400, height: 500)

@@ -10,6 +10,7 @@ import AppKit
 
 // MARK: - Minimal Terminal View
 
+#if GHOSTTY_AVAILABLE
 struct MinimalTerminalView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = GhosttyViewModel()
@@ -52,12 +53,12 @@ struct MinimalTerminalView: View {
                         .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.accent.opacity(0.6)))
                     Text("...")
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(AppTheme.background.opacity(0.9))
-                .cornerRadius(6)
+                .clipShape(.rect(cornerRadius: 6))
                 .padding(.bottom, 8)
                 .transition(.opacity)
             }
@@ -77,6 +78,7 @@ struct MinimalTerminalView: View {
         }
     }
 }
+#endif
 
 // MARK: - Minimal Suggestions Overlay
 
@@ -133,17 +135,17 @@ struct MinimalSuggestionRow: View {
                 if suggestion.isFromAI {
                     Image(systemName: "sparkle")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(AppTheme.accent.opacity(0.7))
+                        .foregroundStyle(AppTheme.accent.opacity(0.7))
                 } else {
                     Image(systemName: "terminal")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
 
                 // Command
                 Text(suggestion.command)
                     .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .foregroundColor(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
                     .lineLimit(1)
 
                 Spacer()
@@ -152,7 +154,7 @@ struct MinimalSuggestionRow: View {
                 if !suggestion.description.isEmpty {
                     Text(suggestion.description)
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .lineLimit(1)
                         .frame(maxWidth: 150, alignment: .trailing)
                 }
@@ -165,11 +167,11 @@ struct MinimalSuggestionRow: View {
                         Text("enter")
                             .font(.system(size: 9, weight: .medium))
                     }
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
                     .background(AppTheme.backgroundSecondary)
-                    .cornerRadius(4)
+                    .clipShape(.rect(cornerRadius: 4))
                 }
             }
             .padding(.horizontal, 12)
@@ -183,7 +185,7 @@ struct MinimalSuggestionRow: View {
 
 // MARK: - Preview
 
-#if DEBUG
+#if DEBUG && GHOSTTY_AVAILABLE
 struct MinimalTerminalView_Previews: PreviewProvider {
     static var previews: some View {
         MinimalTerminalView()

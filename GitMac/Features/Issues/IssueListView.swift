@@ -38,7 +38,7 @@ struct IssueListView: View {
                 // Search
                 HStack {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     DSSearchField(
                         placeholder: "Search issues...",
                         text: $searchText
@@ -73,9 +73,9 @@ struct IssueListView: View {
                     Spacer()
                     Image(systemName: "exclamationmark.circle")
                         .font(DesignTokens.Typography.iconXXXXL)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Text("Select an issue")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
@@ -160,11 +160,11 @@ struct IssueRow: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
             HStack {
                 Image(systemName: issue.state == "open" ? "circle" : "checkmark.circle.fill")
-                    .foregroundColor(issue.state == "open" ? AppTheme.success : AppTheme.accentPurple)
+                    .foregroundStyle(issue.state == "open" ? AppTheme.success : AppTheme.accentPurple)
 
                 Text("#\(issue.number)")
                     .font(.caption.monospacedDigit())
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Text(issue.title)
                     .fontWeight(.medium)
@@ -182,7 +182,7 @@ struct IssueRow: View {
                     if issue.labels.count > 3 {
                         Text("+\(issue.labels.count - 3)")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
             }
@@ -193,27 +193,27 @@ struct IssueRow: View {
                     image.resizable()
                 } placeholder: {
                     Image(systemName: "person.circle.fill")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .frame(width: 16, height: 16)
                 .clipShape(Circle())
 
                 Text(issue.user.login)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Text("•")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Text(formatDate(issue.createdAt))
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
         .padding(.vertical, DesignTokens.Spacing.sm)
         .padding(.horizontal, DesignTokens.Spacing.xs)
         .background(isSelected ? AppTheme.accent.opacity(0.1) : Color.clear)
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
     }
 
     func formatDate(_ dateString: String) -> String {
@@ -235,8 +235,8 @@ struct IssueLabelBadge: View {
             .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
             .padding(.vertical, DesignTokens.Spacing.xxs)
             .background(SwiftUI.Color(hex: label.color).opacity(0.3))
-            .foregroundColor(SwiftUI.Color(hex: label.color))
-            .cornerRadius(DesignTokens.CornerRadius.lg + DesignTokens.Spacing.xxs)
+            .foregroundStyle(SwiftUI.Color(hex: label.color))
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg + DesignTokens.Spacing.xxs))
     }
 }
 
@@ -254,7 +254,7 @@ struct IssueDetailView: View {
 
                         Text("#\(issue.number)")
                             .font(DesignTokens.Typography.title3)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
 
                         Spacer()
 
@@ -281,7 +281,7 @@ struct IssueDetailView: View {
                 }
                 .padding()
                 .background(Color(nsColor: .controlBackgroundColor))
-                .cornerRadius(DesignTokens.CornerRadius.lg)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 
                 // Author info
                 HStack {
@@ -289,7 +289,7 @@ struct IssueDetailView: View {
                         image.resizable()
                     } placeholder: {
                         Image(systemName: "person.circle.fill")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .frame(width: 32, height: 32)
                     .clipShape(Circle())
@@ -299,13 +299,13 @@ struct IssueDetailView: View {
                             .fontWeight(.medium)
                         Text("opened this issue \(formatDate(issue.createdAt))")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color(nsColor: .controlBackgroundColor))
-                .cornerRadius(DesignTokens.CornerRadius.lg)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 
                 // Body
                 if let body = issue.body, !body.isEmpty {
@@ -320,7 +320,7 @@ struct IssueDetailView: View {
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(nsColor: .controlBackgroundColor))
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                 }
 
                 // Actions
@@ -344,7 +344,7 @@ struct IssueDetailView: View {
                     }
                     .padding()
                     .background(Color(nsColor: .controlBackgroundColor))
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                 }
             }
             .padding()
@@ -367,7 +367,7 @@ struct IssueStatusBadge: View {
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.xs) {
             Image(systemName: state == "open" ? "circle" : "checkmark.circle.fill")
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
             Text(state.capitalized)
         }
         .font(DesignTokens.Typography.caption)
@@ -375,8 +375,8 @@ struct IssueStatusBadge: View {
         .padding(.horizontal, DesignTokens.Spacing.sm)
         .padding(.vertical, DesignTokens.Spacing.xs)
         .background(color.opacity(0.2))
-        .foregroundColor(color)
-        .cornerRadius(DesignTokens.CornerRadius.xl)
+        .foregroundStyle(color)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
     }
 
     var color: Color {
@@ -391,13 +391,13 @@ struct EmptyIssueView: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "exclamationmark.circle")
                 .font(DesignTokens.Typography.iconXXXXL)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("No \(state == .all ? "" : state.rawValue) issues")
                 .font(DesignTokens.Typography.headline)
 
             Text("Issues will appear here when they are created")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

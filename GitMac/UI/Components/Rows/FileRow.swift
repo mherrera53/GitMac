@@ -43,7 +43,7 @@ struct FileRow: View {
         // File type icon
         if showFileIcon {
             Image(systemName: "doc.fill")
-                .foregroundColor(AppTheme.info)
+                .foregroundStyle(AppTheme.info)
                 .frame(width: 16)
         }
 
@@ -55,7 +55,7 @@ struct FileRow: View {
             if showDirectory && !file.directory.isEmpty && file.directory != "." {
                 Text(file.directory)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .lineLimit(1)
             }
         }

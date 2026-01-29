@@ -28,7 +28,7 @@ struct PlannerTasksPanel: View {
 
                     Text("Planner")
                         .font(DesignTokens.Typography.headline)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     // Plan selector
                     if !viewModel.plans.isEmpty {
@@ -250,7 +250,7 @@ struct PlannerBoardView: View {
     let tasks: [PlannerTask]
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        ScrollView(.horizontal) {
             HStack(alignment: .top, spacing: DesignTokens.Spacing.md) {
                 ForEach(buckets) { bucket in
                     PlannerKanbanColumn(
@@ -261,6 +261,7 @@ struct PlannerBoardView: View {
             }
             .padding(DesignTokens.Spacing.md)
         }
+        .scrollIndicators(.hidden)
     }
 }
 
@@ -276,31 +277,32 @@ struct PlannerKanbanColumn: View {
             HStack(spacing: DesignTokens.Spacing.sm) {
                 Text(bucket.name)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Text("\(tasks.count)")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                     .padding(.vertical, DesignTokens.Spacing.xxs)
                     .background(AppTheme.backgroundTertiary)
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
                 Spacer()
             }
             .padding(.horizontal, DesignTokens.Spacing.sm + DesignTokens.Spacing.xxs)
             .padding(.vertical, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
 
             // Cards
-            ScrollView(.vertical, showsIndicators: false) {
+            ScrollView(.vertical) {
                 VStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
                     ForEach(tasks) { task in
                         PlannerTaskCard(task: task)
                     }
                 }
             }
+            .scrollIndicators(.hidden)
         }
         .frame(width: 280)
     }
@@ -318,12 +320,12 @@ struct PlannerTaskCard: View {
             HStack(alignment: .top, spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
                 // Checkbox status
                 Image(systemName: task.percentComplete == 100 ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(task.percentComplete == 100 ? AppTheme.success : AppTheme.textSecondary)
+                    .foregroundStyle(task.percentComplete == 100 ? AppTheme.success : AppTheme.textSecondary)
                     .font(DesignTokens.Typography.callout)
 
                 Text(task.title)
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(3)
                     .strikethrough(task.percentComplete == 100)
 
@@ -335,7 +337,7 @@ struct PlannerTaskCard: View {
                 // Priority
                 if let priority = task.priority, priority <= 3 {
                     Image(systemName: "exclamationmark.circle.fill")
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                         .font(DesignTokens.Typography.caption2)
                 }
 
@@ -351,7 +353,7 @@ struct PlannerTaskCard: View {
                 } label: {
                     Image(systemName: "arrow.right.doc.on.clipboard")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
                 .help("Insert into commit message")
@@ -376,11 +378,11 @@ struct PlannerEmptyView: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: "tray")
                 .font(DesignTokens.Typography.largeTitle) // Was: .system(size: 32)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
 
             Text(type)
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -398,12 +400,12 @@ struct PlannerSettingsSheet: View {
             HStack {
                 Text("Planner Settings")
                     .font(DesignTokens.Typography.headline) // Was: .system(size: 15, weight: .semibold)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(DesignTokens.Typography.callout) // Was: .system(size: 12, weight: .medium)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
@@ -417,21 +419,21 @@ struct PlannerSettingsSheet: View {
                 if viewModel.isAuthenticated {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                         Text("Connected to Microsoft Planner")
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
 
                     Button("Disconnect") {
                         viewModel.logout()
                         dismiss()
                     }
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                 } else {
                     Text("Not connected to Planner")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
             .padding(DesignTokens.Spacing.lg)

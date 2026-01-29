@@ -64,9 +64,9 @@ struct DSButton<Label: View>: View {
             .padding(.horizontal, horizontalPaddingForSize)
             .padding(.vertical, verticalPaddingForSize)
             .frame(height: heightForSize)
-            .foregroundColor(foregroundColor)
+            .foregroundStyle(foregroundColor)
             .background(backgroundColor)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                     .stroke(borderColor, lineWidth: variant == .outline ? 1 : 0)

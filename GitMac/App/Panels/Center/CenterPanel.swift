@@ -22,7 +22,7 @@ struct CenterPanel: View {
                         .scaleEffect(1.2)
                     Text("Loading preview...")
                         .font(.system(size: 13))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(AppTheme.background)

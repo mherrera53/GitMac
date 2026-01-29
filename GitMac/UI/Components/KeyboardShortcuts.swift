@@ -85,7 +85,7 @@ struct KeyboardShortcutsHelpView: View {
             HStack {
                 Text("Keyboard Shortcuts")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -94,7 +94,7 @@ struct KeyboardShortcutsHelpView: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
@@ -131,11 +131,11 @@ struct ShortcutCategorySection: View {
             HStack(spacing: 8) {
                 Image(systemName: categoryIcon)
                     .font(.system(size: 12))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
 
                 Text(category.rawValue)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             .padding(.bottom, 4)
 
@@ -165,7 +165,7 @@ struct KeyboardShortcutRow: View {
         HStack {
             Text(shortcut.description)
                 .font(.system(size: 13))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             Spacer()
 
@@ -187,7 +187,7 @@ struct KeyCap: View {
     var body: some View {
         Text(text)
             .font(.system(size: 11, weight: .medium, design: .rounded))
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background(
@@ -226,7 +226,7 @@ struct QuickActionsPalette: View {
             // Search field
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
 
                 TextField("Search actions...", text: $searchText)
                     .font(.system(size: 14))
@@ -237,7 +237,7 @@ struct QuickActionsPalette: View {
                         searchText = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                     .buttonStyle(.plain)
                 }
@@ -262,7 +262,7 @@ struct QuickActionsPalette: View {
         }
         .frame(width: 400)
         .background(AppTheme.panel)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: AppTheme.shadow.opacity(0.3), radius: 20)
         .onAppear {
             isSearchFocused = true
@@ -289,17 +289,17 @@ struct QuickActionRow: View {
             HStack(spacing: 12) {
                 Image(systemName: action.icon)
                     .font(.system(size: 14))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(action.title)
                         .font(.system(size: 13))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Text(action.category)
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
 
                 Spacer()
@@ -307,11 +307,11 @@ struct QuickActionRow: View {
                 if let shortcut = action.shortcut {
                     Text(shortcut)
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(AppTheme.backgroundSecondary)
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                 }
             }
             .padding(.horizontal, 12)

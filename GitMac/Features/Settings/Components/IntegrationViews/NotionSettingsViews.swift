@@ -11,13 +11,13 @@ struct NotionConnectedView: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
             HStack {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 Text("Connected")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 if !databases.isEmpty {
                     Text("\(databases.count) databases")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 DSButton("Disconnect", variant: .danger, size: .sm, action: onDisconnect)
             }
@@ -25,19 +25,19 @@ struct NotionConnectedView: View {
             if !databases.isEmpty {
                 ForEach(databases.prefix(5)) { db in
                     Text(db.displayTitle)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 if databases.count > 5 {
                     Text("and \(databases.count - 5) more...")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             } else {
                 Text("Share databases with your integration to see them here")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
         }
     }
@@ -58,7 +58,7 @@ struct NotionLoginSettingsView: View {
 
             if let error = error {
                 Text(error)
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                     .font(DesignTokens.Typography.caption)
             }
 
@@ -71,7 +71,7 @@ struct NotionLoginSettingsView: View {
                             .scaleEffect(0.8)
                     } else {
                         Text("Connect")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
 
@@ -80,9 +80,9 @@ struct NotionLoginSettingsView: View {
             }
 
             Text("Remember to share your databases with the integration")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
     }
 }

@@ -11,7 +11,7 @@ struct UnifiedDiffScrollView<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: true) {
+        ScrollView([.horizontal, .vertical]) {
             ZStack(alignment: .top) {
                 // Reliable Scroll Tracker
                 GeometryReader { geo in
@@ -31,6 +31,8 @@ struct UnifiedDiffScrollView<Content: View>: View {
                 }
             )
         }
+        .scrollIndicators(.visible, axes: .vertical)
+        .scrollIndicators(.hidden, axes: .horizontal)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .coordinateSpace(name: id)
         .background(

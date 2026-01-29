@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 @main
 struct GitMacApp: App {
@@ -137,6 +138,69 @@ class AppState: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
 
+    // Cached sorted branch lists - updated only when repository data changes
+    @Published private(set) var sortedLocalBranches: [Branch] = []
+    @Published private(set) var sortedRemoteBranches: [Branch] = []
+
+    // FileWatcher integration: increments on .status signal from GitRepositoryWatcher
+    @Published private(set) var statusChangeCounter: UInt = 0
+    private var repositoryWatcher: GitRepositoryWatcher?
+    private var watcherCancellables = Set<AnyCancellable>()
+
+    /// Recompute cached branch lists from current repository data
+    func updateBranchCache() {
+        guard let repo = currentRepository else {
+            sortedLocalBranches = []
+            sortedRemoteBranches = []
+            return
+        }
+
+        let allLocal = repo.branches.filter { !$0.isRemote }
+        let mainBranch = allLocal.first { $0.name == "master" || $0.name == "main" }
+        let currentBranch = allLocal.first { $0.isCurrent && $0.name != "master" && $0.name != "main" }
+        let otherLocal = allLocal
+            .filter { !$0.isCurrent && $0.name != "master" && $0.name != "main" }
+            .sorted { $0.name < $1.name }
+
+        var localResult: [Branch] = []
+        if let main = mainBranch { localResult.append(main) }
+        if let current = currentBranch { localResult.append(current) }
+        localResult.append(contentsOf: otherLocal)
+
+        sortedLocalBranches = localResult
+        sortedRemoteBranches = repo.remoteBranches.sorted { $0.name < $1.name }
+    }
+
+    /// Force a staging area refresh by bumping the status counter
+    func bumpStatusChange() {
+        statusChangeCounter &+= 1
+    }
+
+    /// Start watching the current repository for file changes
+    func startRepositoryWatcher() {
+        // Stop previous watcher
+        repositoryWatcher?.stopAll()
+        watcherCancellables.removeAll()
+        repositoryWatcher = nil
+
+        guard let path = currentRepository?.path else { return }
+
+        let watcher = GitRepositoryWatcher(repositoryPath: path)
+
+        // On .status signal (index or working dir changed) → increment counter
+        watcher.$lastSignal
+            .compactMap { $0 }
+            .filter { $0 == .status || $0 == .head }
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.statusChangeCounter &+= 1
+            }
+            .store(in: &watcherCancellables)
+
+        watcher.startAll()
+        repositoryWatcher = watcher
+    }
+
     var selectedCommit: Commit? {
         get { activeTab?.selectedCommit }
         set {
@@ -239,6 +303,10 @@ class AppState: ObservableObject {
         if activeTabId == nil {
             activeTabId = openTabs.first?.id
         }
+
+        // Start file watcher for the active repository
+        updateBranchCache()
+        startRepositoryWatcher()
     }
 
     func openRepository(at path: String) async {
@@ -257,6 +325,12 @@ class AppState: ObservableObject {
                 openTabs.append(newTab)
                 activeTabId = newTab.id
             }
+
+            // Update cached branch lists
+            updateBranchCache()
+
+            // Start file watcher for real-time staging updates
+            startRepositoryWatcher()
 
             // Save to recent repositories
             RecentRepositoriesManager.shared.addRecent(path: repo.path, name: repo.name)
@@ -280,6 +354,8 @@ class AppState: ObservableObject {
                 updatedTab.repository = repo
                 openTabs[index] = updatedTab
             }
+            // Update cached branch lists immediately
+            updateBranchCache()
             // Notify all views to refresh
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
         } catch {
@@ -339,7 +415,10 @@ class AppState: ObservableObject {
         }
         
         activeTabId = tabId
+        updateBranchCache()
         saveSession()
+        // Restart watcher for the newly selected repo
+        startRepositoryWatcher()
     }
     
     // MARK: - Navigation History

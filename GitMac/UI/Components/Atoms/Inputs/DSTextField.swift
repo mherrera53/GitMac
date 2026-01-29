@@ -38,17 +38,17 @@ struct DSTextField: View {
                 if text.isEmpty {
                     Text(placeholder)
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(placeholderColor)
+                        .foregroundStyle(placeholderColor)
                         .padding(.leading, DesignTokens.Spacing.sm)
                 }
                 TextField("", text: $text)
                     .textFieldStyle(.plain)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(foregroundColor)
+                    .foregroundStyle(foregroundColor)
                     .padding(DesignTokens.Spacing.sm)
             }
             .background(backgroundColor)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                     .stroke(borderColor, lineWidth: 1)
@@ -59,7 +59,7 @@ struct DSTextField: View {
             if let error = errorMessage, state == .error {
                 Text(error)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
         }
     }

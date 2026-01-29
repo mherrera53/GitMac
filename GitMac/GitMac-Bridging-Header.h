@@ -8,10 +8,10 @@
 #ifndef GitMac_Bridging_Header_h
 #define GitMac_Bridging_Header_h
 
-// Define GHOSTTY_AVAILABLE for conditional compilation
-#define GHOSTTY_AVAILABLE 1
-
-// Import Ghostty C API directly
+// Ghostty C API - only import when framework is available
+// To enable: install GhosttyKit.xcframework in Frameworks/ and add GHOSTTY_AVAILABLE to Swift Active Compilation Conditions
+#if __has_include(<ghostty.h>)
 #import <ghostty.h>
+#endif
 
 #endif /* GitMac_Bridging_Header_h */

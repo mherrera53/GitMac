@@ -133,7 +133,7 @@ struct ProFeatureModifier: ViewModifier {
                     Spacer()
 
                     Image(systemName: "lock.fill")
-                        .foregroundColor(AppTheme.warning)
+                        .foregroundStyle(AppTheme.warning)
                         .font(.caption)
                 }
             }
@@ -191,7 +191,7 @@ struct UpgradePromptView: View {
                 if let feature = feature {
                     Text(feature.description)
                         .font(.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -214,7 +214,7 @@ struct UpgradePromptView: View {
                 ], id: \.0) { item in
                     HStack(spacing: 12) {
                         Image(systemName: item.1)
-                            .foregroundColor(AppTheme.info)
+                            .foregroundStyle(AppTheme.info)
                             .frame(width: 20)
 
                         Text(item.0)
@@ -224,7 +224,7 @@ struct UpgradePromptView: View {
             }
             .padding()
             .background(AppTheme.textSecondary.opacity(0.1))
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
 
             // Pricing
             VStack(spacing: 8) {
@@ -233,7 +233,7 @@ struct UpgradePromptView: View {
 
                 Text("That's just $1/month")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             .padding()
             .frame(maxWidth: .infinity)
@@ -244,7 +244,7 @@ struct UpgradePromptView: View {
                     endPoint: .bottomTrailing
                 )
             )
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
 
             Divider()
 
@@ -259,7 +259,7 @@ struct UpgradePromptView: View {
                 if let error = licenseValidator.errorMessage {
                     Text(error)
                         .font(.caption)
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                 }
 
                 Button {
@@ -298,15 +298,15 @@ struct UpgradePromptView: View {
                             endPoint: .trailing
                         )
                     )
-                    .foregroundColor(AppTheme.buttonTextOnColor)
-                    .cornerRadius(12)
+                    .foregroundStyle(AppTheme.buttonTextOnColor)
+                    .clipShape(.rect(cornerRadius: 12))
             }
             .buttonStyle(.plain)
 
             Button("Not now") {
                 dismiss()
             }
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
         }
         .padding(32)
         .frame(width: 500)
@@ -337,7 +337,7 @@ struct FeatureGateButton<Label: View>: View {
                 if !featureManager.isFeatureAvailable(feature) {
                     Image(systemName: "lock.fill")
                         .font(.caption)
-                        .foregroundColor(AppTheme.warning)
+                        .foregroundStyle(AppTheme.warning)
                 }
             }
         }

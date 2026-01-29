@@ -64,7 +64,7 @@ struct DSTabButton: View {
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: iconSizeForSize * 0.7, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .frame(width: 16, height: 16)
                 }
                 .buttonStyle(.plain)
@@ -74,9 +74,9 @@ struct DSTabButton: View {
                 }
             }
         }
-        .foregroundColor(foregroundColor)
+        .foregroundStyle(foregroundColor)
         .background(backgroundColor)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         .overlay(
             // Bottom border indicator for selected state
             Rectangle()

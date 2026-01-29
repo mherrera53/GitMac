@@ -29,7 +29,7 @@ struct FastDiffLine: View {
             if showLineNumber {
                 Text(lineNumber)
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(Color.Theme(themeManager.colors).diffLineNumber)
+                    .foregroundStyle(Color.Theme(themeManager.colors).diffLineNumber)
                     .frame(width: 45, alignment: .trailing)
                     .padding(.leading, 8)
                     .padding(.trailing, 8)
@@ -39,7 +39,7 @@ struct FastDiffLine: View {
 
             Text(indicator)
                 .font(.system(size: 12, design: .monospaced))
-                .foregroundColor(indicatorColor)
+                .foregroundStyle(indicatorColor)
                 .frame(width: 16)
 
             // Use simple text for speed, word-level diff only when needed
@@ -50,7 +50,7 @@ struct FastDiffLine: View {
             } else {
                 Text(line.content)
                     .font(.system(size: 12, design: .monospaced))
-                    .foregroundColor(textColor)
+                    .foregroundStyle(textColor)
                     .padding(.trailing, 8)
             }
 
@@ -124,7 +124,7 @@ struct FastDiffLine: View {
             ForEach(segments) { seg in
                 Text(seg.text)
                     .font(.system(size: 12, design: .monospaced))
-                    .foregroundColor(segmentColor(seg.type))
+                    .foregroundStyle(segmentColor(seg.type))
                     .background(segmentBg(seg.type))
             }
         }
@@ -172,7 +172,7 @@ struct FastInlineLine: View {
                         .frame(width: 35, alignment: .trailing)
                 }
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(Color.Theme(themeManager.colors).diffLineNumber)
+                .foregroundStyle(Color.Theme(themeManager.colors).diffLineNumber)
                 .padding(.leading, 8)
                 .padding(.trailing, 8)
             } else {
@@ -181,12 +181,12 @@ struct FastInlineLine: View {
 
             Text(indicator)
                 .font(.system(size: 12, design: .monospaced))
-                .foregroundColor(indicatorColor)
+                .foregroundStyle(indicatorColor)
                 .frame(width: 16)
 
             Text(line.content)
                 .font(.system(size: 12, design: .monospaced))
-                .foregroundColor(textColor)
+                .foregroundStyle(textColor)
                 .padding(.trailing, 8)
 
             Spacer(minLength: 0)
@@ -259,7 +259,7 @@ struct FastEmptyLine: View {
             if showLineNumber {
                 Text("")
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(Color.Theme(themeManager.colors).textSecondary.opacity(0.3))
+                    .foregroundStyle(Color.Theme(themeManager.colors).textSecondary.opacity(0.3))
                     .frame(width: 45, alignment: .trailing)
                     .padding(.leading, 8)
                     .padding(.trailing, 8)

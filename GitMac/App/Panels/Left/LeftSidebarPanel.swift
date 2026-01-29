@@ -21,21 +21,21 @@ struct LeftSidebarPanel: View {
                 VStack(spacing: 4) {
                     HStack(spacing: 8) {
                         Image(systemName: "folder.fill")
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                             .font(.system(size: 12))
                         Text(repo.name)
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Spacer()
                     }
 
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.triangle.branch")
                             .font(.system(size: 10))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         Text(appState.selectedBranch?.name ?? repo.currentBranch?.name ?? "No Branch")
                             .font(.system(size: 10, weight: .medium, design: .monospaced))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                             .lineLimit(1)
                         Spacer()
                     }
@@ -87,7 +87,7 @@ struct LeftSidebarPanel: View {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
 
                     DSTextField(placeholder: "Search branches...", text: $branchSearchText)
                         .font(.system(size: 11))
@@ -96,7 +96,7 @@ struct LeftSidebarPanel: View {
                         Button(action: { branchSearchText = "" }) {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 11))
-                                .foregroundColor(AppTheme.textMuted)
+                                .foregroundStyle(AppTheme.textMuted)
                         }
                         .buttonStyle(.plain)
                     }
@@ -104,61 +104,44 @@ struct LeftSidebarPanel: View {
                 .padding(.horizontal, DesignTokens.Spacing.md)
                 .padding(.vertical, DesignTokens.Spacing.sm)
                 .background(.quaternary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.bottom, DesignTokens.Spacing.sm)
             }
 
             // All branches: local first (current at top), then remote
-            if let repo = appState.currentRepository {
-                // Local branches
-                let allLocal = repo.branches.filter { !$0.isRemote }
-                let localBranches = branchSearchText.isEmpty ? allLocal : allLocal.filter {
-                    $0.name.localizedCaseInsensitiveContains(branchSearchText)
+            // Uses cached sorted lists from AppState (updated on repo refresh)
+            let localBranches = branchSearchText.isEmpty
+                ? appState.sortedLocalBranches
+                : appState.sortedLocalBranches.filter {
+                    $0.name.localizedStandardContains(branchSearchText)
                 }
 
-                // Sort local: main/master first, then current, then alphabetical
-                let mainBranch = localBranches.first { $0.name == "master" || $0.name == "main" }
-                let currentBranch = localBranches.first { $0.isCurrent && $0.name != "master" && $0.name != "main" }
-                let otherLocalBranches = localBranches
-                    .filter { !$0.isCurrent && $0.name != "master" && $0.name != "main" }
-                    .sorted { $0.name < $1.name }
+            ForEach(localBranches) { branch in
+                SidebarBranchRow(branch: branch)
+            }
 
-                if let main = mainBranch {
-                    SidebarBranchRow(branch: main)
+            // Remote branches
+            let remoteBranches = branchSearchText.isEmpty
+                ? appState.sortedRemoteBranches
+                : appState.sortedRemoteBranches.filter {
+                    $0.name.localizedStandardContains(branchSearchText)
                 }
 
-                if let current = currentBranch {
-                    SidebarBranchRow(branch: current)
+            if !remoteBranches.isEmpty {
+                HStack {
+                    Text("Remote")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(AppTheme.textMuted)
+                        .textCase(.uppercase)
+                    Spacer()
                 }
+                .padding(.horizontal, DesignTokens.Spacing.xs)
+                .padding(.top, DesignTokens.Spacing.sm)
+                .padding(.bottom, DesignTokens.Spacing.xxs)
 
-                ForEach(otherLocalBranches) { branch in
+                ForEach(remoteBranches) { branch in
                     SidebarBranchRow(branch: branch)
-                }
-
-                // Remote branches (with cloud icon - handled in SidebarBranchRow)
-                let allRemote = repo.remoteBranches
-                let filteredRemote = branchSearchText.isEmpty ? allRemote : allRemote.filter {
-                    $0.name.localizedCaseInsensitiveContains(branchSearchText)
-                }
-                let remoteBranches = filteredRemote.sorted { $0.name < $1.name }
-
-                if !remoteBranches.isEmpty {
-                    // Small divider/header for remotes
-                    HStack {
-                        Text("Remote")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(AppTheme.textMuted)
-                            .textCase(.uppercase)
-                        Spacer()
-                    }
-                    .padding(.horizontal, DesignTokens.Spacing.xs)
-                    .padding(.top, DesignTokens.Spacing.sm)
-                    .padding(.bottom, DesignTokens.Spacing.xxs)
-
-                    ForEach(remoteBranches) { branch in
-                        SidebarBranchRow(branch: branch)
-                    }
                 }
             }
 

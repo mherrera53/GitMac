@@ -63,7 +63,7 @@ struct CICDSidebarSection: View {
                 HStack {
                     Text("No CI/CD configured")
                         .font(.system(size: 10))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Spacer()
                 }
                 .padding(.horizontal, 12)
@@ -182,11 +182,11 @@ struct CICDProviderRow: View {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
 
                 Text(name)
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -197,7 +197,7 @@ struct CICDProviderRow: View {
                         Text("\(count)")
                             .font(.system(size: 9, weight: .medium))
                     }
-                    .foregroundColor(AppTheme.info)
+                    .foregroundStyle(AppTheme.info)
                 }
 
                 Circle()

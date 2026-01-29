@@ -19,21 +19,21 @@ struct JiraSettingsContent: View {
             if viewModel.isAuthenticated {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
                     Text("Connected to Jira")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
 
                 Button("Disconnect") {
                     viewModel.logout()
                     dismiss()
                 }
-                .foregroundColor(AppTheme.error)
+                .foregroundStyle(AppTheme.error)
             } else {
                 Text("Not connected to Jira")
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             Spacer()

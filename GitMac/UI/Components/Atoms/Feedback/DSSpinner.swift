@@ -38,28 +38,28 @@ struct DSSpinner: View {
                 DSSpinner(size: .sm)
                 Text("Small")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
 
             VStack {
                 DSSpinner(size: .md)
                 Text("Medium")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
 
             VStack {
                 DSSpinner(size: .lg)
                 Text("Large")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
 
             VStack {
                 DSSpinner(size: .xl)
                 Text("Extra Large")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
         }
 

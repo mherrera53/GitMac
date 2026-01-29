@@ -65,12 +65,12 @@ struct GhosttyDirectView: View {
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: "folder")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                 Text(viewModel.currentDirectory)
                     .font(DesignTokens.Typography.caption2)
                     .lineLimit(1)
             }
-            .foregroundColor(AppTheme.textSecondary)
+            .foregroundStyle(AppTheme.textSecondary)
 
             Spacer()
 
@@ -82,7 +82,7 @@ struct GhosttyDirectView: View {
                     .font(DesignTokens.Typography.caption)
             }
             .buttonStyle(.plain)
-            .foregroundColor(AppTheme.accent)
+            .foregroundStyle(AppTheme.accent)
             .help("AI Assistant")
             .popover(isPresented: $showAIChat) {
                 TerminalAIChatView(repoPath: appState.currentRepository?.path)
@@ -94,13 +94,13 @@ struct GhosttyDirectView: View {
                 HStack(spacing: DesignTokens.Spacing.xxs) {
                     Image(systemName: "sparkles")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Text("AI")
                         .font(DesignTokens.Typography.caption2)
                 }
             }
             .buttonStyle(.plain)
-            .foregroundColor(aiEnabled ? AppTheme.accent : AppTheme.textSecondary)
+            .foregroundStyle(aiEnabled ? AppTheme.accent : AppTheme.textSecondary)
             .help("AI Suggestions")
 
             // Clear
@@ -111,7 +111,7 @@ struct GhosttyDirectView: View {
                     .font(DesignTokens.Typography.caption)
             }
             .buttonStyle(.plain)
-            .foregroundColor(AppTheme.textSecondary)
+            .foregroundStyle(AppTheme.textSecondary)
             .help("Clear Terminal")
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
@@ -132,7 +132,7 @@ struct GhosttyDirectView: View {
             suggestionsList
         }
         .background(AppTheme.backgroundSecondary.opacity(0.98))
-        .cornerRadius(DesignTokens.CornerRadius.xl)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
         .shadow(color: AppTheme.shadow, radius: 20)
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.bottom, DesignTokens.Spacing.md)
@@ -143,17 +143,17 @@ struct GhosttyDirectView: View {
         HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
             Image(systemName: "sparkles")
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
             Text("AI Suggestions")
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
             if viewModel.isLoadingSuggestions {
                 ProgressView().scaleEffect(0.5).frame(width: DesignTokens.Size.iconSM, height: DesignTokens.Size.iconSM)
             }
             Spacer()
             Text("Tab • ↑↓")
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
@@ -177,14 +177,14 @@ struct GhosttyDirectView: View {
                     .scaleEffect(0.7)
                 Text("Loading AI suggestions...")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 Spacer()
             }
             .padding(DesignTokens.Spacing.md)
         } else {
             Text("Type to get AI suggestions...")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .padding(DesignTokens.Spacing.md)
         }
     }
@@ -200,22 +200,22 @@ struct GhosttyDirectView: View {
                         .frame(width: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs, height: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                     Text(suggestion.command)
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Spacer()
                     if suggestion.confidence > 0.8 {
                         Text("HIGH")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                             .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                             .padding(.vertical, DesignTokens.Spacing.xxs)
                             .background(AppTheme.success.opacity(0.2))
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                     }
                 }
                 if !suggestion.description.isEmpty {
                     Text(suggestion.description)
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .lineLimit(2)
                         .padding(.leading, DesignTokens.Size.iconMD - DesignTokens.Spacing.xxs)
                 }
@@ -234,7 +234,7 @@ struct GhosttyDirectView: View {
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: "terminal")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                 Text("\(viewModel.commandCount) commands")
                     .font(DesignTokens.Typography.caption2)
             }
@@ -248,7 +248,7 @@ struct GhosttyDirectView: View {
                 Text("Ghostty")
                     .font(DesignTokens.Typography.caption2)
             }
-            .foregroundColor(AppTheme.success)
+            .foregroundStyle(AppTheme.success)
 
             if viewModel.isRunning {
                 HStack(spacing: DesignTokens.Spacing.xs) {
@@ -258,10 +258,10 @@ struct GhosttyDirectView: View {
                     Text("Running...")
                         .font(DesignTokens.Typography.caption2)
                 }
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
             }
         }
-        .foregroundColor(AppTheme.textSecondary)
+        .foregroundStyle(AppTheme.textSecondary)
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.xs)
         .background(AppTheme.backgroundSecondary)
@@ -851,13 +851,13 @@ struct GhosttyDirectView: View {
             Spacer()
             Text("Ghostty Terminal")
                 .font(.title2)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Text("GhosttyKit framework not available")
                 .font(.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
             Text("Enable GHOSTTY_AVAILABLE flag in build settings")
                 .font(.caption2)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

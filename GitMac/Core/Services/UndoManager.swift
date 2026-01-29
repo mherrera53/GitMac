@@ -430,13 +430,13 @@ struct UndoHistoryView: View {
                 VStack(spacing: 16) {
                     Image(systemName: "clock.arrow.circlepath")
                         .font(.system(size: 48))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Text("No operation history")
                         .font(.headline)
 
                     Text("Git operations will appear here")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -488,7 +488,7 @@ struct UndoHistoryView: View {
                 if let error = undoManager.lastError {
                     Text(error)
                         .font(.caption)
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                         .lineLimit(1)
                 }
             }
@@ -505,7 +505,7 @@ struct OperationRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: operation.icon)
-                .foregroundColor(isRedo ? AppTheme.warning : AppTheme.accent)
+                .foregroundStyle(isRedo ? AppTheme.warning : AppTheme.accent)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -514,7 +514,7 @@ struct OperationRow: View {
 
                 Text(operation.relativeTime)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
 
             Spacer()
@@ -524,7 +524,7 @@ struct OperationRow: View {
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(AppTheme.textSecondary.opacity(0.2))
-                .cornerRadius(4)
+                .clipShape(.rect(cornerRadius: 4))
         }
         .padding(.vertical, 2)
         .opacity(isRedo ? 0.6 : 1)

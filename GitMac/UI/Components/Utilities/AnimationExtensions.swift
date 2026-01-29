@@ -364,11 +364,11 @@ private struct AnimationBox: View {
     var body: some View {
         Text(title)
             .font(DesignTokens.Typography.caption)
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
             .padding()
             .frame(width: 80, height: 80)
             .background(AppTheme.accent.opacity(0.2))
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .transition(transition)
     }
 }
@@ -388,7 +388,7 @@ private struct ShakeEffectPreview: View {
                 .overlay(
                     Text("Error!")
                         .font(DesignTokens.Typography.headline)
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                 )
                 .shake(offset: shouldShake ? 10 : 0)
 
@@ -417,7 +417,7 @@ private struct PulseEffectPreview: View {
 
             Text("Pulsing Animation")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
         .background(AppTheme.background)
@@ -436,7 +436,7 @@ private struct WiggleEffectPreview: View {
 
             Text("Wiggling Notification")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
         .background(AppTheme.background)
@@ -457,7 +457,7 @@ private struct BounceEffectPreview: View {
 
             Text("Bouncing Box")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
         .frame(height: 300)
@@ -477,7 +477,7 @@ private struct RotateEffectPreview: View {
 
             Text("Rotating Icon")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
         .background(AppTheme.background)
@@ -507,7 +507,7 @@ private struct StaggeredAnimationPreview: View {
                         HStack {
                             Text("Item \(index + 1)")
                                 .font(DesignTokens.Typography.body)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
 
                             Spacer()
 
@@ -515,7 +515,7 @@ private struct StaggeredAnimationPreview: View {
                         }
                         .padding()
                         .background(AppTheme.backgroundSecondary)
-                        .cornerRadius(DesignTokens.CornerRadius.md)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                         .staggeredAnimation(index: index, total: 5)
                     }
                 }

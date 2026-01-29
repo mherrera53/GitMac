@@ -45,11 +45,11 @@ struct TaigaTaskRow: View {
                         .font(DesignTokens.Typography.caption2)
                         .fontWeight(.bold)
                         .fontDesign(.monospaced)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .padding(.horizontal, DesignTokens.Spacing.xs)
                         .padding(.vertical, 1)
                         .background(AppTheme.warning)
-                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
                 .buttonStyle(.plain)
                 .help("Click to copy \(taigaRef)")
@@ -58,7 +58,7 @@ struct TaigaTaskRow: View {
             // Task title
             Text(task.subject)
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .lineLimit(2)
 
             Spacer()
@@ -67,7 +67,7 @@ struct TaigaTaskRow: View {
             if let assignee = task.assignedToExtraInfo {
                 Text(assignee.username)
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             // Status badge using DSStatusBadge
@@ -85,7 +85,7 @@ struct TaigaTaskRow: View {
             } label: {
                 Image(systemName: "arrow.right.doc.on.clipboard")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
             }
             .buttonStyle(.plain)
             .help("Insert into commit message")

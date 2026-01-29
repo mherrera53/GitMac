@@ -24,15 +24,15 @@ struct GitConfigView: View {
                     }
 
                 Text("These values are used for commits in repositories without local config")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 if let status = saveStatus {
                     Text(status)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
                 }
             }
 
@@ -50,7 +50,7 @@ struct GitConfigView: View {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                         Text("Fetch interval")
                             .font(DesignTokens.Typography.callout)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
 
                         DSPicker(
                             items: ["1 minute", "5 minutes", "10 minutes", "15 minutes", "30 minutes"],
@@ -138,9 +138,9 @@ struct EmailAliasesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
             Text("Add email aliases to show your avatar on commits with different emails")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             HStack {
                 DSTextField(placeholder: "Email alias (e.g. work@company.com)", text: $newAlias)
@@ -155,11 +155,11 @@ struct EmailAliasesView: View {
                 ForEach(settings.aliases, id: \.self) { alias in
                     HStack {
                         Image(systemName: "envelope")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         Text(alias)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .font(DesignTokens.Typography.body.monospaced())
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Spacer()
                         DSIconButton(iconName: "xmark.circle.fill", variant: .ghost, size: .sm) {
                             settings.removeAlias(alias)

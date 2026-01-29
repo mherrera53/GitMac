@@ -736,7 +736,7 @@ struct FileHistorySheet: View {
             HStack {
                 Text("File History: \(path.components(separatedBy: "/").last ?? path)")
                     .font(.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.escape, modifiers: [])
@@ -768,7 +768,7 @@ struct BlameSheet: View {
             HStack {
                 Text("Blame: \(path.components(separatedBy: "/").last ?? path)")
                     .font(.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.escape, modifiers: [])
@@ -806,12 +806,12 @@ struct LargeFileSplitDiffViewWrapper: View {
     var body: some View {
         HStack(spacing: 0) {
             // Left pane
-            ScrollView {
+            ScrollView([.horizontal, .vertical]) {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(hunks.enumerated()), id: \.offset) { hunkIndex, hunk in
                         // Hunk header
                         FastHunkHeader(header: hunk.header)
-                        
+
                         // Left side lines
                         ForEach(Array(hunk.lines.enumerated()), id: \.offset) { lineIndex, line in
                             if line.type != .addition {
@@ -840,12 +840,12 @@ struct LargeFileSplitDiffViewWrapper: View {
                 .frame(width: 1)
             
             // Right pane
-            ScrollView {
+            ScrollView([.horizontal, .vertical]) {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(hunks.enumerated()), id: \.offset) { hunkIndex, hunk in
                         // Hunk header
                         FastHunkHeader(header: hunk.header)
-                        
+
                         // Right side lines
                         ForEach(Array(hunk.lines.enumerated()), id: \.offset) { lineIndex, line in
                             if line.type != .deletion {
@@ -1931,7 +1931,7 @@ struct SplitHunkHeaderRow: View {
             Text(header)
                 .font(DesignTokens.Typography.commitHash)
         }
-        .foregroundColor(theme.accent)
+        .foregroundStyle(theme.accent)
         .padding(.vertical, DesignTokens.Spacing.sm)
         .padding(.horizontal, DesignTokens.Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -2004,7 +2004,7 @@ struct SplitDiffLineRow: View {
             if showLineNumber {
                 Text(lineNumber.map { String($0) } ?? "")
                     .font(DesignTokens.Typography.commitHash)
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
                     .frame(width: 45, alignment: .trailing)
                     .padding(.trailing, DesignTokens.Spacing.sm)
                     .background(lineNumberBackground(theme: theme))
@@ -2013,13 +2013,13 @@ struct SplitDiffLineRow: View {
             // Change indicator
             Text(changeIndicator)
                 .font(DesignTokens.Typography.diffLine)
-                .foregroundColor(indicatorColor(theme: theme))
+                .foregroundStyle(indicatorColor(theme: theme))
                 .frame(width: 16)
 
             // Content with word-level highlighting
             Text(highlightedContent)
                 .font(DesignTokens.Typography.diffLine)
-                .foregroundColor(textColor(theme: theme))
+                .foregroundStyle(textColor(theme: theme))
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -2301,7 +2301,7 @@ struct HunkSummaryHeader: View {
                 Text("\(hunkCount) hunk\(hunkCount == 1 ? "" : "s")")
                     .font(DesignTokens.Typography.callout.weight(.medium))
             }
-            .foregroundColor(theme.text)
+            .foregroundStyle(theme.text)
 
             Spacer()
 
@@ -2311,21 +2311,21 @@ struct HunkSummaryHeader: View {
                         .font(DesignTokens.Typography.caption2.weight(.bold))
                     Text("\(totalAdditions)")
                 }
-                .foregroundColor(AppTheme.diffAddition)
+                .foregroundStyle(AppTheme.diffAddition)
 
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     Image(systemName: "minus")
                         .font(DesignTokens.Typography.caption2.weight(.bold))
                     Text("\(totalDeletions)")
                 }
-                .foregroundColor(AppTheme.diffDeletion)
+                .foregroundStyle(AppTheme.diffDeletion)
             }
             .font(DesignTokens.Typography.callout.weight(.semibold).monospaced())
         }
         .padding(.horizontal, DesignTokens.Spacing.md + DesignTokens.Spacing.xxs)
         .padding(.vertical, DesignTokens.Spacing.sm + DesignTokens.Spacing.xxs)
         .background(theme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
     }
 }
 
@@ -2359,17 +2359,17 @@ struct HunkSelectionToolbar: View {
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     Image(systemName: isSelectionMode ? "checkmark.square.fill" : "square.dashed")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(theme.textSecondary)
+                        .foregroundStyle(theme.textSecondary)
                     Text("Select")
                         .font(DesignTokens.Typography.caption.weight(.medium))
                 }
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.vertical, DesignTokens.Spacing.xs)
                 .background(isSelectionMode ? theme.accent.opacity(0.2) : Color.clear)
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
             .buttonStyle(.plain)
-            .foregroundColor(isSelectionMode ? theme.accent : theme.text)
+            .foregroundStyle(isSelectionMode ? theme.accent : theme.text)
 
             if isSelectionMode {
                 Divider()
@@ -2378,18 +2378,18 @@ struct HunkSelectionToolbar: View {
                 // Selection counter
                 Text("\(selectedCount)/\(totalCount)")
                     .font(DesignTokens.Typography.caption.monospaced())
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
 
                 // Select/Deselect all buttons
                 Button("All") { onSelectAll?() }
                     .font(DesignTokens.Typography.caption2.weight(.medium))
                     .buttonStyle(.plain)
-                    .foregroundColor(theme.accent)
+                    .foregroundStyle(theme.accent)
 
                 Button("None") { onDeselectAll?() }
                     .font(DesignTokens.Typography.caption2.weight(.medium))
                     .buttonStyle(.plain)
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
 
                 if selectedCount > 0 {
                     Divider()
@@ -2403,15 +2403,15 @@ struct HunkSelectionToolbar: View {
                             HStack(spacing: DesignTokens.Spacing.xxs + 1) {
                                 Image(systemName: "plus.circle.fill")
                                     .font(DesignTokens.Typography.caption2)
-                                    .foregroundColor(theme.success)
+                                    .foregroundStyle(theme.success)
                                 Text("Stage")
                                     .font(DesignTokens.Typography.caption2.weight(.medium))
                             }
                             .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                             .padding(.vertical, DesignTokens.Spacing.xxs + 1)
                             .background(AppTheme.diffAddition)
-                            .foregroundColor(AppTheme.textPrimary)
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                         }
                         .buttonStyle(.plain)
                     }
@@ -2423,15 +2423,15 @@ struct HunkSelectionToolbar: View {
                             HStack(spacing: DesignTokens.Spacing.xxs + 1) {
                                 Image(systemName: "minus.circle.fill")
                                     .font(DesignTokens.Typography.caption2)
-                                    .foregroundColor(theme.error)
+                                    .foregroundStyle(theme.error)
                                 Text("Unstage")
                                     .font(DesignTokens.Typography.caption2.weight(.medium))
                             }
                             .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                             .padding(.vertical, DesignTokens.Spacing.xxs + 1)
                             .background(AppTheme.warning)
-                            .foregroundColor(AppTheme.textPrimary)
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                         }
                         .buttonStyle(.plain)
                     }
@@ -2443,15 +2443,15 @@ struct HunkSelectionToolbar: View {
                             HStack(spacing: DesignTokens.Spacing.xxs + 1) {
                                 Image(systemName: "trash")
                                     .font(DesignTokens.Typography.caption2)
-                                    .foregroundColor(theme.error)
+                                    .foregroundStyle(theme.error)
                                 Text("Discard")
                                     .font(DesignTokens.Typography.caption2.weight(.medium))
                             }
                             .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                             .padding(.vertical, DesignTokens.Spacing.xxs + 1)
                             .background(AppTheme.diffDeletion)
-                            .foregroundColor(AppTheme.textPrimary)
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                         }
                         .buttonStyle(.plain)
                     }
@@ -2503,7 +2503,7 @@ struct CollapsibleHunkCard: View {
                     } label: {
                         Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                             .font(DesignTokens.Typography.headline)
-                            .foregroundColor(isSelected ? theme.accent : theme.text)
+                            .foregroundStyle(isSelected ? theme.accent : theme.text)
                     }
                     .buttonStyle(.plain)
                 }
@@ -2512,7 +2512,7 @@ struct CollapsibleHunkCard: View {
                 Button(action: { onToggleCollapse?() }) {
                     Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
                         .font(DesignTokens.Typography.caption2.weight(.bold))
-                        .foregroundColor(theme.text)
+                        .foregroundStyle(theme.text)
                         .frame(width: DesignTokens.Size.iconMD, height: DesignTokens.Size.iconMD)
                 }
                 .buttonStyle(.plain)
@@ -2520,26 +2520,26 @@ struct CollapsibleHunkCard: View {
                 // Hunk number badge
                 Text("Hunk \(hunkIndex + 1)/\(totalHunks)")
                     .font(DesignTokens.Typography.caption2.weight(.semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                     .padding(.vertical, DesignTokens.Spacing.xxs)
                     .background(theme.accent)
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
                 // Line range
                 Text("Lines \(hunk.oldStart)-\(hunk.oldStart + hunk.oldLines) → \(hunk.newStart)-\(hunk.newStart + hunk.newLines)")
                     .font(DesignTokens.Typography.caption.monospaced())
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
 
                 // Change stats
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     if additions > 0 {
                         Text("+\(additions)")
-                            .foregroundColor(AppTheme.diffAddition)
+                            .foregroundStyle(AppTheme.diffAddition)
                     }
                     if deletions > 0 {
                         Text("-\(deletions)")
-                            .foregroundColor(AppTheme.diffDeletion)
+                            .foregroundStyle(AppTheme.diffDeletion)
                     }
                 }
                 .font(DesignTokens.Typography.caption.weight(.medium).monospaced())
@@ -2555,11 +2555,11 @@ struct CollapsibleHunkCard: View {
                             } label: {
                                 Label("Stage", systemImage: "plus.circle.fill")
                                     .font(DesignTokens.Typography.caption.weight(.medium))
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
                                     .padding(.horizontal, DesignTokens.Spacing.sm)
                                     .padding(.vertical, DesignTokens.Spacing.xs)
                                     .background(AppTheme.diffAddition)
-                                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                             }
                             .buttonStyle(.plain)
 
@@ -2568,11 +2568,11 @@ struct CollapsibleHunkCard: View {
                             } label: {
                                 Label("Discard", systemImage: "trash")
                                     .font(DesignTokens.Typography.caption.weight(.medium))
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
                                     .padding(.horizontal, DesignTokens.Spacing.sm)
                                     .padding(.vertical, DesignTokens.Spacing.xs)
                                     .background(AppTheme.diffDeletion)
-                                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                             }
                             .buttonStyle(.plain)
                         } else {
@@ -2581,11 +2581,11 @@ struct CollapsibleHunkCard: View {
                             } label: {
                                 Label("Unstage", systemImage: "minus.circle.fill")
                                     .font(DesignTokens.Typography.caption.weight(.medium))
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
                                     .padding(.horizontal, DesignTokens.Spacing.sm)
                                     .padding(.vertical, DesignTokens.Spacing.xs)
                                     .background(AppTheme.warning)
-                                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                             }
                             .buttonStyle(.plain)
                         }
@@ -2607,10 +2607,10 @@ struct CollapsibleHunkCard: View {
                 // Collapsed preview
                 HStack(spacing: DesignTokens.Spacing.sm) {
                     Text("...")
-                        .foregroundColor(theme.text)
+                        .foregroundStyle(theme.text)
                     Text("\(hunk.lines.count) lines")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(theme.text)
+                        .foregroundStyle(theme.text)
                 }
                 .padding(.horizontal, DesignTokens.Spacing.md)
                 .padding(.vertical, DesignTokens.Spacing.xs)
@@ -2619,7 +2619,7 @@ struct CollapsibleHunkCard: View {
             }
         }
         .background(isSelected ? theme.accent.opacity(0.1) : theme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                 .stroke(
@@ -2657,7 +2657,7 @@ struct HunkCard: View {
             HStack {
                 Text(hunk.header)
                     .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
 
                 Spacer()
 
@@ -2673,11 +2673,11 @@ struct HunkCard: View {
                                     Text("Stage Hunk")
                                 }
                                 .font(DesignTokens.Typography.caption.weight(.medium))
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .padding(.horizontal, DesignTokens.Spacing.sm)
                                 .padding(.vertical, DesignTokens.Spacing.xs)
                                 .background(AppTheme.diffAddition)
-                                .cornerRadius(DesignTokens.CornerRadius.sm)
+                                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                             }
                             .buttonStyle(.plain)
 
@@ -2690,11 +2690,11 @@ struct HunkCard: View {
                                     Text("Discard")
                                 }
                                 .font(DesignTokens.Typography.caption.weight(.medium))
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .padding(.horizontal, DesignTokens.Spacing.sm)
                                 .padding(.vertical, DesignTokens.Spacing.xs)
                                 .background(AppTheme.diffDeletion)
-                                .cornerRadius(DesignTokens.CornerRadius.sm)
+                                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                             }
                             .buttonStyle(.plain)
                         } else {
@@ -2707,11 +2707,11 @@ struct HunkCard: View {
                                     Text("Unstage Hunk")
                                 }
                                 .font(DesignTokens.Typography.caption.weight(.medium))
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .padding(.horizontal, DesignTokens.Spacing.sm)
                                 .padding(.vertical, DesignTokens.Spacing.xs)
                                 .background(AppTheme.warning)
-                                .cornerRadius(DesignTokens.CornerRadius.sm)
+                                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                             }
                             .buttonStyle(.plain)
                         }
@@ -2720,7 +2720,7 @@ struct HunkCard: View {
 
                 Text("Lines \(hunk.oldStart)-\(hunk.oldStart + hunk.oldLines)")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
             }
             .padding(DesignTokens.Spacing.sm)
             .background(theme.info.opacity(0.1))
@@ -2733,7 +2733,7 @@ struct HunkCard: View {
             }
         }
         .background(Color(nsColor: .textBackgroundColor))
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                 .stroke(isHovered ? theme.accent.opacity(0.5) : theme.border, lineWidth: isHovered ? 2 : 1)
@@ -2780,7 +2780,7 @@ private struct LargeDiffLineView: View {
                 // Hunk header
                 Text(line.content)
                     .font(DesignTokens.Typography.commitHash)
-                    .foregroundColor(AppTheme.info)
+                    .foregroundStyle(AppTheme.info)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DesignTokens.Spacing.sm)
                     .padding(.vertical, DesignTokens.Spacing.xs)
@@ -2795,18 +2795,18 @@ private struct LargeDiffLineView: View {
                             .frame(width: 35, alignment: .trailing)
                     }
                     .font(DesignTokens.Typography.commitHash)
-                    .foregroundColor(theme.text.opacity(0.7))
+                    .foregroundStyle(theme.text.opacity(0.7))
                     .padding(.trailing, DesignTokens.Spacing.xs)
                 }
 
                 Text(prefix)
                     .font(DesignTokens.Typography.diffLine)
-                    .foregroundColor(prefixColor(theme: theme))
+                    .foregroundStyle(prefixColor(theme: theme))
                     .frame(width: 14)
 
                 Text(line.content)
                     .font(DesignTokens.Typography.diffLine)
-                    .foregroundColor(textColor)
+                    .foregroundStyle(textColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -2896,7 +2896,7 @@ struct DifferenceKitSplitDiffView: View {
     var body: some View {
         GeometryReader { geometry in
             ScrollViewReader { proxy in
-                ScrollView {
+                ScrollView([.horizontal, .vertical]) {
                     ZStack(alignment: .topLeading) {
                         // Main content with synchronized scrolling
                         LazyVStack(spacing: 0) {
@@ -2998,7 +2998,7 @@ struct DiffPaneView: View {
             if showLineNumbers {
                 Text(lineNumber)
                     .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .frame(width: 50, alignment: .trailing)
                     .padding(.trailing, 8)
                     .background(lineNumberBackground)
@@ -3006,7 +3006,7 @@ struct DiffPaneView: View {
             
             Text(changeIndicator)
                 .font(.system(.caption, design: .monospaced))
-                .foregroundColor(indicatorColor)
+                .foregroundStyle(indicatorColor)
                 .frame(width: 20)
             
             // Content with intra-line highlighting
@@ -3015,13 +3015,13 @@ struct DiffPaneView: View {
                diffType == .deleted || diffType == .added {
                 Text(highlightedContent(text: text, pairedText: pairedText))
                     .font(.system(.body, design: .monospaced))
-                    .foregroundColor(textColor)
+                    .foregroundStyle(textColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.trailing, 8)
             } else {
                 Text(contentText)
                     .font(.system(.body, design: .monospaced))
-                    .foregroundColor(textColor)
+                    .foregroundStyle(textColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.trailing, 8)
             }

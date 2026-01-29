@@ -59,12 +59,12 @@ struct GhosttyTerminalView: View {
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: "folder")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                 Text(viewModel.currentDirectory)
                     .font(DesignTokens.Typography.caption2)
                     .lineLimit(1)
             }
-            .foregroundColor(GhosttyColors.textMuted)
+            .foregroundStyle(GhosttyColors.textMuted)
 
             Spacer()
 
@@ -76,7 +76,7 @@ struct GhosttyTerminalView: View {
                     .font(DesignTokens.Typography.caption)
             }
             .buttonStyle(.plain)
-            .foregroundColor(GhosttyColors.accent)
+            .foregroundStyle(GhosttyColors.accent)
             .help("AI Assistant")
             .popover(isPresented: $showAIChat) {
                 TerminalAIChatView(repoPath: appState.currentRepository?.path)
@@ -88,13 +88,13 @@ struct GhosttyTerminalView: View {
                 HStack(spacing: DesignTokens.Spacing.xxs) {
                     Image(systemName: "sparkles")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Text("AI")
                         .font(DesignTokens.Typography.caption2)
                 }
             }
             .buttonStyle(.plain)
-            .foregroundColor(aiEnabled ? GhosttyColors.accent : GhosttyColors.textMuted)
+            .foregroundStyle(aiEnabled ? GhosttyColors.accent : GhosttyColors.textMuted)
             .help("AI Suggestions")
 
             // Clear
@@ -105,7 +105,7 @@ struct GhosttyTerminalView: View {
                     .font(DesignTokens.Typography.caption)
             }
             .buttonStyle(.plain)
-            .foregroundColor(GhosttyColors.textMuted)
+            .foregroundStyle(GhosttyColors.textMuted)
             .help("Clear Terminal")
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
@@ -125,16 +125,16 @@ struct GhosttyTerminalView: View {
                         HStack(spacing: DesignTokens.Spacing.sm) {
                             Image(systemName: "sparkles")
                                 .font(DesignTokens.Typography.caption2)
-                                .foregroundColor(GhosttyColors.accent)
+                                .foregroundStyle(GhosttyColors.accent)
 
                             Text(suggestion.command)
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(GhosttyColors.textPrimary)
+                                .foregroundStyle(GhosttyColors.textPrimary)
 
                             if let desc = suggestion.description {
                                 Text("- \(desc)")
                                     .font(DesignTokens.Typography.caption2)
-                                    .foregroundColor(GhosttyColors.textMuted)
+                                    .foregroundStyle(GhosttyColors.textMuted)
                                     .lineLimit(1)
                             }
 
@@ -149,7 +149,7 @@ struct GhosttyTerminalView: View {
             }
         }
         .background(GhosttyColors.backgroundSecondary.opacity(0.95))
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
         .shadow(radius: DesignTokens.CornerRadius.md)
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.bottom, DesignTokens.Spacing.md)
@@ -163,7 +163,7 @@ struct GhosttyTerminalView: View {
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: "terminal")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                 Text("\(viewModel.commandCount) commands")
                     .font(DesignTokens.Typography.caption2)
             }
@@ -179,10 +179,10 @@ struct GhosttyTerminalView: View {
                     Text("Running...")
                         .font(DesignTokens.Typography.caption2)
                 }
-                .foregroundColor(GhosttyColors.accent)
+                .foregroundStyle(GhosttyColors.accent)
             }
         }
-        .foregroundColor(GhosttyColors.textMuted)
+        .foregroundStyle(GhosttyColors.textMuted)
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.xs)
         .background(GhosttyColors.backgroundSecondary)
@@ -268,10 +268,10 @@ struct GhosttyTerminalView: View {
             Spacer()
             Text("Ghostty Terminal")
                 .font(.title2)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Text("SwiftTerm not available")
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -12,11 +12,21 @@ struct StagingAreaPanel: View {
     @State private var extensionFilter: String? = nil
     @State private var showCreatePRSheet = false
     @State private var commitSHAForPR: String = ""
+    @State private var showConflictResolver = false
+    @State private var conflictFileToResolve: FileStatus?
+    @State private var selectedConflictFile: String?
 
     var body: some View {
         VStack(spacing: 0) {
             // Toolbar with view mode and filter
             stagingToolbar
+
+            // Conflicts Section (shown above everything when conflicts exist)
+            if !stagingVM.conflictedFiles.isEmpty {
+                conflictsSection
+
+                Rectangle().fill(AppTheme.border).frame(height: 1)
+            }
 
             // Unstaged Files
             StagingSectionWithTree(
@@ -81,6 +91,96 @@ struct StagingAreaPanel: View {
                 .environmentObject(appState)
             }
         }
+        .sheet(isPresented: $showConflictResolver) {
+            if let file = conflictFileToResolve, let repoPath = appState.currentRepository?.path {
+                InlineConflictResolver(
+                    filePath: file.path,
+                    repositoryPath: repoPath,
+                    onResolved: {
+                        Task {
+                            if let path = appState.currentRepository?.path {
+                                await stagingVM.loadStatusImmediate(at: path)
+                            }
+                        }
+                        showConflictResolver = false
+                    }
+                )
+                .frame(minWidth: 600, minHeight: 400)
+            }
+        }
+    }
+
+    // MARK: - Conflicts Section
+
+    private var conflictsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(AppTheme.error)
+                    .font(.system(size: 12))
+                Text("Conflicts")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppTheme.error)
+                Spacer()
+                Text("\(stagingVM.conflictedFiles.count)")
+                    .font(.system(size: 11))
+                    .foregroundStyle(AppTheme.textMuted)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(AppTheme.error.opacity(0.15))
+                    .clipShape(.rect(cornerRadius: 4))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(AppTheme.error.opacity(0.08))
+
+            // Conflict file rows
+            ForEach(stagingVM.conflictedFiles) { file in
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(AppTheme.error)
+                        .font(.system(size: 11))
+
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(file.filename)
+                            .font(.system(size: 12))
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .lineLimit(1)
+                        if !file.directory.isEmpty && file.directory != "." {
+                            Text(file.directory)
+                                .font(.system(size: 10))
+                                .foregroundStyle(AppTheme.textMuted)
+                                .lineLimit(1)
+                        }
+                    }
+
+                    Spacer()
+
+                    Button {
+                        conflictFileToResolve = file
+                        showConflictResolver = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "wand.and.stars")
+                            Text("Resolve")
+                        }
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(AppTheme.accent)
+                        .clipShape(.rect(cornerRadius: 4))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(selectedConflictFile == file.path ? AppTheme.accent.opacity(0.15) : AppTheme.error.opacity(0.03))
+                .contentShape(Rectangle())
+                .onTapGesture { selectedConflictFile = file.path }
+            }
+        }
     }
 
     // MARK: - Commit + Push + PR Flow
@@ -143,10 +243,10 @@ struct StagingAreaPanel: View {
                 Button(action: { viewMode = .flat }) {
                     Image(systemName: "list.bullet")
                         .font(.system(size: 12))
-                        .foregroundColor(viewMode == .flat ? theme.accent : theme.text)
+                        .foregroundStyle(viewMode == .flat ? theme.accent : theme.text)
                         .frame(width: 28, height: 22)
                         .background(viewMode == .flat ? theme.accent.opacity(0.15) : Color.clear)
-                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
                 .buttonStyle(.plain)
                 .help("List View")
@@ -154,17 +254,17 @@ struct StagingAreaPanel: View {
                 Button(action: { viewMode = .tree }) {
                     Image(systemName: "folder.fill")
                         .font(.system(size: 12))
-                        .foregroundColor(viewMode == .tree ? theme.accent : theme.text)
+                        .foregroundStyle(viewMode == .tree ? theme.accent : theme.text)
                         .frame(width: 28, height: 22)
                         .background(viewMode == .tree ? theme.accent.opacity(0.15) : Color.clear)
-                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
                 .buttonStyle(.plain)
                 .help("Tree View")
             }
             .padding(2)
             .background(theme.backgroundTertiary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
 
             // Extension filter - Separado: Menu (icono) + Text
             HStack(spacing: 4) {
@@ -180,7 +280,7 @@ struct StagingAreaPanel: View {
                                     Text(".\(ext)")
                                     Spacer()
                                     Text("\(fileCountForExtension(ext))")
-                                        .foregroundColor(theme.textSecondary)
+                                        .foregroundStyle(theme.textSecondary)
                                 }
                             }
                         }
@@ -193,18 +293,18 @@ struct StagingAreaPanel: View {
 
                 Text(extensionFilter.map { ".\($0)" } ?? "All")
                     .font(.system(size: 10))
-                    .foregroundColor(extensionFilter != nil ? theme.accent : theme.text)
+                    .foregroundStyle(extensionFilter != nil ? theme.accent : theme.text)
             }
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .padding(.vertical, DesignTokens.Spacing.xs)
             .background(extensionFilter != nil ? theme.accent.opacity(0.15) : theme.backgroundTertiary)
-            .cornerRadius(DesignTokens.CornerRadius.sm)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
             Spacer()
 
             Text("\(stagingVM.unstagedFiles.count + stagingVM.stagedFiles.count)")
                 .font(.system(size: 10))
-                .foregroundColor(theme.textMuted)
+                .foregroundStyle(theme.textMuted)
         }
 
         .padding(.horizontal, DesignTokens.Spacing.md)

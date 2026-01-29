@@ -38,13 +38,13 @@ struct DSHeader<Actions: View>: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                     Text(title)
                         .font(DesignTokens.Typography.title3)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .fontWeight(.semibold)
 
                     if let subtitle = subtitle {
                         Text(subtitle)
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                 }
             }
@@ -56,7 +56,7 @@ struct DSHeader<Actions: View>: View {
         }
         .padding(DesignTokens.Spacing.md)
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     }
 }
 

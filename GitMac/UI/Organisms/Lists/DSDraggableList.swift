@@ -99,7 +99,7 @@ struct DraggableListDropDelegate<Item: Identifiable & Equatable>: DropDelegate {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
                 Text("Reorder Branches")
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .padding(.horizontal, DesignTokens.Spacing.md)
 
                 ScrollView {
@@ -107,7 +107,7 @@ struct DraggableListDropDelegate<Item: Identifiable & Equatable>: DropDelegate {
                         HStack {
                             Image(systemName: "line.3.horizontal")
                                 .font(.system(size: DesignTokens.Size.iconSM))
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(branch.name)
@@ -115,7 +115,7 @@ struct DraggableListDropDelegate<Item: Identifiable & Equatable>: DropDelegate {
 
                                 Text("\(branch.commits) commits")
                                     .font(DesignTokens.Typography.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
 
                             Spacer()
@@ -127,7 +127,7 @@ struct DraggableListDropDelegate<Item: Identifiable & Equatable>: DropDelegate {
                         .padding(.horizontal, DesignTokens.Spacing.md)
                         .padding(.vertical, DesignTokens.Spacing.sm)
                         .background(Color(.controlBackgroundColor))
-                        .cornerRadius(DesignTokens.CornerRadius.md)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                         .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
                     }
                     .padding(.horizontal, DesignTokens.Spacing.md)
@@ -161,7 +161,7 @@ struct DraggableListDropDelegate<Item: Identifiable & Equatable>: DropDelegate {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(DesignTokens.Spacing.sm)
                     .background(Color.blue.opacity(0.1))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
             .padding()
             .frame(width: 300, height: 250)

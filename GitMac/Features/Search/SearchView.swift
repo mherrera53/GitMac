@@ -94,7 +94,7 @@ struct AdvancedSearchView: View {
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "person")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Text(viewModel.filterAuthor ?? "All Authors")
                         .lineLimit(1)
                 }
@@ -128,7 +128,7 @@ struct AdvancedSearchView: View {
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "calendar")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Text(viewModel.filterDateRange?.displayName ?? "Any Time")
                 }
             }
@@ -152,7 +152,7 @@ struct AdvancedSearchView: View {
             HStack {
                 Text("\(viewModel.results.count) results")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 Spacer()
                 
@@ -199,7 +199,7 @@ struct AdvancedSearchView: View {
         VStack(spacing: 12) {
             ProgressView()
             Text("Searching...")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -208,15 +208,15 @@ struct AdvancedSearchView: View {
         VStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text("No results found")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text("Try a different search term or filters")
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -240,9 +240,9 @@ struct AdvancedSearchView: View {
             Spacer()
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Text("Select a result to view details")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Spacer()
         }
     }
@@ -331,7 +331,7 @@ struct SearchResultRow: View {
             // Icon
             Image(systemName: result.icon)
                 .font(.system(size: 16))
-                .foregroundColor(result.iconColor)
+                .foregroundStyle(result.iconColor)
                 .frame(width: 24)
             
             // Content
@@ -341,7 +341,7 @@ struct SearchResultRow: View {
                 
                 Text(result.subtitle)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
             }
             
@@ -351,7 +351,7 @@ struct SearchResultRow: View {
             if let metadata = result.metadata {
                 Text(metadata)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
         .padding(.horizontal, 12)
@@ -707,7 +707,7 @@ struct CommitDetailView: View {
                         Label(commit.date.formatted(.relative(presentation: .named)), systemImage: "clock")
                     }
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 }
                 .padding()
                 
@@ -738,13 +738,13 @@ struct FileMatchDetailView: View {
         VStack(spacing: 16) {
             Image(systemName: "doc.text")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text(path)
                 .font(.headline)
             
             Text("\(matches) matches")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Button("Open File") {
                 NSWorkspace.shared.open(URL(fileURLWithPath: path))
@@ -769,7 +769,7 @@ struct ContentMatchDetailView: View {
                 .font(.system(.body, design: .monospaced))
                 .padding()
                 .background(AppTheme.textSecondary.opacity(0.1))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
             
             Button("Open in Editor") {
                 NSWorkspace.shared.open(URL(fileURLWithPath: path))

@@ -505,7 +505,7 @@ struct AvatarImageView: View {
                 .fill(fallbackColor)
             Text(fallbackInitial)
                 .font(.system(size: size * 0.4, weight: .bold))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
     }
 

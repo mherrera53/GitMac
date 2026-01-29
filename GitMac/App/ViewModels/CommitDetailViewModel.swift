@@ -11,19 +11,39 @@ import SwiftUI
 class CommitDetailViewModel: ObservableObject {
     @Published var changedFiles: [CommitFile] = []
     @Published var isLoading = false
+    @Published var errorMessage: String?
 
     private let engine = GitEngine()
+    private var currentLoadSHA: String?
+
+    func reset() {
+        currentLoadSHA = nil
+        changedFiles = []
+        errorMessage = nil
+        isLoading = false
+    }
 
     func loadCommitFiles(sha: String, at path: String) async {
+        // Avoid redundant loads for the same commit (unless reset was called)
+        guard sha != currentLoadSHA || changedFiles.isEmpty else { return }
+        currentLoadSHA = sha
         isLoading = true
+        errorMessage = nil
         do {
             let files = try await engine.getCommitFiles(sha: sha, at: path)
-            changedFiles = files
+            // Only apply if still the current request
+            if currentLoadSHA == sha {
+                changedFiles = files
+            }
         } catch {
-            print("Error loading commit files: \(error)")
-            changedFiles = []
+            if currentLoadSHA == sha {
+                errorMessage = error.localizedDescription
+                changedFiles = []
+            }
         }
-        isLoading = false
+        if currentLoadSHA == sha {
+            isLoading = false
+        }
     }
 
     func getDiff(for file: CommitFile, commit: Commit, at path: String) async -> FileDiff? {

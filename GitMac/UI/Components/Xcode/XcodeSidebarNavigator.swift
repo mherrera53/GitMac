@@ -87,7 +87,7 @@ struct XcodeSidebarNavigatorButton: View {
             VStack(spacing: 0) {
                 Image(systemName: navigator.icon)
                     .font(.system(size: 13, weight: isSelected ? .medium : .regular))
-                    .foregroundColor(iconColor)
+                    .foregroundStyle(iconColor)
                     .frame(width: 24, height: 22)
 
                 if isSelected {
@@ -124,7 +124,7 @@ struct XcodeSidebarNavigatorBar: View {
     @Binding var selectedNavigator: SidebarNavigator
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        ScrollView(.horizontal) {
             HStack(spacing: 2) {
                 ForEach(SidebarNavigator.visibleCases) { navigator in
                     XcodeSidebarNavigatorButton(
@@ -140,6 +140,7 @@ struct XcodeSidebarNavigatorBar: View {
             }
             .padding(.horizontal, 2)
         }
+        .scrollIndicators(.hidden)
         .frame(height: 28)
         .background(.thinMaterial)
         .overlay(alignment: .bottom) {

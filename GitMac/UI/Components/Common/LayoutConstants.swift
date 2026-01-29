@@ -260,7 +260,7 @@ extension View {
 
     /// Applies standard corner radius
     func standardCornerRadius() -> some View {
-        self.cornerRadius(LayoutConstants.CornerRadius.md)
+        self.clipShape(.rect(cornerRadius: LayoutConstants.CornerRadius.md))
     }
 
     /// Applies standard spacing
@@ -312,17 +312,17 @@ struct LayoutConstants_Previews: PreviewProvider {
                     Text("SM")
                         .padding(LayoutConstants.Padding.standard)
                         .background(AppTheme.success.opacity(0.2))
-                        .cornerRadius(LayoutConstants.CornerRadius.sm)
+                        .clipShape(.rect(cornerRadius: LayoutConstants.CornerRadius.sm))
 
                     Text("MD")
                         .padding(LayoutConstants.Padding.standard)
                         .background(AppTheme.success.opacity(0.2))
-                        .cornerRadius(LayoutConstants.CornerRadius.md)
+                        .clipShape(.rect(cornerRadius: LayoutConstants.CornerRadius.md))
 
                     Text("LG")
                         .padding(LayoutConstants.Padding.standard)
                         .background(AppTheme.success.opacity(0.2))
-                        .cornerRadius(LayoutConstants.CornerRadius.lg)
+                        .clipShape(.rect(cornerRadius: LayoutConstants.CornerRadius.lg))
                 }
             }
 

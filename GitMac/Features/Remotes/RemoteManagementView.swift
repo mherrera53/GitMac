@@ -24,7 +24,7 @@ struct RemoteManagementView: View {
                         showAddRemote = true
                     } label: {
                         Image(systemName: "plus.circle.fill")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.borderless)
                     .help("Add Remote")
@@ -51,9 +51,9 @@ struct RemoteManagementView: View {
                     Spacer()
                     Image(systemName: "network")
                         .font(.system(size: 48))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Text("Select a remote to view details")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Spacer()
                 }
             }
@@ -93,11 +93,11 @@ struct RemoteManagementView: View {
         VStack(spacing: 12) {
             Image(systemName: "network.slash")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text("No remotes configured")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Button {
                 showAddRemote = true
@@ -127,10 +127,10 @@ struct RemoteMgmtRow: View {
             // Remote icon
             Image(systemName: remoteIcon)
                 .font(.system(size: 20))
-                .foregroundColor(remoteColor)
+                .foregroundStyle(remoteColor)
                 .frame(width: 32, height: 32)
                 .background(remoteColor.opacity(0.15))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
             
             // Remote info
             VStack(alignment: .leading, spacing: 2) {
@@ -140,7 +140,7 @@ struct RemoteMgmtRow: View {
 
                 Text(remote.fetchURL)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
             }
             
@@ -153,7 +153,7 @@ struct RemoteMgmtRow: View {
                         onFetch()
                     } label: {
                         Image(systemName: "arrow.down.circle")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.borderless)
                     .help("Fetch")
@@ -162,7 +162,7 @@ struct RemoteMgmtRow: View {
                         onEdit()
                     } label: {
                         Image(systemName: "pencil.circle")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.borderless)
                     .help("Edit")
@@ -171,7 +171,7 @@ struct RemoteMgmtRow: View {
                         onDelete()
                     } label: {
                         Image(systemName: "trash")
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                     }
                     .buttonStyle(.borderless)
                     .help("Delete")
@@ -216,7 +216,7 @@ struct RemoteDetailView: View {
                 HStack {
                     Image(systemName: "network")
                         .font(.system(size: 32))
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text(remote.name)
@@ -225,7 +225,7 @@ struct RemoteDetailView: View {
 
                         Text(remote.fetchURL)
                             .font(.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                     
                     Spacer()
@@ -283,7 +283,7 @@ struct RemoteMgmtBranchRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "arrow.branch")
-                .foregroundColor(AppTheme.success)
+                .foregroundStyle(AppTheme.success)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(branch.name)
@@ -291,7 +291,7 @@ struct RemoteMgmtBranchRow: View {
 
                 Text(branch.shortSHA)
                     .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
 
             Spacer()
