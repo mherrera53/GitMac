@@ -22,8 +22,8 @@ struct RepositoryTabBar: View {
             // Repository info (current branch, status)
             if let repo = appState.currentRepository {
                 HStack(spacing: 8) {
-                    // Current branch
-                    if let branch = repo.currentBranch {
+                    // Current branch - read from branchManager for reactive updates
+                    if let branch = appState.branchManager?.currentBranch {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.triangle.branch")
                                 .font(.system(size: 10))

@@ -30,6 +30,10 @@ class BranchPRTracker: ObservableObject {
     private let githubService = GitHubService()
     private var cancellables = Set<AnyCancellable>()
 
+    /// Debounce: prevent rapid-fire API calls
+    private var lastRefreshTime: Date?
+    private let refreshDebounceInterval: TimeInterval = 2.0
+
     private init() {
         setupNotificationObservers()
     }
@@ -112,6 +116,13 @@ class BranchPRTracker: ObservableObject {
     func refresh() async {
         guard !owner.isEmpty && !repo.isEmpty else { return }
         guard !isLoading else { return } // Prevent concurrent refresh
+
+        // Debounce: skip if refreshed recently
+        if let lastRefresh = lastRefreshTime,
+           Date().timeIntervalSince(lastRefresh) < refreshDebounceInterval {
+            return
+        }
+        lastRefreshTime = Date()
 
         isLoading = true
         defer { isLoading = false }

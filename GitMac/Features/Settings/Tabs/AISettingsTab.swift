@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AISettingsView: View {
     @ObservedObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var ollamaManager = OllamaProcessManager.shared
     @State private var selectedProvider: AIService.AIProvider = .anthropic
     @State private var selectedModel = "claude-3-haiku-20240307"
     @State private var apiKeys: [AIService.AIProvider: String] = [:]
@@ -59,7 +60,14 @@ struct AISettingsView: View {
 
                                 // Status
                                 HStack {
-                                    if configuredProviders.contains(.ollama) {
+                                    if ollamaManager.isRunning {
+                                        Image(systemName: "circle.fill")
+                                            .foregroundColor(AppTheme.success)
+                                            .font(.system(size: 8))
+                                        Text("Auto-started by GitMac")
+                                            .font(DesignTokens.Typography.caption)
+                                            .foregroundColor(AppTheme.success)
+                                    } else if configuredProviders.contains(.ollama) {
                                         Image(systemName: "checkmark.circle.fill")
                                             .foregroundColor(AppTheme.success)
                                         Text("Ollama connected at \(AIService.ollamaBaseURL)")
@@ -68,7 +76,7 @@ struct AISettingsView: View {
                                     } else {
                                         Image(systemName: "xmark.circle.fill")
                                             .foregroundColor(AppTheme.error)
-                                        Text("Ollama not detected. Install from ollama.ai and run 'ollama serve'")
+                                        Text("Ollama not detected. Install from ollama.ai")
                                             .font(DesignTokens.Typography.caption)
                                             .foregroundColor(AppTheme.textSecondary)
                                     }

@@ -49,12 +49,11 @@ struct RightStagingPanel: View {
                 Task { await stagingVM.loadStatus(at: path) }
             }
         }
-        .onReceive(Timer.publish(every: 2.0, on: .main, in: .common).autoconnect()) { _ in
-            // Auto-refresh WIP changes every 2 seconds
+        .onReceive(Timer.publish(every: 5.0, on: .main, in: .common).autoconnect()) { _ in
+            // Only refresh in WIP mode (no commit/stash selected)
+            guard appState.selectedCommit == nil && appState.selectedStash == nil else { return }
             if let path = appState.currentRepository?.path {
-                Task {
-                    await stagingVM.loadStatus(at: path)
-                }
+                Task { await stagingVM.loadStatus(at: path) }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .fileSavedInEditor)) { _ in
@@ -77,6 +76,13 @@ struct RightStagingPanel: View {
             if let commit = newCommit, let path = appState.currentRepository?.path {
                 Task {
                     await commitDetailVM.loadCommitFiles(sha: commit.sha, at: path)
+                }
+            } else if newCommit == nil && appState.selectedStash == nil {
+                // Entering WIP mode - refresh staging area immediately
+                if let path = appState.currentRepository?.path {
+                    Task {
+                        await stagingVM.loadStatus(at: path)
+                    }
                 }
             }
             // Clear diff when commit changes

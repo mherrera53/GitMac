@@ -17,6 +17,11 @@ struct CreateBranchSheet: View {
     @State private var isCreating = false
     @State private var errorMessage: String?
 
+    // Branch name suggestions
+    @State private var suggestions: [BranchSuggestion] = []
+    @State private var isLoadingSuggestions = false
+    private let suggestionService = BranchNamingSuggestionService()
+
     var localBranches: [Branch] {
         appState.currentRepository?.branches ?? []
     }
@@ -96,6 +101,44 @@ struct CreateBranchSheet: View {
                             RoundedRectangle(cornerRadius: 6)
                                 .stroke(AppTheme.border, lineWidth: 1)
                         )
+
+                    // Suggestions
+                    if isLoadingSuggestions {
+                        HStack(spacing: 4) {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                            Text("Loading suggestions...")
+                                .font(.system(size: 10))
+                                .foregroundColor(AppTheme.textMuted)
+                        }
+                    } else if !suggestions.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Suggestions")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(AppTheme.textMuted)
+
+                            FlowLayout(spacing: 6) {
+                                ForEach(suggestions) { suggestion in
+                                    Button {
+                                        branchName = suggestion.name
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: suggestion.icon)
+                                                .font(.system(size: 9))
+                                            Text(suggestion.name)
+                                                .font(.system(size: 10))
+                                        }
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(AppTheme.accent.opacity(0.1))
+                                        .foregroundColor(AppTheme.accent)
+                                        .cornerRadius(4)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Base branch
@@ -161,13 +204,67 @@ struct CreateBranchSheet: View {
             }
             .padding(16)
         }
-        .frame(width: 380, height: 350)
+        .frame(width: 380, height: 400)
         .background(AppTheme.backgroundSecondary)
+        .task {
+            await loadSuggestions()
+        }
+    }
+
+    private func loadSuggestions() async {
+        guard let repoPath = appState.currentRepository?.path else { return }
+
+        isLoadingSuggestions = true
+
+        let engine = GitEngine()
+
+        // Get recent commits and modified files for context
+        var recentCommits: [Commit] = []
+        var modifiedFiles: [String] = []
+
+        do {
+            recentCommits = try await engine.getCommits(at: repoPath, limit: 5)
+        } catch {
+            // Continue without commits
+        }
+
+        // Get modified files from status
+        let shell = ShellExecutor()
+        let statusResult = await shell.execute("git", arguments: ["status", "--porcelain"], workingDirectory: repoPath)
+        if statusResult.isSuccess {
+            modifiedFiles = statusResult.stdout
+                .components(separatedBy: .newlines)
+                .filter { !$0.isEmpty }
+                .compactMap { line in
+                    let trimmed = line.trimmingCharacters(in: .whitespaces)
+                    return String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+                }
+        }
+
+        let context = BranchContext(
+            repoPath: repoPath,
+            baseBranch: baseBranch,
+            recentCommits: recentCommits,
+            modifiedFiles: modifiedFiles,
+            currentBranchName: currentBranchName
+        )
+
+        let loadedSuggestions = await suggestionService.suggestBranchNames(context: context)
+
+        await MainActor.run {
+            suggestions = loadedSuggestions
+            isLoadingSuggestions = false
+        }
     }
 
     private func createBranch() {
-        guard let repoPath = appState.currentRepository?.path else {
+        guard appState.currentRepository?.path != nil else {
             errorMessage = "No repository selected"
+            return
+        }
+
+        guard let manager = appState.branchManager else {
+            errorMessage = "Branch manager not available"
             return
         }
 
@@ -176,20 +273,11 @@ struct CreateBranchSheet: View {
 
         Task {
             do {
-                let engine = GitEngine()
-                _ = try await engine.createBranch(
-                    named: branchName,
+                try await manager.createBranch(
+                    name: branchName,
                     from: baseBranch,
-                    checkout: checkoutAfterCreate,
-                    at: repoPath
+                    checkout: checkoutAfterCreate
                 )
-                await appState.refresh()
-
-                // Post notifications for UI sync
-                if checkoutAfterCreate {
-                    NotificationCenter.default.post(name: .branchDidCheckout, object: branchName)
-                }
-                NotificationCenter.default.post(name: .repositoryDidRefresh, object: repoPath)
 
                 await MainActor.run {
                     isPresented = false

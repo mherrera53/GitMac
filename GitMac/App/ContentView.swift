@@ -152,16 +152,12 @@ struct ContentView: View {
                         Task { await GitOperationHandler(appState: appState).handleDropStash(index: index) }
                     }
                 }
-                // Refresh branch ahead/behind status after commit (for push button)
+                // Refresh after commit to update push button (ahead/behind counts)
                 .onReceive(NotificationCenter.default.publisher(for: .branchDidChange)) { notification in
                     guard let path = notification.object as? String,
                           path == appState.currentRepository?.path else { return }
                     Task {
-                        try? await appState.gitService.refreshBranchStatus()
-                        // Sync gitService.currentRepository back to appState tabs
-                        if let updatedRepo = appState.gitService.currentRepository {
-                            appState.currentRepository = updatedRepo
-                        }
+                        await appState.refresh()
                     }
                 }
         }

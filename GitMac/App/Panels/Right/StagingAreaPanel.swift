@@ -100,28 +100,30 @@ struct StagingAreaPanel: View {
         // Clear commit message
         commitMessage = ""
 
-        // Step 2: Push using GitEngine directly with the tab's repoPath
+        // Step 2: Push using branchManager for consistent state
         do {
             let engine = GitEngine()
 
             // Get current branch for push
-            let currentBranch = appState.currentRepository?.currentBranch?.name
-            var options = PushOptions()
-            options.setUpstream = true
-            if let branch = currentBranch {
-                options.branch = branch
+            guard let currentBranch = appState.branchManager?.currentBranch ?? appState.currentRepository?.currentBranch else {
+                NotificationManager.shared.error("Push failed", detail: "No current branch")
+                return
             }
 
-            try await engine.push(options: options, at: repoPath)
+            // Use branchManager.push() if available for state sync
+            if let manager = appState.branchManager {
+                try await manager.push(currentBranch)
+            } else {
+                // Fallback to direct engine call
+                var options = PushOptions()
+                options.setUpstream = true
+                options.branch = currentBranch.name
+                try await engine.push(options: options, at: repoPath)
+            }
 
             // Get SHA after push
             let sha = try await engine.getHeadSHA(at: repoPath)
             let shortSHA = String(sha.prefix(7))
-
-            NotificationManager.shared.success(
-                "Commit & Push completed",
-                detail: "SHA: \(shortSHA)"
-            )
 
             // Step 3: Open PR sheet
             commitSHAForPR = shortSHA

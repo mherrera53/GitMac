@@ -197,6 +197,15 @@ actor AIService {
         // Save to UserDefaults (works for all providers)
         UserDefaults.standard.set(provider.rawValue, forKey: "ai.preferredProvider")
         UserDefaults.standard.set(model, forKey: "ai.preferredModel")
+        
+        // Start or stop Ollama based on selected provider
+        await MainActor.run {
+            if provider == .ollama {
+                Task {
+                    await OllamaProcessManager.shared.startIfNeeded()
+                }
+            }
+        }
 
         // Also try keychain for non-Ollama providers (backup)
         if let kcProvider = KeychainManager.AIProvider(rawValue: provider.rawValue) {
@@ -940,6 +949,17 @@ actor AIService {
     }
 
     // MARK: - Custom Instructions
+
+    /// Generate text from a prompt (used by BranchNamingSuggestionService)
+    func generateText(prompt: String) async throws -> String {
+        return try await sendMessage(prompt)
+    }
+
+    /// Check if AI service is available
+    func isAvailable() async -> Bool {
+        let provider = await getCurrentProvider()
+        return await hasAPIKey(for: provider)
+    }
 
     /// Generate with custom team instructions
     func generateWithCustomInstructions(
