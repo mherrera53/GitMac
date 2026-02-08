@@ -4,6 +4,7 @@ DerivedData/
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
 build_artifact/
+build_release/
 build_log*.txt
 build/
 
