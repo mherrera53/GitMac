@@ -127,9 +127,9 @@ class UniversalResizerNSView: NSView {
             guard let self = self else { return }
             switch self.orientation {
             case .horizontal:
-                NSCursor.resizeLeftRight.push()
+                NSCursor.resizeLeftRight.set()
             case .vertical:
-                NSCursor.resizeUpDown.push()
+                NSCursor.resizeUpDown.set()
             }
             self.cursorUpdateScheduled = false
         }
@@ -137,7 +137,7 @@ class UniversalResizerNSView: NSView {
 
     private func popCursor() {
         DispatchQueue.main.async {
-            NSCursor.pop()
+            NSCursor.arrow.set()
         }
     }
 }

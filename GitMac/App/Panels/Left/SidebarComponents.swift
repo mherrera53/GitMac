@@ -263,6 +263,8 @@ struct SidebarBranchRow: View {
             try await appState.gitService.checkoutBranch(branch)
             // Refresh appState to sync the updated repository to tabs
             await appState.refresh()
+            // Update selected branch to the checked out branch
+            appState.selectedBranch = branch
             let targetName = branch.isRemote ? branch.displayName : branch.name
             NotificationManager.shared.success("Checked out", detail: targetName)
         } catch {
@@ -275,6 +277,8 @@ struct SidebarBranchRow: View {
             try await appState.gitService.checkoutBranchWithAutoStash(branch)
             // Refresh appState to sync the updated repository to tabs
             await appState.refresh()
+            // Update selected branch to the checked out branch
+            appState.selectedBranch = branch
             let targetName = branch.isRemote ? branch.displayName : branch.name
             NotificationManager.shared.success("Checked out", detail: targetName)
         } catch {

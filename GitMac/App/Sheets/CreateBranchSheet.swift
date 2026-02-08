@@ -268,6 +268,7 @@ struct CreateBranchSheet: View {
 
         isCreating = true
         errorMessage = nil
+        let createdBranchName = branchName
 
         Task {
             do {
@@ -278,6 +279,10 @@ struct CreateBranchSheet: View {
                 )
 
                 await MainActor.run {
+                    // Update selected branch to the newly created one
+                    if let newBranch = manager.localBranches.first(where: { $0.name == createdBranchName }) {
+                        appState.selectedBranch = newBranch
+                    }
                     isPresented = false
                 }
             } catch {

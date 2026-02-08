@@ -522,6 +522,7 @@ struct StagingSplitResizer: View {
 
     @State private var isHovering = false
     @State private var isDragging = false
+    @State private var dragStartRatio: Double = 0
 
     var body: some View {
         ZStack {
@@ -533,10 +534,14 @@ struct StagingSplitResizer: View {
                 .gesture(
                     DragGesture()
                         .onChanged { value in
-                            isDragging = true
-                            // Calculate new ratio based on drag
+                            if !isDragging {
+                                // Store initial ratio at drag start
+                                dragStartRatio = splitRatio
+                                isDragging = true
+                            }
+                            // Calculate new ratio from start position + translation
                             let deltaRatio = value.translation.height / availableHeight
-                            let newRatio = splitRatio + deltaRatio
+                            let newRatio = dragStartRatio + deltaRatio
 
                             // Clamp to ensure min heights
                             let minRatio = minSectionHeight / availableHeight
@@ -545,15 +550,12 @@ struct StagingSplitResizer: View {
                         }
                         .onEnded { _ in
                             isDragging = false
+                            updateCursor()
                         }
                 )
                 .onHover { hovering in
                     isHovering = hovering
-                    if hovering {
-                        NSCursor.resizeUpDown.push()
-                    } else if !isDragging {
-                        NSCursor.pop()
-                    }
+                    updateCursor()
                 }
 
             // Visual divider line
@@ -563,6 +565,14 @@ struct StagingSplitResizer: View {
                 .allowsHitTesting(false)
         }
         .frame(height: 8)
+    }
+
+    private func updateCursor() {
+        if isHovering || isDragging {
+            NSCursor.resizeUpDown.set()
+        } else {
+            NSCursor.arrow.set()
+        }
     }
 
     private var visualColor: Color {

@@ -921,6 +921,7 @@ struct ColumnResizer: View {
 
     @State private var isHovering = false
     @State private var isDragging = false
+    @State private var dragStartWidth: CGFloat = 0
 
     var body: some View {
         ZStack {
@@ -932,21 +933,23 @@ struct ColumnResizer: View {
                 .gesture(
                     DragGesture()
                         .onChanged { value in
-                            isDragging = true
-                            let newWidth = width + value.translation.width
+                            if !isDragging {
+                                // Store initial width at drag start
+                                dragStartWidth = width
+                                isDragging = true
+                            }
+                            // Calculate new width from start position + translation
+                            let newWidth = dragStartWidth + value.translation.width
                             width = min(maxWidth, max(minWidth, newWidth))
                         }
                         .onEnded { _ in
                             isDragging = false
+                            updateCursor()
                         }
                 )
                 .onHover { hovering in
                     isHovering = hovering
-                    if hovering {
-                        NSCursor.resizeLeftRight.push()
-                    } else if !isDragging {
-                        NSCursor.pop()
-                    }
+                    updateCursor()
                 }
 
             // Visual divider line
@@ -956,6 +959,14 @@ struct ColumnResizer: View {
                 .allowsHitTesting(false)
         }
         .frame(width: 8, height: 28)
+    }
+
+    private func updateCursor() {
+        if isHovering || isDragging {
+            NSCursor.resizeLeftRight.set()
+        } else {
+            NSCursor.arrow.set()
+        }
     }
 
     private var visualColor: Color {
