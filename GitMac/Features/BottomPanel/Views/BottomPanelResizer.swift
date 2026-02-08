@@ -33,7 +33,7 @@ fileprivate class ResizerNSView: NSView {
     override func mouseDown(with event: NSEvent) {
         isDragging = true
         initialMouseLocation = NSEvent.mouseLocation
-        NSCursor.resizeUpDown.push()
+        NSCursor.resizeUpDown.set()
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -46,7 +46,7 @@ fileprivate class ResizerNSView: NSView {
 
     override func mouseUp(with event: NSEvent) {
         isDragging = false
-        NSCursor.pop()
+        NSCursor.arrow.set()
     }
 
     override func updateTrackingAreas() {
@@ -61,13 +61,13 @@ fileprivate class ResizerNSView: NSView {
     }
 
     override func mouseEntered(with event: NSEvent) {
-        NSCursor.resizeUpDown.push()
+        NSCursor.resizeUpDown.set()
         onHover?(true)
     }
 
     override func mouseExited(with event: NSEvent) {
         if !isDragging {
-            NSCursor.pop()
+            NSCursor.arrow.set()
         }
         onHover?(false)
     }
