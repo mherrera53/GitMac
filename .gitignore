@@ -27,7 +27,7 @@ xcuserdata/
 screenshots/
 ScreenshotTests/
 
-# Claude Code / AI
+# Editor/IDE cache
 .claude/
 
 # Fastlane
