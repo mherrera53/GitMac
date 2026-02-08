@@ -497,22 +497,11 @@ struct MainLayout: View {
             // All actions centered
             ToolbarItem(placement: .principal) {
                 HStack(spacing: DesignTokens.Spacing.sm) {
-                    // Git Actions
+                    // Git Actions - State-aware buttons that show ahead/behind counts
                     if appState.currentRepository != nil {
-                        XcodeToolbarButton(icon: "arrow.down.to.line", color: AppTheme.info) {
-                            NotificationCenter.default.post(name: .pull, object: nil)
-                        }
-                        .help("Pull")
-
-                        XcodeToolbarButton(icon: "arrow.counterclockwise", color: AppTheme.info) {
-                            NotificationCenter.default.post(name: .fetch, object: nil)
-                        }
-                        .help("Fetch")
-
-                        XcodeToolbarButton(icon: "arrow.up.to.line", color: AppTheme.success) {
-                            NotificationCenter.default.post(name: .push, object: nil)
-                        }
-                        .help("Push")
+                        PullToolbarButton()
+                        FetchToolbarButton()
+                        PushToolbarButton()
 
                         // CI/CD Status Badge
                         CICDToolbarBadge(repoPath: appState.currentRepository?.path)
