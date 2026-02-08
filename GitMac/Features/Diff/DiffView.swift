@@ -20,10 +20,15 @@ struct DiffView: View {
     var repoPath: String? = nil
     var onClose: (() -> Void)? = nil
     var onFileSaved: (() -> Void)? = nil  // Called when file is saved in editor
+    var onStageHunk: ((Int) async -> Bool)? = nil  // Stage hunk by index
+    var onDiscardHunk: ((Int) async -> Bool)? = nil  // Discard hunk by index
+    var onUnstageHunk: ((Int) async -> Bool)? = nil  // Unstage hunk by index
     @AppStorage("diffViewMode") private var viewMode: DiffViewMode = .split
     @AppStorage("diffShowLineNumbers") private var showLineNumbers = true
     @AppStorage("diffWordWrap") private var wordWrap = false
     @AppStorage("diffShowMinimap") private var showMinimap = true
+    @AppStorage("diffIgnoreWhitespace") private var ignoreWhitespace = false
+    @AppStorage("diffContextLines") private var contextLines = 3
         @State private var scrollOffset: CGFloat = 0
     @State private var viewportHeight: CGFloat = 400
     @State private var contentHeight: CGFloat = 1000
@@ -246,6 +251,8 @@ struct DiffView: View {
                 wordWrap: $wordWrap,
                 isPreviewable: isPreviewable,
                 showMinimap: $showMinimap,
+                ignoreWhitespace: $ignoreWhitespace,
+                contextLines: $contextLines,
                 filePath: repoPath.map { URL(fileURLWithPath: $0).appendingPathComponent(fileDiff.newPath).path },
                 onHistoryTap: {
                     showHistory.toggle()
@@ -342,6 +349,26 @@ struct DiffView: View {
         .onDisappear {
             clearCaches()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .showFileHistory)) { notification in
+            if let path = notification.object as? String, path == fileDiff.newPath {
+                showHistory = true
+                loadCommitsIfNeeded()
+            }
+        }
+    }
+
+    // Bridge async hunk callbacks to sync for HunkDiffView
+    private var hunkStageSync: ((Int) -> Void)? {
+        guard let callback = onStageHunk else { return nil }
+        return { index in Task { let _ = await callback(index) } }
+    }
+    private var hunkUnstageSync: ((Int) -> Void)? {
+        guard let callback = onUnstageHunk else { return nil }
+        return { index in Task { let _ = await callback(index) } }
+    }
+    private var hunkDiscardSync: ((Int) -> Void)? {
+        guard let callback = onDiscardHunk else { return nil }
+        return { index in Task { let _ = await callback(index) } }
     }
 
     /// Clear caches to free memory when view disappears
@@ -575,7 +602,10 @@ struct DiffView: View {
                     contentHeight: $contentHeight,
                     filePath: fileDiff.newPath,
                     repoPath: repoPath,
-                    allowPatchActions: allowPatchActions
+                    allowPatchActions: allowPatchActions,
+                    onStageHunk: allowPatchActions ? onStageHunk : nil,
+                    onDiscardHunk: allowPatchActions ? onDiscardHunk : nil,
+                    onUnstageHunk: allowPatchActions ? onUnstageHunk : nil
                 )
                 .id(fileDiff.id)
             case .inline:
@@ -587,13 +617,19 @@ struct DiffView: View {
                     contentHeight: $contentHeight,
                     filePath: fileDiff.newPath,
                     repoPath: repoPath,
-                    allowPatchActions: allowPatchActions
+                    allowPatchActions: allowPatchActions,
+                    onStageHunk: allowPatchActions ? onStageHunk : nil,
+                    onDiscardHunk: allowPatchActions ? onDiscardHunk : nil,
+                    onUnstageHunk: allowPatchActions ? onUnstageHunk : nil
                 )
             case .hunk:
                 HunkDiffView(
                     hunks: effectiveHunks,
                     showLineNumbers: showLineNumbers,
                     filePath: fileDiff.newPath,
+                    onStageHunk: allowPatchActions ? hunkStageSync : nil,
+                    onUnstageHunk: allowPatchActions ? hunkUnstageSync : nil,
+                    onDiscardHunk: allowPatchActions ? hunkDiscardSync : nil,
                     scrollOffset: $scrollOffset,
                     viewportHeight: $viewportHeight,
                     contentHeight: $contentHeight,
@@ -885,6 +921,11 @@ struct OptimizedSplitDiffView: View {
     var repoPath: String? = nil
     var allowPatchActions: Bool = true
 
+    // Hunk-level actions
+    var onStageHunk: ((Int) async -> Bool)? = nil
+    var onDiscardHunk: ((Int) async -> Bool)? = nil
+    var onUnstageHunk: ((Int) async -> Bool)? = nil
+
     @EnvironmentObject var themeManager: ThemeManager
 
     // Line selection state
@@ -894,20 +935,19 @@ struct OptimizedSplitDiffView: View {
     @State private var isDiscarding = false
 
     private var pairs: [DiffPair] {
-        // ... (implementation hidden, same as before)
         var pairs: [DiffPair] = []
         var pairId = 0
-        
-        for hunk in hunks {
+
+        for (hunkIdx, hunk) in hunks.enumerated() {
             pairId += 1
-            pairs.append(DiffPair(id: pairId, left: nil, right: nil, hunkHeader: hunk.header))
-            
+            pairs.append(DiffPair(id: pairId, left: nil, right: nil, hunkHeader: hunk.header, hunkIndex: hunkIdx))
+
             var i = 0
             let lines = hunk.lines
-            
+
             while i < lines.count {
                 let line = lines[i]
-                
+
                 if line.type == .context {
                     pairId += 1
                     pairs.append(DiffPair(id: pairId, left: line, right: line, hunkHeader: nil))
@@ -916,23 +956,23 @@ struct OptimizedSplitDiffView: View {
                     // Collect block of changes
                     var deletions: [DiffLine] = []
                     var additions: [DiffLine] = []
-                    
+
                     // Consume consecutive deletions
                     var j = i
                     while j < lines.count && lines[j].type == .deletion {
                         deletions.append(lines[j])
                         j += 1
                     }
-                    
+
                     // Consume consecutive additions
                     var k = j
                     while k < lines.count && lines[k].type == .addition {
                         additions.append(lines[k])
                         k += 1
                     }
-                    
+
                     let maxCount = max(deletions.count, additions.count)
-                    
+
                     if maxCount > 0 {
                         for idx in 0..<maxCount {
                             pairId += 1
@@ -940,10 +980,9 @@ struct OptimizedSplitDiffView: View {
                             let right = idx < additions.count ? additions[idx] : nil
                             pairs.append(DiffPair(id: pairId, left: left, right: right, hunkHeader: nil))
                         }
-                        
+
                         i = k
                     } else {
-                        // Should technically not happen if log is correct, but safety advance
                         i += 1
                     }
                 }
@@ -986,7 +1025,10 @@ struct OptimizedSplitDiffView: View {
                     side: .left,
                     showLineNumbers: showLineNumbers,
                     selectedPairIds: $selectedPairIds,
-                    lastSelectedPairId: $lastSelectedPairId
+                    lastSelectedPairId: $lastSelectedPairId,
+                    onStageHunk: allowPatchActions ? onStageHunk : nil,
+                    onDiscardHunk: allowPatchActions ? onDiscardHunk : nil,
+                    onUnstageHunk: allowPatchActions ? onUnstageHunk : nil
                 )
                 .background(theme.background)
             } rightContent: {
@@ -995,7 +1037,10 @@ struct OptimizedSplitDiffView: View {
                     side: .right,
                     showLineNumbers: showLineNumbers,
                     selectedPairIds: $selectedPairIds,
-                    lastSelectedPairId: $lastSelectedPairId
+                    lastSelectedPairId: $lastSelectedPairId,
+                    onStageHunk: allowPatchActions ? onStageHunk : nil,
+                    onDiscardHunk: allowPatchActions ? onDiscardHunk : nil,
+                    onUnstageHunk: allowPatchActions ? onUnstageHunk : nil
                 )
                 .background(theme.background)
             }
@@ -1432,11 +1477,16 @@ struct SelectableSplitDiffContentView: View {
     @Binding var selectedPairIds: Set<Int>
     @Binding var lastSelectedPairId: Int?
 
+    // Hunk-level actions
+    var onStageHunk: ((Int) async -> Bool)? = nil
+    var onDiscardHunk: ((Int) async -> Bool)? = nil
+    var onUnstageHunk: ((Int) async -> Bool)? = nil
+
     var body: some View {
         LazyVStack(spacing: 0, pinnedViews: []) {
             ForEach(Array(pairs.enumerated()), id: \.element.id) { index, pair in
                 if let header = pair.hunkHeader {
-                    FastHunkHeader(header: header)
+                    hunkHeader(header: header, hunkIndex: pair.hunkIndex)
                 } else {
                     SelectableSplitDiffRow(
                         pair: pair,
@@ -1482,6 +1532,61 @@ struct SelectableSplitDiffContentView: View {
         }
 
         lastSelectedPairId = pair.id
+    }
+
+    @ViewBuilder
+    private func hunkHeader(header: String, hunkIndex: Int) -> some View {
+        if onStageHunk != nil || onDiscardHunk != nil || onUnstageHunk != nil {
+            let stageAction: (() async -> Void)? = onStageHunk.map { callback in
+                { let _ = await callback(hunkIndex) }
+            }
+            let discardAction: (() async -> Void)? = onDiscardHunk.map { callback in
+                { let _ = await callback(hunkIndex) }
+            }
+            let unstageAction: (() async -> Void)? = onUnstageHunk.map { callback in
+                { let _ = await callback(hunkIndex) }
+            }
+            FastHunkHeader(header: header, actions: buildHunkActions(
+                onStage: stageAction,
+                onDiscard: discardAction,
+                onUnstage: unstageAction
+            ))
+        } else {
+            FastHunkHeader(header: header)
+        }
+    }
+
+    private func buildHunkActions(
+        onStage: (() async -> Void)?,
+        onDiscard: (() async -> Void)?,
+        onUnstage: (() async -> Void)?
+    ) -> [FastHunkHeader.HunkAction] {
+        var actions: [FastHunkHeader.HunkAction] = []
+        if let stage = onStage {
+            actions.append(FastHunkHeader.HunkAction(
+                icon: "plus.circle.fill",
+                color: AppTheme.diffAddition,
+                tooltip: "Stage Hunk",
+                action: stage
+            ))
+        }
+        if let unstage = onUnstage {
+            actions.append(FastHunkHeader.HunkAction(
+                icon: "minus.circle.fill",
+                color: AppTheme.accent,
+                tooltip: "Unstage Hunk",
+                action: unstage
+            ))
+        }
+        if let discard = onDiscard {
+            actions.append(FastHunkHeader.HunkAction(
+                icon: "trash.fill",
+                color: AppTheme.diffDeletion,
+                tooltip: "Discard Hunk",
+                action: discard
+            ))
+        }
+        return actions
     }
 }
 
@@ -1568,6 +1673,11 @@ struct OptimizedInlineDiffView: View {
     var repoPath: String? = nil
     var allowPatchActions: Bool = true
 
+    // Hunk-level actions
+    var onStageHunk: ((Int) async -> Bool)? = nil
+    var onDiscardHunk: ((Int) async -> Bool)? = nil
+    var onUnstageHunk: ((Int) async -> Bool)? = nil
+
     // Line selection state
     @State private var selectedLineIds: Set<Int> = []
     @State private var lastSelectedLineId: Int? = nil
@@ -1595,7 +1705,7 @@ struct OptimizedInlineDiffView: View {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(allLines.enumerated()), id: \.element.id) { index, item in
                             if let header = item.hunkHeader {
-                                FastHunkHeader(header: header)
+                                inlineHunkHeader(header: header, hunkIndex: item.hunkIndex)
                             } else if item.line != nil {
                                 SelectableInlineLineRow(
                                     item: item,
@@ -1728,6 +1838,44 @@ struct OptimizedInlineDiffView: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func inlineHunkHeader(header: String, hunkIndex: Int) -> some View {
+        if allowPatchActions && (onStageHunk != nil || onDiscardHunk != nil || onUnstageHunk != nil) {
+            FastHunkHeader(header: header, actions: buildHunkActions(hunkIndex: hunkIndex))
+        } else {
+            FastHunkHeader(header: header)
+        }
+    }
+
+    private func buildHunkActions(hunkIndex: Int) -> [FastHunkHeader.HunkAction] {
+        var actions: [FastHunkHeader.HunkAction] = []
+        if let onStage = onStageHunk {
+            actions.append(FastHunkHeader.HunkAction(
+                icon: "plus.circle.fill",
+                color: AppTheme.diffAddition,
+                tooltip: "Stage Hunk",
+                action: { let _ = await onStage(hunkIndex) }
+            ))
+        }
+        if let onUnstage = onUnstageHunk {
+            actions.append(FastHunkHeader.HunkAction(
+                icon: "minus.circle.fill",
+                color: AppTheme.accent,
+                tooltip: "Unstage Hunk",
+                action: { let _ = await onUnstage(hunkIndex) }
+            ))
+        }
+        if let onDiscard = onDiscardHunk {
+            actions.append(FastHunkHeader.HunkAction(
+                icon: "trash.fill",
+                color: AppTheme.diffDeletion,
+                tooltip: "Discard Hunk",
+                action: { let _ = await onDiscard(hunkIndex) }
+            ))
+        }
+        return actions
     }
 }
 

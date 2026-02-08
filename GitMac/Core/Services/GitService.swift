@@ -510,7 +510,7 @@ class GitService: ObservableObject {
 
     // MARK: - Stash Operations
 
-    func stash(message: String? = nil, includeUntracked: Bool = true) async throws -> Stash? {
+    func stash(message: String? = nil, includeUntracked: Bool = true, keepIndex: Bool = false) async throws -> Stash? {
         guard let path = currentRepository?.path else {
             throw GitServiceError.noRepository
         }
@@ -518,6 +518,7 @@ class GitService: ObservableObject {
         var options = StashOptions()
         options.message = message
         options.includeUntracked = includeUntracked
+        options.keepIndex = keepIndex
 
         let stash = try await engine.stash(options: options, at: path)
         try await refresh()

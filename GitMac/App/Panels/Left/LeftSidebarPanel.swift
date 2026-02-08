@@ -40,9 +40,8 @@ struct LeftSidebarPanel: View {
                         Spacer()
                     }
                 }
-                .padding(.horizontal, 12)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
                 // Background removed to allow material to show through
 
                 Divider()

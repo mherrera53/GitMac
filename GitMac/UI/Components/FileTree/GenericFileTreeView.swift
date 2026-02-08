@@ -49,40 +49,57 @@ struct GenericFileTreeView<T, NodeView: View>: View {
 
     @ViewBuilder
     private func rowView(for item: GenericFlatTreeItem) -> some View {
-        HStack(spacing: 0) {
-            // Indentation
-            if item.depth > 0 {
-                Spacer().frame(width: CGFloat(item.depth) * 16)
-            }
-
-            // Chevron for folders
-            if item.isFolder {
-                Button {
+        if item.isFolder {
+            // Entire folder row is clickable to toggle expand/collapse
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) {
                     toggleExpansion(item.path)
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(AppTheme.chevronColor)
-                        .rotationEffect(.degrees(expandedPaths.contains(item.path) ? 90 : 0))
-                        .frame(width: 14, height: 14)
-                        .padding(.trailing, 2)
                 }
-                .buttonStyle(.plain)
-            } else {
-                Spacer().frame(width: 16)
-            }
+            } label: {
+                HStack(spacing: 0) {
+                    if item.depth > 0 {
+                        Spacer().frame(width: CGFloat(item.depth) * 12)
+                    }
 
-            // Node content - data fetched on demand
-            nodeView(
-                item.path,
-                item.isFolder ? nil : dataProvider(item.path),
-                item.isFolder,
-                selectedPath == item.path,
-                section
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(AppTheme.chevronColor)
+                        .rotationEffect(.degrees(expandedPaths.contains(item.path) ? 90 : 0))
+                        .frame(width: 12, height: 12)
+                        .padding(.trailing, 2)
+
+                    nodeView(
+                        item.path,
+                        nil,
+                        true,
+                        selectedPath == item.path,
+                        section
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } else {
+            // File rows — click handled by nodeView's own Button
+            HStack(spacing: 0) {
+                if item.depth > 0 {
+                    Spacer().frame(width: CGFloat(item.depth) * 12)
+                }
+
+                Spacer().frame(width: 14)
+
+                nodeView(
+                    item.path,
+                    dataProvider(item.path),
+                    false,
+                    selectedPath == item.path,
+                    section
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .contentShape(Rectangle())
         }
-        .contentShape(Rectangle())
     }
 
     private func rebuildIfNeeded() {
@@ -96,8 +113,10 @@ struct GenericFileTreeView<T, NodeView: View>: View {
     }
 
     private func toggleExpansion(_ path: String) {
+        // Check actual expanded state (accounts for default-expanded folders)
+        let wasExpanded = expandedPaths.contains(path)
         TreeExpansionState.shared.toggle(path, section: section)
-        if expandedPaths.contains(path) {
+        if wasExpanded {
             expandedPaths.remove(path)
         } else {
             expandedPaths.insert(path)

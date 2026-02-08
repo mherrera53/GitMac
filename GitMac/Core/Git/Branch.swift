@@ -12,6 +12,7 @@ struct Branch: Identifiable, Equatable, Hashable {
     let targetSHA: String
     let upstream: UpstreamInfo?
     let createdDate: Date?
+    var isProtected: Bool
 
     init(
         name: String,
@@ -22,7 +23,8 @@ struct Branch: Identifiable, Equatable, Hashable {
         trackingBranch: String? = nil,
         targetSHA: String,
         upstream: UpstreamInfo? = nil,
-        createdDate: Date? = nil
+        createdDate: Date? = nil,
+        isProtected: Bool = false
     ) {
         self.name = name
         self.fullName = fullName
@@ -33,6 +35,7 @@ struct Branch: Identifiable, Equatable, Hashable {
         self.targetSHA = targetSHA
         self.upstream = upstream
         self.createdDate = createdDate
+        self.isProtected = isProtected
     }
 
     var shortSHA: String {

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct SubmoduleView: View {
     @EnvironmentObject var appState: AppState
-    @StateObject private var viewModel = SubmoduleViewModel()
+    @StateObject private var viewModel = SubmoduleViewViewModel()
     @StateObject private var modalCoordinator = ModalCoordinator<SubmoduleModal>()
     @State private var selectedSubmodule: GitSubmodule?
     
@@ -224,8 +224,8 @@ struct SubmoduleRow: View {
 
     private var statusColor: Color {
         switch submodule.status {
-        case .initialized, .upToDate: return AppTheme.success
-        case .modified: return AppTheme.warning
+        case .initialized, .upToDate, .clean: return AppTheme.success
+        case .modified, .mergeConflict: return AppTheme.warning
         case .uninitialized, .unknown: return AppTheme.textPrimary
         }
     }
@@ -358,7 +358,7 @@ enum SubmoduleModal: Hashable {
 // MARK: - ViewModel
 
 @MainActor
-class SubmoduleViewModel: ObservableObject {
+class SubmoduleViewViewModel: ObservableObject {
     @Published var submodules: [GitSubmodule] = []
     @Published var isLoading = false
     @Published var errorMessage: String?

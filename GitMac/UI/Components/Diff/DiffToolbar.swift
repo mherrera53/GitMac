@@ -60,6 +60,8 @@ struct DiffToolbar: View {
     @Binding var wordWrap: Bool
     var isPreviewable: Bool = false
     @Binding var showMinimap: Bool
+    @Binding var ignoreWhitespace: Bool
+    @Binding var contextLines: Int
     var showHistoryButton: Bool = true
     var showBlameButton: Bool = true
     var filePath: String? = nil  // Full path for opening file
@@ -173,6 +175,57 @@ struct DiffToolbar: View {
                 ) {
                     showMinimap.toggle()
                 }
+
+                ToolbarButton(
+                    icon: "space",
+                    isActive: ignoreWhitespace,
+                    tooltip: "Ignore whitespace"
+                ) {
+                    ignoreWhitespace.toggle()
+                }
+
+                // Context lines selector
+                Menu {
+                    ForEach([3, 5, 10, 25], id: \.self) { count in
+                        Button {
+                            contextLines = count
+                        } label: {
+                            HStack {
+                                Text("\(count) lines")
+                                if contextLines == count {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                    Button {
+                        contextLines = 9999
+                    } label: {
+                        HStack {
+                            Text("All")
+                            if contextLines == 9999 {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 2) {
+                        Image(systemName: "arrow.up.and.down.text.horizontal")
+                            .font(.system(size: 12, weight: .medium))
+                        Text("\(contextLines == 9999 ? "All" : "\(contextLines)")")
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .frame(height: 28)
+                    .padding(.horizontal, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.clear)
+                    )
+                }
+                .menuStyle(.borderlessButton)
+                .frame(width: 52)
+                .help("Context lines")
             }
 
             // View mode selector (compact icon-only)
@@ -373,6 +426,8 @@ struct DiffToolbar_Previews: PreviewProvider {
     @State static var showLineNumbers = true
     @State static var wordWrap = false
     @State static var showMinimap = true
+    @State static var ignoreWhitespace = false
+    @State static var contextLines = 3
 
     static var previews: some View {
         VStack(spacing: 0) {
@@ -385,7 +440,9 @@ struct DiffToolbar_Previews: PreviewProvider {
                 showLineNumbers: .constant(true),
                 wordWrap: .constant(false),
                 isPreviewable: false,
-                showMinimap: .constant(true)
+                showMinimap: .constant(true),
+                ignoreWhitespace: .constant(false),
+                contextLines: .constant(3)
             )
 
             Rectangle()
@@ -401,7 +458,9 @@ struct DiffToolbar_Previews: PreviewProvider {
                 showLineNumbers: .constant(true),
                 wordWrap: .constant(true),
                 isPreviewable: true,
-                showMinimap: .constant(false)
+                showMinimap: .constant(false),
+                ignoreWhitespace: .constant(false),
+                contextLines: .constant(3)
             )
 
             Rectangle()
@@ -418,6 +477,8 @@ struct DiffToolbar_Previews: PreviewProvider {
                 wordWrap: .constant(false),
                 isPreviewable: false,
                 showMinimap: .constant(true),
+                ignoreWhitespace: .constant(false),
+                contextLines: .constant(3),
                 extraActions: [
                     DiffToolbar.ToolbarAction(icon: "arrow.clockwise", tooltip: "Refresh") { print("Refresh") },
                     DiffToolbar.ToolbarAction(icon: "arrow.up.doc", tooltip: "Stage File") { print("Stage") }

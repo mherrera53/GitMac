@@ -5,10 +5,43 @@ import os.signpost
 
 private let diffLog = OSLog(subsystem: "com.gitmac", category: "diff")
 
+// MARK: - Local Extensions for ViewDiffEngine
+
+private extension DiffPreflightStats {
+    static func from(
+        numstatLine: String,
+        patchSize: Int,
+        hunkCount: Int,
+        maxLineLength: Int
+    ) -> DiffPreflightStats {
+        let parts = numstatLine.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: "\t")
+        let additions = Int(parts.first ?? "0") ?? 0
+        let deletions = parts.count > 1 ? Int(parts[1]) ?? 0 : 0
+        let estimatedLines = additions + deletions
+        let isLargeFile = patchSize > 1_000_000 || hunkCount > 100 || maxLineLength > 10_000
+
+        return DiffPreflightStats(
+            additions: additions,
+            deletions: deletions,
+            estimatedLines: estimatedLines,
+            fileSizeBytes: patchSize,
+            isLargeFile: isLargeFile,
+            suggestedOptions: isLargeFile ? .largeFile : .default
+        )
+    }
+}
+
+private extension DiffOptions {
+    var noRenames: Bool {
+        // In large file mode, we don't track renames
+        largeFileMode == .forceOn
+    }
+}
+
 // MARK: - Diff Engine
 
 /// High-performance diff engine with streaming parser and on-demand materialization
-actor DiffEngine {
+actor ViewDiffEngine {
     private let shellExecutor: ShellExecutor
     private let cache: DiffCache
     
@@ -98,14 +131,15 @@ actor DiffEngine {
                 
                 do {
                     let parser = DiffStreamParser(options: options)
-                    
-                    for try await hunk in parser.parse(lineStream: lineStream) {
+                    let hunkStream = try await parser.parse(lineStream: lineStream)
+
+                    for await hunk in hunkStream {
                         // Check for cancellation
                         if Task.isCancelled {
                             continuation.finish()
                             return
                         }
-                        
+
                         continuation.yield(hunk)
                     }
                 } catch {
@@ -183,7 +217,7 @@ struct DiffStreamParser {
     func parse(lineStream: AsyncThrowingStream<String, Error>) async throws -> AsyncStream<DiffHunk> {
         AsyncStream { continuation in
             Task {
-                var state = ParserState.initial
+                var state = ViewParserState.initial
                 var currentHunk: PartialHunk?
                 var currentLines: [DiffLine] = []
                 var oldLineNum = 0
@@ -329,7 +363,7 @@ struct DiffStreamParser {
 
 // MARK: - Parser State
 
-enum ParserState {
+private enum ViewParserState {
     case initial
     case fileHeader
     case lines

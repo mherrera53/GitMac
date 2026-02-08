@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Submodule Model
 
-struct Submodule: Identifiable, Hashable {
+struct ManagedSubmodule: Identifiable, Hashable {
     let id: UUID
     let name: String
     let path: String
@@ -33,8 +33,8 @@ struct Submodule: Identifiable, Hashable {
         self.status = status
     }
 
-    static func parseFromStatus(_ output: String, gitmodulesContent: String) -> [Submodule] {
-        var submodules: [Submodule] = []
+    static func parseFromStatus(_ output: String, gitmodulesContent: String) -> [ManagedSubmodule] {
+        var submodules: [ManagedSubmodule] = []
         let lines = output.components(separatedBy: .newlines).filter { !$0.isEmpty }
 
         for line in lines {
@@ -63,7 +63,7 @@ struct Submodule: Identifiable, Hashable {
             let url = parseSubmoduleURL(path: path, from: gitmodulesContent) ?? ""
             let branch = parseSubmoduleBranch(path: path, from: gitmodulesContent)
 
-            submodules.append(Submodule(
+            submodules.append(ManagedSubmodule(
                 name: name,
                 path: path,
                 url: url,
@@ -101,123 +101,19 @@ struct Submodule: Identifiable, Hashable {
     }
 }
 
-enum SubmoduleStatus: String {
-    case clean = "clean"
-    case modified = "modified"
-    case uninitialized = "uninitialized"
-    case mergeConflict = "conflict"
-
-    var icon: String {
-        switch self {
-        case .clean: return "checkmark.circle.fill"
-        case .modified: return "exclamationmark.circle.fill"
-        case .uninitialized: return "minus.circle.fill"
-        case .mergeConflict: return "xmark.circle.fill"
-        }
-    }
-
-    var color: Color {
-        switch self {
-        case .clean: return AppTheme.success
-        case .modified: return AppTheme.warning
-        case .uninitialized: return AppTheme.textSecondary
-        case .mergeConflict: return AppTheme.error
-        }
-    }
-}
-
 // MARK: - Submodule List View
 
 struct SubmoduleListView: View {
     @EnvironmentObject var appState: AppState
-    @StateObject private var viewModel = SubmoduleViewModel()
+    @StateObject private var viewModel = SubmoduleListViewModel()
     @State private var showAddSheet = false
-    @State private var selectedSubmodule: Submodule?
+    @State private var selectedSubmodule: ManagedSubmodule?
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("SUBMODULES")
-                    .font(DesignTokens.Typography.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(AppTheme.textSecondary)
-
-                Spacer()
-
-                HStack(spacing: DesignTokens.Spacing.sm) {
-                    Button {
-                        Task { await viewModel.refresh(at: appState.currentRepository?.path) }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(DesignTokens.Typography.caption)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundColor(AppTheme.textSecondary)
-
-                    Button { showAddSheet = true } label: {
-                        Image(systemName: "plus")
-                            .font(DesignTokens.Typography.caption)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundColor(AppTheme.textSecondary)
-                }
-            }
-            .padding(.horizontal, DesignTokens.Spacing.md)
-            .padding(.vertical, DesignTokens.Spacing.sm)
-            .background(AppTheme.textMuted.opacity(0.1))
-
-            // Content
-            if viewModel.isLoading {
-                ProgressView()
-                    .scaleEffect(0.8)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if viewModel.submodules.isEmpty {
-                VStack(spacing: DesignTokens.Spacing.sm) {
-                    Image(systemName: "shippingbox")
-                        .font(DesignTokens.Typography.title)
-                        .foregroundColor(AppTheme.textSecondary)
-                    Text("No submodules")
-                        .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, DesignTokens.Spacing.lg)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(viewModel.submodules) { submodule in
-                            SubmoduleRow(
-                                submodule: submodule,
-                                isSelected: selectedSubmodule?.id == submodule.id,
-                                onSelect: { selectedSubmodule = submodule },
-                                onUpdate: { await viewModel.update(submodule, at: appState.currentRepository?.path) },
-                                onSync: { await viewModel.sync(submodule, at: appState.currentRepository?.path) },
-                                onRemove: { await viewModel.remove(submodule, at: appState.currentRepository?.path) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Actions bar
-            if !viewModel.submodules.isEmpty {
-                HStack(spacing: DesignTokens.Spacing.md) {
-                    Button("Update All") {
-                        Task { await viewModel.updateAll(at: appState.currentRepository?.path) }
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-
-                    Button("Init Recursive") {
-                        Task { await viewModel.initRecursive(at: appState.currentRepository?.path) }
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-                .padding(DesignTokens.Spacing.sm)
-                .background(AppTheme.textMuted.opacity(0.05))
-            }
+            headerView
+            contentView
+            actionsBar
         }
         .task {
             await viewModel.refresh(at: appState.currentRepository?.path)
@@ -226,7 +122,7 @@ struct SubmoduleListView: View {
             Task { await viewModel.refresh(at: newPath) }
         }
         .sheet(isPresented: $showAddSheet) {
-            AddSubmoduleSheet(viewModel: viewModel)
+            AddSubmoduleSheetFromList(viewModel: viewModel)
         }
         .alert("Error", isPresented: .constant(viewModel.error != nil)) {
             Button("OK") { viewModel.error = nil }
@@ -234,12 +130,111 @@ struct SubmoduleListView: View {
             Text(viewModel.error ?? "")
         }
     }
+
+    @ViewBuilder
+    private var headerView: some View {
+        HStack {
+            Text("SUBMODULES")
+                .font(DesignTokens.Typography.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(AppTheme.textSecondary)
+
+            Spacer()
+
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Button {
+                    Task { await viewModel.refresh(at: appState.currentRepository?.path) }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(DesignTokens.Typography.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(AppTheme.textSecondary)
+
+                Button { showAddSheet = true } label: {
+                    Image(systemName: "plus")
+                        .font(DesignTokens.Typography.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(AppTheme.textSecondary)
+            }
+        }
+        .padding(.horizontal, DesignTokens.Spacing.md)
+        .padding(.vertical, DesignTokens.Spacing.sm)
+        .background(AppTheme.textMuted.opacity(0.1))
+    }
+
+    @ViewBuilder
+    private var contentView: some View {
+        if viewModel.isLoading {
+            ProgressView()
+                .scaleEffect(0.8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if viewModel.submodules.isEmpty {
+            emptyStateView
+        } else {
+            submodulesList
+        }
+    }
+
+    @ViewBuilder
+    private var emptyStateView: some View {
+        VStack(spacing: DesignTokens.Spacing.sm) {
+            Image(systemName: "shippingbox")
+                .font(DesignTokens.Typography.title3)
+                .foregroundStyle(AppTheme.textSecondary)
+            Text("No submodules")
+                .font(DesignTokens.Typography.caption)
+                .foregroundStyle(AppTheme.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, DesignTokens.Spacing.lg)
+    }
+
+    @ViewBuilder
+    private var submodulesList: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(viewModel.submodules) { submodule in
+                    ManagedSubmoduleRow(
+                        submodule: submodule,
+                        isSelected: selectedSubmodule?.id == submodule.id,
+                        onSelect: { selectedSubmodule = submodule },
+                        onUpdate: { await viewModel.update(submodule, at: appState.currentRepository?.path) },
+                        onSync: { await viewModel.sync(submodule, at: appState.currentRepository?.path) },
+                        onRemove: { await viewModel.remove(submodule, at: appState.currentRepository?.path) }
+                    )
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var actionsBar: some View {
+        if !viewModel.submodules.isEmpty {
+            HStack(spacing: DesignTokens.Spacing.md) {
+                Button("Update All") {
+                    Task { await viewModel.updateAll(at: appState.currentRepository?.path) }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Button("Init Recursive") {
+                    Task { await viewModel.initRecursive(at: appState.currentRepository?.path) }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+            .padding(DesignTokens.Spacing.sm)
+            .background(AppTheme.textMuted.opacity(0.05))
+        }
+    }
 }
 
 // MARK: - Submodule Row
 
-struct SubmoduleRow: View {
-    let submodule: Submodule
+struct ManagedSubmoduleRow: View {
+    let submodule: ManagedSubmodule
     let isSelected: Bool
     let onSelect: () -> Void
     let onUpdate: () async -> Void
@@ -324,10 +319,10 @@ struct SubmoduleRow: View {
 
 // MARK: - Add Submodule Sheet
 
-struct AddSubmoduleSheet: View {
+struct AddSubmoduleSheetFromList: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
-    @ObservedObject var viewModel: SubmoduleViewModel
+    @ObservedObject var viewModel: SubmoduleListViewModel
 
     @State private var url = ""
     @State private var path = ""
@@ -396,8 +391,8 @@ struct AddSubmoduleSheet: View {
 // MARK: - View Model
 
 @MainActor
-class SubmoduleViewModel: ObservableObject {
-    @Published var submodules: [Submodule] = []
+class SubmoduleListViewModel: ObservableObject {
+    @Published var submodules: [ManagedSubmodule] = []
     @Published var isLoading = false
     @Published var error: String?
 
@@ -423,7 +418,7 @@ class SubmoduleViewModel: ObservableObject {
         let gitmodulesContent = (try? String(contentsOfFile: gitmodulesPath)) ?? ""
 
         if statusResult.isSuccess {
-            submodules = Submodule.parseFromStatus(statusResult.stdout, gitmodulesContent: gitmodulesContent)
+            submodules = ManagedSubmodule.parseFromStatus(statusResult.stdout, gitmodulesContent: gitmodulesContent)
         } else {
             submodules = []
         }
@@ -454,7 +449,7 @@ class SubmoduleViewModel: ObservableObject {
         isLoading = false
     }
 
-    func update(_ submodule: Submodule, at path: String?) async {
+    func update(_ submodule: ManagedSubmodule, at path: String?) async {
         guard let path = path else { return }
 
         let result = await shell.execute(
@@ -488,7 +483,7 @@ class SubmoduleViewModel: ObservableObject {
         isLoading = false
     }
 
-    func sync(_ submodule: Submodule, at path: String?) async {
+    func sync(_ submodule: ManagedSubmodule, at path: String?) async {
         guard let path = path else { return }
 
         let result = await shell.execute(
@@ -504,7 +499,7 @@ class SubmoduleViewModel: ObservableObject {
         }
     }
 
-    func remove(_ submodule: Submodule, at path: String?) async {
+    func remove(_ submodule: ManagedSubmodule, at path: String?) async {
         guard let path = path else { return }
 
         // 1. Deinit

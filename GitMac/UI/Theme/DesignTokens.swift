@@ -148,18 +148,18 @@ enum DesignTokens {
 
     /// Métricas de layout centralizadas
     enum Layout {
-        /// Sidebar metrics (left panel)
+        /// Sidebar metrics (left panel) - optimized for 14" Retina
         enum Sidebar {
             static let minWidth: CGFloat = 120
-            static let idealWidth: CGFloat = 180
-            static let maxWidth: CGFloat = 300
+            static let idealWidth: CGFloat = 170
+            static let maxWidth: CGFloat = 260
         }
 
-        /// Staging Panel metrics (right inspector)
+        /// Staging Panel metrics (right inspector) - compact for 14" Retina
         enum StagingPanel {
-            static let minWidth: CGFloat = 180
-            static let idealWidth: CGFloat = 260
-            static let maxWidth: CGFloat = 380
+            static let minWidth: CGFloat = 160
+            static let idealWidth: CGFloat = 220
+            static let maxWidth: CGFloat = 340
         }
 
         /// Bottom Panel metrics
@@ -171,7 +171,7 @@ enum DesignTokens {
 
         /// Window metrics - compact with all 3 panels
         enum Window {
-            static let minWidth: CGFloat = 580   // 120 + 100 + 180 + margins
+            static let minWidth: CGFloat = 540   // 120 + 100 + 160 + margins
             static let minHeight: CGFloat = 380
         }
 
@@ -198,6 +198,72 @@ enum DesignTokens {
             static let minWidth: CGFloat = 600
             static let minHeight: CGFloat = 500
         }
+    }
+
+    // MARK: - Padding (Semantic)
+
+    /// Semantic padding presets for common use cases
+    enum Padding {
+        /// Compact padding (6pt) - tight UI elements
+        static let compact: CGFloat = 6
+        /// Standard padding (12pt) - default for most elements
+        static let standard: CGFloat = 12
+        /// Comfortable padding (16pt) - spacious elements
+        static let comfortable: CGFloat = 16
+        /// Large padding (20pt) - prominent sections
+        static let large: CGFloat = 20
+        /// Container padding (24pt) - outer containers
+        static let container: CGFloat = 24
+    }
+
+    // MARK: - Row Height
+
+    /// Standard row heights for list items and table rows
+    enum RowHeight {
+        /// Compact row (18pt) - dense lists
+        static let compact: CGFloat = 18
+        /// Standard row (22pt) - default for diff lines, file rows
+        static let standard: CGFloat = 22
+        /// Comfortable row (28pt) - spacious lists
+        static let comfortable: CGFloat = 28
+        /// Large row (32pt) - headers, prominent items
+        static let large: CGFloat = 32
+        /// Extra large row (40pt) - toolbars
+        static let extraLarge: CGFloat = 40
+    }
+
+    // MARK: - Border Width
+
+    /// Standard border widths
+    enum BorderWidth {
+        /// Hairline border (0.5pt) - subtle separators
+        static let thin: CGFloat = 0.5
+        /// Standard border (1pt) - default
+        static let standard: CGFloat = 1
+        /// Thick border (2pt) - emphasis
+        static let thick: CGFloat = 2
+        /// Extra thick border (3pt) - strong emphasis
+        static let extraThick: CGFloat = 3
+    }
+
+    // MARK: - Diff View Metrics
+
+    /// Metrics for diff view rendering
+    enum Diff {
+        /// Standard line height for diff views
+        static let lineHeight: CGFloat = 18
+        /// Line height for split diff views
+        static let lineHeightSplit: CGFloat = 22
+        /// Standard line number gutter width
+        static let lineNumberWidth: CGFloat = 50
+        /// Wide line number gutter (for large files)
+        static let lineNumberWidthWide: CGFloat = 80
+        /// Gutter width (change indicator)
+        static let gutterWidth: CGFloat = 20
+        /// Prefix width (+/- indicator)
+        static let prefixWidth: CGFloat = 16
+        /// Horizontal padding inside diff lines
+        static let horizontalPadding: CGFloat = 8
     }
 
     // MARK: - Shadow (Elevation)

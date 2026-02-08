@@ -984,7 +984,7 @@ actor AIService {
         theirs: String,
         base: String?,
         filename: String
-    ) async throws -> ConflictResolution {
+    ) async throws -> AIConflictResolution {
         var prompt = """
         Help resolve this Git merge conflict in the file: \(filename)
 
@@ -1033,21 +1033,21 @@ actor AIService {
               let explanation = json["explanation"] as? String,
               let confidenceStr = json["confidence"] as? String else {
             // If JSON parsing fails, return the raw response as the suggestion
-            return ConflictResolution(
+            return AIConflictResolution(
                 suggestion: response,
                 explanation: "AI provided a resolution",
                 confidence: .medium
             )
         }
 
-        let confidence: ConflictResolution.Confidence
+        let confidence: AIConflictResolution.Confidence
         switch confidenceStr.lowercased() {
         case "high": confidence = .high
         case "low": confidence = .low
         default: confidence = .medium
         }
 
-        return ConflictResolution(
+        return AIConflictResolution(
             suggestion: suggestion,
             explanation: explanation,
             confidence: confidence
@@ -1335,7 +1335,7 @@ enum CommitStyle: String, CaseIterable, Identifiable {
     }
 }
 
-struct ConflictResolution {
+struct AIConflictResolution {
     let suggestion: String
     let explanation: String
     let confidence: Confidence

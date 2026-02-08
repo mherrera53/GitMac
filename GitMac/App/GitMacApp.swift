@@ -77,6 +77,12 @@ struct GitMacApp: App {
         // Initialize memory pressure monitoring
         _ = MemoryPressureHandler.shared
 
+        // Initialize app activity monitoring (pauses background work when app is inactive)
+        _ = AppActivityManager.shared
+
+        // Initialize auto-fetch background service
+        _ = AutoFetchService.shared
+
         // Register all integration plugins
         registerPlugins()
     }
@@ -194,8 +200,12 @@ class AppState: ObservableObject {
     static let shared = AppState()
 
     // Multiple repos support (tabs)
-    @Published var openTabs: [RepositoryTab] = []
-    @Published var activeTabId: UUID?
+    @Published var openTabs: [RepositoryTab] = [] {
+        didSet { _refreshActiveTab() }
+    }
+    @Published var activeTabId: UUID? {
+        didSet { _refreshActiveTab() }
+    }
     
     // Computed property for active tab's branch manager
     var branchManager: BranchStateManager? {
@@ -214,8 +224,12 @@ class AppState: ObservableObject {
         }
     }
 
-    var activeTab: RepositoryTab? {
-        openTabs.first { $0.id == activeTabId }
+    /// Cached active tab — avoids O(n) scan on every view body evaluation.
+    /// Invalidated whenever activeTabId or openTabs changes.
+    @Published private(set) var activeTab: RepositoryTab?
+
+    private func _refreshActiveTab() {
+        activeTab = openTabs.first { $0.id == activeTabId }
     }
 
     var activeTabIndex: Int? {
@@ -229,6 +243,9 @@ class AppState: ObservableObject {
         get { activeTab?.selectedCommit }
         set {
             if let index = activeTabIndex {
+                // Must send objectWillChange manually because mutating a nested
+                // ObservableObject inside a @Published array doesn't trigger it.
+                objectWillChange.send()
                 openTabs[index].selectedCommit = newValue
             }
         }
@@ -238,6 +255,7 @@ class AppState: ObservableObject {
         get { activeTab?.selectedBranch }
         set {
             if let index = activeTabIndex {
+                objectWillChange.send()
                 openTabs[index].selectedBranch = newValue
             }
         }
@@ -247,9 +265,23 @@ class AppState: ObservableObject {
         get { activeTab?.selectedStash }
         set {
             if let index = activeTabIndex {
+                objectWillChange.send()
                 openTabs[index].selectedStash = newValue
             }
         }
+    }
+
+    // Commit comparison state
+    @Published var comparisonCommitA: Commit?
+    @Published var comparisonCommitB: Commit?
+
+    var isComparing: Bool {
+        comparisonCommitA != nil && comparisonCommitB != nil
+    }
+
+    func clearComparison() {
+        comparisonCommitA = nil
+        comparisonCommitB = nil
     }
 
     let gitService = GitService()
@@ -774,4 +806,6 @@ extension Notification.Name {
     static let gitMergeCompleted = Notification.Name("gitMergeCompleted")
     static let refreshCICD = Notification.Name("refreshCICD")
     static let showCICD = Notification.Name("showCICD")
+    /// Posted when user requests file history from staging context menu (object: file path String)
+    static let showFileHistory = Notification.Name("showFileHistory")
 }

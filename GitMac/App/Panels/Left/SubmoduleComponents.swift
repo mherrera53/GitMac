@@ -12,7 +12,7 @@ import Foundation
 // MARK: - Submodule Sidebar Section
 struct SubmoduleSidebarSection: View {
     @EnvironmentObject var appState: AppState
-    @StateObject private var viewModel = SubmoduleViewModel()
+    @StateObject private var viewModel = SubmoduleViewViewModel()
     @State private var showSubmoduleView = false
 
     var body: some View {

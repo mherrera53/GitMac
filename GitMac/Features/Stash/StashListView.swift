@@ -72,7 +72,8 @@ struct StashListView: View {
                             onDrop: {
                                 stashToDelete = stash
                                 showDeleteAlert = true
-                            }
+                            },
+                            onCreateBranch: { name in Task { await viewModel.createBranchFromStash(stash, branchName: name) } }
                         )
                         .tag(stash)
                     }
@@ -166,16 +167,16 @@ class StashListViewModel: ObservableObject {
         }
     }
 
-    func createStash(message: String?, includeUntracked: Bool) async {
+    func createStash(message: String?, includeUntracked: Bool, keepIndex: Bool = false) async {
         guard let gitService = gitService else {
             self.error = "Git service not configured"
             return
         }
         isLoading = true
         do {
-            _ = try await gitService.stash(message: message, includeUntracked: includeUntracked)
+            _ = try await gitService.stash(message: message, includeUntracked: includeUntracked, keepIndex: keepIndex)
         } catch {
-            self.self.error = error.localizedDescription
+            self.error = error.localizedDescription
         }
         isLoading = false
     }
@@ -189,7 +190,7 @@ class StashListViewModel: ObservableObject {
                 // Notify that repository changed so staging area updates
                 NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
             } catch {
-                self.self.error = error.localizedDescription
+                self.error = error.localizedDescription
             }
         } else if let path = currentPath {
             // Fallback: use GitEngine directly if gitService not configured
@@ -199,7 +200,7 @@ class StashListViewModel: ObservableObject {
                 try await gitEngine.stashApply(options: options, at: path)
                 NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
             } catch {
-                self.self.error = error.localizedDescription
+                self.error = error.localizedDescription
             }
         } else {
             self.error = "Could not apply stash: no repository configured"
@@ -216,14 +217,14 @@ class StashListViewModel: ObservableObject {
                 try await gitService.stashPop(index: stash.index)
                 NotificationCenter.default.post(name: .repositoryDidRefresh, object: gitService.currentRepository?.path)
             } catch {
-                self.self.error = error.localizedDescription
+                self.error = error.localizedDescription
             }
         } else if let path = currentPath {
             do {
                 try await gitEngine.stashPop(stashRef: stash.reference, at: path)
                 NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
             } catch {
-                self.self.error = error.localizedDescription
+                self.error = error.localizedDescription
             }
         } else {
             self.error = "Could not pop stash: no repository configured"
@@ -239,13 +240,13 @@ class StashListViewModel: ObservableObject {
             do {
                 try await gitService.stashDrop(index: stash.index)
             } catch {
-                self.self.error = error.localizedDescription
+                self.error = error.localizedDescription
             }
         } else if let path = currentPath {
             do {
                 try await gitEngine.stashDrop(stashRef: stash.reference, at: path)
             } catch {
-                self.self.error = error.localizedDescription
+                self.error = error.localizedDescription
             }
         } else {
             self.error = "Could not drop stash: no repository configured"
@@ -289,9 +290,32 @@ class StashListViewModel: ObservableObject {
             
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
         } catch {
-            self.self.error = error.localizedDescription
+            self.error = error.localizedDescription
         }
         
+        isLoading = false
+    }
+
+    func createBranchFromStash(_ stash: Stash, branchName: String) async {
+        guard let path = currentPath else {
+            self.error = "No repository configured"
+            return
+        }
+        isLoading = true
+        do {
+            let shell = ShellExecutor()
+            let result = await shell.execute(
+                "git",
+                arguments: ["stash", "branch", branchName, stash.reference],
+                workingDirectory: path
+            )
+            guard result.exitCode == 0 else {
+                throw GitError.commandFailed("stash branch", result.stderr.isEmpty ? "Failed to create branch from stash" : result.stderr)
+            }
+            NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+        } catch {
+            self.error = error.localizedDescription
+        }
         isLoading = false
     }
 
@@ -316,9 +340,12 @@ struct StashRow: View {
     var onApplyFile: (StashFile) -> Void = { _ in }
     var onPop: () -> Void = {}
     var onDrop: () -> Void = {}
+    var onCreateBranch: (String) -> Void = { _ in }
 
     @State private var isHovered = false
     @State private var isExpanded = false
+    @State private var showBranchNameSheet = false
+    @State private var branchName = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -438,10 +465,15 @@ struct StashRow: View {
                 
                 Divider()
                 
-                Button("Create Branch from Stash...") { }
-                
+                Button {
+                    branchName = ""
+                    showBranchNameSheet = true
+                } label: {
+                    Label("Create Branch from Stash...", systemImage: "arrow.triangle.branch")
+                }
+
                 Divider()
-                
+
                 Button(role: .destructive) {
                     onDrop()
                 } label: {
@@ -464,6 +496,34 @@ struct StashRow: View {
         .cornerRadius(DesignTokens.CornerRadius.sm)
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
+        .sheet(isPresented: $showBranchNameSheet) {
+            VStack(spacing: DesignTokens.Spacing.lg) {
+                Text("Create Branch from Stash")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+
+                DSTextField(placeholder: "Branch name", text: $branchName)
+                    .padding(.horizontal)
+
+                HStack {
+                    Button("Cancel") { showBranchNameSheet = false }
+                        .keyboardShortcut(.cancelAction)
+                    Spacer()
+                    Button("Create") {
+                        let name = branchName.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !name.isEmpty {
+                            onCreateBranch(name)
+                        }
+                        showBranchNameSheet = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .padding()
+            .frame(width: 350)
+        }
     }
 }
 
@@ -933,7 +993,8 @@ struct CreateStashSheet: View {
                     Task {
                         await viewModel.createStash(
                             message: message.isEmpty ? nil : message,
-                            includeUntracked: includeUntracked
+                            includeUntracked: includeUntracked,
+                            keepIndex: keepIndex
                         )
                         dismiss()
                     }

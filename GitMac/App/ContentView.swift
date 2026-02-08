@@ -25,7 +25,6 @@ struct ContentView: View {
     }
 
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
-    @State private var selectedFileDiff: FileDiff? = nil
 
     init() {
         _bottomPanelManager = ObservedObject(wrappedValue: BottomPanelManager.shared)
@@ -89,6 +88,24 @@ struct ContentView: View {
             } message: {
                 Text("You are not currently on a branch. Please create a new branch to save your work before pulling.")
             }
+            .alert(
+                pushConfirmationTitle,
+                isPresented: Binding(
+                    get: { gitOperationHandler.pendingPushConfirmation != nil },
+                    set: { if !$0 { gitOperationHandler.pendingPushConfirmation = nil } }
+                )
+            ) {
+                if let confirmation = gitOperationHandler.pendingPushConfirmation {
+                    Button("Push Anyway", role: .destructive) {
+                        Task { await confirmation.onConfirm() }
+                    }
+                    Button("Cancel", role: .cancel) {
+                        confirmation.onCancel()
+                    }
+                }
+            } message: {
+                Text(pushConfirmationMessage)
+            }
             .onAppear {
                 gitOperationHandler.appState = appState
             }
@@ -98,6 +115,22 @@ struct ContentView: View {
             .onChange(of: themeManager.customColors) { _, _ in
                 themeRefreshTrigger = UUID()
             }
+    }
+
+    private var pushConfirmationTitle: String {
+        guard let confirmation = gitOperationHandler.pendingPushConfirmation else { return "Push Confirmation" }
+        if case .requiresConfirmation(_, let severity) = confirmation.result {
+            return severity.title
+        }
+        return "Push Confirmation"
+    }
+
+    private var pushConfirmationMessage: String {
+        guard let confirmation = gitOperationHandler.pendingPushConfirmation else { return "" }
+        if case .requiresConfirmation(let reason, _) = confirmation.result {
+            return reason
+        }
+        return ""
     }
 
     @ViewBuilder
@@ -125,7 +158,7 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .cloneRepository)) { _ in showCloneSheet = true }
             .onReceive(NotificationCenter.default.publisher(for: .newBranch)) { _ in showNewBranchSheet = true }
             .modifier(GitOperationListeners())
-            .modifier(NavigationListeners(columnVisibility: $columnVisibility, selectedFileDiff: $selectedFileDiff))
+            .modifier(NavigationListeners(columnVisibility: $columnVisibility))
     }
 
     struct GitOperationListeners: ViewModifier {
@@ -165,17 +198,8 @@ struct ContentView: View {
 
     struct NavigationListeners: ViewModifier {
         @Binding var columnVisibility: NavigationSplitViewVisibility
-        @Binding var selectedFileDiff: FileDiff?
         func body(content: Content) -> some View {
             content
-                .onReceive(NotificationCenter.default.publisher(for: .showGraph)) { _ in
-                    selectedFileDiff = nil
-                }
-                .onReceive(NotificationCenter.default.publisher(for: .showHistory)) { _ in
-                    // Logic to show history if it's a separate view state
-                    // For now, history is often part of the graph or a separate tab
-                    NotificationCenter.default.post(name: .showHistory, object: nil)
-                }
                 .onReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
                     withAnimation {
                         columnVisibility = columnVisibility == .all ? .detailOnly : .all
@@ -254,6 +278,8 @@ struct MainLayout: View {
     @State private var selectedFileDiff: FileDiff?
     @State private var isLoadingDiff = false
     @State private var searchText = ""
+    @StateObject private var stagingVM = StagingViewModel()
+    @State private var selectedStagingFile: StagingFile?
 
     // Helper function for group colors
     private func getGroupColor(for repoPath: String) -> Color? {
@@ -317,7 +343,19 @@ struct MainLayout: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
             // Center Panel - Graph OR Diff
-            CenterPanel(selectedFileDiff: $selectedFileDiff, isLoadingDiff: $isLoadingDiff)
+            CenterPanel(
+                selectedFileDiff: $selectedFileDiff,
+                isLoadingDiff: $isLoadingDiff,
+                onStageHunk: selectedStagingFile != nil && !(selectedStagingFile?.isStaged ?? false)
+                    ? { index in await stagingVM.stageHunk(file: selectedStagingFile!.path, hunkIndex: index) }
+                    : nil,
+                onDiscardHunk: selectedStagingFile != nil && !(selectedStagingFile?.isStaged ?? false)
+                    ? { index in await stagingVM.discardHunk(file: selectedStagingFile!.path, hunkIndex: index) }
+                    : nil,
+                onUnstageHunk: selectedStagingFile != nil && (selectedStagingFile?.isStaged ?? false)
+                    ? { index in await stagingVM.unstageHunk(file: selectedStagingFile!.path, hunkIndex: index) }
+                    : nil
+            )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             
             // Bottom Panel (Terminal/Logs) - Resizable
@@ -331,17 +369,16 @@ struct MainLayout: View {
                 // UnifiedBottomPanel handles its own height (28px collapsed, panelHeight expanded)
                 UnifiedBottomPanel(panelManager: bottomPanelManager)
                     .transition(.move(edge: .bottom))
-                    // Force recreation of the panel when repository changes to ensure
-                    // correct context (Terminal sessions, Integration tabs, etc.)
-                    .id(appState.currentRepository?.id.uuidString ?? "no-repo")
             }
         }
         .contextMenu { toolbarConfigurationMenu }
         .onReceive(NotificationCenter.default.publisher(for: .showGraph)) { _ in
             selectedFileDiff = nil
+            selectedStagingFile = nil
         }
         .onReceive(NotificationCenter.default.publisher(for: .showHistory)) { _ in
             selectedFileDiff = nil
+            selectedStagingFile = nil
         }
     }
 
@@ -445,7 +482,12 @@ struct MainLayout: View {
         .navigationSplitViewStyle(.prominentDetail)
         .inspector(isPresented: $showInspector) {
             // Right Panel - Staging/Commit (proper inspector behavior)
-            RightStagingPanel(selectedFileDiff: $selectedFileDiff, isLoadingDiff: $isLoadingDiff)
+            RightStagingPanel(
+                selectedFileDiff: $selectedFileDiff,
+                isLoadingDiff: $isLoadingDiff,
+                stagingVM: stagingVM,
+                selectedStagingFile: $selectedStagingFile
+            )
                 .inspectorColumnWidth(min: DesignTokens.Layout.StagingPanel.minWidth, ideal: DesignTokens.Layout.StagingPanel.idealWidth, max: DesignTokens.Layout.StagingPanel.maxWidth)
                 .background(AppTheme.background)
         }
@@ -553,6 +595,7 @@ struct MainLayout: View {
         .onChange(of: appState.activeTabId) { _, _ in
             // Clear diff when switching repositories
             selectedFileDiff = nil
+            selectedStagingFile = nil
         }
     }
 }

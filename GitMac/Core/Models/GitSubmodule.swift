@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// Represents a Git submodule
 struct GitSubmodule: Identifiable, Hashable {
@@ -21,24 +22,25 @@ enum SubmoduleStatus: String, Hashable {
     case modified = "Modified"
     case upToDate = "Up to date"
     case unknown = "Unknown"
-    
+    case clean = "clean"
+    case mergeConflict = "conflict"
+
     var icon: String {
         switch self {
-        case .initialized: return "checkmark.circle.fill"
-        case .uninitialized: return "circle"
+        case .initialized, .clean, .upToDate: return "checkmark.circle.fill"
+        case .uninitialized: return "minus.circle.fill"
         case .modified: return "exclamationmark.circle.fill"
-        case .upToDate: return "checkmark.circle"
+        case .mergeConflict: return "xmark.circle.fill"
         case .unknown: return "questionmark.circle"
         }
     }
-    
-    var color: String {
+
+    var color: Color {
         switch self {
-        case .initialized: return "green"
-        case .uninitialized: return "gray"
-        case .modified: return "orange"
-        case .upToDate: return "green"
-        case .unknown: return "gray"
+        case .initialized, .clean, .upToDate: return .green
+        case .uninitialized, .unknown: return .gray
+        case .modified: return .orange
+        case .mergeConflict: return .red
         }
     }
 }

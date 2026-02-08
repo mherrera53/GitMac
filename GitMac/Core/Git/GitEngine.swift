@@ -393,6 +393,21 @@ actor GitEngine {
         return commit
     }
 
+    /// Get the last commit message (for amend)
+    func getLastCommitMessage(at path: String) async throws -> String {
+        let result = await shellExecutor.execute(
+            "git",
+            arguments: ["log", "-1", "--format=%B"],
+            workingDirectory: path
+        )
+
+        guard result.exitCode == 0 else {
+            throw GitError.commandFailed("git log", result.stderr)
+        }
+
+        return result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     // MARK: - Staging Operations
 
     /// Get repository status
@@ -1001,8 +1016,16 @@ actor GitEngine {
 
     /// Get diff for a file
     /// Truncates output for very large diffs to prevent UI freeze
-    func getDiff(for file: String? = nil, staged: Bool = false, at path: String) async throws -> String {
+    func getDiff(for file: String? = nil, staged: Bool = false, at path: String, contextLines: Int? = nil, ignoreWhitespace: Bool = false) async throws -> String {
         var args = ["diff", "--no-color", "--no-ext-diff"]
+
+        if let contextLines = contextLines {
+            args.append("--unified=\(contextLines)")
+        }
+
+        if ignoreWhitespace {
+            args.append("-w")
+        }
 
         if staged {
             args.append("--cached")
@@ -1636,7 +1659,7 @@ actor GitEngine {
         // Format: sha, parents, author name, author email, author date, committer name, committer email, committer date, subject
         var args = [
             "log",
-            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x01",
+            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x00%G?%x01",
             "-n", String(limit),
             "--skip", String(skip)
         ]
@@ -1663,7 +1686,7 @@ actor GitEngine {
         let args = [
             "log",
             "--follow",
-            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x01",
+            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x00%G?%x01",
             "-n", String(limit),
             "--skip", String(skip),
             "--",
@@ -1706,7 +1729,10 @@ actor GitEngine {
             let authorDate = parseGitDate(authorDateStr) ?? Date()
             let committerDate = parseGitDate(committerDateStr) ?? Date()
 
-            commits.append(Commit(
+            // Field 9 is signature status (%G?) if available
+            let sigStatus = fields.count > 9 ? fields[9].trimmingCharacters(in: .whitespacesAndNewlines) : nil
+
+            var commit = Commit(
                 sha: sha,
                 message: subject.trimmingCharacters(in: .whitespacesAndNewlines),
                 author: authorName,
@@ -1716,7 +1742,11 @@ actor GitEngine {
                 committerEmail: committerEmail,
                 committerDate: committerDate,
                 parentSHAs: parentSHAs
-            ))
+            )
+            if let sig = sigStatus, !sig.isEmpty, sig != "N" {
+                commit.signatureStatus = sig
+            }
+            commits.append(commit)
         }
 
         return commits

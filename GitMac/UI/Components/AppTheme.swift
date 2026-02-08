@@ -329,7 +329,7 @@ enum AppTheme {
         ]
     }
 
-    /// Static graph lane colors (for compile-time contexts)
+    /// Static graph lane colors (for compile-time contexts) - 16 distinct colors for complex graphs
     static let graphLaneColors: [Color] = [
         Color(nsColor: .systemBlue),
         Color(nsColor: .systemGreen),
@@ -338,7 +338,15 @@ enum AppTheme {
         Color(nsColor: .systemRed),
         Color(nsColor: .systemCyan),
         Color(nsColor: .systemPink),
-        Color(nsColor: .systemYellow)
+        Color(nsColor: .systemYellow),
+        Color(nsColor: .systemTeal),
+        Color(nsColor: .systemIndigo),
+        Color(nsColor: .systemMint),
+        Color(nsColor: .systemBrown),
+        Color(red: 0.4, green: 0.7, blue: 1.0),   // Light blue
+        Color(red: 1.0, green: 0.5, blue: 0.3),   // Coral
+        Color(red: 0.6, green: 0.9, blue: 0.4),   // Lime
+        Color(red: 0.9, green: 0.4, blue: 0.8)    // Magenta
     ]
 
     // MARK: - Diff Colors (Kaleidoscope-style)

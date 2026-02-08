@@ -95,14 +95,14 @@ struct JiraPanel: View {
 
 // MARK: - Issues List
 
-struct JiraIssuesListView: View {
+struct JiraPanelIssuesListView: View {
     let issues: [JiraIssue]
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: DesignTokens.Spacing.xs) {
                 ForEach(issues) { issue in
-                    JiraIssueRow(issue: issue)
+                    JiraPanelIssueRow(issue: issue)
                 }
             }
             .padding(DesignTokens.Spacing.sm)
@@ -110,7 +110,7 @@ struct JiraIssuesListView: View {
     }
 }
 
-struct JiraIssueRow: View {
+struct JiraPanelIssueRow: View {
     let issue: JiraIssue
     @State private var isHovered = false
 
@@ -229,7 +229,7 @@ struct JiraIssueRow: View {
 
 // MARK: - Settings Sheet
 
-struct JiraSettingsSheet: View {
+struct JiraPanelSettingsSheet: View {
     @ObservedObject var viewModel: JiraViewModel
     @Environment(\.dismiss) private var dismiss
 
@@ -280,10 +280,4 @@ struct JiraSettingsSheet: View {
         .frame(width: 350, height: 200)
         .background(AppTheme.panel)
     }
-}
-
-// MARK: - Notification
-
-extension Notification.Name {
-    static let insertJiraRef = Notification.Name("insertJiraRef")
 }

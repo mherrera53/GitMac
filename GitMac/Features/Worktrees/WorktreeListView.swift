@@ -2,7 +2,7 @@ import SwiftUI
 
 struct WorktreeListView: View {
     @EnvironmentObject var appState: AppState
-    @StateObject private var viewModel = WorktreeListViewModel()
+    @StateObject private var manager = WorktreeManager.shared
     @State private var showAddSheet = false
     @State private var selectedWorktree: Worktree?
 
@@ -19,7 +19,7 @@ struct WorktreeListView: View {
 
                 HStack(spacing: DesignTokens.Spacing.sm) {
                     Button {
-                        Task { await viewModel.refresh(at: appState.currentRepository?.path) }
+                        Task { await manager.refresh(at: appState.currentRepository?.path) }
                     } label: {
                         Image(systemName: "arrow.clockwise")
                             .font(DesignTokens.Typography.caption)
@@ -42,7 +42,7 @@ struct WorktreeListView: View {
             .background(AppTheme.textMuted.opacity(0.1))
 
             // Worktree list
-            if viewModel.isLoading {
+            if manager.isLoading {
                 HStack {
                     Spacer()
                     ProgressView()
@@ -50,7 +50,7 @@ struct WorktreeListView: View {
                     Spacer()
                 }
                 .padding(.vertical, 20)
-            } else if viewModel.worktrees.isEmpty {
+            } else if manager.worktrees.isEmpty {
                 VStack(spacing: DesignTokens.Spacing.sm) {
                     Image(systemName: "folder.badge.plus")
                         .font(DesignTokens.Typography.iconXL)
@@ -64,7 +64,7 @@ struct WorktreeListView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(viewModel.worktrees) { worktree in
+                        ForEach(manager.worktrees) { worktree in
                             WorktreeRow(
                                 worktree: worktree,
                                 isSelected: selectedWorktree?.id == worktree.id,
@@ -79,13 +79,13 @@ struct WorktreeListView: View {
             }
         }
         .task {
-            await viewModel.refresh(at: appState.currentRepository?.path)
+            await manager.refresh(at: appState.currentRepository?.path)
         }
         .onChange(of: appState.currentRepository?.path) { _, newPath in
-            Task { await viewModel.refresh(at: newPath) }
+            Task { await manager.refresh(at: newPath) }
         }
         .sheet(isPresented: $showAddSheet) {
-            AddWorktreeSheet(viewModel: viewModel)
+            AddWorktreeSheet()
         }
     }
 
@@ -98,20 +98,16 @@ struct WorktreeListView: View {
     private func removeWorktree(_ worktree: Worktree) {
         guard !worktree.isMain else { return }
         Task {
-            if let path = appState.currentRepository?.path {
-                await viewModel.removeWorktree(worktree, at: path)
-            }
+            try? await manager.removeWorktree(worktree)
         }
     }
 
     private func toggleLock(_ worktree: Worktree) {
         Task {
-            if let path = appState.currentRepository?.path {
-                if worktree.isLocked {
-                    await viewModel.unlockWorktree(worktree, at: path)
-                } else {
-                    await viewModel.lockWorktree(worktree, at: path)
-                }
+            if worktree.isLocked {
+                try? await manager.unlockWorktree(worktree)
+            } else {
+                try? await manager.lockWorktree(worktree)
             }
         }
     }
@@ -224,7 +220,7 @@ struct WorktreeRow: View {
 struct AddWorktreeSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
-    @ObservedObject var viewModel: WorktreeListViewModel
+    @StateObject private var manager = WorktreeManager.shared
 
     @State private var worktreePath = ""
     @State private var selectedBranch = ""
@@ -313,89 +309,140 @@ struct AddWorktreeSheet: View {
     }
 
     private func createWorktree() {
-        guard let repoPath = appState.currentRepository?.path else { return }
-
         Task {
-            await viewModel.addWorktree(
+            _ = try? await manager.addWorktree(
                 path: worktreePath,
                 branch: createNewBranch ? nil : (selectedBranch.isEmpty ? nil : selectedBranch),
                 newBranch: createNewBranch ? newBranchName : nil,
-                detach: isDetached,
-                at: repoPath
+                detach: isDetached
             )
             dismiss()
         }
     }
 }
 
-// MARK: - View Model
-@MainActor
-class WorktreeListViewModel: ObservableObject {
-    @Published var worktrees: [Worktree] = []
-    @Published var isLoading = false
-    @Published var errorMessage: String?
+// MARK: - Create Worktree From Commit Sheet
+struct CreateWorktreeFromCommitSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var appState: AppState
+    @StateObject private var manager = WorktreeManager.shared
 
-    private let engine = GitEngine()
+    let commitSHA: String
 
-    func refresh(at path: String?) async {
-        guard let path = path else {
-            worktrees = []
-            return
+    @State private var worktreePath = ""
+    @State private var createNewBranch = false
+    @State private var newBranchName = ""
+
+    private var shortSHA: String { String(commitSHA.prefix(7)) }
+
+    var body: some View {
+        VStack(spacing: DesignTokens.Spacing.xl) {
+            // Header
+            HStack(spacing: DesignTokens.Spacing.md) {
+                Image(systemName: "folder.badge.plus")
+                    .font(.system(size: 28))
+                    .foregroundStyle(AppTheme.accentPurple)
+
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
+                    Text("Create Worktree")
+                        .font(DesignTokens.Typography.title3.weight(.semibold))
+                        .foregroundColor(AppTheme.textPrimary)
+                    Text("from commit \(shortSHA)")
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                // Worktree path
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                    Text("Worktree Path")
+                        .font(DesignTokens.Typography.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(AppTheme.textSecondary)
+                    HStack {
+                        DSTextField(placeholder: "Path for new worktree", text: $worktreePath)
+                            .padding(DesignTokens.Spacing.md)
+                            .background(AppTheme.textMuted.opacity(0.15))
+                            .cornerRadius(DesignTokens.CornerRadius.md)
+
+                        Button("Browse") {
+                            let panel = NSSavePanel()
+                            panel.canCreateDirectories = true
+                            panel.nameFieldStringValue = "worktree-\(shortSHA)"
+
+                            panel.begin { response in
+                                if response == .OK {
+                                    Task { @MainActor in
+                                        worktreePath = panel.url?.path ?? ""
+                                    }
+                                }
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+
+                // Branch options
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                    DSToggle("Create new branch at this commit", isOn: $createNewBranch)
+
+                    if createNewBranch {
+                        DSTextField(placeholder: "New branch name", text: $newBranchName)
+                            .padding(DesignTokens.Spacing.md)
+                            .background(AppTheme.textMuted.opacity(0.15))
+                            .cornerRadius(DesignTokens.CornerRadius.md)
+                    } else {
+                        HStack(spacing: DesignTokens.Spacing.xs) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(DesignTokens.Typography.caption)
+                                .foregroundColor(AppTheme.warning)
+                            Text("Worktree will be in detached HEAD state")
+                                .font(DesignTokens.Typography.caption)
+                                .foregroundColor(AppTheme.textSecondary)
+                        }
+                        .padding(.vertical, DesignTokens.Spacing.xs)
+                    }
+                }
+            }
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(.bordered)
+
+                Spacer()
+
+                Button("Create Worktree") {
+                    createWorktree()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(worktreePath.isEmpty || (createNewBranch && newBranchName.isEmpty))
+            }
         }
-
-        isLoading = true
-        do {
-            worktrees = try await engine.listWorktrees(at: path)
-        } catch {
-            errorMessage = error.localizedDescription
-            worktrees = []
-        }
-        isLoading = false
+        .padding(DesignTokens.Spacing.xl)
+        .frame(width: 450)
+        .background(AppTheme.background)
     }
 
-    func addWorktree(path: String, branch: String?, newBranch: String?, detach: Bool, at repoPath: String) async {
-        isLoading = true
-        do {
-            _ = try await engine.addWorktree(
-                path: path,
-                branch: branch,
-                newBranch: newBranch,
-                detach: detach,
-                at: repoPath
-            )
-            await refresh(at: repoPath)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-        isLoading = false
-    }
-
-    func removeWorktree(_ worktree: Worktree, at repoPath: String) async {
-        isLoading = true
-        do {
-            try await engine.removeWorktree(path: worktree.path, force: false, at: repoPath)
-            await refresh(at: repoPath)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-        isLoading = false
-    }
-
-    func lockWorktree(_ worktree: Worktree, at repoPath: String) async {
-        do {
-            try await engine.lockWorktree(path: worktree.path, at: repoPath)
-            await refresh(at: repoPath)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    func unlockWorktree(_ worktree: Worktree, at repoPath: String) async {
-        do {
-            try await engine.unlockWorktree(path: worktree.path, at: repoPath)
-            await refresh(at: repoPath)
-        } catch {
-            errorMessage = error.localizedDescription
+    private func createWorktree() {
+        Task {
+            if createNewBranch && !newBranchName.isEmpty {
+                // Create worktree with new branch at commit
+                _ = try? await manager.addWorktree(
+                    path: worktreePath,
+                    branch: commitSHA,
+                    newBranch: newBranchName,
+                    detach: false
+                )
+            } else {
+                // Create detached worktree at commit
+                _ = try? await manager.addWorktreeFromCommit(
+                    path: worktreePath,
+                    commitSHA: commitSHA
+                )
+            }
+            dismiss()
         }
     }
 }

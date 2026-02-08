@@ -1355,8 +1355,8 @@ struct CreatePullRequestSheet: View {
                 detail: title
             )
 
-            // Refresh PR tracker immediately so branch context menu updates
-            await BranchPRTracker.shared.refresh()
+            // Add PR directly to tracker cache for immediate UI update (bypasses debounce)
+            BranchPRTracker.shared.addPR(newPR)
 
             // Also refresh branchManager's PR cache
             await appState.branchManager?.refreshPRs()

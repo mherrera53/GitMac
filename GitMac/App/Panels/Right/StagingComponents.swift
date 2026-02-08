@@ -5,6 +5,7 @@ import AppKit
 struct StagingSectionWithTree: View {
     let title: String
     let count: Int
+    let totalCount: Int  // Total count (may differ from count when paginated)
     let actionIcon: String
     let actionColor: Color
     let onAction: () -> Void
@@ -18,6 +19,10 @@ struct StagingSectionWithTree: View {
     let onStageFolder: (String) -> Void
     var onDiscard: ((StagingFile) -> Void)? = nil
     var onDelete: ((StagingFile) -> Void)? = nil
+    var onDiscardFolder: ((String) -> Void)? = nil
+    var onDeleteFolder: ((String) -> Void)? = nil
+    var hasMore: Bool = false
+    var onLoadMore: (() -> Void)? = nil
 
     @State private var isExpanded = true
 
@@ -27,43 +32,60 @@ struct StagingSectionWithTree: View {
         return files.filter { ($0.path as NSString).pathExtension.lowercased() == ext.lowercased() }
     }
 
+    private var isPaginated: Bool {
+        count < totalCount
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack(spacing: 8) {
+            // Header - compact for 14" Retina
+            HStack(spacing: 6) {
                 Button {
                     withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() }
                 } label: {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
 
                 Text(title)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
+                    .lineLimit(1)
 
-                Text("\(count)")
-                    .font(.system(size: 10))
-                    .foregroundColor(AppTheme.textMuted)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(AppTheme.backgroundTertiary)
-                    .cornerRadius(4)
+                // Show loaded/total when paginated
+                if isPaginated {
+                    Text("\(count)/\(totalCount)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppTheme.warning)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(AppTheme.warning.opacity(0.15))
+                        .clipShape(.rect(cornerRadius: 3))
+                } else {
+                    Text("\(totalCount)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppTheme.textMuted)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(AppTheme.backgroundTertiary)
+                        .clipShape(.rect(cornerRadius: 3))
+                }
 
-                Spacer()
+                Spacer(minLength: 4)
 
                 Button(action: onAction) {
                     Image(systemName: actionIcon)
-                        .font(.system(size: 14))
-                        .foregroundColor(actionColor)
+                        .font(.system(size: 13))
+                        .foregroundStyle(actionColor)
                 }
                 .buttonStyle(.plain)
                 .help(isStaged ? "Unstage All" : "Stage All")
+                .accessibilityLabel(isStaged ? "Unstage all \(totalCount) files" : "Stage all \(totalCount) files")
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
             .background(.thinMaterial)
 
             // Content
@@ -73,12 +95,12 @@ struct StagingSectionWithTree: View {
                         if filteredFiles.isEmpty {
                             Text(isStaged ? "No staged changes" : "No unstaged changes")
                                 .font(.system(size: 11))
-                                .foregroundColor(AppTheme.textMuted)
+                                .foregroundStyle(AppTheme.textMuted)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
                         } else if viewMode == .tree {
                             StagingTreeView(
-                                files: files,  // Pass ALL files to build full tree
+                                files: files,  // Pass loaded files to build tree
                                 isStaged: isStaged,
                                 selectedFilePath: selectedFilePath,
                                 extensionFilter: extensionFilter,  // Filter applied in tree
@@ -86,7 +108,9 @@ struct StagingSectionWithTree: View {
                                 onStage: onStage,
                                 onStageFolder: onStageFolder,
                                 onDiscard: onDiscard,
-                                onDelete: onDelete
+                                onDelete: onDelete,
+                                onDiscardFolder: onDiscardFolder,
+                                onDeleteFolder: onDeleteFolder
                             )
                         } else {
                             ForEach(filteredFiles) { file in
@@ -95,9 +119,33 @@ struct StagingSectionWithTree: View {
                                     isStaged: isStaged,
                                     isSelected: file.path == selectedFilePath,
                                     onSelect: { onSelect(file) },
-                                    onStage: { onStage(file) }
+                                    onStage: { onStage(file) },
+                                    onDiscard: onDiscard.map { cb in { cb(file) } },
+                                    onDelete: onDelete.map { cb in { cb(file) } }
                                 )
                             }
+                        }
+
+                        // Load More button when paginated
+                        if hasMore {
+                            Button {
+                                onLoadMore?()
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "arrow.down.circle")
+                                        .font(.system(size: 12))
+                                    Text("Load more (\(totalCount - count) remaining)")
+                                        .font(.system(size: 11))
+                                }
+                                .foregroundStyle(AppTheme.accent)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(AppTheme.accent.opacity(0.08))
+                                .clipShape(.rect(cornerRadius: 6))
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
                         }
                     }
                 }
@@ -117,6 +165,8 @@ struct StagingTreeView: View {
     let onStageFolder: (String) -> Void
     var onDiscard: ((StagingFile) -> Void)? = nil
     var onDelete: ((StagingFile) -> Void)? = nil
+    var onDiscardFolder: ((String) -> Void)? = nil
+    var onDeleteFolder: ((String) -> Void)? = nil
 
     var body: some View {
         GenericFileTreeView<StagingFile, StagingRowContent>.forStagingFiles(
@@ -136,7 +186,9 @@ struct StagingTreeView: View {
                 onStage: onStage,
                 onStageFolder: onStageFolder,
                 onDiscard: onDiscard,
-                onDelete: onDelete
+                onDelete: onDelete,
+                onDiscardFolder: onDiscardFolder,
+                onDeleteFolder: onDeleteFolder
             )
         }
     }
@@ -154,6 +206,8 @@ struct StagingRowContent: View {
     let onStageFolder: (String) -> Void
     var onDiscard: ((StagingFile) -> Void)? = nil
     var onDelete: ((StagingFile) -> Void)? = nil
+    var onDiscardFolder: ((String) -> Void)? = nil
+    var onDeleteFolder: ((String) -> Void)? = nil
 
     @State private var isHovered = false
 
@@ -170,29 +224,44 @@ struct StagingRowContent: View {
     }
 
     private var folderContent: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 5) {
             Image(systemName: "folder.fill")
-                .font(.system(size: 13))
+                .font(.system(size: 12))
                 .foregroundColor(AppTheme.warning)
             Text(fileName)
                 .font(.system(size: 11))
                 .foregroundColor(AppTheme.textPrimary)
                 .lineLimit(1)
-            Spacer()
+                .truncationMode(.middle)
+            Spacer(minLength: 2)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
         .contextMenu {
             Button { onStageFolder(path) } label: {
                 Label(isStaged ? "Unstage Folder" : "Stage Folder",
                       systemImage: isStaged ? "minus.circle" : "plus.circle")
+            }
+            if !isStaged {
+                if let onDiscardFolder {
+                    Divider()
+                    Button(role: .destructive) { onDiscardFolder(path) } label: {
+                        Label("Revert Folder Changes", systemImage: "arrow.uturn.backward")
+                    }
+                }
+                if let onDeleteFolder {
+                    if onDiscardFolder == nil { Divider() }
+                    Button(role: .destructive) { onDeleteFolder(path) } label: {
+                        Label("Delete Untracked in Folder", systemImage: "trash")
+                    }
+                }
             }
         }
     }
 
     private var fileContent: some View {
         Button { if let f = file { onSelect(f) } } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 if let f = file {
                     StatusIcon(stagingStatus: f.status, size: .small)
                 }
@@ -201,22 +270,24 @@ struct StagingRowContent: View {
                     .font(.system(size: 11))
                     .foregroundColor(AppTheme.textPrimary)
                     .lineLimit(1)
-                Spacer()
+                    .truncationMode(.middle)
+                Spacer(minLength: 2)
 
                 if let f = file, f.hasChanges, f.status != .deleted {
                     DiffStatsView(additions: f.additions, deletions: f.deletions, size: .small, style: .compact)
+                        .fixedSize()
                 }
 
                 if (isHovered || isSelected), let f = file {
                     Button { onStage(f) } label: {
                         Image(systemName: isStaged ? "minus.circle.fill" : "plus.circle.fill")
-                            .font(.system(size: 14))
+                            .font(.system(size: 13))
                             .foregroundColor(isStaged ? AppTheme.error : AppTheme.success)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background(
                 RoundedRectangle(cornerRadius: 4)
@@ -248,6 +319,13 @@ struct StagingRowContent: View {
             }
             Divider()
             Button {
+                onSelect(f)
+                NotificationCenter.default.post(name: .showFileHistory, object: f.path)
+            } label: {
+                Label("Show File History", systemImage: "clock.arrow.circlepath")
+            }
+            Divider()
+            Button {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(f.path, forType: .string)
             } label: {
@@ -264,37 +342,39 @@ struct ClickableFileRow: View {
     var isSelected: Bool = false
     let onSelect: () -> Void
     let onStage: () -> Void
+    var onDiscard: (() -> Void)? = nil
+    var onDelete: (() -> Void)? = nil
     @State private var isHovered = false
 
     var body: some View {
         Button(action: onSelect) {
-            HStack(spacing: 8) {
+            HStack(spacing: 5) {
                 // Status icon
                 Image(systemName: file.status.icon)
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(file.status.color)
-                    .frame(width: 14)
+                    .foregroundStyle(file.status.color)
+                    .frame(width: 12)
 
                 // File path
                 Text(file.path)
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
 
-                Spacer()
+                Spacer(minLength: 2)
 
-                if isHovered {
+                if isHovered || isSelected {
                     Button(action: onStage) {
                         Image(systemName: isStaged ? "minus.circle" : "plus.circle")
                             .font(.system(size: 12))
-                            .foregroundColor(isStaged ? AppTheme.error : AppTheme.success)
+                            .foregroundStyle(isStaged ? AppTheme.error : AppTheme.success)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
             .background(
                 RoundedRectangle(cornerRadius: 4)
                     .fill(isSelected ? AppTheme.accent.opacity(0.3) : (isHovered ? AppTheme.hover : Color.clear))
@@ -302,6 +382,9 @@ struct ClickableFileRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(isStaged ? "Staged" : "Unstaged") file \((file.path as NSString).lastPathComponent), \(file.status.accessibilityDescription)")
+        .accessibilityHint(isStaged ? "Double-click to view diff, hover to unstage" : "Double-click to view diff, hover to stage")
         .onHover { isHovered = $0 }
         .contextMenu {
             Button {
@@ -309,6 +392,25 @@ struct ClickableFileRow: View {
             } label: {
                 Label(isStaged ? "Unstage File" : "Stage File",
                       systemImage: isStaged ? "minus.circle" : "plus.circle")
+            }
+            if !isStaged, let onDiscard, file.status != .untracked {
+                Divider()
+                Button(role: .destructive) { onDiscard() } label: {
+                    Label("Revert Changes", systemImage: "arrow.uturn.backward")
+                }
+            }
+            if !isStaged, let onDelete, file.status == .untracked {
+                Divider()
+                Button(role: .destructive) { onDelete() } label: {
+                    Label("Delete File", systemImage: "trash")
+                }
+            }
+            Divider()
+            Button {
+                onSelect()
+                NotificationCenter.default.post(name: .showFileHistory, object: file.path)
+            } label: {
+                Label("Show File History", systemImage: "clock.arrow.circlepath")
             }
             Divider()
             Button {

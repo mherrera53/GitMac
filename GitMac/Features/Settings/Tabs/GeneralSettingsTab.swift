@@ -7,6 +7,7 @@ struct GeneralSettingsView: View {
     @AppStorage("defaultClonePath") private var defaultClonePath = "~/Developer"
     @AppStorage("confirmBeforePush") private var confirmBeforePush = true
     @AppStorage("confirmBeforeForce") private var confirmBeforeForce = true
+    @AppStorage("notificationSounds") private var notificationSounds = false
 
     var body: some View {
         ScrollView {
@@ -70,6 +71,10 @@ struct GeneralSettingsView: View {
             SettingsSection(title: "Confirmations") {
                 DSToggle("Confirm before pushing", isOn: $confirmBeforePush)
                 DSToggle("Confirm before force operations", isOn: $confirmBeforeForce)
+            }
+
+            SettingsSection(title: "Notifications") {
+                DSToggle("Play sounds for notifications", isOn: $notificationSounds)
             }
             }
         }

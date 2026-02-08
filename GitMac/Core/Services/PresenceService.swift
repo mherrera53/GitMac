@@ -107,10 +107,18 @@ class PresenceService: ObservableObject {
     
     private init() {
         isEnabled = UserDefaults.standard.bool(forKey: "presenceEnabled")
-        
-        // Start cleanup timer
+
+        // Only start cleanup timer if presence is actually enabled
+        if isEnabled {
+            startCleanupTimer()
+        }
+    }
+
+    private func startCleanupTimer() {
+        cleanupTimer?.invalidate()
         cleanupTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
+                guard AppActivityManager.shared.isAppActive else { return }
                 self?.cleanupStaleUsers()
             }
         }
@@ -165,12 +173,16 @@ class PresenceService: ObservableObject {
         // Start browser
         startBrowser()
         
-        // Start broadcast timer
+        // Start broadcast timer — skips when app is inactive
         broadcastTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
+                guard AppActivityManager.shared.isAppActive else { return }
                 self?.broadcastPresence()
             }
         }
+
+        // Start cleanup timer for presence
+        startCleanupTimer()
         
         connectionStatus = .connected
     }

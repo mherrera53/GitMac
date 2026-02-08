@@ -62,6 +62,13 @@ struct SidebarBranchRow: View {
                 .foregroundColor(branch.isCurrent ? AppTheme.textPrimary : AppTheme.textSecondary)
                 .lineLimit(1)
 
+            if branch.isProtected {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 9))
+                    .foregroundStyle(AppTheme.warning)
+                    .help("Protected branch")
+            }
+
             Spacer()
 
             if branch.isCurrent {
@@ -82,6 +89,9 @@ struct SidebarBranchRow: View {
         )
         .scaleEffect(isDropTarget ? 1.02 : 1.0)
         .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isDropTarget)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(branch.isRemote ? "Remote branch" : "Branch") \(branch.isRemote ? branch.displayName : branch.name)\(branch.isCurrent ? ", current" : "")")
+        .accessibilityAddTraits(branch.isCurrent ? [.isSelected] : [])
         .onHover { isHovered = $0 }
         .onTapGesture {
             appState.selectedBranch = branch
@@ -167,7 +177,14 @@ struct SidebarBranchRow: View {
 
             Button(role: .destructive) {
                 Task {
-                    try? await appState.gitService.deleteBranch(named: branch.name)
+                    do {
+                        try await appState.gitService.deleteBranch(named: branch.name)
+                        // Refresh branchManager to update sidebar immediately
+                        await appState.branchManager?.refresh()
+                        await appState.refresh()
+                    } catch {
+                        NotificationManager.shared.error("Delete failed", detail: error.localizedDescription)
+                    }
                 }
             } label: {
                 Label("Delete", systemImage: "trash")
@@ -268,8 +285,10 @@ struct SidebarBranchRow: View {
     private func mergePR(_ pr: GitHubPullRequest, method: MergeMethod) async {
         do {
             try await prTracker.mergePR(pr, method: method)
-            // Refresh repository after merge
+            // Refresh repository and branchManager after merge for immediate UI update
             try? await appState.gitService.refresh()
+            await appState.branchManager?.refresh()
+            await appState.refresh()
         } catch {
             NotificationManager.shared.error(
                 "Merge failed",

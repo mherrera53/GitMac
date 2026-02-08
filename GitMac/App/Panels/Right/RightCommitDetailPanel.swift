@@ -9,6 +9,43 @@ struct RightCommitDetailPanel: View {
     let onClose: () -> Void
     @EnvironmentObject var appState: AppState
 
+    @State private var fileFilterText = ""
+    @State private var filterByStatus: CommitFile.CommitFileStatus?
+    @State private var showFilterBar = false
+
+    private var filteredFiles: [CommitFile] {
+        var files = viewModel.changedFiles
+
+        // Text filter (path or extension)
+        if !fileFilterText.isEmpty {
+            let query = fileFilterText.lowercased()
+            files = files.filter { file in
+                file.path.lowercased().contains(query)
+            }
+        }
+
+        // Status filter
+        if let status = filterByStatus {
+            files = files.filter { $0.status == status }
+        }
+
+        return files
+    }
+
+    /// Unique file extensions present in the changed files
+    private var availableExtensions: [String] {
+        let exts = Set(viewModel.changedFiles.compactMap { file -> String? in
+            let ext = URL(fileURLWithPath: file.path).pathExtension
+            return ext.isEmpty ? nil : ext
+        })
+        return exts.sorted()
+    }
+
+    /// Unique statuses present in the changed files
+    private var availableStatuses: [CommitFile.CommitFileStatus] {
+        Array(Set(viewModel.changedFiles.map(\.status)))
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Commit header
@@ -68,14 +105,32 @@ struct RightCommitDetailPanel: View {
 
             Rectangle().fill(AppTheme.border).frame(height: 1)
 
-            // Changed files
+            // Changed files header with filter
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
                     Text("Changed Files")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(AppTheme.textMuted)
                     Spacer()
-                    Text("\(viewModel.changedFiles.count)")
+
+                    // Filter toggle
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showFilterBar.toggle()
+                            if !showFilterBar {
+                                fileFilterText = ""
+                                filterByStatus = nil
+                            }
+                        }
+                    } label: {
+                        Image(systemName: showFilterBar ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                            .font(.system(size: 13))
+                            .foregroundStyle(showFilterBar ? AppTheme.accent : AppTheme.textMuted)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Filter files")
+
+                    Text("\(filteredFiles.count)\(filteredFiles.count != viewModel.changedFiles.count ? "/\(viewModel.changedFiles.count)" : "")")
                         .font(.system(size: 11))
                         .foregroundColor(AppTheme.textMuted)
                         .padding(.horizontal, 6)
@@ -86,6 +141,11 @@ struct RightCommitDetailPanel: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(.thinMaterial)
+
+                // Filter bar
+                if showFilterBar {
+                    fileFilterBar
+                }
 
                 if viewModel.isLoading {
                     HStack {
@@ -98,14 +158,28 @@ struct RightCommitDetailPanel: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            ForEach(viewModel.changedFiles) { file in
+                            ForEach(filteredFiles) { file in
                                 CommitFileRow(
                                     file: file,
                                     repositoryPath: appState.currentRepository?.path ?? "",
                                     onSelect: { loadCommitFileDiff(file) }
                                 )
                             }
-                            if viewModel.changedFiles.isEmpty {
+                            if filteredFiles.isEmpty && !viewModel.changedFiles.isEmpty {
+                                VStack(spacing: 4) {
+                                    Text("No files match filter")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(AppTheme.textMuted)
+                                    Button("Clear filter") {
+                                        fileFilterText = ""
+                                        filterByStatus = nil
+                                    }
+                                    .font(.system(size: 11))
+                                    .buttonStyle(.borderless)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                            } else if viewModel.changedFiles.isEmpty {
                                 Text("No files changed")
                                     .font(.system(size: 11))
                                     .foregroundColor(AppTheme.textMuted)
@@ -120,10 +194,99 @@ struct RightCommitDetailPanel: View {
             Spacer()
         }
         .task(id: commit.sha) {
-            // Load files when commit changes or panel appears
             guard let path = appState.currentRepository?.path else { return }
             await viewModel.loadCommitFiles(sha: commit.sha, at: path)
         }
+    }
+
+    // MARK: - Filter Bar
+
+    private var fileFilterBar: some View {
+        VStack(spacing: 6) {
+            // Search field
+            HStack(spacing: 4) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppTheme.textMuted)
+                TextField("Filter by name or path...", text: $fileFilterText)
+                    .font(.system(size: 11))
+                    .textFieldStyle(.plain)
+                if !fileFilterText.isEmpty {
+                    Button {
+                        fileFilterText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(AppTheme.textMuted)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(AppTheme.backgroundTertiary)
+            .cornerRadius(4)
+
+            // Status filter chips
+            if availableStatuses.count > 1 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 4) {
+                        fileFilterChip(label: "All", isActive: filterByStatus == nil) {
+                            filterByStatus = nil
+                        }
+                        ForEach(availableStatuses, id: \.self) { status in
+                            fileFilterChip(
+                                label: status.icon,
+                                color: status.color,
+                                isActive: filterByStatus == status
+                            ) {
+                                filterByStatus = filterByStatus == status ? nil : status
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Extension filter chips
+            if availableExtensions.count > 1 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 4) {
+                        ForEach(availableExtensions, id: \.self) { ext in
+                            fileFilterChip(
+                                label: ".\(ext)",
+                                isActive: fileFilterText == ".\(ext)"
+                            ) {
+                                fileFilterText = fileFilterText == ".\(ext)" ? "" : ".\(ext)"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(AppTheme.backgroundSecondary.opacity(0.5))
+    }
+
+    @ViewBuilder
+    private func fileFilterChip(label: String, color: Color? = nil, isActive: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 3) {
+                if let color = color {
+                    Circle()
+                        .fill(color)
+                        .frame(width: 6, height: 6)
+                }
+                Text(label)
+                    .font(.system(size: 10, weight: isActive ? .semibold : .regular))
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(isActive ? AppTheme.accent.opacity(0.2) : AppTheme.backgroundTertiary)
+            .foregroundStyle(isActive ? AppTheme.accent : AppTheme.textSecondary)
+            .cornerRadius(4)
+        }
+        .buttonStyle(.plain)
     }
 
     private func loadCommitFileDiff(_ file: CommitFile) {

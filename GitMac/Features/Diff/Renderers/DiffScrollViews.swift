@@ -7,11 +7,12 @@ struct UnifiedDiffScrollView<Content: View>: View {
     @Binding var viewportHeight: CGFloat
     var viewportWidth: Binding<CGFloat>? = nil
     var contentHeight: Binding<CGFloat>? = nil
+    var enableHorizontalScroll: Bool = true  // Enable horizontal scrolling by default
     var id: String = "DiffScrollView"
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: true) {
+        ScrollView(enableHorizontalScroll ? [.vertical, .horizontal] : [.vertical], showsIndicators: true) {
             ZStack(alignment: .top) {
                 // Reliable Scroll Tracker
                 GeometryReader { geo in
@@ -20,8 +21,13 @@ struct UnifiedDiffScrollView<Content: View>: View {
                 }
                 .frame(height: 1)
 
-                // Content
-                content()
+                // Content - use fixedSize for horizontal sizing when horizontal scroll is enabled
+                if enableHorizontalScroll {
+                    content()
+                        .fixedSize(horizontal: true, vertical: false)
+                } else {
+                    content()
+                }
             }
             .background(
                 GeometryReader { geo in
@@ -57,6 +63,7 @@ struct DiffPair: Identifiable {
     let left: DiffLine?
     let right: DiffLine?
     let hunkHeader: String?
+    var hunkIndex: Int = -1
 }
 
 struct IdentifiedDiffLine: Identifiable {

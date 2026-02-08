@@ -15,6 +15,7 @@ enum BottomPanelType: String, CaseIterable, Identifiable, Codable {
     case jira
     case notion
     case teamActivity
+    case analytics
 
     var id: String { rawValue }
 
@@ -34,6 +35,8 @@ enum BottomPanelType: String, CaseIterable, Identifiable, Codable {
             return "Notion"
         case .teamActivity:
             return "Team Activity"
+        case .analytics:
+            return "Analytics"
         }
     }
 
@@ -53,6 +56,8 @@ enum BottomPanelType: String, CaseIterable, Identifiable, Codable {
             return "doc.text"
         case .teamActivity:
             return "person.3"
+        case .analytics:
+            return "chart.bar.xaxis"
         }
     }
 
@@ -73,6 +78,8 @@ enum BottomPanelType: String, CaseIterable, Identifiable, Codable {
             return AppTheme.textPrimary
         case .teamActivity:
             return AppTheme.accent
+        case .analytics:
+            return AppTheme.success
         }
     }
 }

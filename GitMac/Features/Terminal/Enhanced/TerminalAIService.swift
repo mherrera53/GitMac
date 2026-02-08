@@ -56,7 +56,7 @@ struct OllamaResponse: Codable {
 
 // MARK: - AI Service Configuration
 
-enum AIProvider: String {
+enum TerminalAIProvider: String {
     case ollama = "ollama"
     case openai = "openai"
 }
@@ -256,7 +256,7 @@ class TerminalAIService {
         let ollamaAvailable = await checkOllamaAvailability()
 
         var aiResponse: String?
-        var usedProvider = AIProvider.ollama
+        var usedProvider = TerminalAIProvider.ollama
 
         if ollamaAvailable {
             do {
@@ -265,7 +265,7 @@ class TerminalAIService {
                 print("✅ Got response from Ollama")
             } catch {
                 print("⚠️ Ollama failed: \(error.localizedDescription), falling back to OpenAI")
-                usedProvider = .openai
+                usedProvider = TerminalAIProvider.openai
             }
         } else {
             print("⚠️ Ollama not available, using OpenAI fallback")

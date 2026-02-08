@@ -12,12 +12,12 @@ import Foundation
 // MARK: - Worktree Sidebar Section
 struct WorktreeSidebarSection: View {
     @EnvironmentObject var appState: AppState
-    @StateObject private var viewModel = WorktreeListViewModel()
+    @StateObject private var manager = WorktreeManager.shared
     @State private var showAddSheet = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if viewModel.isLoading {
+            if manager.isLoading {
                 HStack {
                     Spacer()
                     ProgressView()
@@ -26,11 +26,11 @@ struct WorktreeSidebarSection: View {
                 }
                 .padding(.vertical, 8)
             } else {
-                ForEach(viewModel.worktrees) { worktree in
+                ForEach(manager.worktrees) { worktree in
                     WorktreeSidebarRow(worktree: worktree)
                 }
 
-                if viewModel.worktrees.isEmpty {
+                if manager.worktrees.isEmpty {
                     Text("No worktrees")
                         .font(.system(size: 10))
                         .foregroundColor(AppTheme.textMuted)
@@ -56,13 +56,13 @@ struct WorktreeSidebarSection: View {
             }
         }
         .task {
-            await viewModel.refresh(at: appState.currentRepository?.path)
+            await manager.refresh(at: appState.currentRepository?.path)
         }
         .onChange(of: appState.currentRepository?.path) { _, newPath in
-            Task { await viewModel.refresh(at: newPath) }
+            Task { await manager.refresh(at: newPath) }
         }
         .sheet(isPresented: $showAddSheet) {
-            AddWorktreeSheet(viewModel: viewModel)
+            AddWorktreeSheet()
         }
     }
 }
