@@ -599,6 +599,12 @@ struct CommitGraphView: View {
                 }
                 .frame(width: settings.responsiveBranchColumnWidth, alignment: .leading)
                 .padding(.leading, 12)
+
+                ColumnResizer(
+                    width: $settings.branchColumnWidth,
+                    minWidth: 80,
+                    maxWidth: 300
+                )
             }
 
             HStack(spacing: 4) {
@@ -614,10 +620,22 @@ struct CommitGraphView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, DesignTokens.Spacing.sm)
 
+            ColumnResizer(
+                width: $settings.changesColumnWidth,
+                minWidth: 60,
+                maxWidth: 200
+            )
+
             Text("CHANGES")
-                .frame(width: settings.changesColumnWidth, alignment: .leading)
+                .frame(width: settings.responsiveChangesColumnWidth, alignment: .leading)
 
             if settings.shouldShowAuthorColumn {
+                ColumnResizer(
+                    width: $settings.authorColumnWidth,
+                    minWidth: 80,
+                    maxWidth: 200
+                )
+
                 HStack(spacing: 4) {
                     Image(systemName: "person.circle.fill")
                         .font(.system(size: 10, weight: .medium))
@@ -629,6 +647,12 @@ struct CommitGraphView: View {
             }
 
             if settings.shouldShowDateColumn {
+                ColumnResizer(
+                    width: $settings.dateColumnWidth,
+                    minWidth: 60,
+                    maxWidth: 160
+                )
+
                 HStack(spacing: 4) {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 10, weight: .medium))
@@ -640,6 +664,12 @@ struct CommitGraphView: View {
             }
 
             if settings.shouldShowSHAColumn {
+                ColumnResizer(
+                    width: $settings.shaColumnWidth,
+                    minWidth: 60,
+                    maxWidth: 120
+                )
+
                 HStack(spacing: 4) {
                     Image(systemName: "number.circle.fill")
                         .font(.system(size: 10, weight: .medium))
@@ -880,3 +910,61 @@ struct CommitGraphView: View {
 // MARK: - File Changes Indicator
 /// Visual indicator showing file changes with count and add/delete bars
 // FileChangesIndicator is defined in Features/CommitGraph/Components/FileChangesIndicator.swift
+
+// MARK: - Column Resizer
+
+/// Draggable divider between columns for resizing
+struct ColumnResizer: View {
+    @Binding var width: CGFloat
+    let minWidth: CGFloat
+    let maxWidth: CGFloat
+
+    @State private var isHovering = false
+    @State private var isDragging = false
+
+    var body: some View {
+        ZStack {
+            // Hit area for dragging
+            Rectangle()
+                .fill(Color.clear)
+                .frame(width: 8)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            isDragging = true
+                            let newWidth = width + value.translation.width
+                            width = min(maxWidth, max(minWidth, newWidth))
+                        }
+                        .onEnded { _ in
+                            isDragging = false
+                        }
+                )
+                .onHover { hovering in
+                    isHovering = hovering
+                    if hovering {
+                        NSCursor.resizeLeftRight.push()
+                    } else if !isDragging {
+                        NSCursor.pop()
+                    }
+                }
+
+            // Visual divider line
+            Rectangle()
+                .fill(visualColor)
+                .frame(width: 1)
+                .allowsHitTesting(false)
+        }
+        .frame(width: 8, height: 28)
+    }
+
+    private var visualColor: Color {
+        if isDragging {
+            return AppTheme.accent
+        } else if isHovering {
+            return AppTheme.border.opacity(0.8)
+        } else {
+            return Color.clear
+        }
+    }
+}

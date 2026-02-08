@@ -27,6 +27,9 @@ struct StagingAreaPanel: View {
     @AppStorage("diffIgnoreWhitespace") private var ignoreWhitespace = false
     @AppStorage("diffContextLines") private var contextLines = 3
 
+    // Resizable split ratio for Unstaged/Staged sections (persisted)
+    @AppStorage("stagingSplitRatio") private var stagingSplitRatio: Double = 0.5
+
     // Cached computed values — recomputed only when staging files or filter change, not every body call
     @State private var cachedAvailableExtensions: [String] = []
     @State private var cachedExtensionCounts: [String: Int] = [:]
@@ -86,67 +89,82 @@ struct StagingAreaPanel: View {
             } else {
                 stagingToolbar
 
-                StagingSectionWithTree(
-                    title: "Unstaged Files",
-                    count: cachedFilteredUnstaged.count,
-                    totalCount: stagingVM.totalUnstagedCount,
-                    actionIcon: "plus.circle.fill",
-                    actionColor: AppTheme.success,
-                    onAction: { stagingVM.stageAll() },
-                    viewMode: viewMode,
-                    files: stagingVM.unstagedFiles,
-                    isStaged: false,
-                    selectedFilePath: selectedFileDiff?.newPath,
-                    extensionFilter: extensionFilter,
-                    onSelect: loadDiff,
-                    onStage: { stagingVM.stage(file: $0) },
-                    onStageFolder: { stagingVM.stageFolder($0) },
-                    onDiscard: { fileToDiscard = $0 },
-                    onDelete: { fileToDelete = $0 },
-                    onDiscardFolder: { folderToDiscard = $0 },
-                    onDeleteFolder: { folderToDelete = $0 },
-                    hasMore: stagingVM.hasMoreUnstaged,
-                    onLoadMore: { stagingVM.loadMoreUnstaged() }
-                )
+                // Resizable split between Unstaged and Staged sections
+                GeometryReader { geometry in
+                    let availableHeight = geometry.size.height
+                    let minSectionHeight: CGFloat = 80
+                    let unstagedHeight = max(minSectionHeight, min(availableHeight - minSectionHeight, availableHeight * stagingSplitRatio))
 
-                // Large repo warning
-                if stagingVM.isLargeRepo {
-                    HStack(spacing: 6) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(AppTheme.warning)
-                        Text("Large repo: \(stagingVM.totalUnstagedCount + stagingVM.totalStagedCount) files. Consider using .gitignore")
-                            .font(.system(size: 10))
-                            .foregroundStyle(AppTheme.textSecondary)
-                        Spacer()
+                    VStack(spacing: 0) {
+                        // Unstaged Files section
+                        StagingSectionWithTree(
+                            title: "Unstaged Files",
+                            count: cachedFilteredUnstaged.count,
+                            totalCount: stagingVM.totalUnstagedCount,
+                            actionIcon: "plus.circle.fill",
+                            actionColor: AppTheme.success,
+                            onAction: { stagingVM.stageAll() },
+                            viewMode: viewMode,
+                            files: stagingVM.unstagedFiles,
+                            isStaged: false,
+                            selectedFilePath: selectedFileDiff?.newPath,
+                            extensionFilter: extensionFilter,
+                            onSelect: loadDiff,
+                            onStage: { stagingVM.stage(file: $0) },
+                            onStageFolder: { stagingVM.stageFolder($0) },
+                            onDiscard: { fileToDiscard = $0 },
+                            onDelete: { fileToDelete = $0 },
+                            onDiscardFolder: { folderToDiscard = $0 },
+                            onDeleteFolder: { folderToDelete = $0 },
+                            hasMore: stagingVM.hasMoreUnstaged,
+                            onLoadMore: { stagingVM.loadMoreUnstaged() }
+                        )
+                        .frame(height: unstagedHeight)
+
+                        // Large repo warning
+                        if stagingVM.isLargeRepo {
+                            HStack(spacing: 6) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(AppTheme.warning)
+                                Text("Large repo: \(stagingVM.totalUnstagedCount + stagingVM.totalStagedCount) files. Consider using .gitignore")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(AppTheme.textSecondary)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(AppTheme.warning.opacity(0.1))
+                        }
+
+                        // Resizable divider
+                        StagingSplitResizer(
+                            splitRatio: $stagingSplitRatio,
+                            availableHeight: availableHeight,
+                            minSectionHeight: minSectionHeight
+                        )
+
+                        // Staged Files section
+                        StagingSectionWithTree(
+                            title: "Staged Files",
+                            count: cachedFilteredStaged.count,
+                            totalCount: stagingVM.totalStagedCount,
+                            actionIcon: "minus.circle.fill",
+                            actionColor: AppTheme.error,
+                            onAction: { stagingVM.unstageAll() },
+                            viewMode: viewMode,
+                            files: stagingVM.stagedFiles,
+                            isStaged: true,
+                            selectedFilePath: selectedFileDiff?.newPath,
+                            extensionFilter: extensionFilter,
+                            onSelect: loadDiff,
+                            onStage: { stagingVM.unstage(file: $0) },
+                            onStageFolder: { stagingVM.unstageFolder($0) },
+                            hasMore: stagingVM.hasMoreStaged,
+                            onLoadMore: { stagingVM.loadMoreStaged() }
+                        )
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(AppTheme.warning.opacity(0.1))
                 }
-
-                Rectangle().fill(AppTheme.border).frame(height: 1)
-
-                StagingSectionWithTree(
-                    title: "Staged Files",
-                    count: cachedFilteredStaged.count,
-                    totalCount: stagingVM.totalStagedCount,
-                    actionIcon: "minus.circle.fill",
-                    actionColor: AppTheme.error,
-                    onAction: { stagingVM.unstageAll() },
-                    viewMode: viewMode,
-                    files: stagingVM.stagedFiles,
-                    isStaged: true,
-                    selectedFilePath: selectedFileDiff?.newPath,
-                    extensionFilter: extensionFilter,
-                    onSelect: loadDiff,
-                    onStage: { stagingVM.unstage(file: $0) },
-                    onStageFolder: { stagingVM.unstageFolder($0) },
-                    hasMore: stagingVM.hasMoreStaged,
-                    onLoadMore: { stagingVM.loadMoreStaged() }
-                )
-
-                Spacer()
             }
 
             CommitSection(
@@ -491,5 +509,69 @@ struct StagingFolderAlerts: ViewModifier {
                 }.count
                 Text("This will permanently delete \(count) untracked file(s) in \"\(folder)\" from disk.")
             }
+    }
+}
+
+// MARK: - Staging Split Resizer
+
+/// Draggable divider between Unstaged and Staged sections
+struct StagingSplitResizer: View {
+    @Binding var splitRatio: Double
+    let availableHeight: CGFloat
+    let minSectionHeight: CGFloat
+
+    @State private var isHovering = false
+    @State private var isDragging = false
+
+    var body: some View {
+        ZStack {
+            // Hit area for dragging
+            Rectangle()
+                .fill(Color.clear)
+                .frame(height: 8)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            isDragging = true
+                            // Calculate new ratio based on drag
+                            let deltaRatio = value.translation.height / availableHeight
+                            let newRatio = splitRatio + deltaRatio
+
+                            // Clamp to ensure min heights
+                            let minRatio = minSectionHeight / availableHeight
+                            let maxRatio = 1.0 - minRatio
+                            splitRatio = min(maxRatio, max(minRatio, newRatio))
+                        }
+                        .onEnded { _ in
+                            isDragging = false
+                        }
+                )
+                .onHover { hovering in
+                    isHovering = hovering
+                    if hovering {
+                        NSCursor.resizeUpDown.push()
+                    } else if !isDragging {
+                        NSCursor.pop()
+                    }
+                }
+
+            // Visual divider line
+            Rectangle()
+                .fill(visualColor)
+                .frame(height: 1)
+                .allowsHitTesting(false)
+        }
+        .frame(height: 8)
+    }
+
+    private var visualColor: Color {
+        if isDragging {
+            return AppTheme.accent
+        } else if isHovering {
+            return AppTheme.border.opacity(0.8)
+        } else {
+            return AppTheme.border
+        }
     }
 }

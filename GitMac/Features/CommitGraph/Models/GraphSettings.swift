@@ -96,11 +96,15 @@ class GraphSettings: ObservableObject {
     }
 
     // Responsive changes indicator width
-    var changesColumnWidth: CGFloat {
+    @Published var changesColumnWidth: CGFloat = 140 {
+        didSet { saveSettings() }
+    }
+
+    var responsiveChangesColumnWidth: CGFloat {
         if availableWidth < Self.compactBreakpoint {
-            return 80
+            return min(changesColumnWidth, 80)
         }
-        return 140
+        return changesColumnWidth
     }
     @Published var authorColumnWidth: CGFloat = 120 {
         didSet { saveSettings() }
@@ -210,6 +214,7 @@ class GraphSettings: ObservableObject {
             "showSHAColumn": showSHAColumn,
             "branchColumnWidth": branchColumnWidth,
             "baseGraphColumnWidth": baseGraphColumnWidth,
+            "changesColumnWidth": changesColumnWidth,
             "authorColumnWidth": authorColumnWidth,
             "dateColumnWidth": dateColumnWidth,
             "shaColumnWidth": shaColumnWidth,
@@ -245,6 +250,9 @@ class GraphSettings: ObservableObject {
         }
         if let value = settings["baseGraphColumnWidth"] as? CGFloat {
             baseGraphColumnWidth = value
+        }
+        if let value = settings["changesColumnWidth"] as? CGFloat {
+            changesColumnWidth = value
         }
         if let value = settings["authorColumnWidth"] as? CGFloat {
             authorColumnWidth = value

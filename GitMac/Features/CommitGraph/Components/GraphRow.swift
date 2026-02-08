@@ -137,7 +137,7 @@ struct GraphRow: View {
                 filesChanged: node.commit.filesChanged ?? 0,
                 compact: settings.compactMode
             )
-            .frame(width: settings.changesColumnWidth, alignment: .leading)
+            .frame(width: settings.responsiveChangesColumnWidth, alignment: .leading)
 
             // Author column (optional, responsive)
             if settings.shouldShowAuthorColumn {

@@ -721,7 +721,7 @@ struct KaleidoscopeDiffLine: View {
         side == .left ? line.oldLineNumber : line.newLineNumber
     }
 
-    // Character-level highlighting (Kaleidoscope-style)
+    // Character-level highlighting (Kaleidoscope-style) - Cached computation
     private var highlightedContent: AttributedString {
         let theme = Color.Theme(themeManager.colors)
         guard let paired = pairedLine,
@@ -745,14 +745,14 @@ struct KaleidoscopeDiffLine: View {
             case .unchanged:
                 break
             case .added:
-                segmentAttr.backgroundColor = theme.diffAddition.opacity(0.4)
+                segmentAttr.backgroundColor = theme.diffAddition.opacity(0.5)
                 segmentAttr.foregroundColor = theme.diffAddition
             case .removed:
-                segmentAttr.backgroundColor = theme.diffDeletion.opacity(0.4)
+                segmentAttr.backgroundColor = theme.diffDeletion.opacity(0.5)
                 segmentAttr.foregroundColor = theme.diffDeletion
             case .changed:
                 let color = line.type == .addition ? theme.diffAddition : theme.diffDeletion
-                segmentAttr.backgroundColor = color.opacity(0.4)
+                segmentAttr.backgroundColor = color.opacity(0.5)
             }
 
             result.append(segmentAttr)
@@ -765,31 +765,103 @@ struct KaleidoscopeDiffLine: View {
         let theme = Color.Theme(themeManager.colors)
 
         HStack(spacing: 0) {
+            // Left edge accent bar for changed lines (optimized - no GeometryReader)
+            if line.type == .addition || line.type == .deletion {
+                Rectangle()
+                    .fill(edgeAccentColor(theme: theme))
+                    .frame(width: 3)
+            }
+
+            // Line number with enhanced gradient background
             if showLineNumber {
                 Text(lineNumber.map { String($0) } ?? "")
                     .font(DesignTokens.Typography.commitHash)
-                    .foregroundColor(theme.textMuted)
-                    .frame(width: 50, alignment: .trailing)
-                    .padding(.trailing, DesignTokens.Spacing.xs)
-                    .background(lineNumberBackground(theme: theme))
+                    .foregroundStyle(lineNumberTextColor(theme: theme))
+                    .frame(width: 46, alignment: .trailing)
+                    .padding(.trailing, 4)
+                    .frame(width: 50)
+                    .background(lineNumberGradientBackground(theme: theme))
             }
 
             // Change indicator
             Text(changeIndicator)
-                .font(DesignTokens.Typography.diffLine)
-                .foregroundColor(indicatorColor(theme: theme))
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .foregroundStyle(indicatorColor(theme: theme))
                 .frame(width: 20)
 
             // Content with character-level highlighting
             Text(highlightedContent)
                 .font(DesignTokens.Typography.diffLine)
-                .foregroundColor(textColor(theme: theme))
+                .foregroundStyle(textColor(theme: theme))
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 4)
                 .padding(.trailing, DesignTokens.Spacing.sm)
         }
         .frame(height: 24)
-        .background(backgroundColor(theme: theme))
+        .background(contentGradientBackground(theme: theme))
+    }
+
+    // MARK: - Professional Gradient Backgrounds (GPU-accelerated)
+
+    @ViewBuilder
+    private func lineNumberGradientBackground(theme: SwiftUI.Color.Theme) -> some View {
+        switch line.type {
+        case .addition:
+            LinearGradient(
+                stops: [
+                    .init(color: theme.diffAddition.opacity(0.28), location: 0.0),
+                    .init(color: theme.diffAddition.opacity(0.20), location: 0.5),
+                    .init(color: theme.diffAddition.opacity(0.14), location: 1.0)
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        case .deletion:
+            LinearGradient(
+                stops: [
+                    .init(color: theme.diffDeletion.opacity(0.28), location: 0.0),
+                    .init(color: theme.diffDeletion.opacity(0.20), location: 0.5),
+                    .init(color: theme.diffDeletion.opacity(0.14), location: 1.0)
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        default:
+            theme.backgroundSecondary
+        }
+    }
+
+    @ViewBuilder
+    private func contentGradientBackground(theme: SwiftUI.Color.Theme) -> some View {
+        switch line.type {
+        case .addition:
+            // Professional green gradient - GPU-accelerated LinearGradient
+            LinearGradient(
+                stops: [
+                    .init(color: theme.diffAddition.opacity(0.18), location: 0.0),
+                    .init(color: theme.diffAddition.opacity(0.10), location: 0.25),
+                    .init(color: theme.diffAddition.opacity(0.04), location: 0.6),
+                    .init(color: .clear, location: 1.0)
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        case .deletion:
+            // Professional red gradient - GPU-accelerated LinearGradient
+            LinearGradient(
+                stops: [
+                    .init(color: theme.diffDeletion.opacity(0.18), location: 0.0),
+                    .init(color: theme.diffDeletion.opacity(0.10), location: 0.25),
+                    .init(color: theme.diffDeletion.opacity(0.04), location: 0.6),
+                    .init(color: .clear, location: 1.0)
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        default:
+            Color.clear
+        }
     }
 
     // MARK: - Helpers
@@ -797,7 +869,7 @@ struct KaleidoscopeDiffLine: View {
     private var changeIndicator: String {
         switch line.type {
         case .addition: return "+"
-        case .deletion: return "-"
+        case .deletion: return "−"  // Using proper minus sign
         case .context: return " "
         case .hunkHeader: return "@@"
         }
@@ -811,19 +883,19 @@ struct KaleidoscopeDiffLine: View {
         }
     }
 
-    private func backgroundColor(theme: SwiftUI.Color.Theme) -> Color {
+    private func edgeAccentColor(theme: SwiftUI.Color.Theme) -> Color {
         switch line.type {
-        case .addition: return theme.diffAdditionBg
-        case .deletion: return theme.diffDeletionBg
-        case .context, .hunkHeader: return SwiftUI.Color.clear
+        case .addition: return theme.diffAddition
+        case .deletion: return theme.diffDeletion
+        default: return .clear
         }
     }
 
-    private func lineNumberBackground(theme: SwiftUI.Color.Theme) -> Color {
+    private func lineNumberTextColor(theme: SwiftUI.Color.Theme) -> Color {
         switch line.type {
-        case .addition: return theme.diffLineNumberBg
-        case .deletion: return theme.diffLineNumberBg
-        case .context, .hunkHeader: return theme.backgroundSecondary
+        case .addition: return theme.diffAddition.opacity(0.8)
+        case .deletion: return theme.diffDeletion.opacity(0.8)
+        default: return theme.textMuted
         }
     }
 
@@ -847,45 +919,81 @@ struct KaleidoscopeHunkHeader: View {
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
-        HStack(spacing: DesignTokens.Spacing.sm) {
-            Image(systemName: "text.alignleft")
-                .font(DesignTokens.Typography.caption2)
-                .foregroundColor(theme.accent)
 
-            Text(header)
-                .font(DesignTokens.Typography.commitHash)
-                .foregroundColor(theme.accent)
+        ZStack {
+            // Professional gradient background
+            LinearGradient(
+                stops: [
+                    .init(color: theme.accent.opacity(0.18), location: 0.0),
+                    .init(color: theme.accent.opacity(0.12), location: 0.3),
+                    .init(color: theme.accent.opacity(0.06), location: 0.7),
+                    .init(color: theme.accent.opacity(0.02), location: 1.0)
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
 
-            Spacer()
-
-            // Hover action buttons with instant tooltips
-            if isHovered {
-                HStack(spacing: 4) {
-                    if let onStageHunk {
-                        HunkActionButton(
-                            icon: "plus.circle.fill",
-                            tooltip: "Stage Hunk",
-                            color: AppTheme.success,
-                            action: onStageHunk
-                        )
-                    }
-
-                    if let onDiscardHunk {
-                        HunkActionButton(
-                            icon: "trash.fill",
-                            tooltip: "Discard Hunk",
-                            color: AppTheme.error,
-                            action: onDiscardHunk
-                        )
-                    }
-                }
-                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            // Top highlight line
+            VStack(spacing: 0) {
+                LinearGradient(
+                    stops: [
+                        .init(color: theme.accent.opacity(0.4), location: 0.0),
+                        .init(color: theme.accent.opacity(0.2), location: 0.5),
+                        .init(color: theme.accent.opacity(0.0), location: 1.0)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(height: 1)
+                Spacer()
             }
+
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                // Icon with subtle glow
+                ZStack {
+                    Circle()
+                        .fill(theme.accent.opacity(0.15))
+                        .frame(width: 18, height: 18)
+
+                    Image(systemName: "chevron.left.forwardslash.chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(theme.accent)
+                }
+
+                Text(header)
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundColor(theme.accent.opacity(0.9))
+
+                Spacer()
+
+                // Hover action buttons with instant tooltips
+                if isHovered {
+                    HStack(spacing: 4) {
+                        if let onStageHunk {
+                            HunkActionButton(
+                                icon: "plus.circle.fill",
+                                tooltip: "Stage Hunk",
+                                color: AppTheme.success,
+                                action: onStageHunk
+                            )
+                        }
+
+                        if let onDiscardHunk {
+                            HunkActionButton(
+                                icon: "trash.fill",
+                                tooltip: "Discard Hunk",
+                                color: AppTheme.error,
+                                action: onDiscardHunk
+                            )
+                        }
+                    }
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                }
+            }
+            .padding(.horizontal, DesignTokens.Spacing.md)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: 24)
-        .padding(.horizontal, DesignTokens.Spacing.md)
-        .background(theme.accent.opacity(0.08))
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) {
                 isHovered = hovering
