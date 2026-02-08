@@ -13,16 +13,24 @@ class CommitDetailViewModel: ObservableObject {
     @Published var isLoading = false
 
     private let engine = GitEngine()
+    /// Tracks which SHA is currently being loaded so stale results are discarded.
+    private var currentLoadingSHA: String?
 
     func loadCommitFiles(sha: String, at path: String) async {
+        currentLoadingSHA = sha
         isLoading = true
+        changedFiles = []
         do {
             let files = try await engine.getCommitFiles(sha: sha, at: path)
+            // Discard result if a newer load was started while we were awaiting
+            guard currentLoadingSHA == sha else { return }
             changedFiles = files
         } catch {
+            guard currentLoadingSHA == sha else { return }
             print("Error loading commit files: \(error)")
             changedFiles = []
         }
+        guard currentLoadingSHA == sha else { return }
         isLoading = false
     }
 

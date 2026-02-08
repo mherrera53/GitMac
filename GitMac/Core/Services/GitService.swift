@@ -29,6 +29,9 @@ class GitService: ObservableObject {
     // Use V2 optimized methods flag
     private var useOptimizedMethods = true
 
+    // Flag to prevent watcher interference during manual operations
+    private var isManualOperationInProgress = false
+
     // MARK: - Repository Operations
 
     /// Open a repository
@@ -85,6 +88,32 @@ class GitService: ObservableObject {
         NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
     }
 
+    /// Lightweight refresh - only updates branch ahead/behind status (~50ms vs ~500ms)
+    /// Use after commit to update push button state without full reload
+    func refreshBranchStatus() async throws {
+        guard var repo = currentRepository else { return }
+        let path = repo.path
+
+        // Reload only branches to get fresh ahead/behind counts
+        let branches = try await engine.getBranches(at: path)
+        repo.branches = branches
+        currentRepository = repo
+
+        // Invalidate branch cache so next read is fresh
+        branchesCache.invalidate()
+
+        // Notify views
+        NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
+    }
+
+    /// Execute operation with watcher temporarily suspended
+    /// Prevents race conditions between manual refresh and file watcher
+    func withSuspendedWatcher<T>(_ operation: () async throws -> T) async rethrows -> T {
+        isManualOperationInProgress = true
+        defer { isManualOperationInProgress = false }
+        return try await operation()
+    }
+
     // MARK: - Branch Operations
 
     func getBranches() async throws -> [Branch] {
@@ -134,8 +163,11 @@ class GitService: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        try await engine.checkout(ref, at: path)
-        try await refresh()
+        // Use withSuspendedWatcher to prevent race condition with file watcher
+        try await withSuspendedWatcher {
+            try await engine.checkout(ref, at: path)
+            try await refresh()
+        }
     }
 
     func checkoutForce(_ ref: String) async throws {
@@ -146,8 +178,119 @@ class GitService: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        try await engine.checkoutForce(ref, at: path)
-        try await refresh()
+        try await withSuspendedWatcher {
+            try await engine.checkoutForce(ref, at: path)
+            try await refresh()
+        }
+    }
+
+    /// Checkout with automatic stash/pop for uncommitted changes
+    func checkoutWithAutoStash(_ ref: String) async throws {
+        guard let path = currentRepository?.path else {
+            throw GitServiceError.noRepository
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        try await withSuspendedWatcher {
+            // Check for uncommitted changes
+            let status = try await engine.getStatus(at: path)
+            let hasChanges = !status.staged.isEmpty || !status.unstaged.isEmpty
+
+            if hasChanges {
+                _ = try await engine.stash(at: path)
+            }
+
+            try await engine.checkout(ref, at: path)
+
+            if hasChanges {
+                try await engine.stashPop(stashRef: "stash@{0}", at: path)
+            }
+
+            try await refresh()
+        }
+    }
+
+    /// Checkout a branch (handles both local and remote branches)
+    /// For remote branches, creates a local tracking branch
+    func checkoutBranch(_ branch: Branch) async throws {
+        guard let path = currentRepository?.path else {
+            throw GitServiceError.noRepository
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        try await withSuspendedWatcher {
+            if branch.isRemote {
+                // Remote branch: create local tracking branch
+                // origin/feature/foo -> feature/foo
+                let localName = branch.displayName
+                let shell = ShellExecutor()
+                let result = await shell.execute(
+                    "git",
+                    arguments: ["checkout", "-b", localName, "--track", branch.name],
+                    workingDirectory: path
+                )
+                if result.exitCode != 0 {
+                    throw GitServiceError.checkoutFailed(result.stderr)
+                }
+            } else {
+                try await engine.checkout(branch.name, at: path)
+            }
+            try await refresh()
+        }
+    }
+
+    /// Checkout a branch with auto-stash (handles both local and remote)
+    func checkoutBranchWithAutoStash(_ branch: Branch) async throws {
+        guard let path = currentRepository?.path else {
+            throw GitServiceError.noRepository
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        try await withSuspendedWatcher {
+            // Check for uncommitted changes
+            let status = try await engine.getStatus(at: path)
+            let hasChanges = !status.staged.isEmpty || !status.unstaged.isEmpty || !status.untracked.isEmpty
+
+            if hasChanges {
+                var stashOptions = StashOptions()
+                stashOptions.includeUntracked = true
+                stashOptions.message = "Auto-stash for checkout to \(branch.name)"
+                _ = try await engine.stash(options: stashOptions, at: path)
+            }
+
+            // Perform checkout
+            if branch.isRemote {
+                let localName = branch.displayName
+                let shell = ShellExecutor()
+                let result = await shell.execute(
+                    "git",
+                    arguments: ["checkout", "-b", localName, "--track", branch.name],
+                    workingDirectory: path
+                )
+                if result.exitCode != 0 {
+                    // Restore stash on failure
+                    if hasChanges {
+                        try? await engine.stashPop(stashRef: "stash@{0}", at: path)
+                    }
+                    throw GitServiceError.checkoutFailed(result.stderr)
+                }
+            } else {
+                try await engine.checkout(branch.name, at: path)
+            }
+
+            // Pop stash if we stashed
+            if hasChanges {
+                try await engine.stashPop(stashRef: "stash@{0}", at: path)
+            }
+
+            try await refresh()
+        }
     }
 
     // MARK: - Staging Operations
@@ -367,7 +510,7 @@ class GitService: ObservableObject {
 
     // MARK: - Stash Operations
 
-    func stash(message: String? = nil, includeUntracked: Bool = true) async throws -> Stash? {
+    func stash(message: String? = nil, includeUntracked: Bool = true, keepIndex: Bool = false) async throws -> Stash? {
         guard let path = currentRepository?.path else {
             throw GitServiceError.noRepository
         }
@@ -375,6 +518,7 @@ class GitService: ObservableObject {
         var options = StashOptions()
         options.message = message
         options.includeUntracked = includeUntracked
+        options.keepIndex = keepIndex
 
         let stash = try await engine.stash(options: options, at: path)
         try await refresh()
@@ -662,6 +806,9 @@ class GitService: ObservableObject {
 
     /// Handle differentiated change signals for incremental updates
     private func handleChangeSignal(_ signal: RepositoryChangeSignal) async {
+        // Skip watcher signals during manual operations to prevent race conditions
+        guard !isManualOperationInProgress else { return }
+
         let signpostID = OSSignpostID(log: serviceLog)
         os_signpost(.begin, log: serviceLog, name: "handle.signal", signpostID: signpostID,
                     "signal=%{public}s", signal.rawValue)
@@ -879,11 +1026,14 @@ class GitService: ObservableObject {
 
 enum GitServiceError: LocalizedError {
     case noRepository
+    case checkoutFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .noRepository:
             return "No repository is currently open"
+        case .checkoutFailed(let message):
+            return "Checkout failed: \(message)"
         }
     }
 }

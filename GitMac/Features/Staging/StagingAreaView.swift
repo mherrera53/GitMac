@@ -182,6 +182,11 @@ struct StagingAreaView: View {
 
     /// Commits staged changes, pushes to remote, and opens PR creation sheet
     private func commitPushAndOpenPR() async {
+        guard let repoPath = appState.currentRepository?.path else {
+            NotificationManager.shared.error("No repository", detail: "No repository selected")
+            return
+        }
+
         // Step 1: Commit
         let commitSuccess = await viewModel.commit(message: commitMessage, amend: isAmending)
         guard commitSuccess else {
@@ -192,15 +197,27 @@ struct StagingAreaView: View {
         commitMessage = ""
         isAmending = false
 
-        // Step 2: Push
+        // Step 2: Push using branchManager for consistent state
         do {
-            let pushSHA = try await appState.gitService.push()
-            let shortSHA = String(pushSHA.prefix(7))
+            let engine = GitEngine()
 
-            NotificationManager.shared.success(
-                "Commit & Push completed",
-                detail: "SHA: \(shortSHA)"
-            )
+            // Get current branch for push
+            guard let currentBranch = appState.branchManager?.currentBranch ?? appState.currentRepository?.currentBranch else {
+                NotificationManager.shared.error("Push failed", detail: "No current branch")
+                return
+            }
+
+            // Use branchManager.push() if available for state sync
+            if let manager = appState.branchManager {
+                try await manager.push(currentBranch)
+            } else {
+                // Fallback to gitService
+                _ = try await appState.gitService.push()
+            }
+
+            // Get SHA after push
+            let sha = try await engine.getHeadSHA(at: repoPath)
+            let shortSHA = String(sha.prefix(7))
 
             // Step 3: Open PR sheet
             commitSHAForPR = shortSHA

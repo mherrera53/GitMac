@@ -33,16 +33,15 @@ struct LeftSidebarPanel: View {
                         Image(systemName: "arrow.triangle.branch")
                             .font(.system(size: 10))
                             .foregroundColor(AppTheme.textSecondary)
-                        Text(appState.selectedBranch?.name ?? repo.currentBranch?.name ?? "No Branch")
+                        Text(appState.branchManager?.currentBranch?.name ?? "No Branch")
                             .font(.system(size: 10, weight: .medium, design: .monospaced))
                             .foregroundColor(AppTheme.textSecondary)
                             .lineLimit(1)
                         Spacer()
                     }
                 }
-                .padding(.horizontal, 12)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
                 // Background removed to allow material to show through
 
                 Divider()
@@ -110,34 +109,48 @@ struct LeftSidebarPanel: View {
             }
 
             // All branches: local first (current at top), then remote
-            if let repo = appState.currentRepository {
-                // Local branches
-                let allLocal = repo.branches.filter { !$0.isRemote }
+            // Now reading from BranchStateManager (single source of truth)
+            if appState.currentRepository != nil, let manager = appState.branchManager {
+                // Local branches from BranchStateManager
+                let allLocal = manager.localBranches
                 let localBranches = branchSearchText.isEmpty ? allLocal : allLocal.filter {
                     $0.name.localizedCaseInsensitiveContains(branchSearchText)
                 }
 
-                // Sort local: main/master first, then current, then alphabetical
-                let mainBranch = localBranches.first { $0.name == "master" || $0.name == "main" }
-                let currentBranch = localBranches.first { $0.isCurrent && $0.name != "master" && $0.name != "main" }
+                // Sort: 1) Current branch, 2) Main branch, 3) By creation date (newest first)
+                let currentBranch = localBranches.first { $0.isCurrent }
                 let otherLocalBranches = localBranches
-                    .filter { !$0.isCurrent && $0.name != "master" && $0.name != "main" }
-                    .sorted { $0.name < $1.name }
+                    .filter { !$0.isCurrent }
+                    .sorted { lhs, rhs in
+                        // master/main first among non-current branches
+                        let lhsIsMain = lhs.name == "master" || lhs.name == "main"
+                        let rhsIsMain = rhs.name == "master" || rhs.name == "main"
+                        if lhsIsMain && !rhsIsMain { return true }
+                        if !lhsIsMain && rhsIsMain { return false }
+                        
+                        // Then by creation date (newest first)
+                        if let lhsDate = lhs.createdDate, let rhsDate = rhs.createdDate {
+                            return lhsDate > rhsDate
+                        }
+                        // If one has date and other doesn't, prefer the one with date
+                        if lhs.createdDate != nil { return true }
+                        if rhs.createdDate != nil { return false }
+                        // Fallback to alphabetical
+                        return lhs.name < rhs.name
+                    }
 
-                if let main = mainBranch {
-                    SidebarBranchRow(branch: main)
-                }
-
+                // Show current branch first (whether it's master or not)
                 if let current = currentBranch {
                     SidebarBranchRow(branch: current)
                 }
 
+                // Then show all other branches
                 ForEach(otherLocalBranches) { branch in
                     SidebarBranchRow(branch: branch)
                 }
 
-                // Remote branches (with cloud icon - handled in SidebarBranchRow)
-                let allRemote = repo.remoteBranches
+                // Remote branches from BranchStateManager
+                let allRemote = manager.remoteBranches
                 let filteredRemote = branchSearchText.isEmpty ? allRemote : allRemote.filter {
                     $0.name.localizedCaseInsensitiveContains(branchSearchText)
                 }

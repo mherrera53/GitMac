@@ -21,6 +21,11 @@ extension Notification.Name {
     static let popStash = Notification.Name("popStash")
     static let showNotification = Notification.Name("showNotification")
     static let fileSavedInEditor = Notification.Name("fileSavedInEditor")  // Triggers diff refresh
+
+    // Worktree notifications
+    static let worktreeDidChange = Notification.Name("worktreeDidChange")
+    static let createWorktreeFromCommit = Notification.Name("createWorktreeFromCommit")
+    static let createWorktreeFromBranch = Notification.Name("createWorktreeFromBranch")
 }
 
 // MARK: - Helper para usar NotificationManager

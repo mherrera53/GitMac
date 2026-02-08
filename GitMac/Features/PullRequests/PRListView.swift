@@ -295,8 +295,8 @@ class PRListViewModel: ObservableObject {
                 detail: title
             )
 
-            // Refresh PR tracker immediately so branch context menu updates
-            await BranchPRTracker.shared.refresh()
+            // Add PR directly to tracker cache for immediate UI update (bypasses debounce)
+            BranchPRTracker.shared.addPR(newPR)
 
             // Notify other views
             NotificationCenter.default.post(name: .pullRequestCreated, object: newPR)

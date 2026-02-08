@@ -30,6 +30,10 @@ class BranchPRTracker: ObservableObject {
     private let githubService = GitHubService()
     private var cancellables = Set<AnyCancellable>()
 
+    /// Debounce: prevent rapid-fire API calls
+    private var lastRefreshTime: Date?
+    private let refreshDebounceInterval: TimeInterval = 2.0
+
     private init() {
         setupNotificationObservers()
     }
@@ -96,11 +100,24 @@ class BranchPRTracker: ObservableObject {
 
     // MARK: - Public API
 
-    /// Get the PR associated with a branch (if any)
+    /// Fast PR lookup using pre-built cache that includes both "origin/X" and "X" keys.
+    /// Avoids string allocations (replacingOccurrences) in SwiftUI body getters.
     func getPR(for branchName: String) -> GitHubPullRequest? {
-        // Clean the branch name (remove "origin/" prefix if present)
-        let cleanName = branchName.replacingOccurrences(of: "origin/", with: "")
-        return branchPRs[cleanName.lowercased()]
+        return expandedBranchPRs[branchName.lowercased()]
+    }
+
+    /// Expanded lookup cache: maps both "branch" and "origin/branch" to the same PR.
+    /// Rebuilt only when branchPRs changes (on API refresh), not on every view body call.
+    private var expandedBranchPRs: [String: GitHubPullRequest] = [:]
+
+    private func rebuildExpandedCache() {
+        var expanded = [String: GitHubPullRequest]()
+        expanded.reserveCapacity(branchPRs.count * 2)
+        for (key, pr) in branchPRs {
+            expanded[key] = pr                   // "feature/x" (already lowercased)
+            expanded["origin/" + key] = pr       // "origin/feature/x"
+        }
+        expandedBranchPRs = expanded
     }
 
     /// Check if a branch has an open PR
@@ -108,10 +125,29 @@ class BranchPRTracker: ObservableObject {
         return getPR(for: branchName) != nil
     }
 
+    /// Add a newly created PR directly to the cache for immediate UI update
+    /// This bypasses the refresh debounce and ensures instant feedback
+    func addPR(_ pr: GitHubPullRequest) {
+        let branchKey = pr.head.ref.lowercased()
+        branchPRs[branchKey] = pr
+        rebuildExpandedCache()
+        if !openPRs.contains(where: { $0.number == pr.number }) {
+            openPRs.append(pr)
+        }
+        NotificationCenter.default.post(name: .branchPRsDidUpdate, object: nil)
+    }
+
     /// Refresh PR data from GitHub
     func refresh() async {
         guard !owner.isEmpty && !repo.isEmpty else { return }
         guard !isLoading else { return } // Prevent concurrent refresh
+
+        // Debounce: skip if refreshed recently
+        if let lastRefresh = lastRefreshTime,
+           Date().timeIntervalSince(lastRefresh) < refreshDebounceInterval {
+            return
+        }
+        lastRefreshTime = Date()
 
         isLoading = true
         defer { isLoading = false }
@@ -139,6 +175,7 @@ class BranchPRTracker: ObservableObject {
                 }
             }
             branchPRs = newBranchPRs
+            rebuildExpandedCache()
 
             // Post notification that PR data was updated
             NotificationCenter.default.post(name: .branchPRsDidUpdate, object: nil)
@@ -174,6 +211,7 @@ class BranchPRTracker: ObservableObject {
         // Remove PR from local cache (API confirmed merge)
         // This triggers @Published update, which notifies all @ObservedObject observers
         branchPRs.removeValue(forKey: branchKey)
+        rebuildExpandedCache()
         openPRs.removeAll { $0.number == pr.number }
 
         // Post notifications for other components
@@ -189,6 +227,7 @@ class BranchPRTracker: ObservableObject {
     /// Clear all tracked data
     func clear() {
         branchPRs = [:]
+        expandedBranchPRs = [:]
         openPRs = []
         owner = ""
         repo = ""

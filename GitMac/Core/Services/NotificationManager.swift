@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// Notification Manager - Toast notifications system
 /// Displays success, error, warning, and info messages
@@ -8,6 +9,8 @@ class NotificationManager: ObservableObject {
 
     @Published var notifications: [ToastNotification] = []
     @Published var lastAction: LastAction?
+
+    @AppStorage("notificationSounds") var soundsEnabled: Bool = false
 
     private let maxNotifications = 5
     private let defaultDuration: TimeInterval = 5.0
@@ -134,14 +137,34 @@ class NotificationManager: ObservableObject {
             if notifications.count >= maxNotifications {
                 notifications.removeFirst()
             }
-            
+
             notifications.append(notification)
         }
-        
+
+        // Play sound if enabled
+        if soundsEnabled {
+            playSound(for: notification.type)
+        }
+
         // Auto-dismiss after duration
         DispatchQueue.main.asyncAfter(deadline: .now() + notification.duration) { [weak self] in
             self?.dismiss(notification)
         }
+    }
+
+    private func playSound(for type: NotificationType) {
+        let soundName: NSSound.Name
+        switch type {
+        case .success:
+            soundName = "Glass"
+        case .error:
+            soundName = "Basso"
+        case .warning:
+            soundName = "Purr"
+        case .info:
+            soundName = "Pop"
+        }
+        NSSound(named: soundName)?.play()
     }
     
     private func setupNotificationObservers() {

@@ -5,7 +5,8 @@ import UniformTypeIdentifiers
 struct RepositoryTabsView: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject private var groupsService = RepoGroupsService.shared
-    
+    @State private var cachedGroupedTabs: [TabGroup] = []
+
     // Group model to organize tabs
     struct TabGroup: Identifiable {
         let id: String // Use name or color hex as ID
@@ -13,10 +14,8 @@ struct RepositoryTabsView: View {
         let color: String?
         var tabs: [RepositoryTab]
     }
-    
-    // Organize tabs into groups while maintaining order
-    // Uses stable IDs to prevent SwiftUI re-render issues causing duplicate tabs
-    private var groupedTabs: [TabGroup] {
+
+    private func recomputeGroupedTabs() {
         var groups: [TabGroup] = []
         var currentTabs: [RepositoryTab] = []
         var currentGroupId: String? = nil
@@ -29,13 +28,11 @@ struct RepositoryTabsView: View {
             let groupId = firstGroup?.id ?? "ungrouped"
 
             if currentGroupId != groupId {
-                // Save previous group with stable ID based on first tab's ID
                 if !currentTabs.isEmpty, let firstTab = currentTabs.first {
                     let stableId = "\(currentGroupId ?? "ungrouped")-\(firstTab.id.uuidString)"
                     groups.append(TabGroup(id: stableId, name: currentGroupName, color: currentGroupColor, tabs: currentTabs))
                 }
 
-                // Start new group
                 currentGroupId = groupId
                 currentGroupName = firstGroup?.name
                 currentGroupColor = firstGroup?.color
@@ -45,13 +42,12 @@ struct RepositoryTabsView: View {
             }
         }
 
-        // Append last group with stable ID
         if !currentTabs.isEmpty, let firstTab = currentTabs.first {
             let stableId = "\(currentGroupId ?? "ungrouped")-\(firstTab.id.uuidString)"
             groups.append(TabGroup(id: stableId, name: currentGroupName, color: currentGroupColor, tabs: currentTabs))
         }
 
-        return groups
+        cachedGroupedTabs = groups
     }
 
     var body: some View {
@@ -67,7 +63,8 @@ struct RepositoryTabsView: View {
                 .buttonStyle(.plain)
                 .disabled(!appState.canGoBack)
                 .help("Go Back")
-                
+                .accessibilityLabel("Go back to previous repository")
+
                 Button(action: { appState.goForward() }) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .semibold))
@@ -77,13 +74,14 @@ struct RepositoryTabsView: View {
                 .buttonStyle(.plain)
                 .disabled(!appState.canGoForward)
                 .help("Go Forward")
+                .accessibilityLabel("Go forward to next repository")
             }
             .padding(.trailing, 4)
 
             // Horizontal Slider for Groups
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 4) { // Spacing between groups
-                    ForEach(groupedTabs) { group in
+                    ForEach(cachedGroupedTabs) { group in
                         GroupContainer(group: group, appState: appState)
                     }
                     
@@ -110,6 +108,10 @@ struct RepositoryTabsView: View {
             TabsOverflowMenu()
         }
         .frame(height: 32) // Slightly taller for dedicated space
+        .onAppear { recomputeGroupedTabs() }
+        .onChange(of: appState.openTabs.count) { recomputeGroupedTabs() }
+        .onChange(of: appState.openTabs.map(\.id)) { recomputeGroupedTabs() }
+        .onChange(of: groupsService.groups.count) { recomputeGroupedTabs() }
     }
 }
 
@@ -213,6 +215,9 @@ private struct CompactTabPill: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Repository \(tab.repository.name)\(isActive ? ", active" : "")")
+        .accessibilityAddTraits(isActive ? [.isSelected] : [])
         .onHover { isHovering = $0 }
     }
 }

@@ -2,15 +2,17 @@ import Foundation
 
 /// Represents a Git branch
 struct Branch: Identifiable, Equatable, Hashable {
-    let id: UUID
+    var id: String { fullName }
     let name: String
     let fullName: String
     let isRemote: Bool
-    let isHead: Bool
+    var isHead: Bool
     let remoteName: String?
     let trackingBranch: String?
     let targetSHA: String
     let upstream: UpstreamInfo?
+    let createdDate: Date?
+    var isProtected: Bool
 
     init(
         name: String,
@@ -20,9 +22,10 @@ struct Branch: Identifiable, Equatable, Hashable {
         remoteName: String? = nil,
         trackingBranch: String? = nil,
         targetSHA: String,
-        upstream: UpstreamInfo? = nil
+        upstream: UpstreamInfo? = nil,
+        createdDate: Date? = nil,
+        isProtected: Bool = false
     ) {
-        self.id = UUID()
         self.name = name
         self.fullName = fullName
         self.isRemote = isRemote
@@ -31,6 +34,8 @@ struct Branch: Identifiable, Equatable, Hashable {
         self.trackingBranch = trackingBranch
         self.targetSHA = targetSHA
         self.upstream = upstream
+        self.createdDate = createdDate
+        self.isProtected = isProtected
     }
 
     var shortSHA: String {

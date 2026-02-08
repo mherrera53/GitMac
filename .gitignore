@@ -4,7 +4,9 @@ DerivedData/
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
 build_artifact/
+build_release/
 build_log*.txt
+build/
 
 # Swift Package Manager
 .swiftpm/
@@ -18,6 +20,24 @@ build_log*.txt
 xcuserdata/
 *.xcscmblueprint
 *.xccheckout
+*.xcresult
+*.xcresult/
+
+# Test Screenshots & Results
+screenshots/
+ScreenshotTests/
+
+# Editor/IDE cache
+.claude/
+
+# Fastlane
+fastlane/
+!fastlane/Fastfile
+!fastlane/Appfile
+!fastlane/Pluginfile
+
+# Ruby scripts (automation)
+*.rb
 
 # Frameworks (external)
 Frameworks/
@@ -35,4 +55,8 @@ Frameworks/
 # Work in progress documentation
 GHOSTTY_*.md
 TERMINAL_INTEGRATION_STEPS.md
-build/
+IMPLEMENTATION_SUMMARY.md
+INSTRUCCIONES_PARA_COMPLETAR.md
+
+# UI Tests
+GitMacUITests/

@@ -38,7 +38,9 @@ class TreeExpansionState: ObservableObject {
     func toggle(_ path: String, section: String = "") {
         let key = section.isEmpty ? path : "\(section):\(path)"
 
-        if expandedPaths.contains(key) {
+        // Use isExpanded() which accounts for the default-expanded state,
+        // not just expandedPaths.contains() which misses default-expanded folders.
+        if isExpanded(path, section: section) {
             expandedPaths.remove(key)
             collapsedPaths.insert(key)
         } else {

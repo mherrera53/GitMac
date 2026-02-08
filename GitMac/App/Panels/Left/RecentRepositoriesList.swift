@@ -10,6 +10,18 @@ import SwiftUI
 import Foundation
 import AppKit
 
+// MARK: - Set Extension for Toggle
+
+private extension Set where Element == String {
+    mutating func toggle(_ element: Element) {
+        if contains(element) {
+            remove(element)
+        } else {
+            insert(element)
+        }
+    }
+}
+
 // MARK: - Recent Repositories List
 struct RecentRepositoriesList: View {
     @EnvironmentObject var appState: AppState
@@ -131,19 +143,19 @@ struct RecentRepositoriesList: View {
 
             // Action Buttons
             VStack(spacing: 4) {
-                ActionButton(icon: "folder.badge.plus", title: "Open Repository") {
+                RepoActionButton(icon: "folder.badge.plus", title: "Open Repository") {
                     openRepository()
                 }
 
-                ActionButton(icon: "arrow.down.circle", title: "Clone Repository") {
+                RepoActionButton(icon: "arrow.down.circle", title: "Clone Repository") {
                     showCloneSheet = true
                 }
 
-                ActionButton(icon: "plus.circle", title: "Init Repository") {
+                RepoActionButton(icon: "plus.circle", title: "Init Repository") {
                     showInitSheet = true
                 }
 
-                ActionButton(icon: "folder.badge.gearshape", title: "Manage Groups") {
+                RepoActionButton(icon: "folder.badge.gearshape", title: "Manage Groups") {
                     showGroupManagement = true
                 }
             }
@@ -219,7 +231,7 @@ struct MiniSidebarSection<Content: View>: View {
 }
 
 // MARK: - Action Button
-struct ActionButton: View {
+struct RepoActionButton: View {
     let icon: String
     let title: String
     let action: () -> Void

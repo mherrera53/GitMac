@@ -197,6 +197,15 @@ actor AIService {
         // Save to UserDefaults (works for all providers)
         UserDefaults.standard.set(provider.rawValue, forKey: "ai.preferredProvider")
         UserDefaults.standard.set(model, forKey: "ai.preferredModel")
+        
+        // Start or stop Ollama based on selected provider
+        await MainActor.run {
+            if provider == .ollama {
+                Task {
+                    await OllamaProcessManager.shared.startIfNeeded()
+                }
+            }
+        }
 
         // Also try keychain for non-Ollama providers (backup)
         if let kcProvider = KeychainManager.AIProvider(rawValue: provider.rawValue) {
@@ -941,6 +950,17 @@ actor AIService {
 
     // MARK: - Custom Instructions
 
+    /// Generate text from a prompt (used by BranchNamingSuggestionService)
+    func generateText(prompt: String) async throws -> String {
+        return try await sendMessage(prompt)
+    }
+
+    /// Check if AI service is available
+    func isAvailable() async -> Bool {
+        let provider = await getCurrentProvider()
+        return await hasAPIKey(for: provider)
+    }
+
     /// Generate with custom team instructions
     func generateWithCustomInstructions(
         prompt: String,
@@ -964,7 +984,7 @@ actor AIService {
         theirs: String,
         base: String?,
         filename: String
-    ) async throws -> ConflictResolution {
+    ) async throws -> AIConflictResolution {
         var prompt = """
         Help resolve this Git merge conflict in the file: \(filename)
 
@@ -1013,21 +1033,21 @@ actor AIService {
               let explanation = json["explanation"] as? String,
               let confidenceStr = json["confidence"] as? String else {
             // If JSON parsing fails, return the raw response as the suggestion
-            return ConflictResolution(
+            return AIConflictResolution(
                 suggestion: response,
                 explanation: "AI provided a resolution",
                 confidence: .medium
             )
         }
 
-        let confidence: ConflictResolution.Confidence
+        let confidence: AIConflictResolution.Confidence
         switch confidenceStr.lowercased() {
         case "high": confidence = .high
         case "low": confidence = .low
         default: confidence = .medium
         }
 
-        return ConflictResolution(
+        return AIConflictResolution(
             suggestion: suggestion,
             explanation: explanation,
             confidence: confidence
@@ -1315,7 +1335,7 @@ enum CommitStyle: String, CaseIterable, Identifiable {
     }
 }
 
-struct ConflictResolution {
+struct AIConflictResolution {
     let suggestion: String
     let explanation: String
     let confidence: Confidence

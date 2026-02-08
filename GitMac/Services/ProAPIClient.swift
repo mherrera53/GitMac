@@ -5,15 +5,16 @@ import Foundation
 /// Client for GitMac Pro server-side features
 /// All Pro features (AI, integrations) go through this API client
 /// This ensures features cannot be bypassed - they require valid license validation on server
+@MainActor
 class ProAPIClient: ObservableObject {
-    // Singleton
-    static let shared = ProAPIClient()
+    // Singleton - use @MainActor on static property for proper isolation
+    @MainActor static let shared = ProAPIClient()
 
     // Production server
     private let baseURL = "https://gitmac-license-server-production.up.railway.app"
 
-    // License validator for getting current license
-    private let licenseValidator = GitMacLicenseValidator.shared
+    // License validator for getting current license - resolved lazily
+    private var licenseValidator: GitMacLicenseValidator { GitMacLicenseValidator.shared }
 
     @Published var isLoading = false
     @Published var lastError: String?
@@ -102,7 +103,7 @@ class ProAPIClient: ObservableObject {
             license_key: licenseKey
         )
 
-        let _: EmptyResponse = try await post("/api/pro/ai/set-provider", body: request)
+        let _: ProEmptyResponse = try await post("/api/pro/ai/set-provider", body: request)
     }
 
     // MARK: - Jira Integration
@@ -137,16 +138,16 @@ class ProAPIClient: ObservableObject {
             license_key: licenseKey
         )
 
-        let _: EmptyResponse = try await post("/api/pro/integrations/jira/link", body: request)
+        let _: ProEmptyResponse = try await post("/api/pro/integrations/jira/link", body: request)
     }
 
     /// Get Jira issues for current sprint
-    func getJiraIssues() async throws -> [JiraIssue] {
+    func getJiraIssues() async throws -> [ProJiraIssue] {
         guard let licenseKey = getCurrentLicenseKey() else {
             throw ProAPIError.noLicense
         }
 
-        let response: JiraIssuesResponse = try await get(
+        let response: ProJiraIssuesResponse = try await get(
             "/api/pro/integrations/jira/issues",
             params: ["license_key": licenseKey]
         )
@@ -186,7 +187,7 @@ class ProAPIClient: ObservableObject {
             license_key: licenseKey
         )
 
-        let _: EmptyResponse = try await post("/api/pro/integrations/linear/sync", body: request)
+        let _: ProEmptyResponse = try await post("/api/pro/integrations/linear/sync", body: request)
     }
 
     // MARK: - Custom Themes
@@ -200,7 +201,7 @@ class ProAPIClient: ObservableObject {
         var request = theme
         request.license_key = licenseKey
 
-        let _: EmptyResponse = try await post("/api/pro/themes/save", body: request)
+        let _: ProEmptyResponse = try await post("/api/pro/themes/save", body: request)
     }
 
     /// Get user's custom themes from cloud
@@ -419,7 +420,7 @@ struct LinkIssueRequest: Codable {
     let license_key: String
 }
 
-struct JiraIssue: Codable, Identifiable {
+struct ProJiraIssue: Codable, Identifiable {
     let id: String
     let key: String
     let summary: String
@@ -427,8 +428,8 @@ struct JiraIssue: Codable, Identifiable {
     let assignee: String?
 }
 
-struct JiraIssuesResponse: Codable {
-    let issues: [JiraIssue]
+struct ProJiraIssuesResponse: Codable {
+    let issues: [ProJiraIssue]
 }
 
 // Linear
@@ -471,7 +472,7 @@ struct HookTemplatesResponse: Codable {
 }
 
 // Generic
-struct EmptyResponse: Codable {}
+struct ProEmptyResponse: Codable {}
 
 struct ErrorResponse: Codable {
     let error: String

@@ -12,6 +12,9 @@ struct CenterPanel: View {
     @EnvironmentObject var appState: AppState
     @Binding var selectedFileDiff: FileDiff?
     @Binding var isLoadingDiff: Bool
+    var onStageHunk: ((Int) async -> Bool)? = nil
+    var onDiscardHunk: ((Int) async -> Bool)? = nil
+    var onUnstageHunk: ((Int) async -> Bool)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,9 +31,14 @@ struct CenterPanel: View {
                 .background(AppTheme.background)
             } else if let fileDiff = selectedFileDiff {
                 // Diff View with close button
-                DiffViewWithClose(fileDiff: fileDiff, repoPath: appState.currentRepository?.path) {
-                    selectedFileDiff = nil
-                }
+                DiffViewWithClose(
+                    fileDiff: fileDiff,
+                    repoPath: appState.currentRepository?.path,
+                    onClose: { selectedFileDiff = nil },
+                    onStageHunk: onStageHunk,
+                    onDiscardHunk: onDiscardHunk,
+                    onUnstageHunk: onUnstageHunk
+                )
             } else {
                 // Graph View
                 if appState.currentRepository != nil {

@@ -26,16 +26,36 @@ enum StagingFileStatus {
         case .conflicted: return "exclamationmark.triangle"
         }
     }
+
+    var accessibilityDescription: String {
+        switch self {
+        case .added: return "added"
+        case .modified: return "modified"
+        case .deleted: return "deleted"
+        case .renamed: return "renamed"
+        case .untracked: return "untracked"
+        case .conflicted: return "conflicted"
+        }
+    }
 }
 
 // MARK: - Staging File Model
-struct StagingFile: Identifiable {
-    let id = UUID()
+struct StagingFile: Identifiable, Hashable {
+    // Use path as stable identity to preserve scroll position across reloads
+    var id: String { path }
     let path: String
     let status: StagingFileStatus
     var isStaged: Bool = false
     var additions: Int = 0
     var deletions: Int = 0
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(path)
+    }
+
+    static func == (lhs: StagingFile, rhs: StagingFile) -> Bool {
+        lhs.path == rhs.path && lhs.status == rhs.status && lhs.isStaged == rhs.isStaged
+    }
 
     var hasChanges: Bool {
         additions > 0 || deletions > 0

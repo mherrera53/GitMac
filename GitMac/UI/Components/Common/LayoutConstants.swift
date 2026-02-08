@@ -2,8 +2,19 @@ import SwiftUI
 
 // MARK: - Layout Constants
 
-/// Centralized layout constants for consistent spacing and sizing
-/// Use these instead of hard-coded values for maintainability
+/// @deprecated Use DesignTokens instead. This enum is kept for reference only.
+/// All values have been migrated to DesignTokens:
+/// - LayoutConstants.Spacing → DesignTokens.Spacing
+/// - LayoutConstants.Padding → DesignTokens.Padding
+/// - LayoutConstants.CornerRadius → DesignTokens.CornerRadius
+/// - LayoutConstants.RowHeight → DesignTokens.RowHeight
+/// - LayoutConstants.BorderWidth → DesignTokens.BorderWidth
+/// - LayoutConstants.FontSize → DesignTokens.Typography
+/// - LayoutConstants.IconSize → DesignTokens.Size
+/// - LayoutConstants.Opacity → DesignTokens.Opacity
+/// - LayoutConstants.AnimationDuration → DesignTokens.Animation
+/// - LayoutConstants.ZIndex → DesignTokens.ZIndex
+@available(*, deprecated, message: "Use DesignTokens instead")
 enum LayoutConstants {
 
     // MARK: - Spacing

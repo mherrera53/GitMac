@@ -94,6 +94,9 @@ struct XcodeBottomBarTab: View {
                 isHovered = hovering
             }
         }
+        .accessibilityIdentifier("bottom-panel-tab-\(title.lowercased().replacingOccurrences(of: " ", with: "-"))")
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
     private var tabColor: Color {

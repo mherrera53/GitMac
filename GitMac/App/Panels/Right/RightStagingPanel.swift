@@ -5,15 +5,25 @@ struct RightStagingPanel: View {
     @EnvironmentObject var appState: AppState
     @Binding var selectedFileDiff: FileDiff?
     @Binding var isLoadingDiff: Bool
+    @ObservedObject var stagingVM: StagingViewModel
+    @Binding var selectedStagingFile: StagingFile?
     @State private var commitMessage = ""
-    @StateObject private var stagingVM = StagingViewModel()
     @StateObject private var commitDetailVM = CommitDetailViewModel()
     @StateObject private var stashDetailVM = StashDetailViewModel()
     @ObservedObject private var themeManager = ThemeManager.shared
 
     var body: some View {
         VStack(spacing: 0) {
-            if let selectedCommit = appState.selectedCommit {
+            if let commitA = appState.comparisonCommitA,
+               let commitB = appState.comparisonCommitB {
+                // Show commit comparison panel
+                CommitComparisonPanel(
+                    commitA: commitA,
+                    commitB: commitB,
+                    selectedFileDiff: $selectedFileDiff,
+                    onClose: { appState.clearComparison() }
+                )
+            } else if let selectedCommit = appState.selectedCommit {
                 // Show commit details when a commit is selected
                 RightCommitDetailPanel(
                     commit: selectedCommit,
@@ -35,7 +45,8 @@ struct RightStagingPanel: View {
                     stagingVM: stagingVM,
                     selectedFileDiff: $selectedFileDiff,
                     isLoadingDiff: $isLoadingDiff,
-                    commitMessage: $commitMessage
+                    commitMessage: $commitMessage,
+                    selectedStagingFile: $selectedStagingFile
                 )
             }
         }
@@ -49,12 +60,11 @@ struct RightStagingPanel: View {
                 Task { await stagingVM.loadStatus(at: path) }
             }
         }
-        .onReceive(Timer.publish(every: 2.0, on: .main, in: .common).autoconnect()) { _ in
-            // Auto-refresh WIP changes every 2 seconds
+        .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { _ in
+            // Only refresh in WIP mode (no commit/stash selected)
+            guard appState.selectedCommit == nil && appState.selectedStash == nil else { return }
             if let path = appState.currentRepository?.path {
-                Task {
-                    await stagingVM.loadStatus(at: path)
-                }
+                Task { await stagingVM.loadStatus(at: path) }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .fileSavedInEditor)) { _ in
@@ -73,14 +83,19 @@ struct RightStagingPanel: View {
             }
         }
         .onChange(of: appState.selectedCommit) { _, newCommit in
-            // Single-click: only load the file list, not the diff
-            if let commit = newCommit, let path = appState.currentRepository?.path {
-                Task {
-                    await commitDetailVM.loadCommitFiles(sha: commit.sha, at: path)
+            // File loading is handled by RightCommitDetailPanel.task(id: commit.sha)
+            // which has proper cancellation via structured concurrency.
+            if newCommit == nil && appState.selectedStash == nil {
+                // Entering WIP mode - refresh staging area immediately
+                if let path = appState.currentRepository?.path {
+                    Task {
+                        await stagingVM.loadStatus(at: path)
+                    }
                 }
             }
             // Clear diff when commit changes
             selectedFileDiff = nil
+            selectedStagingFile = nil
         }
         .onReceive(NotificationCenter.default.publisher(for: .loadFirstFileDiff)) { _ in
             // Double-click: load diff for first file

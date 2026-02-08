@@ -136,7 +136,7 @@ class ConflictResolverViewModel: ObservableObject {
         await resolveFile(file, with: content)
     }
 
-    func resolveWithAI(_ file: ConflictFile) async -> ConflictResolution? {
+    func resolveWithAI(_ file: ConflictFile) async -> AIConflictResolution? {
         do {
             return try await aiService.suggestConflictResolution(
                 ours: file.oursContent,
@@ -458,7 +458,7 @@ struct ThreeWayMergeView: View {
     let file: ConflictFile
     @ObservedObject var viewModel: ConflictResolverViewModel
     @State private var outputContent: String = ""
-    @State private var aiResolution: ConflictResolution?
+    @State private var aiResolution: AIConflictResolution?
     @State private var isGeneratingAI = false
 
     var body: some View {
@@ -679,7 +679,7 @@ struct OutputPanel: View {
 }
 
 struct ConfidenceBadge: View {
-    let confidence: ConflictResolution.Confidence
+    let confidence: AIConflictResolution.Confidence
 
     var body: some View {
         Text(confidence.rawValue.capitalized)

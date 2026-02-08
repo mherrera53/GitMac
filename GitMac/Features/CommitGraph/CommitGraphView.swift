@@ -1,371 +1,13 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
-// BranchPanelView, BranchSection, BranchPanelRow, and GraphMinimapView are now
+// Models, Components, ViewModels, and Services are defined in their respective files:
+// - Models/: GraphTransferables, GraphSettings, GraphNode, StashNode, TimelineItem, GraphNotifications
+// - Components/: GhostBranchesOverlay, BranchBadge, StashBadge, UncommittedChangesRow, GraphStashRow, GraphRow, CommitContextMenu
+// - ViewModels/: GraphViewModel
+// - Services/: GraphLayoutEngine
+
+// BranchPanelView, BranchSection, BranchPanelRow, and GraphMinimapView are
 // defined in Components/ folder - do not redefine here
-
-// MARK: - Commit Transferable (for drag & drop)
-
-/// Transferable representation of a commit for drag & drop operations
-struct CommitTransferable: Transferable, Codable {
-    let sha: String
-    let message: String
-    let author: String
-    let branchName: String?
-
-    init(commit: Commit, branchName: String? = nil) {
-        self.sha = commit.sha
-        self.message = commit.message
-        self.author = commit.author
-        self.branchName = branchName
-    }
-
-    static var transferRepresentation: some TransferRepresentation {
-        CodableRepresentation(contentType: .commitData)
-    }
-}
-
-extension UTType {
-    static let commitData = UTType(exportedAs: "com.gitmac.commit")
-    static let branchData = UTType(exportedAs: "com.gitmac.branch")
-}
-
-/// Transferable representation of a branch for drag & drop PR creation
-struct BranchTransferable: Transferable, Codable {
-    let name: String
-    let isHead: Bool
-    let targetSHA: String?
-
-    init(name: String, isHead: Bool = false, targetSHA: String? = nil) {
-        self.name = name
-        self.isHead = isHead
-        self.targetSHA = targetSHA
-    }
-
-    static var transferRepresentation: some TransferRepresentation {
-        CodableRepresentation(contentType: .branchData)
-    }
-}
-
-// MARK: - Ghost Branches (integrated from GhostBranchesOverlay.swift)
-
-/// Shows nearby branches when hovering over a commit in the graph
-/// Shows nearby branches when hovering over a commit in the graph
-struct GhostBranchesOverlay: View {
-    let commit: Commit
-    let allBranches: [Branch]
-    let repoPath: String
-    @State private var nearbyBranches: [NearbyBranch] = []
-    @State private var isLoading = false
-
-    var body: some View {
-        return Group {
-            if !nearbyBranches.isEmpty {
-                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                    Text("Nearby Branches")
-                        .font(DesignTokens.Typography.caption2)
-                        .fontWeight(.semibold)
-                        .foregroundColor(AppTheme.textPrimary)
-
-                    ForEach(nearbyBranches.prefix(5)) { branch in
-                        NearbyBranchRow(branch: branch)
-                    }
-                }
-                .padding(DesignTokens.Spacing.sm)
-                .background(AppTheme.backgroundSecondary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
-                .shadow(color: .black.opacity(0.2), radius: DesignTokens.Spacing.xs)
-            }
-        }
-        .task {
-            await findNearbyBranches()
-        }
-    }
-
-    private func findNearbyBranches() async {
-        isLoading = true
-
-        var nearby: [NearbyBranch] = []
-
-        for branch in allBranches {
-            // Skip if this commit IS the branch tip
-            guard branch.targetSHA != commit.sha else { continue }
-
-            // Check distance to this branch
-            if let distance = await getCommitDistance(from: commit.sha, to: branch.targetSHA) {
-                if distance.ahead <= 10 || distance.behind <= 10 {
-                    nearby.append(NearbyBranch(
-                        name: branch.name,
-                        sha: branch.targetSHA,
-                        ahead: distance.ahead,
-                        behind: distance.behind,
-                        isCurrent: branch.isCurrent
-                    ))
-                }
-            }
-        }
-
-        // Sort by total distance
-        nearbyBranches = nearby.sorted { ($0.ahead + $0.behind) < ($1.ahead + $1.behind) }
-        isLoading = false
-    }
-
-    private func getCommitDistance(from: String, to: String) async -> (ahead: Int, behind: Int)? {
-        let executor = ShellExecutor()
-        let result = await executor.execute(
-            "git",
-            arguments: ["rev-list", "--left-right", "--count", "\(from)...\(to)"],
-            workingDirectory: repoPath
-        )
-
-        guard result.exitCode == 0 else { return nil }
-
-        let parts = result.output.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: "\t")
-        guard parts.count == 2,
-              let ahead = Int(parts[0]),
-              let behind = Int(parts[1]) else { return nil }
-
-        return (ahead, behind)
-    }
-}
-
-struct NearbyBranch: Identifiable {
-    let id = UUID()
-    let name: String
-    let sha: String
-    let ahead: Int
-    let behind: Int
-    let isCurrent: Bool
-
-    var distanceDescription: String {
-        var parts: [String] = []
-        if ahead > 0 { parts.append("\(ahead) ahead") }
-        if behind > 0 { parts.append("\(behind) behind") }
-        return parts.joined(separator: ", ")
-    }
-}
-
-struct NearbyBranchRow: View {
-    let branch: NearbyBranch
-
-    var body: some View {
-        HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
-            // Branch icon with color
-            Image(systemName: "arrow.triangle.branch")
-                .font(DesignTokens.Typography.caption2)
-                .foregroundColor(branch.isCurrent ? AppTheme.success : AppTheme.accent)
-
-            // Branch name
-            Text(branch.name)
-                .font(DesignTokens.Typography.caption)
-                .fontWeight(branch.isCurrent ? .semibold : .regular)
-                .lineLimit(1)
-
-            Spacer()
-
-            // Distance indicator
-            HStack(spacing: DesignTokens.Spacing.xs) {
-                if branch.ahead > 0 {
-                    HStack(spacing: DesignTokens.Spacing.xxs) {
-                        Image(systemName: "arrow.up")
-                            .font(.system(size: 8)) // Graph badge font - intentionally small
-                        Text("\(branch.ahead)")
-                            .font(DesignTokens.Typography.caption2)
-                    }
-                    .foregroundColor(AppTheme.success)
-                }
-
-                if branch.behind > 0 {
-                    HStack(spacing: DesignTokens.Spacing.xxs) {
-                        Image(systemName: "arrow.down")
-                            .font(.system(size: 8)) // Graph badge font - intentionally small
-                        Text("\(branch.behind)")
-                            .font(DesignTokens.Typography.caption2)
-                    }
-                    .foregroundColor(AppTheme.warning)
-                }
-            }
-        }
-        .padding(.vertical, DesignTokens.Spacing.xxs)
-    }
-}
-
-extension View {
-    /// Add ghost branches overlay on hover
-    func withGhostBranches(
-        commit: Commit,
-        branches: [Branch],
-        repoPath: String,
-        isHovered: Bool
-    ) -> some View {
-        self.overlay(alignment: .topTrailing) {
-            if isHovered {
-                GhostBranchesOverlay(
-                    commit: commit,
-                    allBranches: branches,
-                    repoPath: repoPath
-                )
-                .offset(x: 10, y: -10)
-            }
-        }
-    }
-}
-
-// MARK: - Graph Display Settings
-@MainActor
-class GraphSettings: ObservableObject {
-    // Column visibility
-    @Published var showBranchColumn = true {
-        didSet { saveSettings() }
-    }
-    @Published var showAuthorColumn = false {
-        didSet { saveSettings() }
-    }
-    @Published var showDateColumn = false {
-        didSet { saveSettings() }
-    }
-    @Published var showSHAColumn = false {
-        didSet { saveSettings() }
-    }
-
-    // Column widths
-    @Published var branchColumnWidth: CGFloat = 140 {
-        didSet { saveSettings() }
-    }
-    @Published var graphColumnWidth: CGFloat = 110 {
-        didSet { saveSettings() }
-    }
-    @Published var authorColumnWidth: CGFloat = 120 {
-        didSet { saveSettings() }
-    }
-    @Published var dateColumnWidth: CGFloat = 100 {
-        didSet { saveSettings() }
-    }
-    @Published var shaColumnWidth: CGFloat = 80 {
-        didSet { saveSettings() }
-    }
-
-    // Display preferences
-    @Published var showAvatars = true {
-        didSet { saveSettings() }
-    }
-    @Published var showInitials = false {
-        didSet { saveSettings() }
-    }
-    @Published var compactMode = false {
-        didSet { saveSettings() }
-    }
-    @Published var dimMergeCommits = false {
-        didSet { saveSettings() }
-    }
-
-    // Filtering
-    @Published var showTags = true
-    @Published var showBranches = true
-    @Published var showStashes = true
-    @Published var filterAuthor: String = ""
-    @Published var searchText: String = ""
-
-    // Repository path for persistence
-    private var repositoryPath: String = ""
-    private let defaults = UserDefaults.standard
-
-    // Computed properties
-    var rowHeight: CGFloat {
-        compactMode ? 32 : 44
-    }
-
-    var nodeRadius: CGFloat {
-        compactMode ? 10 : 14
-    }
-
-    var avatarSize: CGFloat {
-        compactMode ? 18 : 26
-    }
-
-    // MARK: - Persistence
-    func setRepository(_ path: String) {
-        self.repositoryPath = path
-        loadSettings()
-    }
-
-    private func saveSettings() {
-        guard !repositoryPath.isEmpty else { return }
-
-        let key = "graphSettings_\(repositoryPath)"
-        let settings: [String: Any] = [
-            "showBranchColumn": showBranchColumn,
-            "showAuthorColumn": showAuthorColumn,
-            "showDateColumn": showDateColumn,
-            "showSHAColumn": showSHAColumn,
-            "branchColumnWidth": branchColumnWidth,
-            "graphColumnWidth": graphColumnWidth,
-            "authorColumnWidth": authorColumnWidth,
-            "dateColumnWidth": dateColumnWidth,
-            "shaColumnWidth": shaColumnWidth,
-            "showAvatars": showAvatars,
-            "showInitials": showInitials,
-            "compactMode": compactMode,
-            "dimMergeCommits": dimMergeCommits
-        ]
-        defaults.set(settings, forKey: key)
-    }
-
-    private func loadSettings() {
-        guard !repositoryPath.isEmpty else { return }
-
-        let key = "graphSettings_\(repositoryPath)"
-        guard let settings = defaults.dictionary(forKey: key) else { return }
-
-        if let value = settings["showBranchColumn"] as? Bool {
-            showBranchColumn = value
-        }
-        if let value = settings["showAuthorColumn"] as? Bool {
-            showAuthorColumn = value
-        }
-        if let value = settings["showDateColumn"] as? Bool {
-            showDateColumn = value
-        }
-        if let value = settings["showSHAColumn"] as? Bool {
-            showSHAColumn = value
-        }
-        if let value = settings["branchColumnWidth"] as? CGFloat {
-            branchColumnWidth = value
-        }
-        if let value = settings["graphColumnWidth"] as? CGFloat {
-            graphColumnWidth = value
-        }
-        if let value = settings["authorColumnWidth"] as? CGFloat {
-            authorColumnWidth = value
-        }
-        if let value = settings["dateColumnWidth"] as? CGFloat {
-            dateColumnWidth = value
-        }
-        if let value = settings["shaColumnWidth"] as? CGFloat {
-            shaColumnWidth = value
-        }
-        if let value = settings["showAvatars"] as? Bool {
-            showAvatars = value
-        }
-        if let value = settings["showInitials"] as? Bool {
-            showInitials = value
-        }
-        if let value = settings["compactMode"] as? Bool {
-            compactMode = value
-        }
-        if let value = settings["dimMergeCommits"] as? Bool {
-            dimMergeCommits = value
-        }
-    }
-}
-
-// MARK: - Color Extension for Branch Colors
-extension Color {
-    @MainActor static func branchColor(_ index: Int) -> Color {
-        let colors = AppTheme.graphLaneColors
-        return colors[index % colors.count]
-    }
-}
 
 // MARK: - Commit Graph View
 struct CommitGraphView: View {
@@ -386,10 +28,18 @@ struct CommitGraphView: View {
     @State private var selectedFileDiff: FileDiff? = nil
     @State private var dismissedOperationIds: Set<UUID> = []
 
+    // Commit comparison mode - state managed in appState
+    @State private var showStaleBranchCleanup = false
+    @State private var zoomBaseLevel: CGFloat = 1.0
+
     // PR creation from drag & drop
     @State private var showPRSheet = false
     @State private var prHeadBranch: String = ""
     @State private var prBaseBranch: String = ""
+
+    // Worktree creation from commit
+    @State private var showWorktreeSheet = false
+    @State private var worktreeCommitSHA: String = ""
 
     private func isDismissedOperation(_ operation: RemoteOperation) -> Bool {
         dismissedOperationIds.contains(operation.id)
@@ -452,10 +102,18 @@ struct CommitGraphView: View {
                     Divider()
                 }
 
-                // Main graph area
-                VStack(spacing: 0) {
-                    graphHeader
-                    graphContent
+                // Main graph area with responsive width detection
+                GeometryReader { geometry in
+                    VStack(spacing: 0) {
+                        graphHeader
+                        graphContent
+                    }
+                    .onAppear {
+                        settings.availableWidth = geometry.size.width
+                    }
+                    .onChange(of: geometry.size.width) { _, newWidth in
+                        settings.availableWidth = newWidth
+                    }
                 }
 
                 // Minimap (right sidebar)
@@ -542,6 +200,9 @@ struct CommitGraphView: View {
                 Task { await vm.load(at: path) }
             }
         }
+        .onChange(of: vm.maxLane) { _, newMaxLane in
+            settings.maxLane = newMaxLane
+        }
         .sheet(isPresented: $showPRSheet) {
             if !prHeadBranch.isEmpty && !prBaseBranch.isEmpty {
                 // Find or create the head branch object
@@ -555,16 +216,56 @@ struct CommitGraphView: View {
                 .environmentObject(appState)
             }
         }
+        .sheet(isPresented: $showStaleBranchCleanup) {
+            StaleBranchCleanupView()
+                .environmentObject(appState)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .compareCommit)) { notification in
+            if let commits = notification.object as? [Commit], commits.count == 2 {
+                // Multi-select: compare two commits directly
+                appState.comparisonCommitA = commits[0]
+                appState.comparisonCommitB = commits[1]
+                appState.selectedCommit = nil
+            } else if let commit = notification.object as? Commit {
+                // Single-select: set as first commit to compare
+                if appState.comparisonCommitA == nil {
+                    appState.comparisonCommitA = commit
+                    NotificationManager.shared.info(
+                        "Select second commit",
+                        detail: "Right-click another commit and choose 'Compare with...' to complete the comparison"
+                    )
+                } else {
+                    appState.comparisonCommitB = commit
+                    appState.selectedCommit = nil
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showStaleBranchCleanup)) { _ in
+            showStaleBranchCleanup = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .createWorktreeFromCommit)) { notification in
+            if let sha = notification.object as? String {
+                worktreeCommitSHA = sha
+                showWorktreeSheet = true
+            }
+        }
+        .sheet(isPresented: $showWorktreeSheet) {
+            CreateWorktreeFromCommitSheet(commitSHA: worktreeCommitSHA)
+                .environmentObject(appState)
+        }
+        .onAppear {
+            zoomBaseLevel = settings.zoomLevel
+        }
     }
+
+    // MARK: - Remote Status
 
     private var lastOperationForCurrentBranch: RemoteOperation? {
         guard let branch = appState.currentRepository?.currentBranch?.name else { return nil }
         return tracker.getLastOperation(for: branch)
     }
-    
-    private func remoteStatusBar(operation: RemoteOperation) -> some View {
-        // let theme = Color.Theme(themeManager.colors) // Removed
 
+    private func remoteStatusBar(operation: RemoteOperation) -> some View {
         return HStack(spacing: DesignTokens.Spacing.md) {
             // Status icon and info
             RemoteStatusBadge(operation: operation, compact: false)
@@ -572,7 +273,7 @@ struct CommitGraphView: View {
             // Time ago
             Text(operation.timestamp.formatted(.relative(presentation: .named)))
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textPrimary) // Replaced theme.text
+                .foregroundColor(AppTheme.textPrimary)
 
             Spacer()
 
@@ -616,6 +317,7 @@ struct CommitGraphView: View {
     }
 
     // MARK: - Branch Operations
+
     private func checkoutBranch(_ branch: Branch) async {
         guard let repoPath = appState.currentRepository?.path else { return }
 
@@ -641,9 +343,8 @@ struct CommitGraphView: View {
     }
 
     // MARK: - Graph Toolbar
-    private var graphToolbar: some View {
-        // let theme = Color.Theme(themeManager.colors) // Removed
 
+    private var graphToolbar: some View {
         return HStack(spacing: DesignTokens.Spacing.md) {
             // Search field using DS component
             DSSearchField(
@@ -657,7 +358,7 @@ struct CommitGraphView: View {
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     Image(systemName: "person.fill")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textSecondary) // Replaced theme.textSecondary
+                        .foregroundColor(AppTheme.textSecondary)
                     Text(settings.filterAuthor)
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
@@ -690,7 +391,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: settings.showBranches ? "point.3.connected.trianglepath.dotted" : "arrow.triangle.branch")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(settings.showBranches ? AppTheme.accent : AppTheme.textSecondary) // Replaced theme.textMuted
+                        .foregroundColor(settings.showBranches ? AppTheme.accent : AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -701,7 +402,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: settings.showTags ? "tag.circle.fill" : "tag.circle")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(settings.showTags ? AppTheme.warning : AppTheme.textSecondary) // Replaced theme.textMuted
+                        .foregroundColor(settings.showTags ? AppTheme.warning : AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -712,7 +413,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: settings.showStashes ? "archivebox.circle.fill" : "archivebox.circle")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(settings.showStashes ? AppTheme.warning : AppTheme.textSecondary) // Replaced theme.textMuted
+                        .foregroundColor(settings.showStashes ? AppTheme.warning : AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -731,7 +432,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: "sidebar.left")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(showBranchPanel ? AppTheme.accent : AppTheme.textSecondary) // Replaced theme.textMuted
+                        .foregroundColor(showBranchPanel ? AppTheme.accent : AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -744,7 +445,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: "map")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(showMinimap ? AppTheme.accent : AppTheme.textSecondary) // Replaced theme.textMuted
+                        .foregroundColor(showMinimap ? AppTheme.accent : AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -757,11 +458,44 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: "sidebar.right")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(showDetailPanel ? AppTheme.accent : AppTheme.textSecondary) // Replaced theme.textMuted
+                        .foregroundColor(showDetailPanel ? AppTheme.accent : AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
                 .help("Toggle detail panel")
+            }
+
+            Divider()
+                .frame(height: DesignTokens.Spacing.lg)
+
+            // Zoom controls
+            HStack(spacing: 2) {
+                Button(action: { settings.zoomOut() }) {
+                    Image(systemName: "minus.magnifyingglass")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(settings.zoomLevel <= GraphSettings.zoomMin ? AppTheme.textMuted : AppTheme.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(settings.zoomLevel <= GraphSettings.zoomMin)
+                .help("Zoom out")
+
+                Button(action: { settings.resetZoom() }) {
+                    Text("\(settings.zoomPercentage)%")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundColor(settings.zoomLevel == 1.0 ? AppTheme.textMuted : AppTheme.accent)
+                        .frame(width: 36)
+                }
+                .buttonStyle(.plain)
+                .help("Reset zoom to 100%")
+
+                Button(action: { settings.zoomIn() }) {
+                    Image(systemName: "plus.magnifyingglass")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(settings.zoomLevel >= GraphSettings.zoomMax ? AppTheme.textMuted : AppTheme.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(settings.zoomLevel >= GraphSettings.zoomMax)
+                .help("Zoom in")
             }
 
             Divider()
@@ -799,6 +533,17 @@ struct CommitGraphView: View {
 
                 Divider()
 
+                Menu("Zoom") {
+                    Button("Zoom In") { settings.zoomIn() }
+                        .disabled(settings.zoomLevel >= GraphSettings.zoomMax)
+                    Button("Zoom Out") { settings.zoomOut() }
+                        .disabled(settings.zoomLevel <= GraphSettings.zoomMin)
+                    Button("Reset Zoom (100%)") { settings.resetZoom() }
+                        .disabled(settings.zoomLevel == 1.0)
+                }
+
+                Divider()
+
                 Menu("Columns") {
                     Button(action: { settings.showAuthorColumn.toggle() }) {
                         HStack {
@@ -831,29 +576,35 @@ struct CommitGraphView: View {
             } label: {
                 Image(systemName: "slider.horizontal.3")
             }
-            .tint(AppTheme.textSecondary) // Replaced theme.textSecondary
+            .tint(AppTheme.textSecondary)
             .help("Display Options")
             .menuStyle(.borderlessButton)
         }
         .padding(.horizontal, DesignTokens.Spacing.sm)
         .padding(.vertical, DesignTokens.Spacing.xs)
-        .background(AppTheme.backgroundSecondary) // Replaced theme.backgroundSecondary
+        .background(AppTheme.backgroundSecondary)
     }
 
-    private var graphHeader: some View {
-        // let theme = Color.Theme(themeManager.colors) // Removed
+    // MARK: - Graph Header
 
+    private var graphHeader: some View {
         return HStack(spacing: 0) {
-            if settings.showBranchColumn {
+            if settings.shouldShowBranchColumn {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.triangle.branch")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary) // Replaced theme.textMuted
+                        .foregroundColor(AppTheme.textSecondary)
                         .symbolRenderingMode(.monochrome)
                     Text("BRANCH / TAG")
                 }
-                .frame(width: settings.branchColumnWidth, alignment: .leading)
+                .frame(width: settings.responsiveBranchColumnWidth, alignment: .leading)
                 .padding(.leading, 12)
+
+                ColumnResizer(
+                    width: $settings.branchColumnWidth,
+                    minWidth: 80,
+                    maxWidth: 300
+                )
             }
 
             HStack(spacing: 4) {
@@ -869,10 +620,22 @@ struct CommitGraphView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, DesignTokens.Spacing.sm)
 
-            Text("CHANGES")
-                .frame(width: 140, alignment: .leading)
+            ColumnResizer(
+                width: $settings.changesColumnWidth,
+                minWidth: 60,
+                maxWidth: 200
+            )
 
-            if settings.showAuthorColumn {
+            Text("CHANGES")
+                .frame(width: settings.responsiveChangesColumnWidth, alignment: .leading)
+
+            if settings.shouldShowAuthorColumn {
+                ColumnResizer(
+                    width: $settings.authorColumnWidth,
+                    minWidth: 80,
+                    maxWidth: 200
+                )
+
                 HStack(spacing: 4) {
                     Image(systemName: "person.circle.fill")
                         .font(.system(size: 10, weight: .medium))
@@ -883,7 +646,13 @@ struct CommitGraphView: View {
                 .frame(width: settings.authorColumnWidth, alignment: .leading)
             }
 
-            if settings.showDateColumn {
+            if settings.shouldShowDateColumn {
+                ColumnResizer(
+                    width: $settings.dateColumnWidth,
+                    minWidth: 60,
+                    maxWidth: 160
+                )
+
                 HStack(spacing: 4) {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 10, weight: .medium))
@@ -894,7 +663,13 @@ struct CommitGraphView: View {
                 .frame(width: settings.dateColumnWidth, alignment: .trailing)
             }
 
-            if settings.showSHAColumn {
+            if settings.shouldShowSHAColumn {
+                ColumnResizer(
+                    width: $settings.shaColumnWidth,
+                    minWidth: 60,
+                    maxWidth: 120
+                )
+
                 HStack(spacing: 4) {
                     Image(systemName: "number.circle.fill")
                         .font(.system(size: 10, weight: .medium))
@@ -915,6 +690,8 @@ struct CommitGraphView: View {
         .accessibilityLabel("Graph Header")
     }
 
+    // MARK: - Graph Content
+
     @ViewBuilder
     private var graphContent: some View {
         if vm.isLoading && vm.nodes.isEmpty {
@@ -933,12 +710,24 @@ struct CommitGraphView: View {
             itemView(for: item)
         }
         .estimatedItemHeight(settings.rowHeight)
+        .spacing(0)  // Zero spacing so graph lines connect perfectly between rows
         .bufferSize(20)
         .onReachEnd {
             if vm.hasMore && !vm.isLoading {
                 Task { await vm.loadMore() }
             }
         }
+        .gesture(
+            MagnifyGesture()
+                .onChanged { value in
+                    let delta = value.magnification - 1.0
+                    let newZoom = zoomBaseLevel + delta * 0.5
+                    settings.zoomLevel = min(max(newZoom, GraphSettings.zoomMin), GraphSettings.zoomMax)
+                }
+                .onEnded { _ in
+                    zoomBaseLevel = settings.zoomLevel
+                }
+        )
     }
 
     @ViewBuilder
@@ -949,7 +738,8 @@ struct CommitGraphView: View {
                 stagedCount: staged,
                 unstagedCount: unstaged,
                 isSelected: selectedIds.contains("uncommitted-changes"),
-                isHovered: hoveredId == "uncommitted-changes"
+                isHovered: hoveredId == "uncommitted-changes",
+                settings: settings
             )
             .onHover { h in hoveredId = h ? "uncommitted-changes" : nil }
             .onTapGesture {
@@ -1002,7 +792,8 @@ struct CommitGraphView: View {
                 GraphStashRow(
                     stash: stashNode,
                     isSelected: selectedIds.contains(stashNode.id),
-                    isHovered: hoveredId == stashNode.id
+                    isHovered: hoveredId == stashNode.id,
+                    settings: settings
                 )
                 .onHover { h in hoveredId = h ? stashNode.id : nil }
                 .onTapGesture {
@@ -1017,8 +808,8 @@ struct CommitGraphView: View {
         }
     }
 
-
     // MARK: - Search and Filter
+
     private func matchesSearchAndFilter(_ node: GraphNode) -> Bool {
         // Parse advanced search syntax
         if !settings.searchText.isEmpty {
@@ -1051,6 +842,8 @@ struct CommitGraphView: View {
         return true
     }
 
+    // MARK: - Selection
+
     private func handleSelection(item: TimelineItem) {
         let itemId = item.id
         let modifiers = NSEvent.modifierFlags
@@ -1079,17 +872,18 @@ struct CommitGraphView: View {
             lastSelectedId = itemId
         }
 
-        // Single-click: show right panel with changed files (no diff loaded)
-        if let firstId = selectedIds.first {
-            if let commitItem = vm.timelineItems.first(where: { $0.id == firstId }),
+        // Show details for the last clicked item (not arbitrary Set.first)
+        let targetId = lastSelectedId ?? selectedIds.first
+        if let targetId {
+            if let commitItem = vm.timelineItems.first(where: { $0.id == targetId }),
                case .commit(let node) = commitItem {
                 appState.selectedCommit = node.commit
                 appState.selectedStash = nil
-            } else if let stashItem = vm.timelineItems.first(where: { $0.id == firstId }),
+            } else if let stashItem = vm.timelineItems.first(where: { $0.id == targetId }),
                       case .stash(let stashNode) = stashItem {
                 appState.selectedCommit = nil
                 appState.selectedStash = stashNode.stash
-            } else if firstId == "uncommitted-changes" {
+            } else if targetId == "uncommitted-changes" {
                 // WIP selected - clear commit/stash to show staging area
                 appState.selectedCommit = nil
                 appState.selectedStash = nil
@@ -1113,1162 +907,64 @@ struct CommitGraphView: View {
     }
 }
 
-// MARK: - Timeline Item (Commit or Stash or Uncommitted Changes)
-enum TimelineItem: Identifiable {
-    case uncommitted(staged: Int, unstaged: Int)
-    case commit(GraphNode)
-    case stash(StashNode)
-
-    var id: String {
-        switch self {
-        case .uncommitted: return "uncommitted-changes"
-        case .commit(let node): return node.id
-        case .stash(let stash): return stash.id
-        }
-    }
-
-    var date: Date {
-        switch self {
-        case .uncommitted: return Date() // Always most recent
-        case .commit(let node): return node.commit.authorDate
-        case .stash(let stash): return stash.stash.date
-        }
-    }
-}
-
-// MARK: - Uncommitted Changes Row
-struct UncommittedChangesRow: View {
-    let stagedCount: Int
-    let unstagedCount: Int
-    let isSelected: Bool
-    let isHovered: Bool
-
-    private let H: CGFloat = 44
-    private let W: CGFloat = 26
-    private let R: CGFloat = 14
-
-    var body: some View {
-        // let theme = Color.Theme(themeManager.colors) // Removed
-
-        return HStack(spacing: 0) {
-            // Label
-            HStack {
-                BranchBadge(
-                    name: "// WIP",
-                    color: .orange,
-                    isHead: false,
-                    isTag: false
-                )
-                Spacer()
-            }
-            .frame(width: 140)
-            .padding(.leading, DesignTokens.Spacing.sm)
-
-            // Graph - dotted node
-            ZStack {
-                Canvas { ctx, size in
-                    let cy = size.height / 2
-                    let myX: CGFloat = W / 2 + DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs
-
-                    // Dotted line to bottom
-                    drawDottedLine(ctx, from: CGPoint(x: myX, y: cy), to: CGPoint(x: myX, y: size.height), color: .orange)
-
-                    // Dotted circle
-                    let nodeRect = CGRect(x: myX - R, y: cy - R, width: R * 2, height: R * 2)
-                    // Fill with background to hide line passing through
-                    ctx.fill(Circle().path(in: nodeRect), with: .color(AppTheme.background))
-                    ctx.stroke(Circle().path(in: nodeRect), with: .color(.orange), style: StrokeStyle(lineWidth: 2, dash: [5, 6]))
-                }
-                .frame(width: 110, height: H)
-
-                // Pencil icon inside node
-                Image(systemName: "pencil")
-                    .font(DesignTokens.Typography.callout)
-                    .fontWeight(.bold)
-                    .foregroundColor(AppTheme.warning)
-                    .offset(x: -43)
-            }
-
-            // Info
-            HStack(spacing: DesignTokens.Spacing.sm) {
-                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
-                    Text("Uncommitted changes")
-                        .font(DesignTokens.Typography.callout)
-                        .fontWeight(.medium)
-                        .foregroundColor(AppTheme.warning)
-                    Text("\(stagedCount) staged, \(unstagedCount) unstaged")
-                        .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
-                }
-                Spacer()
-            }
-            .padding(.horizontal, DesignTokens.Spacing.sm)
-        }
-        .frame(height: H)
-        .background(isSelected ? AppTheme.accent.opacity(0.1) : (isHovered ? AppTheme.textSecondary.opacity(0.05) : Color.clear))
-    }
-
-    func drawDottedLine(_ ctx: GraphicsContext, from: CGPoint, to: CGPoint, color: Color) {
-        var p = Path()
-        p.move(to: from)
-        p.addLine(to: to)
-        ctx.stroke(p, with: .color(color), style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [5, 6]))
-    }
-}
-
-// MARK: - Graph Stash Row (Modern)
-struct GraphStashRow: View {
-    let stash: StashNode
-    let isSelected: Bool
-    let isHovered: Bool
-
-    private let H: CGFloat = 44
-    private let W: CGFloat = 26
-    private let boxSize: CGFloat = 18
-    private let LW: CGFloat = 2
-    private var stashColor: Color { AppTheme.info }
-
-    var body: some View {
-        // let theme = Color.Theme(themeManager.colors) // Removed
-
-        return HStack(spacing: 0) {
-            // Label - stash badge
-            HStack(spacing: DesignTokens.Spacing.xs) {
-                StashBadge(name: stash.stash.reference)
-                Spacer()
-            }
-            .frame(width: 140)
-            .padding(.leading, DesignTokens.Spacing.sm)
-
-            // Graph area
-            ZStack {
-                Canvas { ctx, size in
-                    let cy = size.height / 2
-                    let mainLaneX: CGFloat = W / 2 + 6
-                    let stashX: CGFloat = mainLaneX + W + 8
-
-                    // 1) Main branch line (continues through)
-                    var mainLine = Path()
-                    mainLine.move(to: CGPoint(x: mainLaneX, y: 0))
-                    mainLine.addLine(to: CGPoint(x: mainLaneX, y: size.height))
-                    ctx.stroke(mainLine, with: .color(Color.branchColor(0)), lineWidth: LW)
-
-                    // 2) Stash connection line
-                    var connLine = Path()
-                    connLine.move(to: CGPoint(x: stashX, y: cy))
-                    connLine.addLine(to: CGPoint(x: mainLaneX, y: size.height)) // Connects down-left
-                    ctx.stroke(connLine, with: .color(stashColor),
-                              style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [5, 6]))
-
-                    // 3) Stash node (Box)
-                    let boxRect = CGRect(x: stashX - boxSize/2, y: cy - boxSize/2,
-                                        width: boxSize, height: boxSize)
-                    let roundedBox = RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.sm).path(in: boxRect)
-                    ctx.fill(roundedBox, with: .color(stashColor))
-                    ctx.stroke(roundedBox, with: .color(stashColor.opacity(0.8)), lineWidth: 1)
-                }
-                .frame(width: 110, height: H)
-
-                // Box icon
-                Image(systemName: "shippingbox.fill")
-                    .font(.system(size: 8, weight: .bold)) // Graph badge font - intentionally small
-                    .foregroundColor(AppTheme.textPrimary)
-                    .offset(x: -5) // Adjust based on stashX calculation
-            }
-
-            // Info
-            HStack(spacing: DesignTokens.Spacing.sm) {
-                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
-                    Text(stash.stash.displayMessage)
-                        .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textPrimary)
-                        .lineLimit(1)
-
-                    HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
-                        Text(stash.stash.reference)
-                            .font(DesignTokens.Typography.caption2.monospaced())
-                            .foregroundColor(stashColor)
-
-                        if let branch = stash.stash.branchName {
-                            Text("on \(branch)")
-                                .font(DesignTokens.Typography.caption2)
-                                .foregroundColor(AppTheme.textSecondary)
-                        }
-                    }
-                }
-
-                Spacer()
-
-                Text(stash.stash.relativeDate)
-                    .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textSecondary)
-                    .frame(width: 70, alignment: .trailing)
-            }
-            .padding(.horizontal, DesignTokens.Spacing.sm)
-        }
-        .frame(height: H)
-        .background(isSelected ? AppTheme.accent.opacity(0.1) : (isHovered ? AppTheme.textSecondary.opacity(0.05) : Color.clear))
-        .contextMenu {
-            Button {
-                NotificationCenter.default.post(name: .applyStash, object: stash.stash.index)
-            } label: {
-                Label("Apply Stash", systemImage: "arrow.down.doc")
-            }
-            Button {
-                NotificationCenter.default.post(name: .popStashAtIndex, object: stash.stash.index)
-            } label: {
-                Label("Pop Stash", systemImage: "arrow.up.doc")
-            }
-            Divider()
-            Button(role: .destructive) {
-                NotificationCenter.default.post(name: .dropStash, object: stash.stash.index)
-            } label: {
-                Label("Drop Stash", systemImage: "trash")
-            }
-        }
-    }
-}
-
-// MARK: - Stash Badge (Modern - solid background)
-struct StashBadge: View {
-    let name: String
-    @Environment(\.colorScheme) private var colorScheme
-    private var stashColor: Color { AppTheme.info }
-
-    var body: some View {
-        HStack(spacing: DesignTokens.Spacing.xxs + 1) {
-            Image(systemName: "shippingbox.fill")
-                .font(.system(size: 9, weight: .medium))
-            Text(name)
-                .font(DesignTokens.Typography.caption2)
-                .fontWeight(.semibold)
-                .lineLimit(1)
-        }
-        .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
-        .padding(.vertical, DesignTokens.Spacing.xxs + 1)
-        .background(stashColor)
-        .foregroundStyle(AppTheme.buttonTextOnColor) // White text on colored background for contrast
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.none + 3))
-    }
-}
-
-// MARK: - Stash Node Model
-struct StashNode: Identifiable {
-    let id: String
-    let stash: Stash
-}
-
-// MARK: - Stash Notification Names
-extension Notification.Name {
-    static let applyStash = Notification.Name("applyStash")
-    static let popStashAtIndex = Notification.Name("popStashAtIndex")
-    static let dropStash = Notification.Name("dropStash")
-    static let loadFirstFileDiff = Notification.Name("loadFirstFileDiff")
-}
-
-// MARK: - Branch Badge (Modern)
-struct BranchBadge: View {
-    let name: String
-    let color: Color
-    let isHead: Bool
-    let isTag: Bool
-    var onDropBranch: ((BranchTransferable) -> Void)? = nil
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var isHovered = false
-    @State private var isDragTargeted = false
-
-    init(name: String, color: Color, isHead: Bool = false, isTag: Bool = false, onDropBranch: ((BranchTransferable) -> Void)? = nil) {
-        self.name = name
-        self.color = color
-        self.isHead = isHead
-        self.isTag = isTag
-        self.onDropBranch = onDropBranch
-    }
-
-    var body: some View {
-        // Simple, clean design like Xcode with proper contrast
-        HStack(spacing: DesignTokens.Spacing.xxs) {
-            Image(systemName: iconName)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundColor(color)
-
-            Text(name)
-                .font(DesignTokens.Typography.caption2)
-                .fontWeight(isHead ? .semibold : .regular)
-                .lineLimit(1)
-                .foregroundColor(textColor)
-        }
-        .padding(.horizontal, DesignTokens.Spacing.xs + 2)
-        .padding(.vertical, DesignTokens.Spacing.xxs + 1)
-        .background(isDragTargeted ? AppTheme.accent.opacity(0.3) : color.opacity(colorScheme == .dark ? 0.2 : 0.12))
-        .cornerRadius(4)
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .strokeBorder(isDragTargeted ? AppTheme.accent : color.opacity(0.4), lineWidth: isDragTargeted ? 2 : 0.5)
-        )
-        .draggable(BranchTransferable(name: name, isHead: isHead))
-        .dropDestination(for: BranchTransferable.self) { items, _ in
-            guard let dropped = items.first, dropped.name != name else { return false }
-            onDropBranch?(dropped)
-            return true
-        } isTargeted: { targeted in
-            isDragTargeted = targeted
-        }
-    }
-
-    /// Adaptive text color - darker in light mode for better contrast
-    private var textColor: Color {
-        if colorScheme == .dark {
-            return color
-        } else {
-            // In light mode, use the primary text color for better readability
-            return Color(nsColor: .labelColor)
-        }
-    }
-
-    private var iconName: String {
-        if isTag {
-            return "tag.circle.fill"
-        }
-        if isHead {
-            return "star.circle.fill"
-        }
-        return "arrow.triangle.branch"
-    }
-
-    private var symbolMode: SymbolRenderingMode {
-        if isHead || isTag {
-            return .hierarchical
-        }
-        return .monochrome
-    }
-}
-
-// MARK: - Graph Row
-struct GraphRow: View {
-    let node: GraphNode
-    let isSelected: Bool
-    let isHovered: Bool
-    let settings: GraphSettings
-    let onHoverBranch: ((String?) -> Void)?
-    var onDropBranch: ((String, BranchTransferable) -> Void)? = nil
-
-    private var H: CGFloat { settings.rowHeight }
-    private var W: CGFloat { 26 }  // Lane spacing
-    private var R: CGFloat { settings.nodeRadius }
-    private var LW: CGFloat { 2 }  // Line width
-
-    var body: some View {
-        return HStack(spacing: 0) {
-            // Branch label with badge
-            if settings.showBranchColumn {
-                HStack {
-                    if let label = node.branchLabel {
-                        BranchBadge(
-                            name: label,
-                            color: color(node.lane),
-                            isHead: label == "main" || label == "master",
-                            isTag: label.hasPrefix("v") || label.contains("."),
-                            onDropBranch: { dropped in
-                                onDropBranch?(label, dropped)
-                            }
-                        )
-                    }
-                    Spacer()
-                }
-                .frame(width: settings.branchColumnWidth)
-                .padding(.leading, DesignTokens.Spacing.sm)
-            }
-
-            // Graph - Canvas for lines, overlay for avatar
-            ZStack {
-                Canvas { ctx, size in
-                    let cy = size.height / 2
-                    let myX = x(node.lane)
-                    let c = color(node.lane)
-
-                    // 1) Pass-through vertical lines (other branches)
-                    for lane in node.passThroughLanes {
-                        let lx = x(lane)
-                        drawLine(ctx, from: CGPoint(x: lx, y: 0), to: CGPoint(x: lx, y: size.height), color: color(lane))
-                    }
-
-                    // 2) My vertical line
-                    if node.lineFromTop && node.lineToBottom {
-                        drawLine(ctx, from: CGPoint(x: myX, y: 0), to: CGPoint(x: myX, y: size.height), color: c)
-                    } else if node.lineFromTop {
-                        drawLine(ctx, from: CGPoint(x: myX, y: 0), to: CGPoint(x: myX, y: cy), color: c)
-                    } else if node.lineToBottom {
-                        drawLine(ctx, from: CGPoint(x: myX, y: cy), to: CGPoint(x: myX, y: size.height), color: c)
-                    }
-
-                    // 3) Curves going to bottom (to other columns)
-                    for toLane in node.curvesToBottom {
-                        let toX = x(toLane)
-                        drawBezier(ctx, from: CGPoint(x: myX, y: cy), to: CGPoint(x: toX, y: size.height), color: color(toLane))
-                    }
-
-                    // 4) Node circle background
-                    let nodeRect = CGRect(x: myX - R, y: cy - R, width: R * 2, height: R * 2)
-                    ctx.fill(Circle().path(in: nodeRect), with: .color(c))
-                    // Add a white/background stroke to separate node from lines
-                    ctx.stroke(Circle().path(in: nodeRect), with: .color(AppTheme.background), lineWidth: 2)
-                }
-                .frame(width: settings.graphColumnWidth, height: H)
-
-                // Avatar overlay INSIDE the node - FIXED positioning and size
-                if settings.showAvatars {
-                    avatarView
-                        .frame(width: settings.avatarSize, height: settings.avatarSize)
-                        .clipShape(Circle())
-                        .overlay(
-                            Circle()
-                                .stroke(color(node.lane), lineWidth: 2)
-                        )
-                        .background(
-                            Circle()
-                                .fill(AppTheme.background)
-                        )
-                        .offset(x: x(node.lane) - (settings.graphColumnWidth / 2))
-                        .scaleEffect(isHovered ? 1.15 : 1.0)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHovered)
-                }
-            }
-
-            // Commit message
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
-                Text(node.commit.summary)
-                    .font(settings.compactMode ? DesignTokens.Typography.caption : DesignTokens.Typography.callout)
-                    .foregroundColor(AppTheme.textPrimary)
-                    .lineLimit(1)
-                if !settings.compactMode && !settings.showAuthorColumn {
-                    Text(node.commit.author)
-                        .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, DesignTokens.Spacing.sm)
-
-            // Changes indicator
-            FileChangesIndicator(
-                additions: node.commit.additions ?? 0,
-                deletions: node.commit.deletions ?? 0,
-                filesChanged: node.commit.filesChanged ?? 0,
-                compact: settings.compactMode
-            )
-            .frame(width: 140, alignment: .leading)
-
-            // Author column (optional)
-            if settings.showAuthorColumn {
-                HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
-                    if settings.showAvatars && !settings.compactMode {
-                        AvatarImageView(
-                            email: node.commit.authorEmail,
-                            size: 20,
-                            fallbackInitial: String(node.commit.author.prefix(1))
-                        )
-                    }
-                    Text(node.commit.author)
-                        .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
-                        .lineLimit(1)
-                }
-                .frame(width: settings.authorColumnWidth, alignment: .leading)
-            }
-
-            // Date column (optional)
-            if settings.showDateColumn {
-                Text(node.commit.relativeDate)
-                    .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textSecondary)
-                    .frame(width: settings.dateColumnWidth, alignment: .trailing)
-            }
-
-            // SHA column (optional)
-            if settings.showSHAColumn {
-                Text(node.commit.shortSha)
-                    .font(DesignTokens.Typography.caption2.monospaced())
-                    .foregroundColor(AppTheme.textSecondary)
-                    .frame(width: settings.shaColumnWidth, alignment: .trailing)
-                    .padding(.trailing, DesignTokens.Spacing.sm)
-            }
-        }
-        .frame(height: H)
-        .background(isSelected ? AppTheme.accent.opacity(0.1) : (isHovered ? AppTheme.textSecondary.opacity(0.05) : Color.clear))
-        .opacity(settings.dimMergeCommits && node.isMerge ? 0.5 : 1.0)
-        .onHover { hovering in
-            if let label = node.branchLabel, hovering {
-                onHoverBranch?(label)
-            } else if !hovering {
-                onHoverBranch?(nil)
-            }
-        }
-        .contextMenu {
-            CommitContextMenu(commits: [node.commit])
-        }
-    }
-
-    @ViewBuilder
-    private var avatarView: some View {
-        AvatarImageView(
-            email: node.commit.authorEmail,
-            size: settings.avatarSize,
-            fallbackInitial: String(node.commit.author.prefix(1))
-        )
-    }
-
-    func x(_ lane: Int) -> CGFloat { CGFloat(lane) * W + W / 2 + DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs }
-    func color(_ lane: Int) -> Color { Color.branchColor(lane) }
-
-    func drawLine(_ ctx: GraphicsContext, from: CGPoint, to: CGPoint, color: Color) {
-        var p = Path()
-        p.move(to: from)
-        p.addLine(to: to)
-        ctx.stroke(p, with: .color(color), style: StrokeStyle(lineWidth: LW, lineCap: .round))
-    }
-
-    func drawBezier(_ ctx: GraphicsContext, from: CGPoint, to: CGPoint, color: Color) {
-        var p = Path()
-        p.move(to: from)
-        // More smooth smooth curve (less S-shape, more like railroad tracks that merge)
-        let controlY = from.y + (to.y - from.y) * 0.6 // Push control point further down
-        p.addCurve(
-            to: to,
-            control1: CGPoint(x: from.x, y: controlY),
-            control2: CGPoint(x: to.x, y: from.y + (to.y - from.y) * 0.4)
-        )
-        ctx.stroke(p, with: .color(color), style: StrokeStyle(lineWidth: LW, lineCap: .round))
-    }
-}
-
-// MARK: - Data Model
-struct GraphNode: Identifiable {
-    let id: String
-    let commit: Commit
-    let lane: Int
-    let branchLabel: String?
-
-    // What to draw
-    let lineFromTop: Bool           // Vertical line from top of row to node
-    let lineToBottom: Bool          // Vertical line from node to bottom of row
-    let passThroughLanes: Set<Int>  // Vertical lines in other columns
-    let curvesToBottom: [Int]       // Curves going to these columns (to bottom)
-
-    var isMerge: Bool { commit.parentSHAs.count > 1 }
-    var shortSha: String { String(commit.sha.prefix(7)) }
-}
-
-// MARK: - View Model
-@MainActor
-class GraphViewModel: ObservableObject {
-    @Published var nodes: [GraphNode] = []
-    @Published var stashNodes: [StashNode] = []
-    @Published var timelineItems: [TimelineItem] = []
-    @Published var isLoading = false
-    @Published var hasMore = true
-
-    // Uncommitted changes state
-    @Published var hasUncommittedChanges = false
-    @Published var stagedCount = 0
-    @Published var unstagedCount = 0
-
-    // Ghost Branches support
-    @Published var branches: [Branch] = []
-
-    // Current user email for @me filter
-    @Published var currentUserEmail: String?
-
-    private let engine = GitEngine()
-    private var path: String?
-    private var page = 0
-    private var commits: [Commit] = []
-    private var branchHeads: [String: String] = [:]
-
-    func load(at p: String) async {
-        isLoading = true
-        path = p
-        page = 0
-        commits = []
-
-        do {
-            // Load branches (use original method - V2 has same output)
-            let loadedBranches = try await engine.getBranches(at: p)
-            branches = loadedBranches  // Save for Ghost Branches
-            branchHeads = [:]
-            for branch in loadedBranches {
-                if branchHeads[branch.targetSHA] == nil {
-                    branchHeads[branch.targetSHA] = branch.name
-                }
-            }
-
-            // Load current user email for @me filter
-            let result = await ShellExecutor().execute(
-                "git",
-                arguments: ["config", "user.email"],
-                workingDirectory: p
-            )
-            if result.exitCode == 0 {
-                currentUserEmail = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-
-            // Load commits using V2 (NUL-separated, handles special chars in messages)
-            commits = try await engine.getCommitsV2(at: p, limit: 100)
-            hasMore = commits.count == 100
-
-            // Load status for uncommitted changes
-            let status = try await engine.getStatus(at: p)
-            stagedCount = status.staged.count
-            unstagedCount = status.unstaged.count + status.untracked.count
-            hasUncommittedChanges = stagedCount > 0 || unstagedCount > 0
-
-            // Load stashes
-            let stashes = try await engine.getStashes(at: p)
-            stashNodes = stashes.map { StashNode(id: "stash-\($0.index)", stash: $0) }
-
-            // Build nodes on background thread
-            let newNodes = await buildNodes()
-            nodes = newNodes
-
-            // Build merged timeline (commits + stashes sorted by date)
-            buildTimeline()
-
-            // Load avatars from GitHub repository in background
-            Task.detached(priority: .utility) {
-                await self.loadAvatarsFromGitHub(at: p)
-            }
-        } catch {
-            // Loading failed silently
-        }
-        isLoading = false
-    }
-
-    /// Load avatars from GitHub repository using commit SHAs
-    private func loadAvatarsFromGitHub(at repoPath: String) async {
-        // Get GitHub token (optional - will use Gravatar if not available)
-        let token = try? await KeychainManager.shared.getGitHubToken()
-
-        do {
-            let remotes = try await engine.getRemotes(at: repoPath)
-            guard let originRemote = remotes.first(where: { $0.name == "origin" }),
-                  let (owner, repo) = extractGitHubOwnerRepo(from: originRemote.fetchURL) else {
-                await preloadAvatarsForCommits(token: token)
-                return
-            }
-
-            if let token = token {
-                await loadAvatarsBySHA(owner: owner, repo: repo, token: token)
-            }
-            await preloadAvatarsForCommits(token: token)
-        } catch {
-            await preloadAvatarsForCommits(token: nil)
-        }
-    }
-
-    /// Load avatars by fetching commits from GitHub API using their SHA
-    private func loadAvatarsBySHA(owner: String, repo: String, token: String) async {
-        let batchSize = 20
-        for (index, commit) in commits.enumerated() {
-            if index > 0 && index % batchSize == 0 {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-            }
-
-            guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/commits/\(commit.sha)") else {
-                continue
-            }
-
-            var request = URLRequest(url: url)
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
-
-            do {
-                let (data, response) = try await URLSession.shared.data(for: request)
-                guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { continue }
-
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let author = json["author"] as? [String: Any],
-                   let avatarUrl = author["avatar_url"] as? String,
-                   let url = URL(string: avatarUrl) {
-                    await AvatarService.shared.cacheAvatar(url: url, for: commit.authorEmail.lowercased())
-                }
-            } catch {
-                // Continue silently on error
-            }
-        }
-    }
-
-    /// Preload avatars for all unique commit author emails
-    private func preloadAvatarsForCommits(token: String?) async {
-        let emails = Set(commits.map { $0.authorEmail })
-        await AvatarService.shared.preloadAvatars(for: Array(emails), githubToken: token)
-    }
-
-    /// Extract owner and repo name from GitHub URL
-    private func extractGitHubOwnerRepo(from url: String) -> (owner: String, repo: String)? {
-        // Handle various GitHub URL formats:
-        // - https://github.com/owner/repo.git
-        // - git@github.com:owner/repo.git
-        // - https://github.com/owner/repo
-
-        let cleanURL = url
-            .replacingOccurrences(of: "git@github.com:", with: "https://github.com/")
-            .replacingOccurrences(of: ".git", with: "")
-
-        guard cleanURL.contains("github.com") else { return nil }
-
-        let components = cleanURL.components(separatedBy: "github.com/")
-        guard components.count >= 2 else { return nil }
-
-        let pathComponents = components[1].components(separatedBy: "/")
-        guard pathComponents.count >= 2 else { return nil }
-
-        return (owner: pathComponents[0], repo: pathComponents[1])
-    }
-
-    func loadMore() async {
-        guard let p = path, !isLoading else { return }
-        isLoading = true
-        page += 1
-
-        do {
-            let more = try await engine.getCommitsV2(at: p, limit: 100, skip: page * 100)
-            commits.append(contentsOf: more)
-            hasMore = more.count == 100
-
-            // Build on background thread
-            let newNodes = await buildNodes()
-            nodes = newNodes
-
-            buildTimeline()
-        } catch {
-            // Loading more failed silently
-        }
-        isLoading = false
-    }
-
-    /// Silently refresh repository status (staged/unstaged counts) without reloading commits
-    /// This prevents the graph from flickering on every file change
-    func refreshStatus() async {
-        guard let p = path else { return }
-
-        do {
-            // Only update status counts - don't reload commits
-            let status = try await engine.getStatus(at: p)
-            let newStagedCount = status.staged.count
-            let newUnstagedCount = status.unstaged.count + status.untracked.count
-            let newHasChanges = newStagedCount > 0 || newUnstagedCount > 0
-
-            // Only update if counts actually changed
-            if stagedCount != newStagedCount || unstagedCount != newUnstagedCount || hasUncommittedChanges != newHasChanges {
-                stagedCount = newStagedCount
-                unstagedCount = newUnstagedCount
-                hasUncommittedChanges = newHasChanges
-
-                buildTimeline()
-            }
-        } catch {
-            // Refresh status failed silently
-        }
-    }
-
-    private func buildNodes() async -> [GraphNode] {
-        // Run expensive computation off main thread
-        let localCommits = commits
-        let localBranchHeads = branchHeads
-
-        return await Task.detached(priority: .userInitiated) {
-            buildCommitGraph(commits: localCommits, branchHeads: localBranchHeads)
-        }.value
-    }
-
-    private func buildTimeline() {
-        // Merge commits and stashes into a single timeline sorted by date (newest first)
-        var items: [TimelineItem] = []
-
-        // Add uncommitted changes at the top if present
-        if hasUncommittedChanges {
-            items.append(.uncommitted(staged: stagedCount, unstaged: unstagedCount))
-        }
-
-        // Add all commits
-        for node in nodes {
-            items.append(.commit(node))
-        }
-
-        // Add all stashes
-        for stash in stashNodes {
-            items.append(.stash(stash))
-        }
-
-        // Sort by date (newest first)
-        // Note: uncommitted will stay at top since its date is always Date()
-        items.sort { $0.date > $1.date }
-
-        timelineItems = items
-    }
-}
-
-// MARK: - Graph Building (runs on background thread)
-// Algorithm based on EDGE tracking (not column tracking)
-// References:
-// - https://pvigier.github.io/2019/05/06/commit-graph-drawing-algorithms.html
-// - https://stackoverflow.com/questions/4739683/how-does-git-log-graph-or-hg-graphlog-work
-// - https://github.com/alaingilbert/git2graph
-
-/// Represents a connection from a child commit to a parent commit
-private struct GraphEdge {
-    let childRow: Int
-    let parentRow: Int
-    let childColumn: Int   // Column of the child commit
-    let parentColumn: Int  // Column of the parent commit
-    let color: Int
-    let isFirstParent: Bool
-}
-
-private func buildCommitGraph(commits: [Commit], branchHeads: [String: String]) -> [GraphNode] {
-    guard !commits.isEmpty else { return [] }
-
-    // PHASE 1: Build indices
-    var shaToRow: [String: Int] = [:]
-    for (i, c) in commits.enumerated() { shaToRow[c.sha] = i }
-
-    // PHASE 2: Assign columns using reservation system
-    // Key insight: First parent inherits column, other parents get new columns
-    var shaToColumn: [String: Int] = [:]
-    var shaToColor: [String: Int] = [:]
-    var columnSlots: [String?] = []  // Track which SHA owns each column slot
-    var nextColor = 0
-
-    func findFreeColumn() -> Int {
-        if let idx = columnSlots.firstIndex(where: { $0 == nil }) {
-            return idx
-        }
-        columnSlots.append(nil)
-        return columnSlots.count - 1
-    }
-
-    func occupyColumn(_ col: Int, with sha: String) {
-        while columnSlots.count <= col { columnSlots.append(nil) }
-        columnSlots[col] = sha
-    }
-
-    func freeColumn(_ col: Int) {
-        if col < columnSlots.count { columnSlots[col] = nil }
-    }
-
-    // Process commits from newest to oldest (topological order)
-    for commit in commits {
-        let sha = commit.sha
-
-        // Get or assign column
-        let col: Int
-        if let reserved = shaToColumn[sha] {
-            // Already reserved by a child's first-parent link
-            col = reserved
-            occupyColumn(col, with: sha)
-        } else {
-            // New branch head, find free column
-            col = findFreeColumn()
-            shaToColumn[sha] = col
-            shaToColor[sha] = nextColor
-            nextColor += 1
-            occupyColumn(col, with: sha)
-        }
-
-        // First parent inherits our column (same branch continues)
-        if let firstParent = commit.parentSHAs.first {
-            if shaToColumn[firstParent] == nil {
-                shaToColumn[firstParent] = col
-                shaToColor[firstParent] = shaToColor[sha] ?? 0
-            }
-        }
-
-        // Other parents (merge sources) get new columns
-        for (i, parentSHA) in commit.parentSHAs.enumerated() where i > 0 {
-            if shaToColumn[parentSHA] == nil && shaToRow[parentSHA] != nil {
-                let parentCol = findFreeColumn()
-                shaToColumn[parentSHA] = parentCol
-                shaToColor[parentSHA] = nextColor
-                nextColor += 1
-                occupyColumn(parentCol, with: parentSHA)
-            }
-        }
-
-        // Free column if branch ends here (no parents or first parent in different column)
-        if commit.parentSHAs.isEmpty {
-            freeColumn(col)
-        } else if let firstParent = commit.parentSHAs.first,
-                  let fpCol = shaToColumn[firstParent], fpCol != col {
-            freeColumn(col)
-        }
-    }
-
-    // PHASE 3: Create list of EDGES
-    var edges: [GraphEdge] = []
-
-    for (childRow, commit) in commits.enumerated() {
-        guard let childCol = shaToColumn[commit.sha] else { continue }
-
-        for (i, parentSHA) in commit.parentSHAs.enumerated() {
-            guard let parentRow = shaToRow[parentSHA],
-                  let parentCol = shaToColumn[parentSHA] else { continue }
-
-            let edgeColor = shaToColor[parentSHA] ?? shaToColor[commit.sha] ?? 0
-
-            edges.append(GraphEdge(
-                childRow: childRow,
-                parentRow: parentRow,
-                childColumn: childCol,
-                parentColumn: parentCol,
-                color: edgeColor,
-                isFirstParent: i == 0
-            ))
-        }
-    }
-
-    // PHASE 4: Build nodes with simplified drawing instructions
-    var result: [GraphNode] = []
-
-    for (row, commit) in commits.enumerated() {
-        guard let col = shaToColumn[commit.sha] else { continue }
-
-        // Pass-through: edges passing through this row (not my column)
-        let passThroughEdges = edges.filter { edge in
-            edge.childRow < row && row < edge.parentRow && edge.parentColumn != col
-        }
-        let passThroughColumns = Set(passThroughEdges.map { $0.parentColumn })
-
-        // Edges that END at this row (I am the parent)
-        let incomingEdges = edges.filter { $0.parentRow == row }
-
-        // Line from top: any edge ends here in MY column
-        let lineFromTop = incomingEdges.contains { $0.parentColumn == col }
-
-        // Edges that START at this row (I am the child)
-        let outgoingEdges = edges.filter { $0.childRow == row }
-
-        // Line to bottom: my first parent is in MY column
-        let lineToBottom = outgoingEdges.contains { $0.parentColumn == col && $0.isFirstParent }
-
-        // Curves to bottom: edges to parents in OTHER columns
-        let curvesToBottom = outgoingEdges
-            .filter { $0.parentColumn != col }
-            .map { $0.parentColumn }
-
-        result.append(GraphNode(
-            id: commit.sha,
-            commit: commit,
-            lane: col,
-            branchLabel: branchHeads[commit.sha],
-            lineFromTop: lineFromTop,
-            lineToBottom: lineToBottom,
-            passThroughLanes: passThroughColumns,
-            curvesToBottom: curvesToBottom
-        ))
-    }
-
-    return result
-}
-
-extension Commit {
-    var shortSha: String { String(sha.prefix(7)) }
-}
-
-// MARK: - Commit Context Menu
-struct CommitContextMenu: View {
-    let commits: [Commit]
-    @EnvironmentObject var appState: AppState
-
-    var body: some View {
-        Group {
-            if commits.count == 1, let commit = commits.first {
-                singleCommitActions(commit: commit)
-            } else if commits.count > 1 {
-                multiCommitActions()
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func singleCommitActions(commit: Commit) -> some View {
-        // Copy actions
-        Button {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(commit.sha, forType: .string)
-        } label: {
-            Label("Copy SHA", systemImage: "doc.on.doc")
-        }
-
-        Button {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(commit.message, forType: .string)
-        } label: {
-            Label("Copy Message", systemImage: "text.quote")
-        }
-
-        Divider()
-
-        // Branch/Tag actions
-        Button {
-            NotificationCenter.default.post(
-                name: .createBranchFromCommit,
-                object: commit.sha
-            )
-        } label: {
-            Label("Create Branch Here...", systemImage: "arrow.triangle.branch")
-        }
-
-        Button {
-            NotificationCenter.default.post(
-                name: .createTagFromCommit,
-                object: commit.sha
-            )
-        } label: {
-            Label("Create Tag Here...", systemImage: "tag")
-        }
-
-        Divider()
-
-        // Checkout
-        Button {
-            Task {
-                try? await appState.gitService.checkout(commit.sha)
-            }
-        } label: {
-            Label("Checkout This Commit", systemImage: "arrow.uturn.backward")
-        }
-
-        Divider()
-
-        // Advanced operations
-        Button {
-            NotificationCenter.default.post(
-                name: .cherryPickCommit,
-                object: commit.sha
-            )
-        } label: {
-            Label("Cherry-pick...", systemImage: "arrow.right.doc.on.clipboard")
-        }
-
-        Button {
-            NotificationCenter.default.post(
-                name: .revertCommit,
-                object: [commit]
-            )
-        } label: {
-            Label("Revert Commit...", systemImage: "arrow.uturn.left")
-        }
-
-        Divider()
-
-        // Rebase actions
-        Button {
-            NotificationCenter.default.post(
-                name: .rebaseOntoCommit,
-                object: commit.sha
-            )
-        } label: {
-            Label("Rebase current branch onto this...", systemImage: "arrow.triangle.pull")
-        }
-
-        Button {
-            NotificationCenter.default.post(
-                name: .interactiveRebase,
-                object: commit.sha
-            )
-        } label: {
-            Label("Interactive Rebase...", systemImage: "list.bullet.rectangle.portrait")
-        }
-
-        Divider()
-
-        Button {
-            // Implementation for Diff with HEAD
-            NotificationCenter.default.post(
-                name: .diffWithHead,
-                object: commit.sha
-            )
-        } label: {
-            Label("Diff with HEAD", systemImage: "arrow.left.arrow.right")
-        }
-
-        Button {
-             let process = Process()
-             process.launchPath = "/usr/bin/open"
-             process.arguments = ["-a", "Terminal", appState.currentRepository?.path ?? "."]
-             try? process.run()
-        } label: {
-            Label("Open in Terminal", systemImage: "terminal")
-        }
-
-        Divider()
-
-        // Reset operations
-        Menu {
-            Button("Soft (keep changes staged)") {
-                NotificationCenter.default.post(
-                    name: .resetToCommit,
-                    object: ["sha": commit.sha, "mode": "soft"]
-                )
-            }
-            Button("Mixed (keep changes unstaged)") {
-                NotificationCenter.default.post(
-                    name: .resetToCommit,
-                    object: ["sha": commit.sha, "mode": "mixed"]
-                )
-            }
-            Button("Hard (discard all changes)") {
-                NotificationCenter.default.post(
-                    name: .resetToCommit,
-                    object: ["sha": commit.sha, "mode": "hard"]
-                )
-            }
-        } label: {
-            Label("Reset to This Commit", systemImage: "clock.arrow.circlepath")
-        }
-    }
-
-    @ViewBuilder
-    private func multiCommitActions() -> some View {
-        Button {
-            NotificationCenter.default.post(
-                name: .revertCommit,
-                object: commits
-            )
-        } label: {
-            Label("Revert \(commits.count) Commits...", systemImage: "arrow.uturn.left")
-        }
-
-        Button {
-            // Placeholder for multi cherry-pick
-        } label: {
-            Label("Cherry-pick \(commits.count) Commits...", systemImage: "arrow.right.doc.on.clipboard")
-        }
-
-        Divider()
-
-        Button {
-            let shas = commits.map { $0.sha }.joined(separator: "\n")
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(shas, forType: .string)
-        } label: {
-            Label("Copy \(commits.count) SHAs", systemImage: "doc.on.doc")
-        }
-    }
-}
-
 // MARK: - File Changes Indicator
 /// Visual indicator showing file changes with count and add/delete bars
 // FileChangesIndicator is defined in Features/CommitGraph/Components/FileChangesIndicator.swift
 
-// MARK: - Additional Notification Names
-extension Notification.Name {
-    static let createBranchFromCommit = Notification.Name("createBranchFromCommit")
-    static let createTagFromCommit = Notification.Name("createTagFromCommit")
-    static let cherryPickCommit = Notification.Name("cherryPickCommit")
-    static let revertCommit = Notification.Name("revertCommit")
-    static let resetToCommit = Notification.Name("resetToCommit")
-    static let rebaseOntoCommit = Notification.Name("rebaseOntoCommit")
-    static let interactiveRebase = Notification.Name("interactiveRebase")
-    static let diffWithHead = Notification.Name("diffWithHead")
+// MARK: - Column Resizer
+
+/// Draggable divider between columns for resizing
+struct ColumnResizer: View {
+    @Binding var width: CGFloat
+    let minWidth: CGFloat
+    let maxWidth: CGFloat
+
+    @State private var isHovering = false
+    @State private var isDragging = false
+
+    var body: some View {
+        ZStack {
+            // Hit area for dragging
+            Rectangle()
+                .fill(Color.clear)
+                .frame(width: 8)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            isDragging = true
+                            let newWidth = width + value.translation.width
+                            width = min(maxWidth, max(minWidth, newWidth))
+                        }
+                        .onEnded { _ in
+                            isDragging = false
+                        }
+                )
+                .onHover { hovering in
+                    isHovering = hovering
+                    if hovering {
+                        NSCursor.resizeLeftRight.push()
+                    } else if !isDragging {
+                        NSCursor.pop()
+                    }
+                }
+
+            // Visual divider line
+            Rectangle()
+                .fill(visualColor)
+                .frame(width: 1)
+                .allowsHitTesting(false)
+        }
+        .frame(width: 8, height: 28)
+    }
+
+    private var visualColor: Color {
+        if isDragging {
+            return AppTheme.accent
+        } else if isHovering {
+            return AppTheme.border.opacity(0.8)
+        } else {
+            return Color.clear
+        }
+    }
 }

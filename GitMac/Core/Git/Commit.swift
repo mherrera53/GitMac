@@ -32,6 +32,11 @@ struct Commit: Identifiable, Equatable, Hashable {
     var deletions: Int?
     var filesChanged: Int?
 
+    // Signature verification (from git log %G?)
+    // G=good, B=bad, U=untrusted, X=expired, Y=expired key, R=revoked, E=cannot check, N=none
+    var signatureStatus: String?
+    var isVerified: Bool { signatureStatus == "G" }
+
     init(
         sha: String,
         message: String,

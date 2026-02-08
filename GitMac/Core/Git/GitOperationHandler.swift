@@ -7,6 +7,7 @@ import SwiftUI
 class GitOperationHandler: ObservableObject {
     @Published var isOperationInProgress = false
     @Published var operationMessage = ""
+    @Published var pendingPushConfirmation: PushConfirmation?
 
     weak var appState: AppState?
 
@@ -95,15 +96,50 @@ class GitOperationHandler: ObservableObject {
         )
     }
 
-    func handlePush() async {
+    func handlePush(force: Bool = false, forceWithLease: Bool = false) async {
         guard let repo = appState?.currentRepository else { return }
         let branchName = repo.currentBranch?.name ?? "unknown"
 
+        // Check branch protection
+        let protection = BranchProtectionService.shared
+        let result = protection.evaluatePush(
+            branchName: branchName,
+            isForce: force,
+            isForceWithLease: forceWithLease
+        )
+
+        switch result {
+        case .blocked(let reason, _):
+            NotificationManager.shared.error("Push Blocked", detail: reason)
+            return
+
+        case .requiresConfirmation:
+            // Show confirmation dialog — actual push happens in confirmPush()
+            pendingPushConfirmation = PushConfirmation(
+                branchName: branchName,
+                result: result,
+                onConfirm: { [weak self] in
+                    await self?.executePush(branchName: branchName, force: force)
+                },
+                onCancel: { [weak self] in
+                    self?.pendingPushConfirmation = nil
+                }
+            )
+            return
+
+        case .allowed:
+            await executePush(branchName: branchName, force: force)
+        }
+    }
+
+    /// Execute the actual push operation (called directly or after confirmation)
+    func executePush(branchName: String, force: Bool = false) async {
         isOperationInProgress = true
         operationMessage = "Pushing to remote..."
+        pendingPushConfirmation = nil
 
         do {
-            let sha = try await appState?.gitService.push() ?? ""
+            let sha = try await appState?.gitService.push(force: force) ?? ""
             let shortSHA = String(sha.prefix(7))
 
             await appState?.refresh()
@@ -117,7 +153,7 @@ class GitOperationHandler: ObservableObject {
             // Show success notification with SHA
             NotificationManager.shared.success(
                 "Push completed",
-                detail: "Branch '\(branchName)' pushed • SHA: \(shortSHA)"
+                detail: "Branch '\(branchName)' pushed \u{2022} SHA: \(shortSHA)"
             )
         } catch {
             let errorMessage = "Push failed: \(error.localizedDescription)"

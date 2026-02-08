@@ -25,14 +25,12 @@ struct BinaryFileView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: DesignTokens.Spacing.lg) {
-                if isImage, let path = fullPath {
-                    // Image preview
-                    ImagePreviewView(imageURL: path, filename: filename)
+                if isImage, let repo = repoPath {
+                    // Image diff view with old/new comparison
+                    ImageDiffView(filename: filename, repoPath: repo)
                 } else if isPDF, let path = fullPath {
-                    // PDF preview
                     PDFPreviewView(pdfURL: path, filename: filename)
                 } else {
-                    // Generic binary file
                     GenericBinaryView(filename: filename)
                 }
             }
@@ -40,6 +38,273 @@ struct BinaryFileView: View {
             .padding(DesignTokens.Spacing.lg)
         }
         .background(Color(nsColor: .textBackgroundColor))
+    }
+}
+
+// MARK: - Image Diff View
+
+enum ImageDiffMode: String, CaseIterable {
+    case sideBySide = "Side by Side"
+    case onionSkin = "Onion Skin"
+    case swipe = "Swipe"
+}
+
+struct ImageDiffView: View {
+    let filename: String
+    let repoPath: String
+
+    @State private var diffMode: ImageDiffMode = .sideBySide
+    @State private var opacity: Double = 0.5
+    @State private var swipePosition: CGFloat = 0.5
+    @State private var oldImage: NSImage?
+    @State private var newImage: NSImage?
+    @State private var oldSize: CGSize = .zero
+    @State private var newSize: CGSize = .zero
+    @State private var oldFileSize: Int64 = 0
+    @State private var newFileSize: Int64 = 0
+    @State private var isLoading = true
+
+    private var fullPath: URL {
+        URL(fileURLWithPath: repoPath).appendingPathComponent(filename)
+    }
+
+    var body: some View {
+        VStack(spacing: DesignTokens.Spacing.md) {
+            // Header
+            HStack {
+                Image(systemName: "photo.on.rectangle.angled")
+                    .foregroundStyle(AppTheme.accent)
+                Text(filename)
+                    .font(DesignTokens.Typography.headline)
+                Spacer()
+                Picker("", selection: $diffMode) {
+                    ForEach(ImageDiffMode.allCases, id: \.self) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 280)
+            }
+
+            if isLoading {
+                ProgressView("Loading images...")
+                    .frame(maxWidth: .infinity, minHeight: 200)
+            } else if oldImage == nil && newImage != nil {
+                // New file
+                VStack(spacing: DesignTokens.Spacing.sm) {
+                    Label("New image", systemImage: "plus.circle.fill")
+                        .foregroundStyle(AppTheme.diffAddition)
+                        .font(DesignTokens.Typography.callout)
+                    imageView(newImage, label: "New")
+                    imageSizeInfo(size: newSize, fileSize: newFileSize)
+                }
+            } else if oldImage != nil && newImage == nil {
+                // Deleted file
+                VStack(spacing: DesignTokens.Spacing.sm) {
+                    Label("Deleted image", systemImage: "minus.circle.fill")
+                        .foregroundStyle(AppTheme.diffDeletion)
+                        .font(DesignTokens.Typography.callout)
+                    imageView(oldImage, label: "Old")
+                    imageSizeInfo(size: oldSize, fileSize: oldFileSize)
+                }
+            } else if let old = oldImage, let new = newImage {
+                // Modified - show comparison
+                switch diffMode {
+                case .sideBySide:
+                    sideBySideView(old: old, new: new)
+                case .onionSkin:
+                    onionSkinView(old: old, new: new)
+                case .swipe:
+                    swipeView(old: old, new: new)
+                }
+
+                // Size delta
+                sizeDeltaInfo
+            } else {
+                GenericBinaryView(filename: filename)
+            }
+        }
+        .task {
+            await loadImages()
+        }
+    }
+
+    // MARK: - Side by Side
+
+    private func sideBySideView(old: NSImage, new: NSImage) -> some View {
+        HStack(spacing: DesignTokens.Spacing.md) {
+            VStack(spacing: DesignTokens.Spacing.xs) {
+                Text("Before")
+                    .font(DesignTokens.Typography.caption.weight(.medium))
+                    .foregroundStyle(AppTheme.diffDeletion)
+                imageView(old, label: "Old")
+                imageSizeInfo(size: oldSize, fileSize: oldFileSize)
+            }
+            .frame(maxWidth: .infinity)
+
+            VStack(spacing: DesignTokens.Spacing.xs) {
+                Text("After")
+                    .font(DesignTokens.Typography.caption.weight(.medium))
+                    .foregroundStyle(AppTheme.diffAddition)
+                imageView(new, label: "New")
+                imageSizeInfo(size: newSize, fileSize: newFileSize)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    // MARK: - Onion Skin
+
+    private func onionSkinView(old: NSImage, new: NSImage) -> some View {
+        VStack(spacing: DesignTokens.Spacing.sm) {
+            ZStack {
+                Image(nsImage: old)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .opacity(1 - opacity)
+
+                Image(nsImage: new)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .opacity(opacity)
+            }
+            .frame(maxWidth: 700, maxHeight: 500)
+            .background(CheckerboardPattern())
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
+
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Text("Old")
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundStyle(AppTheme.diffDeletion)
+                Slider(value: $opacity, in: 0...1)
+                    .frame(width: 200)
+                Text("New")
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundStyle(AppTheme.diffAddition)
+            }
+        }
+    }
+
+    // MARK: - Swipe
+
+    private func swipeView(old: NSImage, new: NSImage) -> some View {
+        VStack(spacing: DesignTokens.Spacing.sm) {
+            GeometryReader { geo in
+                ZStack {
+                    Image(nsImage: new)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: geo.size.width)
+
+                    Image(nsImage: old)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: geo.size.width)
+                        .clipShape(
+                            Rectangle()
+                                .offset(x: 0)
+                                .size(width: geo.size.width * swipePosition, height: geo.size.height)
+                        )
+
+                    // Divider line
+                    Rectangle()
+                        .fill(AppTheme.accent)
+                        .frame(width: 2)
+                        .offset(x: geo.size.width * swipePosition - geo.size.width / 2)
+                }
+                .background(CheckerboardPattern())
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
+            }
+            .frame(maxWidth: 700, maxHeight: 500)
+
+            Slider(value: $swipePosition, in: 0...1)
+                .frame(width: 300)
+        }
+    }
+
+    // MARK: - Helpers
+
+    @ViewBuilder
+    private func imageView(_ image: NSImage?, label: String) -> some View {
+        if let img = image {
+            Image(nsImage: img)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(maxWidth: 400, maxHeight: 400)
+                .background(CheckerboardPattern())
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
+                .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+        }
+    }
+
+    private func imageSizeInfo(size: CGSize, fileSize: Int64) -> some View {
+        HStack(spacing: DesignTokens.Spacing.sm) {
+            if size != .zero {
+                Text("\(Int(size.width)) × \(Int(size.height))")
+                    .font(DesignTokens.Typography.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+            if fileSize > 0 {
+                Text(ByteCountFormatter.string(fromByteCount: fileSize, countStyle: .file))
+                    .font(DesignTokens.Typography.caption2)
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+        }
+    }
+
+    private var sizeDeltaInfo: some View {
+        HStack(spacing: DesignTokens.Spacing.md) {
+            if oldSize != .zero && newSize != .zero {
+                if oldSize != newSize {
+                    Text("Dimensions: \(Int(oldSize.width))×\(Int(oldSize.height)) → \(Int(newSize.width))×\(Int(newSize.height))")
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+            }
+            if oldFileSize > 0 && newFileSize > 0 {
+                let delta = newFileSize - oldFileSize
+                let sign = delta >= 0 ? "+" : ""
+                Text("Size: \(sign)\(ByteCountFormatter.string(fromByteCount: delta, countStyle: .file))")
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundStyle(delta > 0 ? AppTheme.diffDeletion : AppTheme.diffAddition)
+            }
+        }
+    }
+
+    private func loadImages() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        // Load new image from working copy
+        let newURL = fullPath
+        if FileManager.default.fileExists(atPath: newURL.path) {
+            if let img = NSImage(contentsOf: newURL) {
+                newImage = img
+                newSize = img.size
+            }
+            if let attrs = try? FileManager.default.attributesOfItem(atPath: newURL.path),
+               let size = attrs[.size] as? Int64 {
+                newFileSize = size
+            }
+        }
+
+        // Load old image from git HEAD via temp file (binary-safe)
+        let tempPath = NSTemporaryDirectory() + "gitmac_imgdiff_\(UUID().uuidString).\((filename as NSString).pathExtension)"
+        defer { try? FileManager.default.removeItem(atPath: tempPath) }
+        let shell = ShellExecutor()
+        let result = await shell.execute(
+            "bash",
+            arguments: ["-c", "git show HEAD:\(filename) > \(tempPath)"],
+            workingDirectory: repoPath
+        )
+        if result.exitCode == 0, FileManager.default.fileExists(atPath: tempPath) {
+            let tempURL = URL(fileURLWithPath: tempPath)
+            if let data = try? Data(contentsOf: tempURL), let img = NSImage(data: data) {
+                oldImage = img
+                oldSize = img.size
+                oldFileSize = Int64(data.count)
+            }
+        }
     }
 }
 

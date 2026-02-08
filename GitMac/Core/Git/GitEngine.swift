@@ -139,11 +139,12 @@ actor GitEngine {
 
     /// Get all local branches
     func getBranches(at path: String) async throws -> [Branch] {
+        print("🔍 getBranches() - path: \(path)")
         let result = await shellExecutor.execute(
             "git",
             arguments: [
                 "for-each-ref",
-                "--format=%(refname:short)|%(objectname)|%(HEAD)|%(upstream:short)|%(upstream:track)",
+                "--format=%(refname:short)|%(objectname)|%(HEAD)|%(upstream:short)|%(upstream:track)|%(committerdate:unix)",
                 "refs/heads"
             ],
             workingDirectory: path
@@ -155,7 +156,7 @@ actor GitEngine {
 
         _ = try? await getHeadSHA(at: path)
 
-        return result.stdout
+        let branches = result.stdout
             .components(separatedBy: .newlines)
             .filter { !$0.isEmpty }
             .compactMap { line -> Branch? in
@@ -164,20 +165,33 @@ actor GitEngine {
 
                 let name = parts[0]
                 let sha = parts[1]
-                let isHead = parts.count > 2 && parts[2] == "*"
+                let headMarker = parts.count > 2 ? parts[2] : ""
+                let isHead = headMarker == "*"
                 let upstream = parts.count > 3 && !parts[3].isEmpty ? parts[3] : nil
                 let trackInfo = parts.count > 4 ? parseTrackInfo(parts[4]) : nil
+                
+                // Parse commit date (unix timestamp)
+                var createdDate: Date?
+                if parts.count > 5, let timestamp = TimeInterval(parts[5]) {
+                    createdDate = Date(timeIntervalSince1970: timestamp)
+                }
+
+                print("  Branch: \(name) | HEAD marker: '\(headMarker)' | isHead: \(isHead)")
 
                 return Branch(
                     name: name,
                     fullName: "refs/heads/\(name)",
                     isRemote: false,
-                    isHead: isHead,  // Only use git's HEAD marker, not SHA comparison
+                    isHead: isHead,
                     trackingBranch: upstream,
                     targetSHA: sha,
-                    upstream: trackInfo
+                    upstream: trackInfo,
+                    createdDate: createdDate
                 )
             }
+        
+        print("✅ getBranches() done - found \(branches.count) branches, \(branches.filter { $0.isHead }.count) marked as HEAD")
+        return branches
     }
 
     /// Get all remote branches
@@ -377,6 +391,21 @@ actor GitEngine {
         }
 
         return commit
+    }
+
+    /// Get the last commit message (for amend)
+    func getLastCommitMessage(at path: String) async throws -> String {
+        let result = await shellExecutor.execute(
+            "git",
+            arguments: ["log", "-1", "--format=%B"],
+            workingDirectory: path
+        )
+
+        guard result.exitCode == 0 else {
+            throw GitError.commandFailed("git log", result.stderr)
+        }
+
+        return result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     // MARK: - Staging Operations
@@ -987,8 +1016,16 @@ actor GitEngine {
 
     /// Get diff for a file
     /// Truncates output for very large diffs to prevent UI freeze
-    func getDiff(for file: String? = nil, staged: Bool = false, at path: String) async throws -> String {
+    func getDiff(for file: String? = nil, staged: Bool = false, at path: String, contextLines: Int? = nil, ignoreWhitespace: Bool = false) async throws -> String {
         var args = ["diff", "--no-color", "--no-ext-diff"]
+
+        if let contextLines = contextLines {
+            args.append("--unified=\(contextLines)")
+        }
+
+        if ignoreWhitespace {
+            args.append("-w")
+        }
 
         if staged {
             args.append("--cached")
@@ -1622,7 +1659,7 @@ actor GitEngine {
         // Format: sha, parents, author name, author email, author date, committer name, committer email, committer date, subject
         var args = [
             "log",
-            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x01",
+            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x00%G?%x01",
             "-n", String(limit),
             "--skip", String(skip)
         ]
@@ -1649,7 +1686,7 @@ actor GitEngine {
         let args = [
             "log",
             "--follow",
-            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x01",
+            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x00%G?%x01",
             "-n", String(limit),
             "--skip", String(skip),
             "--",
@@ -1692,7 +1729,10 @@ actor GitEngine {
             let authorDate = parseGitDate(authorDateStr) ?? Date()
             let committerDate = parseGitDate(committerDateStr) ?? Date()
 
-            commits.append(Commit(
+            // Field 9 is signature status (%G?) if available
+            let sigStatus = fields.count > 9 ? fields[9].trimmingCharacters(in: .whitespacesAndNewlines) : nil
+
+            var commit = Commit(
                 sha: sha,
                 message: subject.trimmingCharacters(in: .whitespacesAndNewlines),
                 author: authorName,
@@ -1702,7 +1742,11 @@ actor GitEngine {
                 committerEmail: committerEmail,
                 committerDate: committerDate,
                 parentSHAs: parentSHAs
-            ))
+            )
+            if let sig = sigStatus, !sig.isEmpty, sig != "N" {
+                commit.signatureStatus = sig
+            }
+            commits.append(commit)
         }
 
         return commits
@@ -2012,6 +2056,9 @@ enum GitError: LocalizedError {
         case .pullFailed(let msg):
             if msg.contains("uncommitted changes") || msg.contains("would be overwritten") {
                 return ("Stash Changes", "git stash", "You have uncommitted changes. Stash them first, then pull.")
+            }
+            if msg.contains("unmerged files") || msg.contains("unresolved conflict") {
+                return ("Clean Merge State", "git reset --merge", "There's a residual merge state. Clean it to continue.")
             }
             if msg.contains("diverged") {
                 return ("Rebase or Merge", "git pull --rebase", "Your branch has diverged from remote. Try pull with rebase.")

@@ -73,8 +73,8 @@ struct JiraLoginPrompt: View {
         isLoading = true
         error = nil
 
-        Task { [weak self, weak viewModel] in
-            guard let self = self, let viewModel = viewModel else { return }
+        Task { [weak viewModel] in
+            guard let viewModel = viewModel else { return }
             do {
                 // Create Basic auth token
                 let credentials = "\(email):\(apiToken)"
@@ -104,18 +104,18 @@ struct JiraLoginPrompt: View {
                 // Configure service for direct REST API access
                 await JiraService.shared.setAccessToken(basicToken, cloudId: cloudId, siteUrl: cleanSiteUrl)
 
-                await MainActor.run { [weak viewModel, weak self] in
-                    viewModel?.isAuthenticated = true
-                    self?.isLoading = false
+                await MainActor.run {
+                    viewModel.isAuthenticated = true
                 }
+                isLoading = false
 
                 await viewModel.loadProjects()
                 try? await viewModel.refresh()
             } catch {
-                await MainActor.run { [weak self] in
-                    self?.self.error = "Failed to connect: \(error.localizedDescription)"
-                    self?.isLoading = false
+                await MainActor.run {
+                    self.error = "Failed to connect: \(error.localizedDescription)"
                 }
+                isLoading = false
             }
         }
     }

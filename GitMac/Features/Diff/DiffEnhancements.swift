@@ -216,13 +216,23 @@ public actor IntralineDiffEngine {
 
 // MARK: - Syntax Highlighter with Cancellation
 
+/// Sendable wrapper for syntax highlight results
+/// NSAttributedString is immutable after creation, so this is safe to transfer across isolation boundaries
+public struct SyntaxHighlightResults: @unchecked Sendable {
+    public let results: [Int: NSAttributedString]
+
+    public init(results: [Int: NSAttributedString]) {
+        self.results = results
+    }
+}
+
 /// On-demand syntax highlighting with cancellation support
 public actor SyntaxHighlightEngine {
 
     private static let signpostLog = OSLog(subsystem: "com.gitmac.SyntaxHighlight", category: "Performance")
 
     /// Splash highlighter
-    private let highlighter: SyntaxHighlighter<AttributedStringOutputFormat>
+    private let highlighter: Splash.SyntaxHighlighter<AttributedStringOutputFormat>
 
     /// Cache for highlighted content
     private var cache: [String: NSAttributedString] = [:]
@@ -232,23 +242,9 @@ public actor SyntaxHighlightEngine {
     private var activeTasks: [UUID: Task<Void, Never>] = [:]
 
     public init() {
-        let theme = Theme(
-            font: DesignTokens.Typography.diffLine.font,
-            plainTextColor: Color(AppTheme.textPrimary),
-            tokenColors: [
-                .keyword: Color(red: 0.6, green: 0.4, blue: 0.8),
-                .string: Color(red: 0.8, green: 0.6, blue: 0.4),
-                .type: Color(red: 0.4, green: 0.7, blue: 0.8),
-                .call: Color(red: 0.6, green: 0.8, blue: 0.6),
-                .number: Color(red: 0.8, green: 0.7, blue: 0.5),
-                .comment: Color(AppTheme.textMuted),
-                .property: Color(red: 0.7, green: 0.6, blue: 0.8),
-                .dotAccess: Color(red: 0.6, green: 0.7, blue: 0.8),
-                .preprocessing: Color(red: 0.8, green: 0.5, blue: 0.5)
-            ],
-            backgroundColor: Color.clear
-        )
-        self.highlighter = SyntaxHighlighter(format: AttributedStringOutputFormat(theme: theme))
+        // Use Splash's built-in theme with appropriate font size
+        let theme = Splash.Theme.sundellsColors(withFont: Splash.Font(size: DesignTokens.Typography.diffLineSize))
+        self.highlighter = Splash.SyntaxHighlighter(format: AttributedStringOutputFormat(theme: theme))
     }
 
     /// Highlight code with cancellation support
@@ -278,7 +274,7 @@ public actor SyntaxHighlightEngine {
                 }
             }
 
-            let nsResult = NSAttributedString(result)
+            let nsResult = NSAttributedString(attributedString: result)
             cache[cacheKey] = nsResult
 
             return nsResult
@@ -289,10 +285,11 @@ public actor SyntaxHighlightEngine {
     }
 
     /// Highlight multiple lines for viewport
+    /// Returns a sendable wrapper containing the highlighted attributed strings
     public func highlightViewport(
         lines: [(index: Int, content: String)],
         language: String?
-    ) async -> [Int: NSAttributedString] {
+    ) async -> SyntaxHighlightResults {
         var results: [Int: NSAttributedString] = [:]
 
         for (index, content) in lines {
@@ -307,7 +304,7 @@ public actor SyntaxHighlightEngine {
             }
         }
 
-        return results
+        return SyntaxHighlightResults(results: results)
     }
 
     private func cancelTask(_ taskId: UUID) {
@@ -329,8 +326,8 @@ public actor SyntaxHighlightEngine {
 
 // MARK: - Diff Preferences
 
-/// User preferences for diff viewer
-public struct DiffPreferences: Codable, Equatable {
+/// User preferences for diff viewer (Enhanced version with full configuration)
+public struct EnhancedDiffPreferences: Codable, Equatable, Sendable {
     // MARK: - LFM Thresholds
     public var lfmFileSizeThresholdMB: Int = 8
     public var lfmLinesThreshold: Int = 50_000
@@ -358,16 +355,16 @@ public struct DiffPreferences: Codable, Equatable {
     public var enableCaching: Bool = true
     public var maxCacheSizeMB: Int = 50
 
-    public enum ViewModePreference: String, Codable, CaseIterable {
+    public enum ViewModePreference: String, Codable, CaseIterable, Sendable {
         case unified = "Unified"
         case sideBySide = "Side by Side"
         case auto = "Auto"
     }
 
-    public static let `default` = DiffPreferences()
+    public static let `default` = EnhancedDiffPreferences()
 
     /// Convert to LargeFileModeConfig
-    public func toLFMConfig() -> LargeFileModeConfig {
+    func toLFMConfig() -> LargeFileModeConfig {
         var config = LargeFileModeConfig()
         config.fileSizeThreshold = lfmFileSizeThresholdMB * 1024 * 1024
         config.linesThreshold = lfmLinesThreshold
@@ -378,7 +375,7 @@ public struct DiffPreferences: Codable, Equatable {
     }
 
     /// Convert to DiffOptions
-    public func toDiffOptions() -> DiffOptions {
+    func toDiffOptions() -> DiffOptions {
         var options = DiffOptions()
         options.contextLines = contextLines
         options.enableWordDiff = enableWordDiff
@@ -405,7 +402,7 @@ public struct DiffPreferences: Codable, Equatable {
 public class DiffPreferencesManager: ObservableObject {
     public static let shared = DiffPreferencesManager()
 
-    @Published public var preferences: DiffPreferences {
+    @Published public var preferences: EnhancedDiffPreferences {
         didSet {
             save()
         }
@@ -415,7 +412,7 @@ public class DiffPreferencesManager: ObservableObject {
 
     private init() {
         if let data = UserDefaults.standard.data(forKey: userDefaultsKey),
-           let decoded = try? JSONDecoder().decode(DiffPreferences.self, from: data) {
+           let decoded = try? JSONDecoder().decode(EnhancedDiffPreferences.self, from: data) {
             self.preferences = decoded
         } else {
             self.preferences = .default
@@ -447,7 +444,7 @@ struct DiffPreferencesView: View {
             // Display Section
             Section("Display") {
                 Picker("Default View", selection: $manager.preferences.defaultViewMode) {
-                    ForEach(DiffPreferences.ViewModePreference.allCases, id: \.self) { mode in
+                    ForEach(EnhancedDiffPreferences.ViewModePreference.allCases, id: \.self) { mode in
                         Text(mode.rawValue).tag(mode)
                     }
                 }
@@ -576,7 +573,7 @@ struct IntralineDiffLineView: View {
     let line: DiffLine
     let intralineResult: IntralineDiffEngine.IntralineResult?
     let showLineNumbers: Bool
-    let preferences: DiffPreferences
+    let preferences: EnhancedDiffPreferences
 
     var body: some View {
         HStack(spacing: 0) {
@@ -639,7 +636,7 @@ struct IntralineDiffLineView: View {
         }
     }
 
-    private func colorForSegment(_ segment: IntralineDiffEngine.IntralineSegment) -> Color {
+    private func colorForSegment(_ segment: IntralineDiffEngine.IntralineSegment) -> SwiftUI.Color {
         switch segment.type {
         case .unchanged:
             return textColor
@@ -650,7 +647,7 @@ struct IntralineDiffLineView: View {
         }
     }
 
-    private func backgroundForSegment(_ segment: IntralineDiffEngine.IntralineSegment) -> Color {
+    private func backgroundForSegment(_ segment: IntralineDiffEngine.IntralineSegment) -> SwiftUI.Color {
         switch segment.type {
         case .unchanged:
             return .clear
@@ -670,7 +667,7 @@ struct IntralineDiffLineView: View {
         }
     }
 
-    private var prefixColor: Color {
+    private var prefixColor: SwiftUI.Color {
         switch line.type {
         case .addition: return AppTheme.success
         case .deletion: return AppTheme.error
@@ -678,7 +675,7 @@ struct IntralineDiffLineView: View {
         }
     }
 
-    private var textColor: Color {
+    private var textColor: SwiftUI.Color {
         switch line.type {
         case .addition: return AppTheme.success
         case .deletion: return AppTheme.error
@@ -686,7 +683,7 @@ struct IntralineDiffLineView: View {
         }
     }
 
-    private var backgroundColor: Color {
+    private var backgroundColor: SwiftUI.Color {
         switch line.type {
         case .addition:
             return AppTheme.success.opacity(preferences.additionBackgroundOpacity)
@@ -697,7 +694,7 @@ struct IntralineDiffLineView: View {
         }
     }
 
-    private var lineNumberBackground: Color {
+    private var lineNumberBackground: SwiftUI.Color {
         switch line.type {
         case .addition:
             return AppTheme.success.opacity(0.06)
@@ -762,7 +759,7 @@ struct SyntaxHighlightedLineView: View {
         }
     }
 
-    private var prefixColor: Color {
+    private var prefixColor: SwiftUI.Color {
         switch line.type {
         case .addition: return AppTheme.success
         case .deletion: return AppTheme.error
@@ -770,7 +767,7 @@ struct SyntaxHighlightedLineView: View {
         }
     }
 
-    private var textColor: Color {
+    private var textColor: SwiftUI.Color {
         switch line.type {
         case .addition: return AppTheme.success
         case .deletion: return AppTheme.error
@@ -778,7 +775,7 @@ struct SyntaxHighlightedLineView: View {
         }
     }
 
-    private var backgroundColor: Color {
+    private var backgroundColor: SwiftUI.Color {
         switch line.type {
         case .addition: return AppTheme.success.opacity(0.15)
         case .deletion: return AppTheme.error.opacity(0.15)
@@ -816,11 +813,11 @@ public class ViewportEnhancementManager: ObservableObject {
     private var currentTask: Task<Void, Never>?
 
     /// Process visible lines for enhancements
-    public func processViewport(
+    func processViewport(
         lines: [DiffLine],
         visibleRange: Range<Int>,
         language: String?,
-        preferences: DiffPreferences
+        preferences: EnhancedDiffPreferences
     ) {
         // Cancel previous task
         currentTask?.cancel()
@@ -870,10 +867,10 @@ public class ViewportEnhancementManager: ObservableObject {
             .filter { lines[$0].type == .context || lines[$0].type == .addition }
             .map { (index: $0, content: lines[$0].content) }
 
-        let results = await syntaxEngine.highlightViewport(lines: linesToHighlight, language: language)
+        let highlightResults = await syntaxEngine.highlightViewport(lines: linesToHighlight, language: language)
 
         await MainActor.run {
-            for (index, highlighted) in results {
+            for (index, highlighted) in highlightResults.results {
                 syntaxResults[index] = highlighted
             }
         }

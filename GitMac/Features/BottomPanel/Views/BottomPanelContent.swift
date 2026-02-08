@@ -29,6 +29,8 @@ struct BottomPanelContent: View {
                 NotionPanelContent()
             case .teamActivity:
                 TeamActivityPanelContent()
+            case .analytics:
+                AnalyticsPanelContent()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -76,6 +78,11 @@ struct GhosttyWithAIInput: View {
         .background(AppTheme.background)
         .onAppear {
             isInputFocused = true
+        }
+        .onChange(of: appState.currentRepository?.path) { _, newPath in
+            if let path = newPath {
+                ghosttyConnector.sendText("cd \(path)\n")
+            }
         }
         #else
         Text("Ghostty not available")
@@ -581,6 +588,13 @@ struct NotionPanelContent: View {
 struct TeamActivityPanelContent: View {
     var body: some View {
         RepositoryActivityPanel()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+struct AnalyticsPanelContent: View {
+    var body: some View {
+        AnalyticsDashboard()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

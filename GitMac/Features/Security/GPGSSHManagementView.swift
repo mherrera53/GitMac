@@ -1,5 +1,86 @@
 import SwiftUI
 
+// MARK: - ShellExecutor Extension for Full Command Strings
+
+private extension ShellExecutor {
+    /// Execute a full command string (parses command and arguments)
+    func execute(_ fullCommand: String) async -> ShellResult {
+        let components = parseCommand(fullCommand)
+        guard !components.isEmpty else {
+            return ShellResult(stdout: "", stderr: "Invalid command", exitCode: 1)
+        }
+        let command = components[0]
+        let arguments = Array(components.dropFirst())
+        return await execute(command, arguments: arguments)
+    }
+
+    /// Synchronous version for compatibility (nonisolated for sync access)
+    nonisolated func executeSync(_ fullCommand: String) -> ShellResult? {
+        let components = parseCommand(fullCommand)
+        guard !components.isEmpty else { return nil }
+        let command = components[0]
+        let arguments = Array(components.dropFirst())
+
+        let process = Process()
+        let stdout = Pipe()
+        let stderr = Pipe()
+
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = [command] + arguments
+        process.standardOutput = stdout
+        process.standardError = stderr
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let outData = stdout.fileHandleForReading.readDataToEndOfFile()
+            let errData = stderr.fileHandleForReading.readDataToEndOfFile()
+
+            return ShellResult(
+                stdout: String(data: outData, encoding: .utf8) ?? "",
+                stderr: String(data: errData, encoding: .utf8) ?? "",
+                exitCode: process.terminationStatus
+            )
+        } catch {
+            return nil
+        }
+    }
+
+    private nonisolated func parseCommand(_ command: String) -> [String] {
+        var result: [String] = []
+        var current = ""
+        var inQuote = false
+        var quoteChar: Character = "\""
+
+        for char in command {
+            if char == "'" || char == "\"" {
+                if !inQuote {
+                    inQuote = true
+                    quoteChar = char
+                } else if char == quoteChar {
+                    inQuote = false
+                } else {
+                    current.append(char)
+                }
+            } else if char == " " && !inQuote {
+                if !current.isEmpty {
+                    result.append(current)
+                    current = ""
+                }
+            } else {
+                current.append(char)
+            }
+        }
+
+        if !current.isEmpty {
+            result.append(current)
+        }
+
+        return result
+    }
+}
+
 // MARK: - GPG/SSH Management View
 
 struct GPGSSHManagementView: View {

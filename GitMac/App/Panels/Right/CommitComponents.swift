@@ -152,12 +152,17 @@ struct CommitSection: View {
     let repositoryPath: String?
     let onCommit: () -> Void
     var onCommitPushPR: (() -> Void)? = nil  // Optional: Commit + Push + Create PR
+    @Binding var isAmending: Bool
 
     @State private var linkedTaigaRef: String?
     @State private var linkedTaigaSubject: String?
     @State private var showStatusPicker = false
     @State private var isGeneratingAI = false
     @State private var aiError: String?
+    @State private var showSaveTemplateSheet = false
+    @State private var templateName = ""
+
+    private var history: CommitMessageHistory { CommitMessageHistory.shared }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -231,7 +236,7 @@ struct CommitSection: View {
                     .background(Color.clear)
                     .frame(minHeight: 60, maxHeight: 100)
 
-                // AI Generation Button
+                // AI Generation + History buttons
                 HStack {
                     if let error = aiError {
                         Text(error)
@@ -240,6 +245,58 @@ struct CommitSection: View {
                             .lineLimit(1)
                     }
                     Spacer()
+
+                    // Commit message history menu
+                    Menu {
+                        if !history.recentMessages.isEmpty {
+                            Section("Recent Messages") {
+                                ForEach(Array(history.recentMessages.prefix(10).enumerated()), id: \.offset) { _, message in
+                                    Button {
+                                        commitMessage = message
+                                    } label: {
+                                        Text(message.prefix(80) + (message.count > 80 ? "..." : ""))
+                                    }
+                                }
+                            }
+                        }
+
+                        if !history.templates.isEmpty {
+                            Section("Templates") {
+                                ForEach(history.templates) { template in
+                                    Button {
+                                        commitMessage = template.template
+                                    } label: {
+                                        Text(template.name)
+                                    }
+                                }
+                            }
+                        }
+
+                        Divider()
+
+                        Button("Save as Template...") {
+                            templateName = ""
+                            showSaveTemplateSheet = true
+                        }
+                        .disabled(commitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                        if !history.recentMessages.isEmpty {
+                            Button("Clear History") {
+                                history.clearHistory()
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 10))
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .padding(6)
+                            .background(AppTheme.background.opacity(0.8))
+                            .clipShape(Circle())
+                    }
+                    .menuStyle(.borderlessButton)
+                    .frame(width: 28)
+                    .help("Commit message history")
+
                     Button {
                         generateAICommitMessage()
                     } label: {
@@ -266,23 +323,42 @@ struct CommitSection: View {
             .background(AppTheme.backgroundTertiary)
             .cornerRadius(6)
 
-            // Commit buttons row
+            // Amend toggle + Commit buttons row
+            HStack(spacing: 8) {
+                Toggle(isOn: $isAmending) {
+                    Text("Amend")
+                        .font(.system(size: 11))
+                }
+                .toggleStyle(.checkbox)
+                .help("Amend the last commit")
+                .onChange(of: isAmending) { _, newValue in
+                    if newValue {
+                        loadLastCommitMessage()
+                    }
+                }
+
+                Spacer()
+            }
+
             HStack(spacing: 8) {
                 // Standard Commit button
                 Button(action: onCommit) {
                     HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                        Text("Commit")
+                        Image(systemName: isAmending ? "arrow.uturn.backward.circle.fill" : "checkmark.circle.fill")
+                        Text(isAmending ? "Amend" : "Commit")
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(canCommit && !commitMessage.isEmpty ? AppTheme.success : AppTheme.backgroundTertiary)
-                    .foregroundColor(canCommit && !commitMessage.isEmpty ? AppTheme.textPrimary : AppTheme.textMuted)
+                    .background(commitEnabled ? (isAmending ? AppTheme.warning : AppTheme.success) : AppTheme.backgroundTertiary)
+                    .foregroundColor(commitEnabled ? AppTheme.textPrimary : AppTheme.textMuted)
                     .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
-                .disabled(!canCommit || commitMessage.isEmpty)
+                .disabled(!commitEnabled)
+                .keyboardShortcut(.return, modifiers: .command)
+                .accessibilityLabel(isAmending ? "Amend last commit" : "Commit staged changes")
+                .accessibilityHint(commitEnabled ? "Commits with message: \(commitMessage)" : "Add staged files and a commit message first")
 
                 // Commit + Push + PR button
                 if let onCommitPushPR = onCommitPushPR {
@@ -300,6 +376,7 @@ struct CommitSection: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(!canCommit || commitMessage.isEmpty)
+                    .accessibilityLabel("Commit, push, and create pull request")
                     .help("Commit, Push, and Create Pull Request")
                 }
             }
@@ -332,6 +409,32 @@ struct CommitSection: View {
                 } else {
                     commitMessage += "\n\n" + title
                 }
+            }
+        }
+        .sheet(isPresented: $showSaveTemplateSheet) {
+            SaveTemplateSheet(templateName: $templateName) {
+                history.addTemplate(name: templateName, template: commitMessage)
+                showSaveTemplateSheet = false
+            }
+        }
+    }
+
+    /// Whether commit/amend button is enabled
+    /// For amend: message must not be empty (staged files not required)
+    /// For commit: both staged files and message required
+    private var commitEnabled: Bool {
+        if isAmending {
+            return !commitMessage.isEmpty
+        }
+        return canCommit && !commitMessage.isEmpty
+    }
+
+    private func loadLastCommitMessage() {
+        guard let path = repositoryPath else { return }
+        Task {
+            let engine = GitEngine()
+            if let message = try? await engine.getLastCommitMessage(at: path) {
+                commitMessage = message
             }
         }
     }
@@ -446,5 +549,33 @@ struct CommitSection: View {
                 print("Error generating AI commit message: \(error)")
             }
         }
+    }
+}
+
+// MARK: - Save Template Sheet
+private struct SaveTemplateSheet: View {
+    @Binding var templateName: String
+    let onSave: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("Save as Template")
+                .font(.headline)
+
+            TextField("Template name", text: $templateName)
+                .textFieldStyle(.roundedBorder)
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button("Save") { onSave() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(templateName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(20)
+        .frame(width: 300)
     }
 }

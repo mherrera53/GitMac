@@ -79,12 +79,75 @@ class GitHubSyncManager: ObservableObject {
         // Also refresh PR tracker
         await BranchPRTracker.shared.refresh()
 
+        // Check branch protection for key branches
+        await checkBranchProtection()
+
         lastSync = Date()
     }
 
-    /// Background sync (less aggressive)
+    /// Check branch protection status for main/master branches via `gh` CLI
+    /// Only checks key branches to avoid rate limiting
+    private func checkBranchProtection() async {
+        guard let repoPath = await AppState.shared.currentRepository?.path else { return }
+
+        let shell = ShellExecutor()
+
+        // Get the remote owner/repo slug from git remote
+        let remoteResult = await shell.execute(
+            "git", arguments: ["remote", "get-url", "origin"],
+            workingDirectory: repoPath
+        )
+        guard remoteResult.exitCode == 0 else { return }
+
+        let remoteURL = remoteResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let slug = extractGitHubSlug(from: remoteURL) else { return }
+
+        // Check protection for main branches only
+        let branchesToCheck = ["main", "master", "develop"]
+
+        for branchName in branchesToCheck {
+            let result = await shell.execute(
+                "gh", arguments: ["api", "repos/\(slug)/branches/\(branchName)/protection", "--silent"],
+                workingDirectory: repoPath
+            )
+
+            let isProtected = result.exitCode == 0
+
+            // Update branch protection status in AppState
+            await MainActor.run {
+                if let tab = AppState.shared.activeTab {
+                    if let idx = tab.repository.branches.firstIndex(where: { $0.name == branchName }) {
+                        tab.repository.branches[idx].isProtected = isProtected
+                    }
+                }
+            }
+        }
+    }
+
+    /// Extract owner/repo from a GitHub remote URL
+    private func extractGitHubSlug(from url: String) -> String? {
+        // SSH: git@github.com:owner/repo.git
+        if url.contains("github.com:") {
+            let parts = url.components(separatedBy: "github.com:")
+            if let slug = parts.last?.replacingOccurrences(of: ".git", with: "") {
+                return slug.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        // HTTPS: https://github.com/owner/repo.git
+        if url.contains("github.com/") {
+            let parts = url.components(separatedBy: "github.com/")
+            if let slug = parts.last?.replacingOccurrences(of: ".git", with: "") {
+                return slug.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        return nil
+    }
+
+    /// Background sync (less aggressive) — skips entirely when app is inactive
     private func performBackgroundSync() async {
         guard !isSyncing else { return }
+        // Don't waste CPU/network when the app isn't being used
+        guard AppActivityManager.shared.isAppActive else { return }
 
         // Only refresh PR data in background
         await BranchPRTracker.shared.refresh()

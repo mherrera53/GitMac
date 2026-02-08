@@ -112,6 +112,7 @@ class GitRepositoryWatcher: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let repositoryPath: String
     private let debounceInterval: TimeInterval
+    private var isRunning = false
 
     init(repositoryPath: String, debounceInterval: TimeInterval = 0.2) {
         self.repositoryPath = repositoryPath
@@ -123,11 +124,55 @@ class GitRepositoryWatcher: ObservableObject {
         }
 
         setupWatchers()
+        setupActivityObserver()
     }
 
     deinit {
         stopAll()
         signalContinuation?.finish()
+    }
+
+    /// Automatically pause/resume file watchers based on app activity
+    private func setupActivityObserver() {
+        NotificationCenter.default.publisher(for: .appDidBecomeInactive)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self, self.isRunning else { return }
+                self.suspendAll()
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .appDidBecomeActiveAgain)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self, !self.isRunning else { return }
+                self.resumeAll()
+                // Emit a full signal so UI catches up on any changes that happened while suspended
+                self.emitSignal(.full)
+            }
+            .store(in: &cancellables)
+    }
+
+    /// Temporarily suspend watchers without destroying them (for app inactivity)
+    private func suspendAll() {
+        headWatcher?.stop()
+        indexWatcher?.stop()
+        stashWatcher?.stop()
+        configWatcher?.stop()
+        refsWatcher?.stop()
+        workingDirWatcher?.stop()
+        isRunning = false
+    }
+
+    /// Resume previously suspended watchers
+    private func resumeAll() {
+        headWatcher?.start()
+        indexWatcher?.start()
+        stashWatcher?.start()
+        configWatcher?.start()
+        refsWatcher?.start()
+        workingDirWatcher?.start()
+        isRunning = true
     }
 
     private func setupWatchers() {
@@ -190,10 +235,10 @@ class GitRepositoryWatcher: ObservableObject {
         }
 
         // Watch working directory for file changes -> .status signal
-        // Increased latency and extensive excludes for large repos (AWS CodeBuild, etc.)
+        // High latency + directory-level events for minimal CPU overhead on large repos
         workingDirWatcher = RecursiveDirectoryWatcher(
             paths: [repositoryPath],
-            latency: 0.5, // Increased from 0.2 for large repos
+            latency: 1.0, // Increased for better event coalescing on large repos
             excludePaths: [
                 // Version control
                 ".git",
@@ -233,6 +278,7 @@ class GitRepositoryWatcher: ObservableObject {
         configWatcher?.start()
         refsWatcher?.start()
         workingDirWatcher?.start()
+        isRunning = true
     }
 
     /// Stop all watchers
@@ -243,6 +289,7 @@ class GitRepositoryWatcher: ObservableObject {
         configWatcher?.stop()
         refsWatcher?.stop()
         workingDirWatcher?.stop()
+        isRunning = false
     }
 
     /// Reset change flags
@@ -288,10 +335,12 @@ class RecursiveDirectoryWatcher {
             copyDescription: nil
         )
 
-        // Removed kFSEventStreamCreateFlagNoDefer for better coalescing on large repos
+        // Use directory-level events (not file-level) for much lower CPU overhead.
+        // kFSEventStreamCreateFlagFileEvents removed: file-level events fire per-file
+        // and are extremely expensive on large repos. Directory-level is sufficient
+        // since we just need to know "something changed" to trigger a git status.
         let flags: FSEventStreamCreateFlags = UInt32(
-            kFSEventStreamCreateFlagUseCFTypes |
-            kFSEventStreamCreateFlagFileEvents
+            kFSEventStreamCreateFlagUseCFTypes
         )
 
         eventStream = FSEventStreamCreate(

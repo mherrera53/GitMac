@@ -1,10 +1,69 @@
 import SwiftUI
 
+@MainActor
+class OllamaProcessManager: ObservableObject {
+    static let shared = OllamaProcessManager()
+    
+    @Published private(set) var isRunning = false
+    private var ollamaProcess: Process?
+    
+    private init() {}
+    
+    func startIfNeeded() async {
+        let provider = await AIService.shared.getCurrentProvider()
+        
+        guard provider == .ollama else { return }
+        
+        let (isConnected, _) = await AIService.shared.testOllamaConnection()
+        guard !isConnected else {
+            isRunning = true
+            return
+        }
+        
+        await startOllama()
+    }
+    
+    private func startOllama() async {
+        guard !isRunning else { return }
+        
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["ollama", "serve"]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        
+        process.terminationHandler = { [weak self] _ in
+            Task { @MainActor in
+                self?.isRunning = false
+            }
+        }
+        
+        do {
+            try process.run()
+            ollamaProcess = process
+            isRunning = true
+            
+            try await Task.sleep(nanoseconds: 2_000_000_000)
+        } catch {
+            print("Failed to start Ollama: \(error)")
+        }
+    }
+    
+    func stop() {
+        ollamaProcess?.terminate()
+        ollamaProcess = nil
+        isRunning = false
+    }
+}
+
 @main
 struct GitMacApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var recentReposManager = RecentRepositoriesManager.shared
     @StateObject private var themeManager = ThemeManager.shared
+    @StateObject private var ollamaManager = OllamaProcessManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -17,6 +76,12 @@ struct GitMacApp: App {
 
         // Initialize memory pressure monitoring
         _ = MemoryPressureHandler.shared
+
+        // Initialize app activity monitoring (pauses background work when app is inactive)
+        _ = AppActivityManager.shared
+
+        // Initialize auto-fetch background service
+        _ = AutoFetchService.shared
 
         // Register all integration plugins
         registerPlugins()
@@ -64,6 +129,8 @@ struct GitMacApp: App {
                 .task {
                     // Restore previous session on launch
                     await appState.restoreSession()
+                    // Start Ollama if configured as default provider
+                    await ollamaManager.startIfNeeded()
                 }
                 .onAppear {
                     configureWindow()
@@ -76,10 +143,15 @@ struct GitMacApp: App {
         .commands {
             GitMacCommands()
         }
-        .onChange(of: scenePhase) { _, newPhase in
+        .onChange(of: scenePhase) { oldPhase, newPhase in
             if newPhase == .background || newPhase == .inactive {
                 // Save session when app goes to background or becomes inactive
                 appState.saveSession()
+            } else if newPhase == .active {
+                // Check Ollama status when app becomes active
+                Task {
+                    await ollamaManager.startIfNeeded()
+                }
             }
         }
 
@@ -92,16 +164,33 @@ struct GitMacApp: App {
 }
 
 // MARK: - Repository Tab
-struct RepositoryTab: Identifiable, Equatable {
+class RepositoryTab: Identifiable, ObservableObject, Hashable, Equatable {
     let id = UUID()
-    var repository: Repository
-    var selectedCommit: Commit?
-    var selectedBranch: Branch?
-    var selectedStash: Stash?
+    @Published var repository: Repository
+    @Published var selectedCommit: Commit?
+    @Published var selectedBranch: Branch?
+    @Published var selectedStash: Stash?
+    let branchManager: BranchStateManager
 
+    @MainActor
+    init(repository: Repository) {
+        self.repository = repository
+        self.branchManager = BranchStateManager()
+    }
+    
+    @MainActor
+    func configureBranchManager() async {
+        await branchManager.configure(repoPath: repository.path)
+        // Force UI update
+        objectWillChange.send()
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
     static func == (lhs: RepositoryTab, rhs: RepositoryTab) -> Bool {
-        // Include repository comparison so SwiftUI detects branch changes
-        lhs.id == rhs.id && lhs.repository == rhs.repository
+        lhs.id == rhs.id
     }
 }
 
@@ -111,8 +200,17 @@ class AppState: ObservableObject {
     static let shared = AppState()
 
     // Multiple repos support (tabs)
-    @Published var openTabs: [RepositoryTab] = []
-    @Published var activeTabId: UUID?
+    @Published var openTabs: [RepositoryTab] = [] {
+        didSet { _refreshActiveTab() }
+    }
+    @Published var activeTabId: UUID? {
+        didSet { _refreshActiveTab() }
+    }
+    
+    // Computed property for active tab's branch manager
+    var branchManager: BranchStateManager? {
+        activeTab?.branchManager
+    }
 
     // Computed property for backward compatibility
     var currentRepository: Repository? {
@@ -126,8 +224,12 @@ class AppState: ObservableObject {
         }
     }
 
-    var activeTab: RepositoryTab? {
-        openTabs.first { $0.id == activeTabId }
+    /// Cached active tab — avoids O(n) scan on every view body evaluation.
+    /// Invalidated whenever activeTabId or openTabs changes.
+    @Published private(set) var activeTab: RepositoryTab?
+
+    private func _refreshActiveTab() {
+        activeTab = openTabs.first { $0.id == activeTabId }
     }
 
     var activeTabIndex: Int? {
@@ -141,6 +243,9 @@ class AppState: ObservableObject {
         get { activeTab?.selectedCommit }
         set {
             if let index = activeTabIndex {
+                // Must send objectWillChange manually because mutating a nested
+                // ObservableObject inside a @Published array doesn't trigger it.
+                objectWillChange.send()
                 openTabs[index].selectedCommit = newValue
             }
         }
@@ -150,6 +255,7 @@ class AppState: ObservableObject {
         get { activeTab?.selectedBranch }
         set {
             if let index = activeTabIndex {
+                objectWillChange.send()
                 openTabs[index].selectedBranch = newValue
             }
         }
@@ -159,9 +265,23 @@ class AppState: ObservableObject {
         get { activeTab?.selectedStash }
         set {
             if let index = activeTabIndex {
+                objectWillChange.send()
                 openTabs[index].selectedStash = newValue
             }
         }
+    }
+
+    // Commit comparison state
+    @Published var comparisonCommitA: Commit?
+    @Published var comparisonCommitB: Commit?
+
+    var isComparing: Bool {
+        comparisonCommitA != nil && comparisonCommitB != nil
+    }
+
+    func clearComparison() {
+        comparisonCommitA = nil
+        comparisonCommitB = nil
     }
 
     let gitService = GitService()
@@ -239,6 +359,16 @@ class AppState: ObservableObject {
         if activeTabId == nil {
             activeTabId = openTabs.first?.id
         }
+        
+        print("🔧 Configuring \(openTabs.count) tabs...")
+        // Configure branch manager for each tab
+        for tab in openTabs {
+            await tab.configureBranchManager()
+        }
+        print("✅ All tabs configured")
+        
+        // Force AppState update
+        objectWillChange.send()
     }
 
     func openRepository(at path: String) async {
@@ -251,12 +381,17 @@ class AppState: ObservableObject {
             // Check if already open
             if let existingTab = openTabs.first(where: { $0.repository.path == repo.path }) {
                 activeTabId = existingTab.id
+                await existingTab.configureBranchManager()
             } else {
                 // Create new tab
                 let newTab = RepositoryTab(repository: repo)
                 openTabs.append(newTab)
                 activeTabId = newTab.id
+                await newTab.configureBranchManager()
             }
+            
+            // Force update
+            objectWillChange.send()
 
             // Save to recent repositories
             RecentRepositoriesManager.shared.addRecent(path: repo.path, name: repo.name)
@@ -274,13 +409,12 @@ class AppState: ObservableObject {
         guard let path = currentRepository?.path else { return }
         do {
             let repo = try await gitService.openRepository(at: path)
-            // Update the tab with refreshed data
             if let index = openTabs.firstIndex(where: { $0.id == activeTabId }) {
                 var updatedTab = openTabs[index]
                 updatedTab.repository = repo
                 openTabs[index] = updatedTab
             }
-            // Notify all views to refresh
+            await branchManager?.refresh()
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
         } catch {
             errorMessage = "Error refreshing: \(error.localizedDescription)"
@@ -296,6 +430,8 @@ class AppState: ObservableObject {
             let newTab = RepositoryTab(repository: repo)
             openTabs.append(newTab)
             activeTabId = newTab.id
+            await newTab.configureBranchManager()
+            objectWillChange.send()
         } catch {
             errorMessage = "Error cloning repository: \(error.localizedDescription)"
         }
@@ -333,13 +469,22 @@ class AppState: ObservableObject {
     }
 
     func selectTab(_ tabId: UUID, fromNavigation: Bool = false) {
+        print("👆 selectTab() called - tabId: \(tabId)")
+        
         if !fromNavigation, let current = activeTabId, current != tabId {
             backStack.append(current)
-            forwardStack.removeAll() // Clear forward stack on new navigation
+            forwardStack.removeAll()
         }
         
+        // Simply switch the active tab - each tab has its own branchManager
         activeTabId = tabId
         saveSession()
+        
+        print("✅ selectTab() done - activeTab: \(activeTab?.repository.name ?? "nil")")
+        print("📊 branchManager.currentBranch: \(branchManager?.currentBranch?.name ?? "nil")")
+        
+        // Force UI update
+        objectWillChange.send()
     }
     
     // MARK: - Navigation History
@@ -653,10 +798,14 @@ extension Notification.Name {
     static let toggleSidebar = Notification.Name("toggle_sidebar")
     static let repositoryDidRefresh = Notification.Name("repositoryDidRefresh")
     static let branchDidCheckout = Notification.Name("branchDidCheckout")
+    /// Posted when branch ahead/behind status changes (after commit, push, pull)
+    static let branchDidChange = Notification.Name("branchDidChange")
 
     // CI/CD Triggers
     static let gitPushCompleted = Notification.Name("gitPushCompleted")
     static let gitMergeCompleted = Notification.Name("gitMergeCompleted")
     static let refreshCICD = Notification.Name("refreshCICD")
     static let showCICD = Notification.Name("showCICD")
+    /// Posted when user requests file history from staging context menu (object: file path String)
+    static let showFileHistory = Notification.Name("showFileHistory")
 }

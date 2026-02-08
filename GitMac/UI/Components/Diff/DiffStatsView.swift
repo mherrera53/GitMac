@@ -53,23 +53,15 @@ struct DiffStatsView: View {
     private var compactView: some View {
         HStack(spacing: size.spacing) {
             if additions > 0 {
-                HStack(spacing: 1) {
-                    Text("+")
-                        .foregroundColor(AppTheme.diffAddition)
-                    Text("\(additions)")
-                        .foregroundColor(AppTheme.diffAddition)
-                }
-                .font(.system(size: size.fontSize, weight: .medium, design: .monospaced))
+                Text("+\(additions)")
+                    .foregroundStyle(AppTheme.diffAddition)
+                    .font(.system(size: size.fontSize, weight: .medium, design: .monospaced))
             }
 
             if deletions > 0 {
-                HStack(spacing: 1) {
-                    Text("−")
-                        .foregroundColor(AppTheme.diffDeletion)
-                    Text("\(deletions)")
-                        .foregroundColor(AppTheme.diffDeletion)
-                }
-                .font(.system(size: size.fontSize, weight: .medium, design: .monospaced))
+                Text("−\(deletions)")
+                    .foregroundStyle(AppTheme.diffDeletion)
+                    .font(.system(size: size.fontSize, weight: .medium, design: .monospaced))
             }
         }
     }

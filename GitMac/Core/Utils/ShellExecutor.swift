@@ -98,6 +98,9 @@ struct ShellResult: Sendable {
 
 /// Executes shell commands
 actor ShellExecutor {
+    /// Shared instance for convenience
+    static let shared = ShellExecutor()
+
     private let defaultEnvironment: [String: String]
 
     init() {
