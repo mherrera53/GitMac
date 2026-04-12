@@ -25,7 +25,7 @@ struct SidebarBranchRow: View {
     @State private var showDragDropPRSheet = false
 
     // Use shared PR tracker for reactive updates
-    @ObservedObject private var prTracker = BranchPRTracker.shared
+    @StateObject private var prTracker = BranchPRTracker.shared
 
     /// Get PR for this branch from the shared tracker
     private var branchPR: GitHubPullRequest? {
@@ -54,12 +54,12 @@ struct SidebarBranchRow: View {
             // Icon: cloud for remote, branch for local
             Image(systemName: branch.isRemote ? "cloud" : "arrow.triangle.branch")
                 .font(.system(size: 12))
-                .foregroundColor(branchIconColor)
+                .foregroundStyle(branchIconColor)
 
             // Branch name (show display name for remote to strip origin/)
             Text(branch.isRemote ? branch.displayName : branch.name)
                 .font(.system(size: 12))
-                .foregroundColor(branch.isCurrent ? AppTheme.textPrimary : AppTheme.textSecondary)
+                .foregroundStyle(branch.isCurrent ? AppTheme.textPrimary : AppTheme.textSecondary)
                 .lineLimit(1)
 
             if branch.isProtected {
@@ -74,7 +74,7 @@ struct SidebarBranchRow: View {
             if branch.isCurrent {
                 Image(systemName: "checkmark")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
             }
         }
         .padding(.horizontal, 12)
@@ -150,7 +150,7 @@ struct SidebarBranchRow: View {
                 } label: {
                     HStack {
                         Image(systemName: pr.draft ? "doc.text" : (pr.state == "open" ? "arrow.triangle.pull" : "checkmark.circle.fill"))
-                            .foregroundColor(pr.draft ? .gray : (pr.state == "open" ? .green : .purple))
+                            .foregroundStyle(pr.draft ? .gray : (pr.state == "open" ? .green : .purple))
                         Text("PR #\(pr.number): \(pr.title)")
                     }
                 }
@@ -313,16 +313,16 @@ struct RemoteSidebarRow: View {
             HStack(spacing: 8) {
                 Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                     .font(.system(size: 9))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .frame(width: 12)
 
                 Image(systemName: "network")
                     .font(.system(size: 12))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 Text(remote.name)
                     .font(.system(size: 12))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 Spacer()
             }
@@ -351,11 +351,11 @@ struct StashSidebarRow: View {
         HStack(spacing: 8) {
             Image(systemName: "archivebox")
                 .font(.system(size: 12))
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
 
             Text(stash.message)
                 .font(.system(size: 12))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .lineLimit(1)
 
             Spacer()
@@ -376,11 +376,11 @@ struct TagSidebarRow: View {
         HStack(spacing: 8) {
             Image(systemName: "tag")
                 .font(.system(size: 12))
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
 
             Text(tag.name)
                 .font(.system(size: 12))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .lineLimit(1)
 
             Spacer()
@@ -401,7 +401,7 @@ struct SidebarRepoRow: View {
     var groupBadge: GroupBadge? = nil
 
     @EnvironmentObject var appState: AppState
-    @ObservedObject private var groupsService = RepoGroupsService.shared
+    @StateObject private var groupsService = RepoGroupsService.shared
     @State private var isHovered = false
     @State private var showGroupPicker = false
 
@@ -409,11 +409,11 @@ struct SidebarRepoRow: View {
         HStack(spacing: 6) {
             Image(systemName: "folder.fill")
                 .font(.system(size: 10))
-                .foregroundColor(isActive ? AppTheme.accent : AppTheme.info)
+                .foregroundStyle(isActive ? AppTheme.accent : AppTheme.info)
 
             Text(repoName)
                 .font(.system(size: 10))
-                .foregroundColor(isActive ? AppTheme.accent : AppTheme.textSecondary)
+                .foregroundStyle(isActive ? AppTheme.accent : AppTheme.textSecondary)
                 .lineLimit(1)
 
             if let badge = groupBadge {
@@ -428,7 +428,7 @@ struct SidebarRepoRow: View {
                 } label: {
                     Image(systemName: isFavorite ? "star.fill" : "star")
                         .font(.system(size: 9))
-                        .foregroundColor(isFavorite ? .yellow : AppTheme.textMuted)
+                        .foregroundStyle(isFavorite ? .yellow : AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
@@ -442,7 +442,7 @@ struct SidebarRepoRow: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
         .background(isHovered ? AppTheme.hover : (isActive ? AppTheme.hover.opacity(0.5) : Color.clear))
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         .onHover { isHovered = $0 }
         .onTapGesture {
             Task {
@@ -511,11 +511,11 @@ struct SidebarRecentRepoRow: View {
         HStack(spacing: 8) {
             Image(systemName: "folder.fill.badge.gearshape")
                 .font(.system(size: 11))
-                .foregroundColor(isActive ? AppTheme.accent : AppTheme.info)
+                .foregroundStyle(isActive ? AppTheme.accent : AppTheme.info)
 
             Text(repo.name)
                 .font(.system(size: 11))
-                .foregroundColor(isActive ? AppTheme.accent : AppTheme.textSecondary)
+                .foregroundStyle(isActive ? AppTheme.accent : AppTheme.textSecondary)
                 .lineLimit(1)
 
             Spacer()

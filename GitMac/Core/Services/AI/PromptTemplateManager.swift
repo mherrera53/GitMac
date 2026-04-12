@@ -502,7 +502,7 @@ struct PromptTemplateEditorView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Prompt Templates")
                     .font(.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .padding()
                 
                 Divider()
@@ -510,18 +510,18 @@ struct PromptTemplateEditorView: View {
                 List(PromptTemplateType.allCases, selection: $selectedType) { type in
                     HStack(spacing: DesignTokens.Spacing.sm) {
                         Image(systemName: type.icon)
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                             .frame(width: 20)
                         
                         VStack(alignment: .leading, spacing: 2) {
                             Text(type.displayName)
                                 .font(.subheadline)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                             
                             if !manager.getTemplate(for: type).isDefault {
                                 Text("Customized")
                                     .font(.caption2)
-                                    .foregroundColor(AppTheme.accent)
+                                    .foregroundStyle(AppTheme.accent)
                             }
                         }
                     }
@@ -539,11 +539,11 @@ struct PromptTemplateEditorView: View {
                         Text(selectedType.displayName)
                             .font(.title3)
                             .fontWeight(.semibold)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         
                         Text(selectedType.description)
                             .font(.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     
                     Spacer()
@@ -565,12 +565,12 @@ struct PromptTemplateEditorView: View {
                 Divider()
                 
                 // Variables reference
-                ScrollView(.horizontal, showsIndicators: false) {
+                ScrollView(.horizontal) {
                     HStack(spacing: DesignTokens.Spacing.sm) {
                         Text("Variables:")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textMuted)
-                        
+                            .foregroundStyle(AppTheme.textMuted)
+
                         ForEach(selectedType.availableVariables, id: \.self) { variable in
                             Button {
                                 insertVariable(variable)
@@ -580,7 +580,7 @@ struct PromptTemplateEditorView: View {
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
                                     .background(AppTheme.accent.opacity(0.2))
-                                    .cornerRadius(4)
+                                    .clipShape(.rect(cornerRadius: 4))
                             }
                             .buttonStyle(.plain)
                             .help(variable.description)
@@ -589,6 +589,7 @@ struct PromptTemplateEditorView: View {
                     .padding(.horizontal)
                     .padding(.vertical, DesignTokens.Spacing.sm)
                 }
+                .scrollIndicators(.hidden)
                 .background(AppTheme.backgroundTertiary)
                 
                 // Text editor

@@ -17,7 +17,7 @@ struct RevertView: View {
             HStack {
                 Image(systemName: "arrow.uturn.backward.circle.fill")
                     .font(.system(size: 32))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Revert Commit")
@@ -26,7 +26,7 @@ struct RevertView: View {
                     
                     Text("Create a new commit that undoes the changes")
                         .font(.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 
                 Spacer()
@@ -63,7 +63,7 @@ struct RevertView: View {
                         
                         Text("Apply the revert to staging area, allowing you to modify or amend before committing")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
             }
@@ -71,7 +71,7 @@ struct RevertView: View {
             // Info box
             HStack(spacing: 12) {
                 Image(systemName: "info.circle.fill")
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("How revert works:")
@@ -80,13 +80,13 @@ struct RevertView: View {
                     
                     Text("Revert creates a new commit that undoes the changes from the selected commit. This is safe for public branches because it doesn't rewrite history.")
                         .font(.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding()
             .background(AppTheme.accent.opacity(0.1))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             
             Spacer()
             
@@ -153,21 +153,21 @@ struct CommitInfoCard: View {
                 HStack(spacing: 8) {
                     Text(commit.shortSHA)
                         .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     Text("•")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     Text(commit.author)
                         .font(.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     Text("•")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     Text(commit.date.formatted(.relative(presentation: .named)))
                         .font(.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
             
@@ -175,7 +175,7 @@ struct CommitInfoCard: View {
         }
         .padding()
         .background(AppTheme.accent.opacity(0.1))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
     }
 }
 

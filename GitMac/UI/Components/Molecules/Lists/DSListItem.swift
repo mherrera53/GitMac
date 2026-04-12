@@ -39,13 +39,13 @@ struct DSListItem<Leading: View, Trailing: View>: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                 Text(title)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
 
                 if let subtitle = subtitle {
                     Text(subtitle)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .lineLimit(1)
                 }
             }
@@ -56,7 +56,7 @@ struct DSListItem<Leading: View, Trailing: View>: View {
         }
         .padding(DesignTokens.Spacing.md)
         .background(isHovered ? AppTheme.backgroundSecondary : Color.clear)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         .contentShape(Rectangle())
         .onHover { hovering in
             withAnimation(DesignTokens.Animation.fastEasing) {
@@ -138,7 +138,7 @@ struct DSListItem<Leading: View, Trailing: View>: View {
                 DSIcon("chevron.right", size: .sm, color: AppTheme.textMuted)
             }
         } action: {
-            print("README.md tapped")
+            Logger.debug("README.md tapped")
         }
 
         DSListItem(
@@ -152,7 +152,7 @@ struct DSListItem<Leading: View, Trailing: View>: View {
                 DSIcon("chevron.right", size: .sm, color: AppTheme.textMuted)
             }
         } action: {
-            print("main.swift tapped")
+            Logger.debug("main.swift tapped")
         }
 
         DSListItem(
@@ -166,7 +166,7 @@ struct DSListItem<Leading: View, Trailing: View>: View {
                 DSIcon("chevron.right", size: .sm, color: AppTheme.textMuted)
             }
         } action: {
-            print("old-file.txt tapped")
+            Logger.debug("old-file.txt tapped")
         }
     }
     .padding()
@@ -185,9 +185,9 @@ struct DSListItem<Leading: View, Trailing: View>: View {
         } trailing: {
             Text("a3f5b2c")
                 .font(DesignTokens.Typography.commitHash)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
         } action: {
-            print("Commit tapped")
+            Logger.debug("Commit tapped")
         }
 
         DSListItem(
@@ -200,9 +200,9 @@ struct DSListItem<Leading: View, Trailing: View>: View {
         } trailing: {
             Text("d8e91fc")
                 .font(DesignTokens.Typography.commitHash)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
         } action: {
-            print("Commit tapped")
+            Logger.debug("Commit tapped")
         }
     }
     .padding()

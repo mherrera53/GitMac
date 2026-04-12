@@ -17,7 +17,7 @@ struct GhostBranchesOverlay: View {
                     Text("Nearby Branches")
                         .font(DesignTokens.Typography.caption2)
                         .fontWeight(.semibold)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     ForEach(nearbyBranches.prefix(5)) { branch in
                         NearbyBranchRow(branch: branch)
@@ -25,7 +25,7 @@ struct GhostBranchesOverlay: View {
                 }
                 .padding(DesignTokens.Spacing.sm)
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 .shadow(color: .black.opacity(0.2), radius: DesignTokens.Spacing.xs)
             }
         }
@@ -63,7 +63,7 @@ struct GhostBranchesOverlay: View {
     }
 
     private func getCommitDistance(from: String, to: String) async -> (ahead: Int, behind: Int)? {
-        let executor = ShellExecutor()
+        let executor = ShellExecutor.shared
         let result = await executor.execute(
             "git",
             arguments: ["rev-list", "--left-right", "--count", "\(from)...\(to)"],
@@ -105,7 +105,7 @@ struct NearbyBranchRow: View {
             // Branch icon with color
             Image(systemName: "arrow.triangle.branch")
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(branch.isCurrent ? AppTheme.success : AppTheme.accent)
+                .foregroundStyle(branch.isCurrent ? AppTheme.success : AppTheme.accent)
 
             // Branch name
             Text(branch.name)
@@ -124,7 +124,7 @@ struct NearbyBranchRow: View {
                         Text("\(branch.ahead)")
                             .font(DesignTokens.Typography.caption2)
                     }
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 }
 
                 if branch.behind > 0 {
@@ -134,7 +134,7 @@ struct NearbyBranchRow: View {
                         Text("\(branch.behind)")
                             .font(DesignTokens.Typography.caption2)
                     }
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
                 }
             }
         }

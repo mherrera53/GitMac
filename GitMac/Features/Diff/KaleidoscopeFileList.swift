@@ -9,7 +9,7 @@ struct KaleidoscopeFileList: View {
     @State private var filterText: String = ""
     @State private var expandedDirectories: Set<String> = []
 
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     private var groupedFiles: [String: [FileDiff]] {
         var groups: [String: [FileDiff]] = [:]
@@ -97,21 +97,21 @@ struct KaleidoscopeFileList: View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: "doc.on.doc")
                 .font(DesignTokens.Typography.headline)
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
 
             Text("Files")
                 .font(DesignTokens.Typography.headline.weight(.semibold))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Spacer()
 
             Text("\(files.count)")
                 .font(DesignTokens.Typography.caption.monospaced())
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
                 .padding(.horizontal, DesignTokens.Spacing.xs)
                 .padding(.vertical, 2)
                 .background(AppTheme.backgroundTertiary)
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         }
         .padding(DesignTokens.Spacing.md)
     }
@@ -120,12 +120,12 @@ struct KaleidoscopeFileList: View {
         HStack(spacing: DesignTokens.Spacing.xs) {
             Image(systemName: "magnifyingglass")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
 
             TextField("Filter Files", text: $filterText)
                 .textFieldStyle(.plain)
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             if !filterText.isEmpty {
                 Button {
@@ -133,14 +133,14 @@ struct KaleidoscopeFileList: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(DesignTokens.Spacing.sm)
         .background(AppTheme.backgroundTertiary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.sm)
     }
@@ -154,7 +154,7 @@ struct DirectoryHeader: View {
     let isExpanded: Bool
     let onToggle: () -> Void
 
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -163,23 +163,23 @@ struct DirectoryHeader: View {
             HStack(spacing: DesignTokens.Spacing.sm) {
                 Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                     .font(DesignTokens.Typography.caption2.weight(.bold))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .frame(width: 12)
 
                 Image(systemName: "folder")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
 
                 Text(directory)
                     .font(DesignTokens.Typography.caption.weight(.semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
 
                 Spacer()
 
                 Text("\(fileCount)")
                     .font(DesignTokens.Typography.caption2.monospaced())
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             .padding(.horizontal, DesignTokens.Spacing.md)
             .padding(.vertical, DesignTokens.Spacing.xs)
@@ -197,7 +197,7 @@ struct FileListRow: View {
     let onSelect: () -> Void
 
     @State private var isHovered = false
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     private var fileName: String {
         (file.displayPath as NSString).lastPathComponent
@@ -236,14 +236,14 @@ struct FileListRow: View {
                 // Status icon
                 Image(systemName: statusIcon)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(statusColor)
+                    .foregroundStyle(statusColor)
                     .frame(width: 16)
 
                 // File name
                 VStack(alignment: .leading, spacing: 2) {
                     Text(fileName)
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
 
                     // Stats
@@ -251,12 +251,12 @@ struct FileListRow: View {
                         if file.additions > 0 {
                             Text("+\(file.additions)")
                                 .font(DesignTokens.Typography.caption2.monospaced())
-                                .foregroundColor(AppTheme.diffAddition)
+                                .foregroundStyle(AppTheme.diffAddition)
                         }
                         if file.deletions > 0 {
                             Text("-\(file.deletions)")
                                 .font(DesignTokens.Typography.caption2.monospaced())
-                                .foregroundColor(AppTheme.diffDeletion)
+                                .foregroundStyle(AppTheme.diffDeletion)
                         }
                     }
                 }

@@ -227,7 +227,7 @@ struct CreateBranchSheet: View {
         }
 
         // Get modified files from status
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let statusResult = await shell.execute("git", arguments: ["status", "--porcelain"], workingDirectory: repoPath)
         if statusResult.isSuccess {
             modifiedFiles = statusResult.stdout

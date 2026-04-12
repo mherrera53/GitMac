@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - AWS Connected View
 
 struct AWSConnectedView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     let region: String
     let projects: [String]
     let selectedRepoPath: String?
@@ -17,18 +17,18 @@ struct AWSConnectedView: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
             HStack {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 Text("Connected")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Text(region)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                     .padding(.vertical, DesignTokens.Spacing.xxs)
                     .background(AppTheme.warning.opacity(0.2))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 DSIconButton(iconName: "arrow.clockwise", variant: .ghost, size: .sm, action: onRefresh)
                 DSButton("Disconnect", variant: .danger, size: .sm, action: onDisconnect)
             }
@@ -40,16 +40,16 @@ struct AWSConnectedView: View {
                         .padding(.vertical, DesignTokens.Spacing.xs)
 
                     Text("Assign to \(URL(fileURLWithPath: repoPath).lastPathComponent):")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
 
                     Picker("CodeBuild Project", selection: $selectedProject) {
                         Text("None").tag("")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         ForEach(projects, id: \.self) { project in
                             Text(project).tag(project)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                         }
                     }
                     .pickerStyle(.menu)
@@ -67,12 +67,12 @@ struct AWSConnectedView: View {
                     if !selectedProject.isEmpty {
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(AppTheme.success)
+                                .foregroundStyle(AppTheme.success)
                                 .font(DesignTokens.Typography.caption)
                             Text("Only builds from '\(selectedProject)' will show for this repo")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                     }
 
@@ -81,25 +81,25 @@ struct AWSConnectedView: View {
                 }
 
                 Text("Available Projects (\(projects.count)):")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 ForEach(projects, id: \.self) { project in
                     HStack {
                         Image(systemName: "hammer.fill")
-                            .foregroundColor(AppTheme.warning)
+                            .foregroundStyle(AppTheme.warning)
                             .frame(width: 20)
                         Text(project)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .font(DesignTokens.Typography.body.monospaced())
                     }
                 }
             } else {
                 Text("No CodeBuild projects found")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
         }
     }
@@ -108,7 +108,7 @@ struct AWSConnectedView: View {
 // MARK: - AWS Login View
 
 struct AWSLoginView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @Binding var accessKeyId: String
     @Binding var secretAccessKey: String
     @Binding var sessionToken: String
@@ -128,23 +128,23 @@ struct AWSLoginView: View {
             DSSecureField(placeholder: "Session Token (MFA/2FA)", text: $sessionToken)
 
             Text("Required if using MFA/2FA authentication")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             Picker("Region", selection: $region) {
                 ForEach(regions, id: \.self) { r in
                     Text(r).tag(r)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
             .pickerStyle(.menu)
 
             if let error = error {
                 Text(error)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
 
             DSButton(variant: .primary, size: .sm, isDisabled: accessKeyId.isEmpty || secretAccessKey.isEmpty || isLoading) {
@@ -155,7 +155,7 @@ struct AWSLoginView: View {
                         .scaleEffect(0.7)
                 } else {
                     Text("Connect")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
 
@@ -163,9 +163,9 @@ struct AWSLoginView: View {
                 .font(DesignTokens.Typography.caption)
 
             Text("For MFA: Run `aws sts get-session-token --serial-number arn:aws:iam::ACCOUNT:mfa/USER --token-code CODE` to get session token")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
     }
 }

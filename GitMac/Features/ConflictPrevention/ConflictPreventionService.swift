@@ -9,7 +9,7 @@ actor ConflictPreventionService {
     static let shared = ConflictPreventionService()
 
     private let engine = GitEngine()
-    private let shell = ShellExecutor()
+    private let shell = ShellExecutor.shared
 
     // MARK: - Models
 

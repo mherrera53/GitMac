@@ -224,7 +224,7 @@ public actor DiffEngine {
 
     // MARK: - Initialization
 
-    init(shellExecutor: ShellExecutor = ShellExecutor(), cacheSize: Int = 50 * 1024 * 1024) {
+    init(shellExecutor: ShellExecutor = ShellExecutor.shared, cacheSize: Int = 50 * 1024 * 1024) {
         self.shellExecutor = shellExecutor
         self.hunkCache = LRUDiffCache(maxCostBytes: cacheSize)
     }
@@ -527,11 +527,14 @@ public actor DiffEngine {
         return hunks
     }
 
+    private static let hunkHeaderRegex: NSRegularExpression = {
+        try! NSRegularExpression(pattern: #"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@"#)
+    }()
+
     private func parseHunkHeader(_ line: String) -> HunkHeaderInfo? {
         // Format: @@ -oldStart,oldLines +newStart,newLines @@ optional context
-        let pattern = #"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@"#
-        guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) else {
+        let regex = Self.hunkHeaderRegex
+        guard let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) else {
             return nil
         }
 
@@ -646,10 +649,10 @@ final class LRUDiffCache<Key: Hashable, Value>: @unchecked Sendable {
     private struct Entry {
         let value: Value
         let cost: Int
-        var lastAccess: Date
     }
 
     private var cache: [Key: Entry] = [:]
+    private var lruOrder: [Key] = []
     private var totalCost: Int = 0
     private let maxCostBytes: Int
     private let lock = NSLock()
@@ -662,9 +665,12 @@ final class LRUDiffCache<Key: Hashable, Value>: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
 
-        guard var entry = cache[key] else { return nil }
-        entry.lastAccess = Date()
-        cache[key] = entry
+        guard let entry = cache[key] else { return nil }
+        // Move to end (most recently used)
+        if let idx = lruOrder.firstIndex(of: key) {
+            lruOrder.remove(at: idx)
+        }
+        lruOrder.append(key)
         return entry.value
     }
 
@@ -675,6 +681,7 @@ final class LRUDiffCache<Key: Hashable, Value>: @unchecked Sendable {
         // Remove old entry if exists
         if let existing = cache[key] {
             totalCost -= existing.cost
+            lruOrder.removeAll { $0 == key }
         }
 
         // Evict if needed
@@ -682,7 +689,8 @@ final class LRUDiffCache<Key: Hashable, Value>: @unchecked Sendable {
             evictLRU()
         }
 
-        cache[key] = Entry(value: value, cost: cost, lastAccess: Date())
+        cache[key] = Entry(value: value, cost: cost)
+        lruOrder.append(key)
         totalCost += cost
     }
 
@@ -690,6 +698,7 @@ final class LRUDiffCache<Key: Hashable, Value>: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         cache.removeAll()
+        lruOrder.removeAll()
         totalCost = 0
     }
 
@@ -700,8 +709,10 @@ final class LRUDiffCache<Key: Hashable, Value>: @unchecked Sendable {
     }
 
     private func evictLRU() {
-        guard let oldest = cache.min(by: { $0.value.lastAccess < $1.value.lastAccess }) else { return }
-        totalCost -= oldest.value.cost
-        cache.removeValue(forKey: oldest.key)
+        guard !lruOrder.isEmpty, let key = lruOrder.first else { return }
+        lruOrder.removeFirst()
+        if let entry = cache.removeValue(forKey: key) {
+            totalCost -= entry.cost
+        }
     }
 }

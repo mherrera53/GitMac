@@ -56,7 +56,7 @@ struct InsightsView: View {
                 if let repo = appState.currentRepository {
                     Text(repo.name)
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
 
@@ -68,7 +68,7 @@ struct InsightsView: View {
                 }
             } label: {
                 Image(systemName: "arrow.clockwise")
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .buttonStyle(.bordered)
             .disabled(viewModel.isLoading)
@@ -86,8 +86,8 @@ struct InsightsView: View {
                         .padding(.horizontal, DesignTokens.Spacing.md)
                         .padding(.vertical, DesignTokens.Spacing.sm - 2)
                         .background(selectedTimeRange == range ? AppTheme.info : AppTheme.textMuted.opacity(0.1))
-                        .foregroundColor(selectedTimeRange == range ? .white : .primary)
-                        .cornerRadius(DesignTokens.CornerRadius.md)
+                        .foregroundStyle(selectedTimeRange == range ? .white : .primary)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 }
                 .buttonStyle(.plain)
             }
@@ -173,7 +173,7 @@ struct InsightsView: View {
         }
         .padding(DesignTokens.Spacing.lg)
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 
         // PR throughput
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
@@ -184,28 +184,28 @@ struct InsightsView: View {
                 VStack {
                     Text("\(metrics.openPRs)")
                         .font(DesignTokens.Typography.title2)
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
                     Text("Open")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
 
                 VStack {
                     Text("\(metrics.mergedPRs)")
                         .font(DesignTokens.Typography.title2)
-                        .foregroundColor(AppTheme.accentPurple)
+                        .foregroundStyle(AppTheme.accentPurple)
                     Text("Merged")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
 
                 VStack {
                     Text("\(metrics.closedPRs)")
                         .font(DesignTokens.Typography.title2)
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                     Text("Closed")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
 
                 Spacer()
@@ -213,7 +213,7 @@ struct InsightsView: View {
         }
         .padding(DesignTokens.Spacing.lg)
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
     }
 
     private func topContributorsSection(_ metrics: InsightMetrics) -> some View {
@@ -229,7 +229,7 @@ struct InsightsView: View {
                         .overlay(
                             Text(String(contributor.name.prefix(1)).uppercased())
                                 .font(DesignTokens.Typography.callout.bold())
-                                .foregroundColor(AppTheme.info)
+                                .foregroundStyle(AppTheme.info)
                         )
 
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
@@ -237,7 +237,7 @@ struct InsightsView: View {
                             .font(DesignTokens.Typography.callout.weight(.medium))
                         Text("\(contributor.commits) commits")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
 
                     Spacer()
@@ -252,13 +252,13 @@ struct InsightsView: View {
                     }
                     .frame(width: 100, height: DesignTokens.Spacing.sm)
                     .background(AppTheme.textMuted.opacity(0.1))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
             }
         }
         .padding(DesignTokens.Spacing.lg)
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
     }
 
     private var loadingView: some View {
@@ -266,7 +266,7 @@ struct InsightsView: View {
             ProgressView()
             Text("Analyzing repository...")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(DesignTokens.Spacing.xxl + 8)
@@ -276,14 +276,14 @@ struct InsightsView: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: "chart.bar.xaxis")
                 .font(.system(size: DesignTokens.Size.iconXL))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("No data available")
                 .font(DesignTokens.Typography.headline)
 
             Text("Open a repository to see insights")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity)
         .padding(DesignTokens.Spacing.xxl + 8)
@@ -314,7 +314,7 @@ struct MetricCard: View {
             HStack {
                 Image(systemName: icon)
                     .font(.system(size: DesignTokens.Size.iconSM))
-                    .foregroundColor(color)
+                    .foregroundStyle(color)
                 Spacer()
                 if let trend = trend {
                     HStack(spacing: DesignTokens.Spacing.xxs) {
@@ -323,7 +323,7 @@ struct MetricCard: View {
                         Text("\(abs(Int(trend * 100)))%")
                             .font(.system(size: 9)) // Chart label - intentionally small
                     }
-                    .foregroundColor(trend >= 0 ? AppTheme.success : AppTheme.error)
+                    .foregroundStyle(trend >= 0 ? AppTheme.success : AppTheme.error)
                 }
             }
 
@@ -332,11 +332,11 @@ struct MetricCard: View {
 
             Text(title)
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .padding(DesignTokens.Spacing.md)
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
     }
 }
 
@@ -401,7 +401,7 @@ class InsightsViewModel: ObservableObject {
     @Published var isLoading = false
 
     private let engine = GitEngine()
-    private let shell = ShellExecutor()
+    private let shell = ShellExecutor.shared
 
     func loadMetrics(at repoPath: String, timeRange: TimeRange) async {
         isLoading = true
@@ -418,7 +418,7 @@ class InsightsViewModel: ObservableObject {
         )
 
         guard commitsResult.isSuccess else {
-            print("Error loading metrics: \(commitsResult.stderr)")
+            Logger.debug("Error loading metrics: \(commitsResult.stderr)")
             metrics = nil
             isLoading = false
             return

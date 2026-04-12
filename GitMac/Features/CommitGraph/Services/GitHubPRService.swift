@@ -97,7 +97,7 @@ class GitHubPRService {
     /// Get GitHub token from git config or keychain
     func getGitHubToken(at path: String) async -> String? {
         // Try git config first
-        let result = await ShellExecutor().execute(
+        let result = await ShellExecutor.shared.execute(
             "git",
             arguments: ["config", "github.token"],
             workingDirectory: path

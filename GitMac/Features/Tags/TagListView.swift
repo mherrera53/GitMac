@@ -18,7 +18,7 @@ struct TagListView: View {
                     .font(.headline)
 
                 Text("(\(viewModel.tags.count))")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -143,14 +143,14 @@ class TagListViewModel: ObservableObject {
 
     func pushTag(_ tag: Tag) async {
         isLoading = true
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         _ = await shell.execute("git", arguments: ["push", "origin", tag.name])
         isLoading = false
     }
 
     func pushAllTags() async {
         isLoading = true
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         _ = await shell.execute("git", arguments: ["push", "--tags"])
         isLoading = false
     }
@@ -171,7 +171,7 @@ struct TagRow: View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             // Tag icon
             Image(systemName: tag.isAnnotated ? "tag.fill" : "tag")
-                .foregroundColor(tag.isVersionTag ? AppTheme.warning : AppTheme.accent)
+                .foregroundStyle(tag.isVersionTag ? AppTheme.warning : AppTheme.accent)
 
             // Tag info
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
@@ -185,30 +185,30 @@ struct TagRow: View {
                             .padding(.horizontal, DesignTokens.Spacing.xs)
                             .padding(.vertical, DesignTokens.Spacing.xxs / 2)
                             .background(AppTheme.warning.opacity(0.2))
-                            .foregroundColor(AppTheme.warning)
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
+                            .foregroundStyle(AppTheme.warning)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                     }
                 }
 
                 HStack(spacing: DesignTokens.Spacing.sm) {
                     Text(tag.shortSHA)
                         .font(DesignTokens.Typography.caption.monospacedDigit())
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     if let date = tag.relativeDate {
                         Text("•")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Text(date)
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
 
                     if let tagger = tag.tagger {
                         Text("•")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Text(tagger)
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
             }
@@ -233,7 +233,7 @@ struct TagRow: View {
         .padding(.vertical, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
         .padding(.horizontal, DesignTokens.Spacing.xs)
         .background(isSelected ? AppTheme.accent.opacity(0.1) : (isHovered ? AppTheme.textSecondary.opacity(0.05) : Color.clear))
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
         .contextMenu {
@@ -262,7 +262,7 @@ struct EmptyTagView: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "tag")
                 .font(DesignTokens.Typography.iconXXXXL)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             if hasSearch {
                 Text("No matching tags")
@@ -272,7 +272,7 @@ struct EmptyTagView: View {
                     .font(.headline)
 
                 Text("Create a tag to mark a specific point in history")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .multilineTextAlignment(.center)
             }
         }
@@ -338,7 +338,7 @@ struct CreateTagSheet: View {
                     if let version = SemanticVersion(from: tagName) {
                         Text("Version: \(version.string)")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
             }

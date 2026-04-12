@@ -28,12 +28,12 @@ struct PanelIssueRow<LeadingIcon: View, StatusBadge: View, Metadata: View>: View
             if let id = identifier {
                 Text(id)
                     .font(.system(size: 12, design: .monospaced))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             Text(title)
                 .font(.system(size: 12))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .lineLimit(2)
 
             Spacer()
@@ -46,7 +46,7 @@ struct PanelIssueRow<LeadingIcon: View, StatusBadge: View, Metadata: View>: View
                 Button(action: onInsert) {
                     Image(systemName: "arrow.right.doc.on.clipboard")
                         .font(.system(size: 10))
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
                 .help("Insert into commit message")
@@ -55,7 +55,7 @@ struct PanelIssueRow<LeadingIcon: View, StatusBadge: View, Metadata: View>: View
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(isHovered ? AppTheme.hover : Color.clear)
-        .cornerRadius(4)
+        .clipShape(.rect(cornerRadius: 4))
         .onHover { isHovered = $0 }
     }
 }
@@ -70,11 +70,11 @@ struct StatusBadge: View {
     var body: some View {
         Text(text)
             .font(.system(size: 10))
-            .foregroundColor(color)
+            .foregroundStyle(color)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(color.opacity(0.2))
-            .cornerRadius(4)
+            .clipShape(.rect(cornerRadius: 4))
     }
 }
 
@@ -86,7 +86,7 @@ struct StatusBadge: View {
         title: "Implement dark mode toggle",
         leadingIcon: {
             Image(systemName: "circle")
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .font(.system(size: 12))
         },
         statusBadge: {
@@ -95,7 +95,7 @@ struct StatusBadge: View {
         metadata: {
             EmptyView()
         },
-        onInsert: { print("Insert") }
+        onInsert: { Logger.debug("Insert") }
     )
 }
 
@@ -105,7 +105,7 @@ struct StatusBadge: View {
         title: "Fix navigation bug in settings",
         leadingIcon: {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(AppTheme.success)
+                .foregroundStyle(AppTheme.success)
                 .font(.system(size: 12))
         },
         statusBadge: {
@@ -114,6 +114,6 @@ struct StatusBadge: View {
         metadata: {
             EmptyView()
         },
-        onInsert: { print("Insert") }
+        onInsert: { Logger.debug("Insert") }
     )
 }

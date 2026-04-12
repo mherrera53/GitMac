@@ -141,15 +141,15 @@ struct NotionLoginPrompt: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "doc.text.fill")
                 .font(DesignTokens.Typography.iconXXXL)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Connect to Notion")
                 .font(DesignTokens.Typography.headline) // Was: .system(size: 15, weight: .semibold)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Enter your Notion integration token")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
 
             DSSecureField(placeholder: "Integration Token", text: $integrationToken)
@@ -158,7 +158,7 @@ struct NotionLoginPrompt: View {
             if let error = error {
                 Text(error)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
 
             Button {
@@ -181,7 +181,7 @@ struct NotionLoginPrompt: View {
 
                 Text("Make sure to share your databases with the integration")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -227,12 +227,12 @@ struct NotionSettingsSheet: View {
             HStack {
                 Text("Notion Settings")
                     .font(DesignTokens.Typography.headline) // Was: .system(size: 15, weight: .semibold)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(DesignTokens.Typography.callout) // Was: .system(size: 12, weight: .medium)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
@@ -245,25 +245,25 @@ struct NotionSettingsSheet: View {
                 if viewModel.isAuthenticated {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                         Text("Connected to Notion")
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
 
                     Text("\(viewModel.databases.count) databases available")
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
 
                     Button("Disconnect") {
                         viewModel.logout()
                         dismiss()
                     }
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                 } else {
                     Text("Not connected to Notion")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
             .padding(DesignTokens.Spacing.lg)
@@ -357,12 +357,12 @@ struct SimpleNotionTaskRow: View {
             // Completion indicator
             Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
                 .font(DesignTokens.Typography.callout) // Was: .system(size: 12)
-                .foregroundColor(isDone ? AppTheme.success : AppTheme.textSecondary)
+                .foregroundStyle(isDone ? AppTheme.success : AppTheme.textSecondary)
 
             // Task title
             Text(task.title)
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .lineLimit(2)
 
             Spacer()
@@ -372,7 +372,7 @@ struct SimpleNotionTaskRow: View {
                 Link(destination: URL(string: url)!) {
                     Image(systemName: "arrow.up.right.square")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .help("Open in Notion")
             }
@@ -381,11 +381,11 @@ struct SimpleNotionTaskRow: View {
             if let status = task.status {
                 Text(status)
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(statusColor(task.statusColor))
+                    .foregroundStyle(statusColor(task.statusColor))
                     .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                     .padding(.vertical, DesignTokens.Spacing.xxs)
                     .background(statusColor(task.statusColor).opacity(0.2))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
 
             // Insert button (shown on hover)
@@ -406,7 +406,7 @@ struct SimpleNotionTaskRow: View {
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.sm)
         .background(isHovered ? AppTheme.backgroundSecondary : Color.clear)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         .onHover { hovering in
             withAnimation(DesignTokens.Animation.fastEasing) {
                 isHovered = hovering

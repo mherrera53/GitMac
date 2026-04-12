@@ -57,7 +57,7 @@ struct DSLinkButton: View {
                         .underline(isHovered && !isDisabled)
                 }
             }
-            .foregroundColor(foregroundColor)
+            .foregroundStyle(foregroundColor)
             .padding(.horizontal, DesignTokens.Spacing.xxs)
             .padding(.vertical, DesignTokens.Spacing.xxs)
         }
@@ -102,19 +102,19 @@ struct DSLinkButton: View {
 #Preview("Link Buttons") {
     VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
         DSLinkButton(title: "View documentation") {
-            print("Docs clicked")
+            Logger.debug("Docs clicked")
         }
 
         DSLinkButton(title: "Learn more", iconName: "arrow.right") {
-            print("Learn more clicked")
+            Logger.debug("Learn more clicked")
         }
 
         DSLinkButton(title: "Open in browser", iconName: "safari") {
-            print("Browser clicked")
+            Logger.debug("Browser clicked")
         }
 
         DSLinkButton(title: "Disabled link", isDisabled: true) {
-            print("Disabled clicked")
+            Logger.debug("Disabled clicked")
         }
     }
     .padding()
@@ -123,15 +123,15 @@ struct DSLinkButton: View {
 #Preview("Link Sizes") {
     VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
         DSLinkButton(title: "Small link", size: .sm) {
-            print("Small clicked")
+            Logger.debug("Small clicked")
         }
 
         DSLinkButton(title: "Medium link", size: .md) {
-            print("Medium clicked")
+            Logger.debug("Medium clicked")
         }
 
         DSLinkButton(title: "Large link", size: .lg) {
-            print("Large clicked")
+            Logger.debug("Large clicked")
         }
     }
     .padding()
@@ -141,23 +141,23 @@ struct DSLinkButton: View {
     VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
         Text("GitMac")
             .font(DesignTokens.Typography.title2)
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
 
         Text("A modern Git client for macOS with powerful features.")
             .font(DesignTokens.Typography.body)
-            .foregroundColor(AppTheme.textSecondary)
+            .foregroundStyle(AppTheme.textSecondary)
 
         HStack(spacing: DesignTokens.Spacing.md) {
             DSLinkButton(title: "Documentation", iconName: "book") {
-                print("Docs")
+                Logger.debug("Docs")
             }
 
             DSLinkButton(title: "GitHub", iconName: "link") {
-                print("GitHub")
+                Logger.debug("GitHub")
             }
 
             DSLinkButton(title: "Report Issue", iconName: "exclamationmark.triangle") {
-                print("Issue")
+                Logger.debug("Issue")
             }
         }
     }
@@ -169,10 +169,10 @@ struct DSLinkButton: View {
     HStack(spacing: DesignTokens.Spacing.xs) {
         Text("Read more about Git workflows")
             .font(DesignTokens.Typography.body)
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
 
         DSLinkButton(title: "here", iconName: "arrow.up.right.square") {
-            print("External link")
+            Logger.debug("External link")
         }
     }
     .padding()

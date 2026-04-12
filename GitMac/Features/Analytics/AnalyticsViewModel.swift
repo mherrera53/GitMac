@@ -138,7 +138,7 @@ class AnalyticsViewModel: ObservableObject {
     @Published var error: String?
     
     private var currentRepositoryPath: String?
-    private let shell = ShellExecutor()
+    private let shell = ShellExecutor.shared
     
     // MARK: - Load Analytics
     

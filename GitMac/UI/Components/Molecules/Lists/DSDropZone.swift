@@ -40,13 +40,13 @@ struct DSDropZone: View {
             VStack(spacing: DesignTokens.Spacing.xs) {
                 Text(title)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .fontWeight(.medium)
 
                 if let subtitle = subtitle {
                     Text(subtitle)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -58,7 +58,7 @@ struct DSDropZone: View {
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                 .strokeBorder(borderColor, style: StrokeStyle(lineWidth: 2, dash: [8, 4]))
         )
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
         .animation(DesignTokens.Animation.fastEasing, value: isTargeted)
         .onDrop(of: acceptedTypes, isTargeted: $isTargeted) { providers in
             onDrop(providers)
@@ -97,7 +97,7 @@ struct DSDropZone: View {
         title: "Drop files here",
         subtitle: "Drag and drop files to upload"
     ) { providers in
-        print("Dropped \(providers.count) items")
+        Logger.debug("Dropped \(providers.count) items")
         return true
     }
     .frame(width: 400, height: 200)
@@ -111,7 +111,7 @@ struct DSDropZone: View {
         subtitle: "Drag files here to add them to the staging area",
         icon: "plus.square.dashed"
     ) { providers in
-        print("Staging \(providers.count) files")
+        Logger.debug("Staging \(providers.count) files")
         return true
     }
     .frame(width: 400, height: 200)
@@ -125,7 +125,7 @@ struct DSDropZone: View {
         subtitle: "Drag files here to remove them from staging",
         icon: "minus.square.dashed"
     ) { providers in
-        print("Unstaging \(providers.count) files")
+        Logger.debug("Unstaging \(providers.count) files")
         return true
     }
     .frame(width: 400, height: 200)
@@ -139,7 +139,7 @@ struct DSDropZone: View {
         subtitle: "Supports PDF, DOC, TXT files",
         icon: "doc.badge.arrow.up"
     ) { providers in
-        print("Uploading \(providers.count) documents")
+        Logger.debug("Uploading \(providers.count) documents")
         return true
     }
     .frame(width: 400, height: 200)
@@ -180,7 +180,7 @@ struct DSDropZone: View {
             subtitle: "Unstaged changes",
             icon: "folder"
         ) { providers in
-            print("Moved to workspace: \(providers.count) items")
+            Logger.debug("Moved to workspace: \(providers.count) items")
             return true
         }
 
@@ -189,7 +189,7 @@ struct DSDropZone: View {
             subtitle: "Ready to commit",
             icon: "tray"
         ) { providers in
-            print("Moved to staging: \(providers.count) items")
+            Logger.debug("Moved to staging: \(providers.count) items")
             return true
         }
     }

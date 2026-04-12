@@ -47,7 +47,7 @@ class GraphViewModel: ObservableObject {
             }
 
             // Load current user email for @me filter
-            let result = await ShellExecutor().execute(
+            let result = await ShellExecutor.shared.execute(
                 "git",
                 arguments: ["config", "user.email"],
                 workingDirectory: p

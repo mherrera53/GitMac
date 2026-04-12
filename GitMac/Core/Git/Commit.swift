@@ -2,6 +2,13 @@ import Foundation
 
 /// Represents a Git commit
 struct Commit: Identifiable, Equatable, Hashable {
+    private static let displayDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }()
+
     let id: UUID
     let sha: String
     let shortSHA: String
@@ -84,10 +91,7 @@ struct Commit: Identifiable, Equatable, Hashable {
     }
 
     var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: authorDate)
+        Self.displayDateFormatter.string(from: authorDate)
     }
 
     var gravatarURL: URL? {

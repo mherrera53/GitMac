@@ -17,12 +17,12 @@ struct JiraSettingsSheet: View {
             HStack {
                 Text("Jira Settings")
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
@@ -35,21 +35,21 @@ struct JiraSettingsSheet: View {
                 if viewModel.isAuthenticated {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                         Text("Connected to Jira")
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
 
                     Button("Disconnect") {
                         viewModel.logout()
                         dismiss()
                     }
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                 } else {
                     Text("Not connected to Jira")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
             .padding(DesignTokens.Spacing.lg)

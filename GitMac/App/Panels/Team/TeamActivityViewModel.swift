@@ -109,7 +109,7 @@ class TeamActivityViewModel: ObservableObject {
                 """
             }
         } catch {
-            print("Failed to load team activity: \(error)")
+            Logger.debug("Failed to load team activity: \(error)")
         }
 
         isLoading = false

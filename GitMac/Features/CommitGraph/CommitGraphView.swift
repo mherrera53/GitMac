@@ -273,7 +273,7 @@ struct CommitGraphView: View {
             // Time ago
             Text(operation.timestamp.formatted(.relative(presentation: .named)))
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Spacer()
 
@@ -297,7 +297,7 @@ struct CommitGraphView: View {
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 18))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .frame(width: 28, height: 28)
                     .contentShape(Rectangle())
             }
@@ -311,7 +311,7 @@ struct CommitGraphView: View {
                 operation.color.opacity(0.08)
                 Rectangle()
                     .frame(height: DesignTokens.Spacing.xxs)
-                    .foregroundColor(operation.color.opacity(0.4))
+                    .foregroundStyle(operation.color.opacity(0.4))
             }
         )
     }
@@ -321,7 +321,7 @@ struct CommitGraphView: View {
     private func checkoutBranch(_ branch: Branch) async {
         guard let repoPath = appState.currentRepository?.path else { return }
 
-        let executor = ShellExecutor()
+        let executor = ShellExecutor.shared
         let result = await executor.execute(
             "git",
             arguments: ["checkout", branch.name],
@@ -358,7 +358,7 @@ struct CommitGraphView: View {
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     Image(systemName: "person.fill")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Text(settings.filterAuthor)
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
@@ -366,15 +366,15 @@ struct CommitGraphView: View {
                         settings.filterAuthor = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                     }
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.vertical, DesignTokens.Spacing.xs)
                 .background(AppTheme.info.opacity(0.2))
-                .foregroundColor(AppTheme.info)
-                .cornerRadius(DesignTokens.CornerRadius.xl)
+                .foregroundStyle(AppTheme.info)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
             }
 
             Spacer()
@@ -391,7 +391,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: settings.showBranches ? "point.3.connected.trianglepath.dotted" : "arrow.triangle.branch")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(settings.showBranches ? AppTheme.accent : AppTheme.textSecondary)
+                        .foregroundStyle(settings.showBranches ? AppTheme.accent : AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -402,7 +402,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: settings.showTags ? "tag.circle.fill" : "tag.circle")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(settings.showTags ? AppTheme.warning : AppTheme.textSecondary)
+                        .foregroundStyle(settings.showTags ? AppTheme.warning : AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -413,7 +413,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: settings.showStashes ? "archivebox.circle.fill" : "archivebox.circle")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(settings.showStashes ? AppTheme.warning : AppTheme.textSecondary)
+                        .foregroundStyle(settings.showStashes ? AppTheme.warning : AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -432,7 +432,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: "sidebar.left")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(showBranchPanel ? AppTheme.accent : AppTheme.textSecondary)
+                        .foregroundStyle(showBranchPanel ? AppTheme.accent : AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -445,7 +445,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: "map")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(showMinimap ? AppTheme.accent : AppTheme.textSecondary)
+                        .foregroundStyle(showMinimap ? AppTheme.accent : AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -458,7 +458,7 @@ struct CommitGraphView: View {
                 }) {
                     Image(systemName: "sidebar.right")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(showDetailPanel ? AppTheme.accent : AppTheme.textSecondary)
+                        .foregroundStyle(showDetailPanel ? AppTheme.accent : AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -473,7 +473,7 @@ struct CommitGraphView: View {
                 Button(action: { settings.zoomOut() }) {
                     Image(systemName: "minus.magnifyingglass")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(settings.zoomLevel <= GraphSettings.zoomMin ? AppTheme.textMuted : AppTheme.textSecondary)
+                        .foregroundStyle(settings.zoomLevel <= GraphSettings.zoomMin ? AppTheme.textMuted : AppTheme.textSecondary)
                 }
                 .buttonStyle(.plain)
                 .disabled(settings.zoomLevel <= GraphSettings.zoomMin)
@@ -482,7 +482,7 @@ struct CommitGraphView: View {
                 Button(action: { settings.resetZoom() }) {
                     Text("\(settings.zoomPercentage)%")
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundColor(settings.zoomLevel == 1.0 ? AppTheme.textMuted : AppTheme.accent)
+                        .foregroundStyle(settings.zoomLevel == 1.0 ? AppTheme.textMuted : AppTheme.accent)
                         .frame(width: 36)
                 }
                 .buttonStyle(.plain)
@@ -491,7 +491,7 @@ struct CommitGraphView: View {
                 Button(action: { settings.zoomIn() }) {
                     Image(systemName: "plus.magnifyingglass")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(settings.zoomLevel >= GraphSettings.zoomMax ? AppTheme.textMuted : AppTheme.textSecondary)
+                        .foregroundStyle(settings.zoomLevel >= GraphSettings.zoomMax ? AppTheme.textMuted : AppTheme.textSecondary)
                 }
                 .buttonStyle(.plain)
                 .disabled(settings.zoomLevel >= GraphSettings.zoomMax)
@@ -593,7 +593,7 @@ struct CommitGraphView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.triangle.branch")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .symbolRenderingMode(.monochrome)
                     Text("BRANCH / TAG")
                 }
@@ -610,7 +610,7 @@ struct CommitGraphView: View {
             HStack(spacing: 4) {
                 Image(systemName: "point.3.connected.trianglepath.dotted")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .symbolRenderingMode(.monochrome)
                 Text("GRAPH")
             }
@@ -639,7 +639,7 @@ struct CommitGraphView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "person.circle.fill")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                     Text("AUTHOR")
                 }
@@ -656,7 +656,7 @@ struct CommitGraphView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                     Text("DATE")
                 }
@@ -673,7 +673,7 @@ struct CommitGraphView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "number.circle.fill")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .symbolRenderingMode(.hierarchical)
                     Text("SHA")
                 }
@@ -683,7 +683,7 @@ struct CommitGraphView: View {
         }
         .font(DesignTokens.Typography.caption2)
         .fontWeight(.semibold)
-        .foregroundColor(AppTheme.textPrimary)
+        .foregroundStyle(AppTheme.textPrimary)
         .frame(height: 28)
         .background(AppTheme.backgroundSecondary)
         .accessibilityElement(children: .combine)

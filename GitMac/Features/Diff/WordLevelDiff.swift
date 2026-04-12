@@ -277,7 +277,7 @@ struct InlineDiffText: View {
             ForEach(segments) { segment in
                 Text(segment.text)
                     .font(font)
-                    .foregroundColor(textColor(for: segment.type))
+                    .foregroundStyle(textColor(for: segment.type))
                     .background(backgroundColor(for: segment.type))
             }
         }
@@ -343,7 +343,7 @@ struct EnhancedDiffLineRow: View {
             if showLineNumber {
                 Text(lineNumberText)
                     .font(DesignTokens.Typography.commitHash)
-                    .foregroundColor(AppTheme.textSecondary.opacity(0.6))
+                    .foregroundStyle(AppTheme.textSecondary.opacity(0.6))
                     .frame(width: 45, alignment: .trailing)
                     .padding(.trailing, DesignTokens.Spacing.sm)
             }
@@ -356,7 +356,7 @@ struct EnhancedDiffLineRow: View {
             } else {
                 Text(line.content)
                     .font(DesignTokens.Typography.diffLine)
-                    .foregroundColor(contentColor)
+                    .foregroundStyle(contentColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 

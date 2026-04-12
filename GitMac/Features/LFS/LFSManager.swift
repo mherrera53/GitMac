@@ -57,7 +57,7 @@ struct LFSStorageInfo {
 // MARK: - LFS View
 
 struct LFSManagerView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = LFSViewModel()
@@ -72,7 +72,7 @@ struct LFSManagerView: View {
                 Text("GIT LFS")
                     .font(DesignTokens.Typography.caption)
                     .fontWeight(.semibold)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -82,14 +82,14 @@ struct LFSManagerView: View {
                         .frame(width: DesignTokens.Spacing.md, height: DesignTokens.Spacing.md)
                     Text("Installed")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
                 } else {
                     Circle()
                         .fill(AppTheme.error)
                         .frame(width: DesignTokens.Spacing.md, height: DesignTokens.Spacing.md)
                     Text("Not installed")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                 }
             }
             .padding(.horizontal, DesignTokens.Spacing.md)
@@ -102,7 +102,7 @@ struct LFSManagerView: View {
                     Image(systemName: "externaldrive.badge.xmark")
                         // TODO: Replace with appropriate Typography token when available for large icons
                         .font(.system(size: DesignTokens.Size.iconXL))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Text("Git LFS is not installed")
                         .font(DesignTokens.Typography.body)
@@ -110,7 +110,7 @@ struct LFSManagerView: View {
 
                     Text("Install Git LFS to track large files")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Button("Install LFS") {
                         Task { await viewModel.install(at: appState.currentRepository?.path) }
@@ -165,12 +165,12 @@ struct LFSManagerView: View {
             // Search
             HStack {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 DSTextField(placeholder: "Search files...", text: $searchText)
             }
             .padding(DesignTokens.Spacing.sm)
             .background(AppTheme.textMuted.opacity(0.1))
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .padding(DesignTokens.Spacing.sm)
 
             if viewModel.isLoading {
@@ -180,10 +180,10 @@ struct LFSManagerView: View {
                 VStack(spacing: DesignTokens.Spacing.sm) {
                     Image(systemName: "doc.badge.ellipsis")
                         .font(DesignTokens.Typography.title2)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Text("No LFS files tracked")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -239,7 +239,7 @@ struct LFSManagerView: View {
                     ForEach(viewModel.patterns) { pattern in
                         HStack {
                             Image(systemName: "doc.badge.gearshape")
-                                .foregroundColor(AppTheme.accent)
+                                .foregroundStyle(AppTheme.accent)
 
                             Text(pattern.pattern)
                                 .font(DesignTokens.Typography.callout)
@@ -251,7 +251,7 @@ struct LFSManagerView: View {
                                 Task { await viewModel.untrack(pattern: pattern.pattern, at: appState.currentRepository?.path) }
                             } label: {
                                 Image(systemName: "trash")
-                                    .foregroundColor(AppTheme.error)
+                                    .foregroundStyle(AppTheme.error)
                             }
                             .buttonStyle(.plain)
                         }
@@ -287,7 +287,7 @@ struct LFSManagerView: View {
                         HStack {
                             Image(systemName: "internaldrive")
                                 .font(DesignTokens.Typography.title3)
-                                .foregroundColor(AppTheme.accent)
+                                .foregroundStyle(AppTheme.accent)
                             VStack(alignment: .leading) {
                                 Text("Local Storage")
                                     .font(DesignTokens.Typography.callout)
@@ -300,15 +300,15 @@ struct LFSManagerView: View {
                     }
                     .padding()
                     .background(AppTheme.info.opacity(0.1))
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 
                     // File count
                     HStack {
                         Image(systemName: "doc.on.doc")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Text("\(info.fileCount) files tracked")
                             .font(DesignTokens.Typography.callout)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Spacer()
                     }
 
@@ -324,7 +324,7 @@ struct LFSManagerView: View {
 
                         Text("Remove local copies of old LFS objects")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
                 .padding()
@@ -345,7 +345,7 @@ struct LFSFileRow: View {
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: file.isPointer ? "arrow.down.circle" : "checkmark.circle.fill")
-                .foregroundColor(file.isPointer ? AppTheme.warning : AppTheme.success)
+                .foregroundStyle(file.isPointer ? AppTheme.warning : AppTheme.success)
                 .font(DesignTokens.Typography.callout)
 
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
@@ -360,7 +360,7 @@ struct LFSFileRow: View {
                         .font(DesignTokens.Typography.caption2)
                         .fontWeight(.medium)
                 }
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             }
 
             Spacer()
@@ -368,7 +368,7 @@ struct LFSFileRow: View {
             if isHovered {
                 Text(file.shortOID)
                     .font(.system(size: 9, design: .monospaced)) // OID - intentionally small
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
@@ -411,14 +411,14 @@ struct TrackPatternSheet: View {
                     Text("Pattern")
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     DSTextField(placeholder: "*.psd, assets/**/*.png", text: $pattern)
                 }
 
                 Text("Common patterns:")
                     .font(DesignTokens.Typography.caption)
                     .fontWeight(.medium)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: DesignTokens.Spacing.sm) {
                     ForEach(Array(presets.keys.sorted()), id: \.self) { key in
@@ -431,8 +431,8 @@ struct TrackPatternSheet: View {
                                 .padding(.horizontal, DesignTokens.Spacing.sm)
                                 .padding(.vertical, DesignTokens.Spacing.xs)
                                 .background(pattern == key ? AppTheme.info : AppTheme.textMuted.opacity(0.2))
-                                .foregroundColor(pattern == key ? .white : .primary)
-                                .cornerRadius(DesignTokens.CornerRadius.sm)
+                                .foregroundStyle(pattern == key ? .white : .primary)
+                                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                         }
                         .buttonStyle(.plain)
                     }
@@ -471,7 +471,7 @@ class LFSViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
 
-    private let shell = ShellExecutor()
+    private let shell = ShellExecutor.shared
 
     func checkInstallation() async {
         let result = await shell.execute("git", arguments: ["lfs", "version"], workingDirectory: nil)

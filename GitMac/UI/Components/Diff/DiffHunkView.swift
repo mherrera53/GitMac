@@ -39,7 +39,7 @@ struct FastHunkHeader: View {
                 // Hunk header text
                 Text(header)
                     .font(headerFont)
-                    .foregroundColor(headerColor)
+                    .foregroundStyle(headerColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Hover actions
@@ -242,8 +242,8 @@ struct DiffHunkView_Previews: PreviewProvider {
                 Text("With Actions (hover to see)").font(.headline)
                 HunkHeaderWithActions(
                     header: "@@ -10,4 +10,6 @@ struct MyView: View",
-                    onStage: { print("Stage hunk") },
-                    onDiscard: { print("Discard hunk") }
+                    onStage: { Logger.debug("Stage hunk") },
+                    onDiscard: { Logger.debug("Discard hunk") }
                 )
             }
 

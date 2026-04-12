@@ -34,7 +34,7 @@ struct DSDraggable<Data>: ViewModifier where Data: Transferable {
                     content
                         .padding(DesignTokens.Spacing.sm)
                         .background(AppTheme.backgroundSecondary)
-                        .cornerRadius(DesignTokens.CornerRadius.md)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 }
             }
             .onChange(of: isDragging) { _, newValue in
@@ -334,17 +334,17 @@ private struct DoubleTapPreview: View {
         VStack(spacing: DesignTokens.Spacing.xl) {
             Text("Double Tap Me!")
                 .font(DesignTokens.Typography.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .padding(DesignTokens.Spacing.xl)
                 .background(AppTheme.accent.opacity(0.2))
-                .cornerRadius(DesignTokens.CornerRadius.lg)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                 .onDoubleTap {
                     tapCount += 1
                 }
 
             Text("Tapped \(tapCount) times")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
         .background(AppTheme.background)
@@ -363,17 +363,17 @@ private struct LongPressPreview: View {
         VStack(spacing: DesignTokens.Spacing.xl) {
             Text("Long Press Me!")
                 .font(DesignTokens.Typography.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .padding(DesignTokens.Spacing.xl)
                 .background(isPressing ? AppTheme.warning.opacity(0.3) : AppTheme.success.opacity(0.2))
-                .cornerRadius(DesignTokens.CornerRadius.lg)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                 .onLongPress(minimumDuration: 0.5) {
                     pressCount += 1
                 }
 
             Text("Pressed \(pressCount) times")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
         .background(AppTheme.background)
@@ -394,17 +394,17 @@ private struct SwipeablePreview: View {
                     HStack {
                         Text(item)
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
 
                         Spacer()
                     }
                     .padding()
                     .background(AppTheme.backgroundSecondary)
-                    .cornerRadius(DesignTokens.CornerRadius.md)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                     .swipeable(
                         leading: [
                             .init(icon: "checkmark.circle.fill", color: AppTheme.success) {
-                                print("Mark as done: \(item)")
+                                Logger.debug("Mark as done: \(item)")
                             }
                         ],
                         trailing: [
@@ -455,7 +455,7 @@ private struct MagnifiablePreview: View {
             HStack(spacing: DesignTokens.Spacing.md) {
                 Text("Scale: \(String(format: "%.1f", scale))x")
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 DSButton(variant: .secondary, size: .sm) {
                     withAnimation(DesignTokens.Animation.spring) {

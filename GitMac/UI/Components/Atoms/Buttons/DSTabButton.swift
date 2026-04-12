@@ -64,7 +64,7 @@ struct DSTabButton: View {
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: iconSizeForSize * 0.7, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .frame(width: 16, height: 16)
                 }
                 .buttonStyle(.plain)
@@ -74,9 +74,9 @@ struct DSTabButton: View {
                 }
             }
         }
-        .foregroundColor(foregroundColor)
+        .foregroundStyle(foregroundColor)
         .background(backgroundColor)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         .overlay(
             // Bottom border indicator for selected state
             Rectangle()
@@ -154,15 +154,15 @@ struct DSTabButton: View {
 #Preview("Tab Buttons") {
     HStack(spacing: DesignTokens.Spacing.xs) {
         DSTabButton(title: "Files", iconName: "folder", isSelected: true) {
-            print("Files clicked")
+            Logger.debug("Files clicked")
         }
 
         DSTabButton(title: "History", iconName: "clock", isSelected: false) {
-            print("History clicked")
+            Logger.debug("History clicked")
         }
 
         DSTabButton(title: "Branches", iconName: "arrow.triangle.branch", isSelected: false) {
-            print("Branches clicked")
+            Logger.debug("Branches clicked")
         }
     }
     .padding()
@@ -172,31 +172,31 @@ struct DSTabButton: View {
     VStack(spacing: DesignTokens.Spacing.md) {
         HStack(spacing: DesignTokens.Spacing.xs) {
             DSTabButton(title: "Small", isSelected: true, size: .sm) {
-                print("Small clicked")
+                Logger.debug("Small clicked")
             }
 
             DSTabButton(title: "Tab", isSelected: false, size: .sm) {
-                print("Tab clicked")
+                Logger.debug("Tab clicked")
             }
         }
 
         HStack(spacing: DesignTokens.Spacing.xs) {
             DSTabButton(title: "Medium", isSelected: true, size: .md) {
-                print("Medium clicked")
+                Logger.debug("Medium clicked")
             }
 
             DSTabButton(title: "Tab", isSelected: false, size: .md) {
-                print("Tab clicked")
+                Logger.debug("Tab clicked")
             }
         }
 
         HStack(spacing: DesignTokens.Spacing.xs) {
             DSTabButton(title: "Large", isSelected: true, size: .lg) {
-                print("Large clicked")
+                Logger.debug("Large clicked")
             }
 
             DSTabButton(title: "Tab", isSelected: false, size: .lg) {
-                print("Tab clicked")
+                Logger.debug("Tab clicked")
             }
         }
     }
@@ -206,15 +206,15 @@ struct DSTabButton: View {
 #Preview("Text Only Tabs") {
     HStack(spacing: DesignTokens.Spacing.xs) {
         DSTabButton(title: "Overview", isSelected: true) {
-            print("Overview clicked")
+            Logger.debug("Overview clicked")
         }
 
         DSTabButton(title: "Details", isSelected: false) {
-            print("Details clicked")
+            Logger.debug("Details clicked")
         }
 
         DSTabButton(title: "Settings", isSelected: false) {
-            print("Settings clicked")
+            Logger.debug("Settings clicked")
         }
     }
     .padding()

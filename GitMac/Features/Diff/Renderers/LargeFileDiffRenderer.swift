@@ -5,7 +5,7 @@ import AppKit
 
 /// High-performance diff view for large files with pagination
 struct LargeFileDiffViewWrapper: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     let hunks: [DiffHunk]
     let showLineNumbers: Bool
@@ -97,7 +97,7 @@ struct LargeFileDiffViewWrapper: View {
                         .background(AppTheme.backgroundSecondary)
                     }
                     .buttonStyle(.plain)
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 }
             }
         }
@@ -127,7 +127,7 @@ private struct LargeDiffLine: Identifiable {
 
 /// Simple line view for large diffs (minimal overhead)
 private struct LargeDiffLineView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     let line: LargeDiffLine
     let showLineNumbers: Bool
@@ -138,7 +138,7 @@ private struct LargeDiffLineView: View {
                 // Hunk header
                 Text(line.content)
                     .font(DesignTokens.Typography.commitHash)
-                    .foregroundColor(AppTheme.info)
+                    .foregroundStyle(AppTheme.info)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DesignTokens.Spacing.sm)
                     .padding(.vertical, DesignTokens.Spacing.xs)
@@ -153,18 +153,18 @@ private struct LargeDiffLineView: View {
                             .frame(width: 35, alignment: .trailing)
                     }
                     .font(DesignTokens.Typography.commitHash)
-                    .foregroundColor(AppTheme.textSecondary.opacity(0.5))
+                    .foregroundStyle(AppTheme.textSecondary.opacity(0.5))
                     .padding(.trailing, DesignTokens.Spacing.xs)
                 }
 
                 Text(prefix)
                     .font(DesignTokens.Typography.diffLine)
-                    .foregroundColor(prefixColor)
+                    .foregroundStyle(prefixColor)
                     .frame(width: 14)
 
                 Text(line.content)
                     .font(DesignTokens.Typography.diffLine)
-                    .foregroundColor(textColor)
+                    .foregroundStyle(textColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }

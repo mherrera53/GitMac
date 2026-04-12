@@ -119,28 +119,58 @@ func buildCommitGraph(commits: [Commit], branchHeads: [String: String]) -> [Grap
     }
 
     // PHASE 4: Build nodes with simplified drawing instructions
+
+    // Pre-index edges for O(1) lookup by row
+    var edgesByParentRow: [Int: [GraphEdge]] = [:]
+    var edgesByChildRow: [Int: [GraphEdge]] = [:]
+    for edge in edges {
+        edgesByParentRow[edge.parentRow, default: []].append(edge)
+        edgesByChildRow[edge.childRow, default: []].append(edge)
+    }
+
+    // Sweep-line: track active edges passing through the current row
+    // An edge is active between its childRow (exclusive) and parentRow (exclusive)
+    // We map parentColumn -> count of active edges using that column
+    var activeColumns: [Int: Int] = [:]
+
     var result: [GraphNode] = []
 
     for (row, commit) in commits.enumerated() {
+        // Sweep-line update: activate edges that started at the previous row (childRow == row - 1)
+        // An edge passes through row when childRow < row < parentRow, so it becomes active at childRow + 1
+        if row > 0 {
+            for edge in edgesByChildRow[row - 1] ?? [] {
+                // Only activate if there's at least one row between child and parent
+                if edge.parentRow > row {
+                    activeColumns[edge.parentColumn, default: 0] += 1
+                }
+            }
+        }
+
+        // Sweep-line update: deactivate edges that end at this row (parentRow == row)
+        // These edges were active up to row - 1, now they terminate here
+        for edge in edgesByParentRow[row] ?? [] {
+            if edge.childRow < row {
+                activeColumns[edge.parentColumn, default: 0] -= 1
+                if activeColumns[edge.parentColumn] == 0 {
+                    activeColumns.removeValue(forKey: edge.parentColumn)
+                }
+            }
+        }
+
         guard let col = shaToColumn[commit.sha] else { continue }
 
-        // Pass-through: edges passing through this row
-        // An edge "passes through" a row if: childRow < row < parentRow
-        // We need the vertical line in the parent's column for all these edges
-        let passThroughEdges = edges.filter { edge in
-            edge.childRow < row && row < edge.parentRow
-        }
-        // All columns where vertical lines should continue (INCLUDING our column if an edge passes through)
-        var passThroughColumns = Set(passThroughEdges.map { $0.parentColumn })
+        // Pass-through columns from the sweep-line set
+        var passThroughColumns = Set(activeColumns.keys)
 
         // Edges that END at this row (I am the parent)
-        let incomingEdges = edges.filter { $0.parentRow == row }
+        let incomingEdges = edgesByParentRow[row] ?? []
 
         // Line from top: any edge ends here in MY column
         let lineFromTop = incomingEdges.contains { $0.parentColumn == col }
 
         // Edges that START at this row (I am the child)
-        let outgoingEdges = edges.filter { $0.childRow == row }
+        let outgoingEdges = edgesByChildRow[row] ?? []
 
         // Line to bottom: my first parent is in MY column
         let lineToBottom = outgoingEdges.contains { $0.parentColumn == col && $0.isFirstParent }

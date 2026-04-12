@@ -46,12 +46,12 @@ class PluginRegistry: ObservableObject {
     func register(_ plugin: any IntegrationPlugin) {
         // Prevent duplicate registration
         guard !plugins.contains(where: { $0.id == plugin.id }) else {
-            print("⚠️ Plugin '\(plugin.id)' is already registered")
+            Logger.debug("⚠️ Plugin '\(plugin.id)' is already registered")
             return
         }
 
         plugins.append(plugin)
-        print("✅ Registered plugin: \(plugin.name) (\(plugin.id))")
+        Logger.debug("✅ Registered plugin: \(plugin.name) (\(plugin.id))")
     }
 
     /// Get a plugin by its ID
@@ -74,7 +74,7 @@ class PluginRegistry: ObservableObject {
     func unregister(pluginWithId id: String) -> Bool {
         if let index = plugins.firstIndex(where: { $0.id == id }) {
             let plugin = plugins.remove(at: index)
-            print("🗑️ Unregistered plugin: \(plugin.name) (\(plugin.id))")
+            Logger.debug("🗑️ Unregistered plugin: \(plugin.name) (\(plugin.id))")
             return true
         }
         return false
@@ -86,6 +86,6 @@ class PluginRegistry: ObservableObject {
     func clearAll() {
         let count = plugins.count
         plugins.removeAll()
-        print("🧹 Cleared all \(count) plugins")
+        Logger.debug("🧹 Cleared all \(count) plugins")
     }
 }

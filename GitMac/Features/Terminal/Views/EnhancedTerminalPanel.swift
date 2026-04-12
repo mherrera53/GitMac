@@ -111,11 +111,11 @@ struct EnhancedTerminalPanel: View {
                 VStack(spacing: 16) {
                     Text("No Terminal Session")
                         .font(DesignTokens.Typography.headline)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     
                     Text("Open a new terminal to get started")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     
                     Button(action: {
                         tabManager.addTab(workingDirectory: appState.currentRepository?.path ?? NSHomeDirectory())
@@ -130,7 +130,7 @@ struct EnhancedTerminalPanel: View {
                         .padding(.horizontal, 20)
                         .padding(.vertical, 10)
                         .background(AppTheme.accent)
-                        .cornerRadius(8)
+                        .clipShape(.rect(cornerRadius: 8))
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
@@ -233,7 +233,7 @@ struct EnhancedTerminalPanel: View {
                 // AI icon with subtle glow
                 Image(systemName: "brain.head.profile")
                     .font(.system(size: DesignTokens.Size.iconMD, weight: .medium))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .frame(width: DesignTokens.Size.iconXL, height: DesignTokens.Size.iconXL)
                     .background(
                         Circle()
@@ -248,7 +248,7 @@ struct EnhancedTerminalPanel: View {
                     .padding(.horizontal, DesignTokens.Spacing.md)
                     .padding(.vertical, DesignTokens.Spacing.sm)
                     .background(AppTheme.inputBackground)
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                     .onSubmit {
                         Task {
                             await translateInput()
@@ -269,7 +269,7 @@ struct EnhancedTerminalPanel: View {
                         }) {
                             Image(systemName: "arrow.up.circle.fill")
                                 .font(.system(size: DesignTokens.Size.iconLG))
-                                .foregroundColor(nlInputText.isEmpty ? AppTheme.textMuted : AppTheme.accent)
+                                .foregroundStyle(nlInputText.isEmpty ? AppTheme.textMuted : AppTheme.accent)
                         }
                         .disabled(nlInputText.isEmpty)
                         .buttonStyle(PlainButtonStyle())
@@ -300,11 +300,11 @@ struct EnhancedTerminalPanel: View {
                 HStack {
                     Text(result.category.rawValue)
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                         .padding(.horizontal, DesignTokens.Spacing.sm)
                         .padding(.vertical, DesignTokens.Spacing.xs)
                         .background(AppTheme.accent.opacity(0.1))
-                        .cornerRadius(DesignTokens.CornerRadius.md)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                     
                     Spacer()
                     
@@ -313,7 +313,7 @@ struct EnhancedTerminalPanel: View {
                         ForEach(0..<5) { i in
                             Image(systemName: i < Int(result.confidence * 5) ? "star.fill" : "star")
                                 .font(.system(size: 8))
-                                .foregroundColor(i < Int(result.confidence * 5) ? AppTheme.accent : AppTheme.border)
+                                .foregroundStyle(i < Int(result.confidence * 5) ? AppTheme.accent : AppTheme.border)
                         }
                     }
                 }
@@ -334,7 +334,7 @@ struct EnhancedTerminalPanel: View {
                         .padding(.horizontal, DesignTokens.Spacing.md)
                         .padding(.vertical, DesignTokens.Spacing.sm)
                         .background(AppTheme.accent)
-                        .cornerRadius(DesignTokens.CornerRadius.lg)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                     }
                     .buttonStyle(PlainButtonStyle())
                     
@@ -347,10 +347,10 @@ struct EnhancedTerminalPanel: View {
                     }) {
                         Image(systemName: "doc.on.doc")
                             .font(.system(size: 14))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                             .frame(width: 32, height: 32)
                             .background(AppTheme.backgroundTertiary)
-                            .cornerRadius(DesignTokens.CornerRadius.md)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
@@ -358,12 +358,12 @@ struct EnhancedTerminalPanel: View {
                 // Explanation
                 Text(result.explanation)
                     .font(.system(size: 13))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(DesignTokens.Spacing.lg)
             .background(AppTheme.background)
-            .cornerRadius(DesignTokens.CornerRadius.xl)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
             .shadow(color: DesignTokens.Shadow.md.color, radius: DesignTokens.Shadow.md.radius, x: DesignTokens.Shadow.md.x, y: DesignTokens.Shadow.md.y)
         }
         .padding(.horizontal, DesignTokens.Spacing.lg)
@@ -384,10 +384,10 @@ struct EnhancedTerminalPanel: View {
                     HStack(spacing: DesignTokens.Spacing.xs) {
                         Image(systemName: "folder")
                             .font(.system(size: 12))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                         Text(URL(fileURLWithPath: cwd).lastPathComponent)
                             .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                 }
                 
@@ -409,7 +409,7 @@ struct EnhancedTerminalPanel: View {
                 ))
                     .font(.system(size: 13, weight: .medium, design: .monospaced))
                     .textFieldStyle(.plain)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .onSubmit {
                         if let viewModel = tabManager.currentViewModel {
                             viewModel.writeInput(enhancedViewModel.currentInput + "\n")
@@ -428,7 +428,7 @@ struct EnhancedTerminalPanel: View {
                 }) {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(enhancedViewModel.currentInput.isEmpty ? AppTheme.textMuted : AppTheme.accent)
+                        .foregroundStyle(enhancedViewModel.currentInput.isEmpty ? AppTheme.textMuted : AppTheme.accent)
                 }
                 .disabled(enhancedViewModel.currentInput.isEmpty)
                 .buttonStyle(PlainButtonStyle())
@@ -495,7 +495,7 @@ struct EnhancedTerminalPanel: View {
              } label: {
                  Image(systemName: "xmark")
                      .font(.system(size: 10, weight: .bold))
-                     .foregroundColor(AppTheme.textSecondary)
+                     .foregroundStyle(AppTheme.textSecondary)
                      .padding(DesignTokens.Spacing.sm)
                      .background(AppTheme.backgroundSecondary.opacity(0.8))
                      .clipShape(Circle())
@@ -516,7 +516,7 @@ struct EnhancedTerminalPanel: View {
 
             Text("AI thinking...")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding(.horizontal, DesignTokens.Spacing.lg)
         .padding(.vertical, 10)
@@ -571,19 +571,19 @@ struct EnhancedTerminalPanel: View {
     private func suggestionIcon(index: Int, isFromAI: Bool, enhancedViewModel: GhosttyEnhancedViewModel) -> some View {
             Image(systemName: isFromAI ? "sparkles" : "terminal")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(index == enhancedViewModel.selectedSuggestionIndex ? AppTheme.accent : AppTheme.textSecondary)
+                .foregroundStyle(index == enhancedViewModel.selectedSuggestionIndex ? AppTheme.accent : AppTheme.textSecondary)
     }
 
     private func suggestionContent(suggestion: AICommandSuggestion, index: Int, enhancedViewModel: GhosttyEnhancedViewModel) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(suggestion.command)
                 .font(.system(size: 13, weight: .medium, design: .monospaced))
-                .foregroundColor(index == enhancedViewModel.selectedSuggestionIndex ? AppTheme.textPrimary : AppTheme.textSecondary)
+                .foregroundStyle(index == enhancedViewModel.selectedSuggestionIndex ? AppTheme.textPrimary : AppTheme.textSecondary)
 
             if !suggestion.description.isEmpty {
                 Text(suggestion.description)
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .lineLimit(2)
             }
         }
@@ -596,11 +596,11 @@ struct EnhancedTerminalPanel: View {
             Text("enter")
                 .font(.system(size: 10, weight: .medium))
         }
-        .foregroundColor(AppTheme.textMuted)
+        .foregroundStyle(AppTheme.textMuted)
         .padding(.horizontal, DesignTokens.Spacing.sm)
         .padding(.vertical, DesignTokens.Spacing.xs)
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
     }
 
     private func applySuggestion(_ suggestion: AICommandSuggestion, to viewModel: GhosttyViewModel, enhancedViewModel: GhosttyEnhancedViewModel) {
@@ -679,7 +679,7 @@ struct EnhancedTerminalTabBar: View {
     var body: some View {
         HStack(spacing: 0) {
             // Terminal tabs
-            ScrollView(.horizontal, showsIndicators: false) {
+            ScrollView(.horizontal) {
                 HStack(spacing: 1) {
                     ForEach(tabs) { tab in
                         EnhancedTerminalTabButton(
@@ -695,7 +695,7 @@ struct EnhancedTerminalTabBar: View {
                     Button(action: onAddTab) {
                         Image(systemName: "plus")
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                             .frame(width: 28, height: 28)
                     }
                     .buttonStyle(.plain)
@@ -703,6 +703,7 @@ struct EnhancedTerminalTabBar: View {
                 }
                 .padding(.horizontal, 8)
             }
+            .scrollIndicators(.hidden)
 
             Divider()
                 .frame(height: 20)
@@ -727,11 +728,11 @@ struct EnhancedTerminalTabBar: View {
                     Text("Share")
                         .font(.system(size: 11, weight: .medium))
                 }
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background(AppTheme.backgroundTertiary)
-                .cornerRadius(5)
+                .clipShape(.rect(cornerRadius: 5))
             }
             .buttonStyle(.plain)
             .help("Share terminal session")
@@ -746,10 +747,10 @@ struct EnhancedTerminalTabBar: View {
             }) {
                 Image(systemName: "command")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .frame(width: 28, height: 28)
                     .background(AppTheme.backgroundTertiary)
-                    .cornerRadius(5)
+                    .clipShape(.rect(cornerRadius: 5))
             }
             .buttonStyle(.plain)
             .help("Command Palette (Cmd+Shift+P)")
@@ -776,7 +777,7 @@ struct EnhancedTerminalTabButton: View {
             HStack(spacing: 6) {
                 Image(systemName: "terminal")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(isSelected ? AppTheme.accent : AppTheme.textMuted)
+                    .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.textMuted)
 
                 Text(tab.name)
                     .font(.system(size: 11, weight: .medium))
@@ -786,16 +787,16 @@ struct EnhancedTerminalTabButton: View {
                     Button(action: onClose) {
                         Image(systemName: "xmark")
                             .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .foregroundColor(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+            .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(isSelected ? AppTheme.background : (isHovered ? AppTheme.background.opacity(0.5) : Color.clear))
-            .cornerRadius(5)
+            .clipShape(.rect(cornerRadius: 5))
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
@@ -844,11 +845,11 @@ struct AIAgentCommandPalette: View {
             HStack {
                 Image(systemName: "brain.head.profile")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 
                 Text("AI Agent Commands")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 Spacer()
                 
@@ -858,7 +859,7 @@ struct AIAgentCommandPalette: View {
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(PlainButtonStyle())
             }
@@ -870,7 +871,7 @@ struct AIAgentCommandPalette: View {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 14))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                 
                 TextField("Type command or search...", text: $searchText)
                     .font(.system(size: 14))
@@ -888,7 +889,7 @@ struct AIAgentCommandPalette: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(AppTheme.inputBackground)
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .padding(.horizontal, 16)
             .padding(.bottom, 12)
             
@@ -917,7 +918,7 @@ struct AIAgentCommandPalette: View {
                 VStack(spacing: 8) {
                     Text("Select work mode")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     
                     HStack(spacing: 8) {
                         ForEach(modes, id: \.name) { mode in
@@ -934,7 +935,7 @@ struct AIAgentCommandPalette: View {
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
                                 .background(mode.color)
-                                .cornerRadius(16)
+                                .clipShape(.rect(cornerRadius: 16))
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
@@ -946,7 +947,7 @@ struct AIAgentCommandPalette: View {
         }
         .frame(width: 400)
         .background(AppTheme.background)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.2), radius: 20, x: 0, y: 10)
         .onAppear {
             isFocused = true
@@ -977,17 +978,17 @@ struct AIAgentCommandRow: View {
             HStack(spacing: 12) {
                 Image(systemName: command.icon)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .frame(width: 20)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("/" + command.command)
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     Text(command.description)
                         .font(.system(size: 12))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 
                 Spacer()

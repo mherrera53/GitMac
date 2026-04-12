@@ -65,13 +65,13 @@ struct DSToggle: View {
                     if isOn {
                         Image(systemName: "checkmark")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(AppTheme.buttonTextOnColor)
+                            .foregroundStyle(AppTheme.buttonTextOnColor)
                     }
                 }
 
                 Text(label)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
         .buttonStyle(.plain)
@@ -82,7 +82,7 @@ struct DSToggle: View {
         HStack {
             Text(label)
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Spacer()
 
@@ -109,11 +109,11 @@ struct DSToggle: View {
                 Text(label)
                     .font(DesignTokens.Typography.body)
             }
-            .foregroundColor(isOn ? AppTheme.buttonTextOnColor : AppTheme.textPrimary)
+            .foregroundStyle(isOn ? AppTheme.buttonTextOnColor : AppTheme.textPrimary)
             .padding(.horizontal, DesignTokens.Spacing.md)
             .padding(.vertical, DesignTokens.Spacing.sm)
             .background(isOn ? AppTheme.accent : AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                     .stroke(isOn ? Color.clear : AppTheme.backgroundTertiary, lineWidth: 1)

@@ -247,7 +247,7 @@ struct ManagedSubmoduleRow: View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: submodule.status.icon)
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(submodule.status.color)
+                .foregroundStyle(submodule.status.color)
 
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                 HStack(spacing: DesignTokens.Spacing.xs) {
@@ -262,7 +262,7 @@ struct ManagedSubmoduleRow: View {
                             .padding(.horizontal, DesignTokens.Spacing.xs)
                             .padding(.vertical, 1)
                             .background(AppTheme.info.opacity(0.2))
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                     }
                 }
 
@@ -275,7 +275,7 @@ struct ManagedSubmoduleRow: View {
                         .font(DesignTokens.Typography.caption2)
                         .fontDesign(.monospaced)
                 }
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
             }
 
             Spacer()
@@ -285,7 +285,7 @@ struct ManagedSubmoduleRow: View {
                     Button { Task { await onUpdate() } } label: {
                         Image(systemName: "arrow.down.circle")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.info)
+                            .foregroundStyle(AppTheme.info)
                     }
                     .buttonStyle(.plain)
                     .help("Update submodule")
@@ -293,7 +293,7 @@ struct ManagedSubmoduleRow: View {
                     Button { Task { await onSync() } } label: {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.info)
+                            .foregroundStyle(AppTheme.info)
                     }
                     .buttonStyle(.plain)
                     .help("Sync URL")
@@ -301,7 +301,7 @@ struct ManagedSubmoduleRow: View {
                     Button { Task { await onRemove() } } label: {
                         Image(systemName: "trash")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                     }
                     .buttonStyle(.plain)
                     .help("Remove submodule")
@@ -339,7 +339,7 @@ struct AddSubmoduleSheetFromList: View {
                     Text("Repository URL")
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     DSTextField(placeholder: "https://github.com/user/repo.git", text: $url)
                 }
 
@@ -347,7 +347,7 @@ struct AddSubmoduleSheetFromList: View {
                     Text("Path (relative to repo root)")
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     DSTextField(placeholder: "libs/mylib", text: $path)
                 }
 
@@ -355,7 +355,7 @@ struct AddSubmoduleSheetFromList: View {
                     Text("Branch (optional)")
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     DSTextField(placeholder: "main", text: $branch)
                 }
             }
@@ -396,7 +396,7 @@ class SubmoduleListViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
 
-    private let shell = ShellExecutor()
+    private let shell = ShellExecutor.shared
 
     func refresh(at path: String?) async {
         guard let path = path else {

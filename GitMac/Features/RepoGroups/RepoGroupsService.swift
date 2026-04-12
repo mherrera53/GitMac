@@ -197,14 +197,14 @@ class RepoGroupsService: ObservableObject {
 
 struct FavoriteButton: View {
     let repoPath: String
-    @ObservedObject private var service = RepoGroupsService.shared
+    @StateObject private var service = RepoGroupsService.shared
     
     var body: some View {
         Button {
             service.toggleFavorite(repoPath)
         } label: {
             Image(systemName: service.isFavorite(repoPath) ? "star.fill" : "star")
-                .foregroundColor(service.isFavorite(repoPath) ? .yellow : .secondary)
+                .foregroundStyle(service.isFavorite(repoPath) ? .yellow : .secondary)
         }
         .buttonStyle(.plain)
         .help(service.isFavorite(repoPath) ? "Remove from favorites" : "Add to favorites")
@@ -220,7 +220,7 @@ struct GroupBadge: View {
             .padding(.horizontal, DesignTokens.Spacing.xs)
             .padding(.vertical, 1)
             .background(SwiftUI.Color(hex: group.color).opacity(0.2))
-            .foregroundColor(SwiftUI.Color(hex: group.color))
-            .cornerRadius(DesignTokens.CornerRadius.sm)
+            .foregroundStyle(SwiftUI.Color(hex: group.color))
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
     }
 }

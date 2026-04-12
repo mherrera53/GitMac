@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct AISettingsView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
-    @ObservedObject private var ollamaManager = OllamaProcessManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
+    @StateObject private var ollamaManager = OllamaProcessManager.shared
     @State private var selectedProvider: AIService.AIProvider = .anthropic
     @State private var selectedModel = "claude-3-haiku-20240307"
     @State private var apiKeys: [AIService.AIProvider: String] = [:]
@@ -23,16 +23,16 @@ struct AISettingsView: View {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                         HStack {
                             Image(systemName: providerIcon(provider))
-                                .foregroundColor(providerColor(provider))
+                                .foregroundStyle(providerColor(provider))
                             Text(provider.displayName)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .fontWeight(.medium)
 
                             Spacer()
 
                             if configuredProviders.contains(provider) {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(AppTheme.success)
+                                    .foregroundStyle(AppTheme.success)
                             }
                         }
 
@@ -43,7 +43,7 @@ struct AISettingsView: View {
                                 HStack {
                                     Text("Server URL:")
                                         .font(DesignTokens.Typography.caption)
-                                        .foregroundColor(AppTheme.textSecondary)
+                                        .foregroundStyle(AppTheme.textSecondary)
                                     TextField("http://localhost:11434", text: $ollamaURL)
                                         .textFieldStyle(.roundedBorder)
                                         .font(DesignTokens.Typography.caption)
@@ -62,23 +62,23 @@ struct AISettingsView: View {
                                 HStack {
                                     if ollamaManager.isRunning {
                                         Image(systemName: "circle.fill")
-                                            .foregroundColor(AppTheme.success)
+                                            .foregroundStyle(AppTheme.success)
                                             .font(.system(size: 8))
                                         Text("Auto-started by GitMac")
                                             .font(DesignTokens.Typography.caption)
-                                            .foregroundColor(AppTheme.success)
+                                            .foregroundStyle(AppTheme.success)
                                     } else if configuredProviders.contains(.ollama) {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(AppTheme.success)
+                                            .foregroundStyle(AppTheme.success)
                                         Text("Ollama connected at \(AIService.ollamaBaseURL)")
                                             .font(DesignTokens.Typography.caption)
-                                            .foregroundColor(AppTheme.success)
+                                            .foregroundStyle(AppTheme.success)
                                     } else {
                                         Image(systemName: "xmark.circle.fill")
-                                            .foregroundColor(AppTheme.error)
+                                            .foregroundStyle(AppTheme.error)
                                         Text("Ollama not detected. Install from ollama.ai")
                                             .font(DesignTokens.Typography.caption)
-                                            .foregroundColor(AppTheme.textSecondary)
+                                            .foregroundStyle(AppTheme.textSecondary)
                                     }
 
                                     Spacer()
@@ -97,10 +97,10 @@ struct AISettingsView: View {
                                 if let result = ollamaTestResult {
                                     HStack {
                                         Image(systemName: result.success ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                            .foregroundColor(result.success ? AppTheme.success : AppTheme.error)
+                                            .foregroundStyle(result.success ? AppTheme.success : AppTheme.error)
                                         Text(result.message)
                                             .font(DesignTokens.Typography.caption)
-                                            .foregroundColor(result.success ? AppTheme.success : AppTheme.error)
+                                            .foregroundStyle(result.success ? AppTheme.success : AppTheme.error)
                                     }
                                     .padding(.top, 4)
                                 }
@@ -122,13 +122,13 @@ struct AISettingsView: View {
             SettingsSection(title: "Preferred Provider") {
                 if configuredProviders.isEmpty {
                     Text("Add an API key above to enable AI features")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 } else {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                             Text("Provider")
                                 .font(DesignTokens.Typography.callout)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
 
                             DSPicker(
                                 items: Array(configuredProviders),
@@ -144,7 +144,7 @@ struct AISettingsView: View {
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                             Text("Model")
                                 .font(DesignTokens.Typography.callout)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
 
                             DSPicker(
                                 items: selectedProvider.models,
@@ -173,7 +173,7 @@ struct AISettingsView: View {
 
                         if let message = successMessage {
                             Text(message)
-                                .foregroundColor(AppTheme.success)
+                                .foregroundStyle(AppTheme.success)
                                 .font(DesignTokens.Typography.caption)
                         }
                     }
@@ -318,7 +318,7 @@ struct AISettingsView: View {
 // MARK: - Feature Row
 
 struct FeatureRow: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     let icon: String
     let title: String
     let description: String
@@ -326,17 +326,17 @@ struct FeatureRow: View {
     var body: some View {
         HStack(alignment: .top) {
             Image(systemName: icon)
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
                 .frame(width: 20)
 
             VStack(alignment: .leading) {
                 Text(title)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .fontWeight(.medium)
                 Text(description)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
         }
     }
@@ -358,10 +358,10 @@ struct PromptEditor: View {
             HStack {
                 VStack(alignment: .leading) {
                     Text(title)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .fontWeight(.medium)
                     Text("Placeholders: \(placeholders)")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .font(DesignTokens.Typography.caption)
                 }
 
@@ -383,11 +383,11 @@ struct PromptEditor: View {
                 VStack(spacing: 0) {
                     TextEditor(text: $prompt)
                         .font(.custom("Menlo", size: 12))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .frame(height: 150)
                         .padding(8)
                         .background(AppTheme.backgroundSecondary)
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
                                 .stroke(AppTheme.border, lineWidth: 1)
@@ -404,7 +404,7 @@ struct PromptEditor: View {
         }
         .padding()
         .background(AppTheme.backgroundSecondary.opacity(0.3))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .onAppear {
             if let stored = UserDefaults.standard.string(forKey: key), !stored.isEmpty {
                 prompt = stored

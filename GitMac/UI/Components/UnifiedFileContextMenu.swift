@@ -710,8 +710,8 @@ struct UnifiedFileContextMenu_Previews: PreviewProvider {
                     UnifiedFileContextMenu.forModified(
                         path: "/path/to/file.swift",
                         repoPath: "/path/to",
-                        onStage: { print("Stage") },
-                        onDiscard: { print("Discard") }
+                        onStage: { Logger.debug("Stage") },
+                        onDiscard: { Logger.debug("Discard") }
                     )
                 }
             
@@ -720,8 +720,8 @@ struct UnifiedFileContextMenu_Previews: PreviewProvider {
                     UnifiedFileContextMenu.forUntracked(
                         path: "/path/to/newfile.swift",
                         repoPath: "/path/to",
-                        onStage: { print("Stage") },
-                        onDelete: { print("Delete") }
+                        onStage: { Logger.debug("Stage") },
+                        onDelete: { Logger.debug("Delete") }
                     )
                 }
             
@@ -730,8 +730,8 @@ struct UnifiedFileContextMenu_Previews: PreviewProvider {
                     HunkContextMenu(
                         hunkIndex: 0,
                         isStaged: false,
-                        onStageHunk: { _ in print("Stage hunk") },
-                        onDiscardHunk: { _ in print("Discard hunk") }
+                        onStageHunk: { _ in Logger.debug("Stage hunk") },
+                        onDiscardHunk: { _ in Logger.debug("Discard hunk") }
                     )
                 }
         }

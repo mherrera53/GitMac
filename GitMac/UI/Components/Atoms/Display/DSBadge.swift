@@ -59,11 +59,11 @@ struct DSBadge: View {
             Text(text)
                 .font(DesignTokens.Typography.caption)
         }
-        .foregroundColor(variant.foregroundColor)
+        .foregroundStyle(variant.foregroundColor)
         .padding(.horizontal, DesignTokens.Spacing.sm)
         .padding(.vertical, DesignTokens.Spacing.xxs)
         .background(variant.backgroundColor)
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
     }
 }
 

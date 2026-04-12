@@ -13,7 +13,7 @@ struct WorktreeListView: View {
                 Text("WORKTREES")
                     .font(DesignTokens.Typography.caption)
                     .fontWeight(.semibold)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 Spacer()
 
@@ -23,7 +23,7 @@ struct WorktreeListView: View {
                     } label: {
                         Image(systemName: "arrow.clockwise")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.plain)
 
@@ -32,7 +32,7 @@ struct WorktreeListView: View {
                     } label: {
                         Image(systemName: "plus")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -54,10 +54,10 @@ struct WorktreeListView: View {
                 VStack(spacing: DesignTokens.Spacing.sm) {
                     Image(systemName: "folder.badge.plus")
                         .font(DesignTokens.Typography.iconXL)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Text("No worktrees")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, DesignTokens.Spacing.xl)
@@ -128,29 +128,29 @@ struct WorktreeRow: View {
             // Status icon
             Image(systemName: worktree.isMain ? "house.fill" : "folder.fill")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(worktree.isMain ? AppTheme.info : AppTheme.accentPurple)
+                .foregroundStyle(worktree.isMain ? AppTheme.info : AppTheme.accentPurple)
 
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     Text(worktree.name)
                         .font(DesignTokens.Typography.callout.weight(worktree.isMain ? .semibold : .regular))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
 
                     if worktree.isLocked {
                         Image(systemName: "lock.fill")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.warning)
+                            .foregroundStyle(AppTheme.warning)
                     }
 
                     if worktree.isMain {
                         Text("main")
                             .font(DesignTokens.Typography.caption2.weight(.medium))
-                            .foregroundColor(AppTheme.info)
+                            .foregroundStyle(AppTheme.info)
                             .padding(.horizontal, DesignTokens.Spacing.xs)
                             .padding(.vertical, DesignTokens.Spacing.xxs / 2)
                             .background(AppTheme.info.opacity(0.2))
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                     }
                 }
 
@@ -158,13 +158,13 @@ struct WorktreeRow: View {
                     if let branch = worktree.branch {
                         Image(systemName: "arrow.triangle.branch")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         Text(branch)
                             .font(DesignTokens.Typography.caption2)
                     } else if worktree.isDetached {
                         Image(systemName: "exclamationmark.triangle")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.warning)
+                            .foregroundStyle(AppTheme.warning)
                         Text("detached")
                             .font(DesignTokens.Typography.caption2)
                     }
@@ -172,7 +172,7 @@ struct WorktreeRow: View {
                     Text(worktree.shortSHA)
                         .font(DesignTokens.Typography.caption2.monospacedDigit())
                 }
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
             }
 
             Spacer()
@@ -183,7 +183,7 @@ struct WorktreeRow: View {
                     Button(action: onOpen) {
                         Image(systemName: "arrow.up.forward.square")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.plain)
                     .help("Open in new tab")
@@ -191,7 +191,7 @@ struct WorktreeRow: View {
                     Button(action: onLock) {
                         Image(systemName: worktree.isLocked ? "lock.open" : "lock")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.plain)
                     .help(worktree.isLocked ? "Unlock" : "Lock")
@@ -199,7 +199,7 @@ struct WorktreeRow: View {
                     Button(action: onRemove) {
                         Image(systemName: "trash")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                     }
                     .buttonStyle(.plain)
                     .help("Remove worktree")
@@ -232,7 +232,7 @@ struct AddWorktreeSheet: View {
         VStack(spacing: DesignTokens.Spacing.xl) {
             Text("Add Worktree")
                 .font(DesignTokens.Typography.title3.weight(.semibold))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
                 // Worktree path
@@ -240,12 +240,12 @@ struct AddWorktreeSheet: View {
                     Text("Worktree Path")
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     HStack {
                         DSTextField(placeholder: "Path for new worktree", text: $worktreePath)
                             .padding(DesignTokens.Spacing.md)
                             .background(AppTheme.textMuted.opacity(0.15))
-                            .cornerRadius(DesignTokens.CornerRadius.md)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
 
                         Button("Browse") {
                             let panel = NSSavePanel()
@@ -272,7 +272,7 @@ struct AddWorktreeSheet: View {
                         DSTextField(placeholder: "New branch name", text: $newBranchName)
                             .padding(DesignTokens.Spacing.md)
                             .background(AppTheme.textMuted.opacity(0.15))
-                            .cornerRadius(DesignTokens.CornerRadius.md)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                     } else {
                         // Select existing branch
                         Picker("Branch", selection: $selectedBranch) {
@@ -346,10 +346,10 @@ struct CreateWorktreeFromCommitSheet: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                     Text("Create Worktree")
                         .font(DesignTokens.Typography.title3.weight(.semibold))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Text("from commit \(shortSHA)")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -360,12 +360,12 @@ struct CreateWorktreeFromCommitSheet: View {
                     Text("Worktree Path")
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     HStack {
                         DSTextField(placeholder: "Path for new worktree", text: $worktreePath)
                             .padding(DesignTokens.Spacing.md)
                             .background(AppTheme.textMuted.opacity(0.15))
-                            .cornerRadius(DesignTokens.CornerRadius.md)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
 
                         Button("Browse") {
                             let panel = NSSavePanel()
@@ -392,15 +392,15 @@ struct CreateWorktreeFromCommitSheet: View {
                         DSTextField(placeholder: "New branch name", text: $newBranchName)
                             .padding(DesignTokens.Spacing.md)
                             .background(AppTheme.textMuted.opacity(0.15))
-                            .cornerRadius(DesignTokens.CornerRadius.md)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                     } else {
                         HStack(spacing: DesignTokens.Spacing.xs) {
                             Image(systemName: "exclamationmark.triangle")
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.warning)
+                                .foregroundStyle(AppTheme.warning)
                             Text("Worktree will be in detached HEAD state")
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                         .padding(.vertical, DesignTokens.Spacing.xs)
                     }

@@ -29,7 +29,7 @@ actor TerminalSuggestionEngine {
                     return parseSuggestions(result, prefix: input)
                 }
             } catch {
-                print("[SuggestionEngine] Ollama failed: \(error)")
+                Logger.debug("[SuggestionEngine] Ollama failed: \(error)")
             }
         }
 
@@ -41,7 +41,7 @@ actor TerminalSuggestionEngine {
             )
             return suggestions.map { $0.command }
         } catch {
-            print("[SuggestionEngine] Fallback AI failed: \(error)")
+            Logger.debug("[SuggestionEngine] Fallback AI failed: \(error)")
         }
 
         return []

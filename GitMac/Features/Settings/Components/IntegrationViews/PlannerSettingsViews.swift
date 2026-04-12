@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Planner Login View
 
 struct PlannerLoginView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     let isLoading: Bool
     let error: String?
     let onLogin: () -> Void
@@ -20,17 +20,17 @@ struct PlannerLoginView: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             HStack {
                 Image(systemName: "calendar.badge.checkmark")
-                    .foregroundColor(SwiftUI.Color(hex: "0078D4"))
+                    .foregroundStyle(SwiftUI.Color(hex: "0078D4"))
                 Text("Connect to Microsoft Planner")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
 
             Text("Link your Microsoft 365 account to sync Planner tasks and boards.")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             if let deviceCode = deviceCode {
                 // Waiting for user authorization
@@ -47,15 +47,15 @@ struct PlannerLoginView: View {
                 // Need to configure Client ID
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Configure Azure AD App")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .font(DesignTokens.Typography.subheadline)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Text("Register an app in Azure AD and enter the Client ID.")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
 
                     DSTextField(placeholder: "Application (client) ID", text: $clientId)
 
@@ -73,20 +73,20 @@ struct PlannerLoginView: View {
                     }
 
                     Text("Required: Enable 'Allow public client flows' in Azure AD")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .font(.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             } else {
                 // Ready to authenticate
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                         Text("Azure AD configured")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .font(.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
 
                         Spacer()
 
@@ -102,7 +102,7 @@ struct PlannerLoginView: View {
                         HStack {
                             Image(systemName: "arrow.up.forward.app")
                             Text("Sign in with Microsoft")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -111,14 +111,14 @@ struct PlannerLoginView: View {
 
             if let error = authError ?? error {
                 Text(error)
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                     .font(.caption)
             }
 
             Text("Required scopes: Tasks.ReadWrite, Group.Read.All, User.Read")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .font(.caption2)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .task {
             hasClientId = await microsoftOAuth.hasClientId
@@ -160,7 +160,7 @@ struct PlannerLoginView: View {
 // MARK: - Microsoft OAuth Waiting View
 
 struct MicrosoftOAuthWaitingView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     let userCode: String
     let verificationUri: String
     let onCancel: () -> Void
@@ -171,15 +171,15 @@ struct MicrosoftOAuthWaitingView: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: "link.circle.fill")
                 .font(DesignTokens.Typography.iconXXXL)
-                .foregroundColor(SwiftUI.Color(hex: "0078D4"))
+                .foregroundStyle(SwiftUI.Color(hex: "0078D4"))
 
             Text("Enter this code on Microsoft")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .font(DesignTokens.Typography.headline)
 
             HStack(spacing: DesignTokens.Spacing.md) {
                 Text(userCode)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.title2.bold().monospaced())
 
                 DSIconButton(iconName: copied ? "checkmark" : "doc.on.doc", variant: .ghost, size: .sm) {
@@ -193,22 +193,22 @@ struct MicrosoftOAuthWaitingView: View {
             }
             .padding()
             .background(AppTheme.textSecondary.opacity(0.1))
-            .cornerRadius(DesignTokens.CornerRadius.lg)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 
             if copied {
                 Text("Copied!")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
             }
 
             ProgressView()
                 .scaleEffect(0.8)
 
             Text("Waiting for authorization...")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             HStack {
                 DSButton("Open Microsoft", variant: .primary, size: .sm) {
@@ -229,7 +229,7 @@ struct MicrosoftOAuthWaitingView: View {
 // MARK: - Planner Connected View
 
 struct PlannerConnectedView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     let selectedRepoPath: String?
     let plans: [PlannerPlan]
     @ObservedObject var workspaceManager: WorkspaceSettingsManager
@@ -241,11 +241,11 @@ struct PlannerConnectedView: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             HStack {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 Text("Connected to Microsoft Planner")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .fontWeight(.medium)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 DSButton("Disconnect", variant: .danger, size: .sm) {
                     onDisconnect()
@@ -257,10 +257,10 @@ struct PlannerConnectedView: View {
 
                 Picker("Plan for this repository", selection: $selectedPlanId) {
                     Text("None").tag(nil as String?)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     ForEach(plans) { plan in
                         Text(plan.title).tag(Optional(plan.id))
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
                 .onChange(of: selectedPlanId) { _, newValue in
@@ -274,15 +274,15 @@ struct PlannerConnectedView: View {
                 if let planName = config.plannerPlanName {
                     HStack {
                         Image(systemName: "checklist")
-                            .foregroundColor(SwiftUI.Color(hex: "0078D4"))
+                            .foregroundStyle(SwiftUI.Color(hex: "0078D4"))
                         Text("Linked to: \(planName)")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .font(DesignTokens.Typography.caption)
                     }
                 }
             } else {
                 Text("Select a repository to assign a plan")
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .font(DesignTokens.Typography.caption)
             }
         }

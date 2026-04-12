@@ -17,11 +17,11 @@ struct TaigaEmptyView: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: "tray")
                 .font(DesignTokens.Typography.iconXXL)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
 
             Text("No \(type) found")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -39,12 +39,12 @@ struct TaigaSettingsSheet: View {
             HStack {
                 Text("Taiga Settings")
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
@@ -58,21 +58,21 @@ struct TaigaSettingsSheet: View {
                 if viewModel.isAuthenticated {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                         Text("Connected to Taiga")
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
 
                     Button("Disconnect") {
                         viewModel.logout()
                         dismiss()
                     }
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                 } else {
                     Text("Not connected to Taiga")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
             .padding(DesignTokens.Spacing.lg)

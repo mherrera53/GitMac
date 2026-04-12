@@ -38,7 +38,7 @@ struct AppIconView: View {
                     .overlay(
                         Image(systemName: "arrow.triangle.branch")
                             .font(.system(size: size * 0.5))
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                     )
                     .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
             }
@@ -128,34 +128,14 @@ struct WelcomeView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var refreshTrigger = UUID()
 
-    // Computed colors that respond to theme changes
-    private var backgroundColor: SwiftUI.Color {
-        colorScheme == .dark ? SwiftUI.Color(hex: "#1E1E1E") : SwiftUI.Color(hex: "#FFFFFF")
-    }
-
-    private var backgroundSecondaryColor: SwiftUI.Color {
-        colorScheme == .dark ? SwiftUI.Color(hex: "#252526") : SwiftUI.Color(hex: "#F5F5F7")
-    }
-
-    private var textPrimaryColor: SwiftUI.Color {
-        colorScheme == .dark ? SwiftUI.Color.white : SwiftUI.Color(hex: "#1D1D1F")
-    }
-
-    private var textSecondaryColor: SwiftUI.Color {
-        colorScheme == .dark ? SwiftUI.Color(hex: "#CCCCCC") : SwiftUI.Color(hex: "#48484A")
-    }
-
-    private var textMutedColor: SwiftUI.Color {
-        colorScheme == .dark ? SwiftUI.Color(hex: "#999999") : SwiftUI.Color(hex: "#6E6E73")
-    }
-
-    private var accentColor: Color {
-        Color.accentColor
-    }
-
-    private var successColor: Color {
-        Color(nsColor: .systemGreen)
-    }
+    // Use AppTheme semantic colors for theme/dark mode support
+    private var backgroundColor: Color { AppTheme.background }
+    private var backgroundSecondaryColor: Color { AppTheme.backgroundSecondary }
+    private var textPrimaryColor: Color { AppTheme.textPrimary }
+    private var textSecondaryColor: Color { AppTheme.textSecondary }
+    private var textMutedColor: Color { AppTheme.textMuted }
+    private var accentColor: Color { Color.accentColor }
+    private var successColor: Color { AppTheme.success }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -168,11 +148,11 @@ struct WelcomeView: View {
 
                 Text("GitMac")
                     .font(.system(size: 36, weight: .bold))
-                    .foregroundColor(textPrimaryColor)
+                    .foregroundStyle(textPrimaryColor)
 
                 Text("A Git client for Mac")
                     .font(.system(size: 16))
-                    .foregroundColor(textSecondaryColor)
+                    .foregroundStyle(textSecondaryColor)
 
                 HStack(spacing: 16) {
                     WelcomeButton(icon: "folder", title: "Open", color: accentColor, action: onOpen)
@@ -221,7 +201,7 @@ struct RecentReposSidebar: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("RECENT REPOSITORIES")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(textMutedColor)
+                .foregroundStyle(textMutedColor)
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
                 .padding(.bottom, 12)
@@ -232,9 +212,9 @@ struct RecentReposSidebar: View {
                         VStack(spacing: 12) {
                             Image(systemName: "clock")
                                 .font(.system(size: 32))
-                                .foregroundColor(textMutedColor)
+                                .foregroundStyle(textMutedColor)
                             Text("No recent repositories")
-                                .foregroundColor(textMutedColor)
+                                .foregroundStyle(textMutedColor)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.top, 60)
@@ -268,10 +248,10 @@ struct WelcomeButton: View {
                 Text(title)
                     .font(.system(size: 12, weight: .medium))
             }
-            .foregroundColor(isHovered ? .white : color)
+            .foregroundStyle(isHovered ? .white : color)
             .frame(width: 80, height: 80)
             .background(isHovered ? color : color.opacity(0.15))
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
@@ -284,16 +264,10 @@ struct RecentRepoRow: View {
     let repo: RecentRepository
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var recentReposManager: RecentRepositoriesManager
-    @Environment(\.colorScheme) private var colorScheme
     @State private var isHovered = false
 
-    private var textPrimaryColor: SwiftUI.Color {
-        colorScheme == .dark ? SwiftUI.Color.white : SwiftUI.Color(hex: "#1D1D1F")
-    }
-
-    private var textMutedColor: SwiftUI.Color {
-        colorScheme == .dark ? SwiftUI.Color(hex: "#999999") : SwiftUI.Color(hex: "#6E6E73")
-    }
+    private var textPrimaryColor: Color { AppTheme.textPrimary }
+    private var textMutedColor: Color { AppTheme.textMuted }
 
     private var hoverColor: Color {
         Color.accentColor.opacity(0.1)
@@ -308,15 +282,15 @@ struct RecentRepoRow: View {
             HStack(spacing: 12) {
                 Image(systemName: "folder.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(Color.accentColor)
+                    .foregroundStyle(Color.accentColor)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(repo.name)
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(textPrimaryColor)
+                        .foregroundStyle(textPrimaryColor)
                     Text(repo.path)
                         .font(.system(size: 11))
-                        .foregroundColor(textMutedColor)
+                        .foregroundStyle(textMutedColor)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }

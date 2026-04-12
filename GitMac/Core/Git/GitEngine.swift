@@ -3,10 +3,30 @@ import Foundation
 /// Main wrapper for Git operations
 /// Uses git CLI commands as the primary backend for reliability
 actor GitEngine {
+    private static let isoDateFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withFullDate, .withTime, .withSpaceBetweenDateAndTime]
+        return f
+    }()
+
+    private static let gitDateFormatters: [DateFormatter] = {
+        let formats = [
+            "yyyy-MM-dd HH:mm:ss Z",
+            "yyyy-MM-dd HH:mm:ss",
+            "EEE MMM d HH:mm:ss yyyy Z"
+        ]
+        return formats.map { format in
+            let f = DateFormatter()
+            f.dateFormat = format
+            f.locale = Locale(identifier: "en_US_POSIX")
+            return f
+        }
+    }()
+
     private let shellExecutor: ShellExecutor
 
     init() {
-        self.shellExecutor = ShellExecutor()
+        self.shellExecutor = ShellExecutor.shared
     }
 
     // MARK: - Repository Operations
@@ -139,7 +159,7 @@ actor GitEngine {
 
     /// Get all local branches
     func getBranches(at path: String) async throws -> [Branch] {
-        print("🔍 getBranches() - path: \(path)")
+        Logger.debug("🔍 getBranches() - path: \(path)")
         let result = await shellExecutor.execute(
             "git",
             arguments: [
@@ -176,7 +196,7 @@ actor GitEngine {
                     createdDate = Date(timeIntervalSince1970: timestamp)
                 }
 
-                print("  Branch: \(name) | HEAD marker: '\(headMarker)' | isHead: \(isHead)")
+                Logger.debug("  Branch: \(name) | HEAD marker: '\(headMarker)' | isHead: \(isHead)")
 
                 return Branch(
                     name: name,
@@ -190,7 +210,7 @@ actor GitEngine {
                 )
             }
         
-        print("✅ getBranches() done - found \(branches.count) branches, \(branches.filter { $0.isHead }.count) marked as HEAD")
+        Logger.debug("✅ getBranches() done - found \(branches.count) branches, \(branches.filter { $0.isHead }.count) marked as HEAD")
         return branches
     }
 
@@ -333,9 +353,6 @@ actor GitEngine {
         guard result.exitCode == 0 else {
             throw GitError.commandFailed("git log", result.stderr)
         }
-
-        let dateFormatter = ISO8601DateFormatter()
-        dateFormatter.formatOptions = [.withFullDate, .withTime, .withSpaceBetweenDateAndTime]
 
         return result.stdout
             .components(separatedBy: .newlines)
@@ -1910,22 +1927,11 @@ actor GitEngine {
 
 /// Parse git date format
 private func parseGitDate(_ dateString: String) -> Date? {
-    let formatters = [
-        "yyyy-MM-dd HH:mm:ss Z",
-        "yyyy-MM-dd HH:mm:ss",
-        "EEE MMM d HH:mm:ss yyyy Z"
-    ]
-
-    for format in formatters {
-        let formatter = DateFormatter()
-        formatter.dateFormat = format
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-
+    for formatter in Self.gitDateFormatters {
         if let date = formatter.date(from: dateString) {
             return date
         }
     }
-
     return nil
 }
 

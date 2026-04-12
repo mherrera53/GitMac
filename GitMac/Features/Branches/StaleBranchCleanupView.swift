@@ -288,13 +288,13 @@ class StaleBranchCleanupViewModel: ObservableObject {
             targetBranch = defaultBranch
 
             // Get current branch to exclude it
-            let currentResult = await ShellExecutor().execute(
+            let currentResult = await ShellExecutor.shared.execute(
                 "git", arguments: ["branch", "--show-current"], workingDirectory: path
             )
             let currentBranch = currentResult.output.trimmingCharacters(in: .whitespacesAndNewlines)
 
             // Get merged branches
-            let result = await ShellExecutor().execute(
+            let result = await ShellExecutor.shared.execute(
                 "git",
                 arguments: ["branch", "--merged", defaultBranch, "--format=%(refname:short)|%(authorname)|%(committerdate:relative)"],
                 workingDirectory: path
@@ -336,7 +336,7 @@ class StaleBranchCleanupViewModel: ObservableObject {
         var failed: [String] = []
 
         for name in names {
-            let result = await ShellExecutor().execute(
+            let result = await ShellExecutor.shared.execute(
                 "git", arguments: ["branch", "-d", name], workingDirectory: path
             )
             if result.exitCode != 0 {
@@ -359,7 +359,7 @@ class StaleBranchCleanupViewModel: ObservableObject {
 
     private func detectDefaultBranch(at path: String) async throws -> String {
         // Check origin/HEAD
-        let result = await ShellExecutor().execute(
+        let result = await ShellExecutor.shared.execute(
             "git", arguments: ["symbolic-ref", "refs/remotes/origin/HEAD", "--short"],
             workingDirectory: path
         )
@@ -374,7 +374,7 @@ class StaleBranchCleanupViewModel: ObservableObject {
 
         // Fallback: check for main or master
         for name in ["main", "master"] {
-            let check = await ShellExecutor().execute(
+            let check = await ShellExecutor.shared.execute(
                 "git", arguments: ["rev-parse", "--verify", name],
                 workingDirectory: path
             )

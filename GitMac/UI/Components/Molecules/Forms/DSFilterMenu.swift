@@ -72,7 +72,7 @@ struct DSFilterMenu: View {
 
                         if selectedFilter == option.value {
                             Image(systemName: "checkmark")
-                                .foregroundColor(AppTheme.accent)
+                                .foregroundStyle(AppTheme.accent)
                         }
                     }
                 }
@@ -97,9 +97,9 @@ struct DSFilterMenu: View {
                 // Chevron
                 Image(systemName: "chevron.down")
                     .font(.system(size: DesignTokens.Size.iconSM))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
-            .foregroundColor(selectedFilter != nil ? AppTheme.accent : AppTheme.textPrimary)
+            .foregroundStyle(selectedFilter != nil ? AppTheme.accent : AppTheme.textPrimary)
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .padding(.vertical, DesignTokens.Spacing.xs)
             .background(
@@ -107,7 +107,7 @@ struct DSFilterMenu: View {
                     ? AppTheme.accent.opacity(0.1)
                     : AppTheme.backgroundSecondary
             )
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                     .stroke(
@@ -134,7 +134,7 @@ struct DSFilterMenu: View {
     VStack(spacing: DesignTokens.Spacing.lg) {
         Text("No Filter Selected")
             .font(DesignTokens.Typography.caption)
-            .foregroundColor(AppTheme.textMuted)
+            .foregroundStyle(AppTheme.textMuted)
         DSFilterMenu(
             selectedFilter: .constant(nil),
             options: [
@@ -146,7 +146,7 @@ struct DSFilterMenu: View {
 
         Text("Filter Selected")
             .font(DesignTokens.Typography.caption)
-            .foregroundColor(AppTheme.textMuted)
+            .foregroundStyle(AppTheme.textMuted)
         DSFilterMenu(
             selectedFilter: .constant("active"),
             options: [
@@ -158,7 +158,7 @@ struct DSFilterMenu: View {
 
         Text("Without Badge")
             .font(DesignTokens.Typography.caption)
-            .foregroundColor(AppTheme.textMuted)
+            .foregroundStyle(AppTheme.textMuted)
         DSFilterMenu(
             selectedFilter: .constant("active"),
             options: [
@@ -177,7 +177,7 @@ struct DSFilterMenu: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Branch Filter")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             DSFilterMenu(
                 label: "Branch Type",
                 selectedFilter: .constant(nil),
@@ -193,7 +193,7 @@ struct DSFilterMenu: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Commit Filter")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             DSFilterMenu(
                 label: "Commit Type",
                 selectedFilter: .constant("feat"),
@@ -209,7 +209,7 @@ struct DSFilterMenu: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("File Status Filter")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             DSFilterMenu(
                 label: "Status",
                 selectedFilter: .constant("modified"),

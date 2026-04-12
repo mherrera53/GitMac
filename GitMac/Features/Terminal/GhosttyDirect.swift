@@ -65,12 +65,12 @@ struct GhosttyDirectView: View {
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: "folder")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                 Text(viewModel.currentDirectory)
                     .font(DesignTokens.Typography.caption2)
                     .lineLimit(1)
             }
-            .foregroundColor(AppTheme.textSecondary)
+            .foregroundStyle(AppTheme.textSecondary)
 
             Spacer()
 
@@ -82,7 +82,7 @@ struct GhosttyDirectView: View {
                     .font(DesignTokens.Typography.caption)
             }
             .buttonStyle(.plain)
-            .foregroundColor(AppTheme.accent)
+            .foregroundStyle(AppTheme.accent)
             .help("AI Assistant")
             .popover(isPresented: $showAIChat) {
                 TerminalAIChatView(repoPath: appState.currentRepository?.path)
@@ -94,13 +94,13 @@ struct GhosttyDirectView: View {
                 HStack(spacing: DesignTokens.Spacing.xxs) {
                     Image(systemName: "sparkles")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Text("AI")
                         .font(DesignTokens.Typography.caption2)
                 }
             }
             .buttonStyle(.plain)
-            .foregroundColor(aiEnabled ? AppTheme.accent : AppTheme.textSecondary)
+            .foregroundStyle(aiEnabled ? AppTheme.accent : AppTheme.textSecondary)
             .help("AI Suggestions")
 
             // Clear
@@ -111,7 +111,7 @@ struct GhosttyDirectView: View {
                     .font(DesignTokens.Typography.caption)
             }
             .buttonStyle(.plain)
-            .foregroundColor(AppTheme.textSecondary)
+            .foregroundStyle(AppTheme.textSecondary)
             .help("Clear Terminal")
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
@@ -132,7 +132,7 @@ struct GhosttyDirectView: View {
             suggestionsList
         }
         .background(AppTheme.backgroundSecondary.opacity(0.98))
-        .cornerRadius(DesignTokens.CornerRadius.xl)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
         .shadow(color: AppTheme.shadow, radius: 20)
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.bottom, DesignTokens.Spacing.md)
@@ -143,17 +143,17 @@ struct GhosttyDirectView: View {
         HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
             Image(systemName: "sparkles")
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
             Text("AI Suggestions")
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
             if viewModel.isLoadingSuggestions {
                 ProgressView().scaleEffect(0.5).frame(width: DesignTokens.Size.iconSM, height: DesignTokens.Size.iconSM)
             }
             Spacer()
             Text("Tab • ↑↓")
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
@@ -177,14 +177,14 @@ struct GhosttyDirectView: View {
                     .scaleEffect(0.7)
                 Text("Loading AI suggestions...")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 Spacer()
             }
             .padding(DesignTokens.Spacing.md)
         } else {
             Text("Type to get AI suggestions...")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .padding(DesignTokens.Spacing.md)
         }
     }
@@ -200,22 +200,22 @@ struct GhosttyDirectView: View {
                         .frame(width: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs, height: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                     Text(suggestion.command)
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Spacer()
                     if suggestion.confidence > 0.8 {
                         Text("HIGH")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                             .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                             .padding(.vertical, DesignTokens.Spacing.xxs)
                             .background(AppTheme.success.opacity(0.2))
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                     }
                 }
                 if !suggestion.description.isEmpty {
                     Text(suggestion.description)
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .lineLimit(2)
                         .padding(.leading, DesignTokens.Size.iconMD - DesignTokens.Spacing.xxs)
                 }
@@ -234,7 +234,7 @@ struct GhosttyDirectView: View {
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: "terminal")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                 Text("\(viewModel.commandCount) commands")
                     .font(DesignTokens.Typography.caption2)
             }
@@ -248,7 +248,7 @@ struct GhosttyDirectView: View {
                 Text("Ghostty")
                     .font(DesignTokens.Typography.caption2)
             }
-            .foregroundColor(AppTheme.success)
+            .foregroundStyle(AppTheme.success)
 
             if viewModel.isRunning {
                 HStack(spacing: DesignTokens.Spacing.xs) {
@@ -258,10 +258,10 @@ struct GhosttyDirectView: View {
                     Text("Running...")
                         .font(DesignTokens.Typography.caption2)
                 }
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
             }
         }
-        .foregroundColor(AppTheme.textSecondary)
+        .foregroundStyle(AppTheme.textSecondary)
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.xs)
         .background(AppTheme.backgroundSecondary)
@@ -350,7 +350,7 @@ class GhosttyNSView: NSView {
     }
 
     override func becomeFirstResponder() -> Bool {
-        print("[Ghostty] View became first responder")
+        Logger.debug("[Ghostty] View became first responder")
         if let surface = surface {
             ghostty_surface_set_focus(surface, true)
         }
@@ -358,7 +358,7 @@ class GhosttyNSView: NSView {
     }
 
     override func resignFirstResponder() -> Bool {
-        print("[Ghostty] View resigned first responder")
+        Logger.debug("[Ghostty] View resigned first responder")
         if let surface = surface {
             ghostty_surface_set_focus(surface, false)
         }
@@ -374,24 +374,24 @@ class GhosttyNSView: NSView {
         let characters = event.characters ?? ""
         let modifiers = event.modifierFlags
 
-        print("[Ghostty] Key: code=\(keyCode), char='\(characters)'")
+        Logger.debug("[Ghostty] Key: code=\(keyCode), char='\(characters)'")
 
         // Handle special keys directly using ghostty_surface_key()
         switch keyCode {
         case 51: // Delete/Backspace
-            print("[Ghostty] Backspace (keyCode 51)")
+            Logger.debug("[Ghostty] Backspace (keyCode 51)")
             sendKey(GHOSTTY_KEY_BACKSPACE, keyCode: 51)
             viewModel?.onBackspace()
             return
 
         case 36: // Return/Enter
-            print("[Ghostty] Enter")
+            Logger.debug("[Ghostty] Enter")
             sendKey(GHOSTTY_KEY_ENTER, keyCode: 36, text: "\r")
             viewModel?.onEnter()
             return
 
         case 48: // Tab
-            print("[Ghostty] Tab")
+            Logger.debug("[Ghostty] Tab")
             // If we have AI suggestions, apply the selected one
             if let vm = viewModel, !vm.aiSuggestions.isEmpty {
                 vm.applySelectedSuggestion()
@@ -401,59 +401,59 @@ class GhosttyNSView: NSView {
             return
 
         case 53: // Escape
-            print("[Ghostty] Escape")
+            Logger.debug("[Ghostty] Escape")
             sendKey(GHOSTTY_KEY_ESCAPE, keyCode: 53)
             return
 
         case 123: // Left Arrow
-            print("[Ghostty] Left Arrow")
+            Logger.debug("[Ghostty] Left Arrow")
             sendKey(GHOSTTY_KEY_ARROW_LEFT, keyCode: 123)
             return
 
         case 124: // Right Arrow
-            print("[Ghostty] Right Arrow")
+            Logger.debug("[Ghostty] Right Arrow")
             sendKey(GHOSTTY_KEY_ARROW_RIGHT, keyCode: 124)
             return
 
         case 125: // Down Arrow
-            print("[Ghostty] Down Arrow")
+            Logger.debug("[Ghostty] Down Arrow")
             sendKey(GHOSTTY_KEY_ARROW_DOWN, keyCode: 125)
             return
 
         case 126: // Up Arrow
-            print("[Ghostty] Up Arrow")
+            Logger.debug("[Ghostty] Up Arrow")
             sendKey(GHOSTTY_KEY_ARROW_UP, keyCode: 126)
             return
 
         case 117: // Forward Delete
-            print("[Ghostty] Forward Delete")
+            Logger.debug("[Ghostty] Forward Delete")
             sendKey(GHOSTTY_KEY_DELETE, keyCode: 117)
             return
 
         case 115: // Home
-            print("[Ghostty] Home")
+            Logger.debug("[Ghostty] Home")
             sendKey(GHOSTTY_KEY_HOME, keyCode: 115)
             return
 
         case 119: // End
-            print("[Ghostty] End")
+            Logger.debug("[Ghostty] End")
             sendKey(GHOSTTY_KEY_END, keyCode: 119)
             return
 
         case 116: // Page Up
-            print("[Ghostty] Page Up")
+            Logger.debug("[Ghostty] Page Up")
             sendKey(GHOSTTY_KEY_PAGE_UP, keyCode: 116)
             return
 
         case 121: // Page Down
-            print("[Ghostty] Page Down")
+            Logger.debug("[Ghostty] Page Down")
             sendKey(GHOSTTY_KEY_PAGE_DOWN, keyCode: 121)
             return
 
         default:
             // For regular characters
             if !characters.isEmpty {
-                print("[Ghostty] Regular char: '\(characters)'")
+                Logger.debug("[Ghostty] Regular char: '\(characters)'")
 
                 // Handle Ctrl+ combinations
                 if modifiers.contains(.control) && !modifiers.contains(.command) {
@@ -532,11 +532,11 @@ class GhosttyNSView: NSView {
         // Call ghostty_init()
         let result = ghostty_init(UInt(cArgs.count), &cArgs)
         if result != 0 {
-            print("❌ ghostty_init() failed with code: \(result)")
+            Logger.debug("❌ ghostty_init() failed with code: \(result)")
             return
         }
 
-        print("✅ Ghostty global state initialized")
+        Logger.debug("✅ Ghostty global state initialized")
         ghosttyInitialized = true
     }
 
@@ -549,7 +549,7 @@ class GhosttyNSView: NSView {
 
         // Update surface size when frame changes
         if let surface = surface, newSize.width > 0 && newSize.height > 0 {
-            print("[Ghostty] Frame resized to: \(newSize.width)x\(newSize.height)")
+            Logger.debug("[Ghostty] Frame resized to: \(newSize.width)x\(newSize.height)")
             ghostty_surface_set_size(surface, UInt32(newSize.width), UInt32(newSize.height))
             ghostty_surface_draw(surface)
         }
@@ -562,16 +562,16 @@ class GhosttyNSView: NSView {
             return
         }
 
-        print("[Ghostty] Starting terminal initialization...")
+        Logger.debug("[Ghostty] Starting terminal initialization...")
 
         // Create Ghostty configuration
-        print("[Ghostty] Creating config...")
+        Logger.debug("[Ghostty] Creating config...")
         config = ghostty_config_new()
         guard config != nil else {
             showError("Failed to create Ghostty config")
             return
         }
-        print("[Ghostty] Config created successfully")
+        Logger.debug("[Ghostty] Config created successfully")
 
         // Load default configuration
         ghostty_config_load_default_files(config)
@@ -599,13 +599,13 @@ class GhosttyNSView: NSView {
         runtimeConfig.close_surface_cb = nil
 
         // Create Ghostty app
-        print("[Ghostty] Creating app...")
+        Logger.debug("[Ghostty] Creating app...")
         app = ghostty_app_new(&runtimeConfig, config)
         guard app != nil else {
             showError("Failed to create Ghostty app")
             return
         }
-        print("[Ghostty] App created successfully")
+        Logger.debug("[Ghostty] App created successfully")
 
         // Create surface configuration
         var surfaceConfig = ghostty_surface_config_new()
@@ -620,7 +620,7 @@ class GhosttyNSView: NSView {
         // Set working directory to repository path if available
         if let repoPath = viewModel?.repoPath {
             surfaceConfig.working_directory = UnsafePointer(strdup(repoPath))
-            print("[Ghostty] Setting working directory to: \(repoPath)")
+            Logger.debug("[Ghostty] Setting working directory to: \(repoPath)")
         } else {
             surfaceConfig.working_directory = nil
         }
@@ -632,19 +632,19 @@ class GhosttyNSView: NSView {
         surfaceConfig.wait_after_command = false
 
         // Create Ghostty surface
-        print("[Ghostty] Creating surface...")
+        Logger.debug("[Ghostty] Creating surface...")
         surface = ghostty_surface_new(app, &surfaceConfig)
         guard surface != nil else {
             showError("Failed to create Ghostty surface")
             return
         }
-        print("[Ghostty] Surface created successfully")
+        Logger.debug("[Ghostty] Surface created successfully")
 
-        print("✅ Ghostty Terminal initialized successfully")
+        Logger.debug("✅ Ghostty Terminal initialized successfully")
 
         // Set initial size
         if frame.width > 0 && frame.height > 0 {
-            print("[Ghostty] Setting surface size: \(frame.width)x\(frame.height)")
+            Logger.debug("[Ghostty] Setting surface size: \(frame.width)x\(frame.height)")
             ghostty_surface_set_size(surface, UInt32(frame.width), UInt32(frame.height))
         }
 
@@ -652,10 +652,10 @@ class GhosttyNSView: NSView {
         ghostty_surface_set_focus(surface, true)
 
         // Trigger initial draw
-        print("[Ghostty] Triggering initial draw...")
+        Logger.debug("[Ghostty] Triggering initial draw...")
         ghostty_surface_draw(surface)
 
-        print("[Ghostty] Initialization complete, terminal should be visible")
+        Logger.debug("[Ghostty] Initialization complete, terminal should be visible")
 
         // Make this view the first responder to receive keyboard events
         DispatchQueue.main.async { [weak self] in
@@ -664,7 +664,7 @@ class GhosttyNSView: NSView {
     }
 
     private func showError(_ message: String) {
-        print("❌ Ghostty Error: \(message)")
+        Logger.debug("❌ Ghostty Error: \(message)")
 
         let label = NSTextField(labelWithString: "Ghostty Terminal Error\n\n\(message)\n\nCheck Console for details.")
         label.alignment = .center
@@ -700,7 +700,7 @@ class GhosttyNSView: NSView {
             self.config = nil
         }
 
-        print("✅ Ghostty Terminal cleanup complete")
+        Logger.debug("✅ Ghostty Terminal cleanup complete")
     }
 }
 
@@ -785,7 +785,7 @@ class GhosttyDirectViewModel: ObservableObject {
         // Don't fetch if input is too short
         let trimmed = currentInput.trimmingCharacters(in: .whitespaces)
         guard trimmed.count >= 2 else {
-            print("[AI] Input too short: '\(trimmed)'")
+            Logger.debug("[AI] Input too short: '\(trimmed)'")
             aiSuggestions.removeAll()
             return
         }
@@ -794,7 +794,7 @@ class GhosttyDirectViewModel: ObservableObject {
         guard trimmed != lastSuggestionInput else { return }
         lastSuggestionInput = trimmed
 
-        print("[AI] Fetching suggestions for: '\(trimmed)'")
+        Logger.debug("[AI] Fetching suggestions for: '\(trimmed)'")
 
         // Debounce: wait 300ms before fetching
         suggestionTask = Task { @MainActor in
@@ -804,20 +804,20 @@ class GhosttyDirectViewModel: ObservableObject {
                 try await Task.sleep(nanoseconds: 300_000_000) // 300ms
                 guard !Task.isCancelled else { return }
 
-                print("[AI] Calling AIService.suggestTerminalCommands...")
+                Logger.debug("[AI] Calling AIService.suggestTerminalCommands...")
                 let suggestions = try await aiService.suggestTerminalCommands(
                     input: trimmed,
                     repoPath: repoPath
                 )
 
                 guard !Task.isCancelled else { return }
-                print("[AI] Received \(suggestions.count) suggestions")
+                Logger.debug("[AI] Received \(suggestions.count) suggestions")
                 aiSuggestions = suggestions
                 selectedSuggestionIndex = 0
                 isLoadingSuggestions = false
             } catch {
                 if !Task.isCancelled {
-                    print("[AI] Error fetching suggestions: \(error)")
+                    Logger.debug("[AI] Error fetching suggestions: \(error)")
                     aiSuggestions.removeAll()
                     isLoadingSuggestions = false
                 }
@@ -851,13 +851,13 @@ struct GhosttyDirectView: View {
             Spacer()
             Text("Ghostty Terminal")
                 .font(.title2)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Text("GhosttyKit framework not available")
                 .font(.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
             Text("Enable GHOSTTY_AVAILABLE flag in build settings")
                 .font(.caption2)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -866,6 +866,7 @@ struct GhosttyDirectView: View {
 }
 
 // Stub ViewModel
+@MainActor
 class GhosttyDirectViewModel: ObservableObject {
     func setWorkingDirectory(_ path: String) {}
 }

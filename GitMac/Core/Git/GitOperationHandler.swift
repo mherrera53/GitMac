@@ -277,7 +277,7 @@ class GitOperationHandler: ObservableObject {
     }
 
     private func performAssumeUnchanged(filePath: String, repoPath: String) async throws {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let relativePath = filePath.replacingOccurrences(of: repoPath + "/", with: "")
         let result = await shell.execute(
             "git",
@@ -291,7 +291,7 @@ class GitOperationHandler: ObservableObject {
     }
 
     private func performStopTrackingFile(filePath: String, repoPath: String) async throws {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let relativePath = filePath.replacingOccurrences(of: repoPath + "/", with: "")
         let result = await shell.execute(
             "git",

@@ -94,7 +94,7 @@ struct AdvancedSearchView: View {
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "person")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Text(viewModel.filterAuthor ?? "All Authors")
                         .lineLimit(1)
                 }
@@ -128,7 +128,7 @@ struct AdvancedSearchView: View {
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "calendar")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Text(viewModel.filterDateRange?.displayName ?? "Any Time")
                 }
             }
@@ -152,7 +152,7 @@ struct AdvancedSearchView: View {
             HStack {
                 Text("\(viewModel.results.count) results")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 Spacer()
                 
@@ -199,7 +199,7 @@ struct AdvancedSearchView: View {
         VStack(spacing: 12) {
             ProgressView()
             Text("Searching...")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -208,15 +208,15 @@ struct AdvancedSearchView: View {
         VStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text("No results found")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text("Try a different search term or filters")
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -240,9 +240,9 @@ struct AdvancedSearchView: View {
             Spacer()
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Text("Select a result to view details")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Spacer()
         }
     }
@@ -331,7 +331,7 @@ struct SearchResultRow: View {
             // Icon
             Image(systemName: result.icon)
                 .font(.system(size: 16))
-                .foregroundColor(result.iconColor)
+                .foregroundStyle(result.iconColor)
                 .frame(width: 24)
             
             // Content
@@ -341,7 +341,7 @@ struct SearchResultRow: View {
                 
                 Text(result.subtitle)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
             }
             
@@ -351,7 +351,7 @@ struct SearchResultRow: View {
             if let metadata = result.metadata {
                 Text(metadata)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
         .padding(.horizontal, 12)
@@ -421,16 +421,18 @@ enum SearchResultType {
 
 @MainActor
 class SearchViewModel: ObservableObject {
+    private static let isoFormatter = ISO8601DateFormatter()
+
     @Published var results: [SearchResult] = []
     @Published var authors: [String] = []
     @Published var isSearching = false
-    
+
     // Filters
     @Published var filterAuthor: String?
     @Published var filterDateRange: DateRangeFilter?
     @Published var useRegex = false
     @Published var caseSensitive = false
-    
+
     private var appState: AppState?
     private var searchTask: Task<Void, Never>?
     
@@ -475,7 +477,7 @@ class SearchViewModel: ObservableObject {
     // MARK: - Search Implementations
     
     private func searchCommits(query: String, repoPath: String) async {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         
         var args = ["log", "--format=%H|%an|%ae|%ai|%s"]
         
@@ -485,8 +487,7 @@ class SearchViewModel: ObservableObject {
         }
         
         if let dateRange = filterDateRange {
-            let formatter = ISO8601DateFormatter()
-            args.append("--since=\(formatter.string(from: dateRange.date))")
+            args.append("--since=\(Self.isoFormatter.string(from: dateRange.date))")
         }
         
         // Search in message
@@ -512,7 +513,7 @@ class SearchViewModel: ObservableObject {
     }
     
     private func searchFiles(query: String, repoPath: String) async {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let result = await shell.execute(
             "git",
             arguments: ["ls-files"],
@@ -544,7 +545,7 @@ class SearchViewModel: ObservableObject {
     }
     
     private func searchContent(query: String, repoPath: String) async {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         
         var args = ["grep", "-n"]
         
@@ -570,7 +571,7 @@ class SearchViewModel: ObservableObject {
     }
     
     private func searchAuthors(query: String, repoPath: String) async {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let result = await shell.execute(
             "git",
             arguments: ["log", "--format=%an|%ae", "--all"],
@@ -622,7 +623,7 @@ class SearchViewModel: ObservableObject {
                 let parts = line.components(separatedBy: "|")
                 guard parts.count >= 5 else { return nil }
                 
-                let parsedDate = ISO8601DateFormatter().date(from: parts[3]) ?? Date()
+                let parsedDate = Self.isoFormatter.date(from: parts[3]) ?? Date()
                 let commit = Commit(
                     sha: parts[0],
                     message: parts[4],
@@ -670,7 +671,7 @@ class SearchViewModel: ObservableObject {
         guard let repoPath = appState?.currentRepository?.path else { return }
         
         Task {
-            let shell = ShellExecutor()
+            let shell = ShellExecutor.shared
             let result = await shell.execute(
                 "git",
                 arguments: ["log", "--format=%an", "--all"],
@@ -707,7 +708,7 @@ struct CommitDetailView: View {
                         Label(commit.date.formatted(.relative(presentation: .named)), systemImage: "clock")
                     }
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 }
                 .padding()
                 
@@ -738,13 +739,13 @@ struct FileMatchDetailView: View {
         VStack(spacing: 16) {
             Image(systemName: "doc.text")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text(path)
                 .font(.headline)
             
             Text("\(matches) matches")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Button("Open File") {
                 NSWorkspace.shared.open(URL(fileURLWithPath: path))
@@ -769,7 +770,7 @@ struct ContentMatchDetailView: View {
                 .font(.system(.body, design: .monospaced))
                 .padding()
                 .background(AppTheme.textSecondary.opacity(0.1))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
             
             Button("Open in Editor") {
                 NSWorkspace.shared.open(URL(fileURLWithPath: path))

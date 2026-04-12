@@ -460,22 +460,22 @@ struct OptimizedDiffView: View {
                 VStack(spacing: DesignTokens.Spacing.md) {
                     Image(systemName: "exclamationmark.triangle")
                         .font(DesignTokens.Typography.iconXXXL)
-                        .foregroundColor(AppTheme.accentOrange)
+                        .foregroundStyle(AppTheme.accentOrange)
                     Text("Failed to load diff")
                         .font(.headline)
                     Text(error.localizedDescription)
                         .font(.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if hunks.isEmpty {
                 VStack(spacing: DesignTokens.Spacing.md) {
                     Image(systemName: "doc.text")
                         .font(DesignTokens.Typography.iconXXXL)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     Text("No changes")
                         .font(.headline)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if isLargeFileMode {
@@ -584,20 +584,20 @@ struct LFMStatusBadge: View {
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: "bolt.fill")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
                 Text("LFM")
                     .font(DesignTokens.Typography.caption2.weight(.semibold))
                 if let stats = stats {
                     Text("(\(formatLines(stats.estimatedLines)) lines)")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
-            .foregroundColor(AppTheme.warning)
+            .foregroundStyle(AppTheme.warning)
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .padding(.vertical, DesignTokens.Spacing.xs)
             .background(AppTheme.warning.opacity(0.15))
-            .cornerRadius(DesignTokens.CornerRadius.sm)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         }
     }
 

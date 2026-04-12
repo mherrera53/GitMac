@@ -106,15 +106,15 @@ class TerminalAIService {
                 lastOllamaCheck = Date()
 
                 if available {
-                    print("✅ Ollama is available at \(ollamaEndpoint)")
+                    Logger.debug("✅ Ollama is available at \(ollamaEndpoint)")
                 } else {
-                    print("⚠️ Ollama returned status \(httpResponse.statusCode)")
+                    Logger.debug("⚠️ Ollama returned status \(httpResponse.statusCode)")
                 }
 
                 return available
             }
         } catch {
-            print("⚠️ Ollama not available: \(error.localizedDescription)")
+            Logger.debug("⚠️ Ollama not available: \(error.localizedDescription)")
             isOllamaAvailable = false
             lastOllamaCheck = Date()
         }
@@ -177,26 +177,26 @@ class TerminalAIService {
         repoPath: String?,
         recentCommands: [String]
     ) async throws -> [AICommandSuggestion] {
-        print("🔮 TerminalAIService: suggestTerminalCommands called with input: '\(input)'")
+        Logger.debug("🔮 TerminalAIService: suggestTerminalCommands called with input: '\(input)'")
 
         // PRIORITY 1: Check for git branch suggestions (checkout, switch, merge)
         let branchSuggestions = getBranchSuggestions(for: input, repoPath: repoPath)
         if !branchSuggestions.isEmpty {
-            print("🌿 Returning \(branchSuggestions.count) branch suggestions")
+            Logger.debug("🌿 Returning \(branchSuggestions.count) branch suggestions")
             return branchSuggestions
         }
 
         // PRIORITY 2: Check for remote branch suggestions
         let remoteBranchSuggestions = getRemoteBranchSuggestions(for: input, repoPath: repoPath)
         if !remoteBranchSuggestions.isEmpty {
-            print("🌐 Returning \(remoteBranchSuggestions.count) remote branch suggestions")
+            Logger.debug("🌐 Returning \(remoteBranchSuggestions.count) remote branch suggestions")
             return remoteBranchSuggestions
         }
 
         // PRIORITY 3: Check for git tag suggestions
         let tagSuggestions = getTagSuggestions(for: input, repoPath: repoPath)
         if !tagSuggestions.isEmpty {
-            print("🏷️ Returning \(tagSuggestions.count) tag suggestions")
+            Logger.debug("🏷️ Returning \(tagSuggestions.count) tag suggestions")
             return tagSuggestions
         }
 
@@ -204,7 +204,7 @@ class TerminalAIService {
         if input.hasPrefix("git commit") && !input.contains("-m") {
             let commitSuggestions = await suggestCommitMessage(repoPath: repoPath)
             if !commitSuggestions.isEmpty {
-                print("📝 Returning \(commitSuggestions.count) commit message suggestions")
+                Logger.debug("📝 Returning \(commitSuggestions.count) commit message suggestions")
                 return commitSuggestions
             }
         }
@@ -212,7 +212,7 @@ class TerminalAIService {
         // PRIORITY 5: Check for directory/file path suggestions
         let directorySuggestions = getDirectorySuggestions(for: input, repoPath: repoPath)
         if !directorySuggestions.isEmpty {
-            print("📁 Returning \(directorySuggestions.count) directory suggestions")
+            Logger.debug("📁 Returning \(directorySuggestions.count) directory suggestions")
             return directorySuggestions
         }
 
@@ -260,15 +260,15 @@ class TerminalAIService {
 
         if ollamaAvailable {
             do {
-                print("📡 Calling Ollama for suggestions...")
+                Logger.debug("📡 Calling Ollama for suggestions...")
                 aiResponse = try await callOllama(prompt: prompt, temperature: 0.3, maxTokens: 300)
-                print("✅ Got response from Ollama")
+                Logger.debug("✅ Got response from Ollama")
             } catch {
-                print("⚠️ Ollama failed: \(error.localizedDescription), falling back to OpenAI")
+                Logger.debug("⚠️ Ollama failed: \(error.localizedDescription), falling back to OpenAI")
                 usedProvider = TerminalAIProvider.openai
             }
         } else {
-            print("⚠️ Ollama not available, using OpenAI fallback")
+            Logger.debug("⚠️ Ollama not available, using OpenAI fallback")
             usedProvider = .openai
         }
 
@@ -294,10 +294,10 @@ class TerminalAIService {
                     )
                 }
                 
-                print("💡 TerminalAIService: Returning \(mappedSuggestions.count) AI suggestions from cloud provider")
+                Logger.debug("💡 TerminalAIService: Returning \(mappedSuggestions.count) AI suggestions from cloud provider")
                 return mappedSuggestions
             } catch {
-                print("❌ Cloud AI provider failed: \(error.localizedDescription)")
+                Logger.debug("❌ Cloud AI provider failed: \(error.localizedDescription)")
                 return getStaticSuggestions(for: input)
             }
         }
@@ -312,7 +312,7 @@ class TerminalAIService {
         guard let regex = try? NSRegularExpression(pattern: jsonPattern, options: [.dotMatchesLineSeparators]),
               let match = regex.firstMatch(in: response, range: NSRange(response.startIndex..., in: response)),
               let range = Range(match.range, in: response) else {
-            print("⚠️ Failed to extract JSON from AI response, using static suggestions")
+            Logger.debug("⚠️ Failed to extract JSON from AI response, using static suggestions")
             return getStaticSuggestions(for: input)
         }
 
@@ -337,11 +337,11 @@ class TerminalAIService {
                 )
             }
 
-            print("💡 TerminalAIService: Returning \(aiSuggestions.count) AI suggestions")
+            Logger.debug("💡 TerminalAIService: Returning \(aiSuggestions.count) AI suggestions")
             return aiSuggestions
 
         } catch {
-            print("⚠️ Failed to parse AI JSON: \(error.localizedDescription)")
+            Logger.debug("⚠️ Failed to parse AI JSON: \(error.localizedDescription)")
             return getStaticSuggestions(for: input)
         }
     }
@@ -528,7 +528,7 @@ class TerminalAIService {
             }
         }
 
-        print("💡 TerminalAIService: Returning \(uniqueSuggestions.count) static suggestions")
+        Logger.debug("💡 TerminalAIService: Returning \(uniqueSuggestions.count) static suggestions")
         return uniqueSuggestions
     }
 
@@ -570,23 +570,23 @@ class TerminalAIService {
 
         if ollamaAvailable {
             do {
-                print("📡 Calling Ollama for error explanation...")
+                Logger.debug("📡 Calling Ollama for error explanation...")
                 let explanation = try await callOllama(prompt: prompt, temperature: 0.2, maxTokens: 500)
-                print("✅ Got error explanation from Ollama")
+                Logger.debug("✅ Got error explanation from Ollama")
                 return explanation
             } catch {
-                print("⚠️ Ollama failed: \(error.localizedDescription)")
+                Logger.debug("⚠️ Ollama failed: \(error.localizedDescription)")
             }
         }
 
         // Fallback to OpenAI
         do {
-            print("📡 Calling OpenAI for error explanation...")
+            Logger.debug("📡 Calling OpenAI for error explanation...")
             let explanation = try await callOpenAI(prompt: prompt)
-            print("✅ Got error explanation from OpenAI")
+            Logger.debug("✅ Got error explanation from OpenAI")
             return explanation
         } catch {
-            print("❌ OpenAI also failed: \(error.localizedDescription)")
+            Logger.debug("❌ OpenAI also failed: \(error.localizedDescription)")
             return "Unable to get AI explanation. Error: \(error.localizedDescription)\n\nTry checking the command syntax and ensure you have the necessary permissions."
         }
     }
@@ -962,7 +962,7 @@ class TerminalAIService {
             }
 
         } catch {
-            print("❌ Error reading directory \(directory): \(error)")
+            Logger.debug("❌ Error reading directory \(directory): \(error)")
         }
 
         return results
@@ -972,7 +972,7 @@ class TerminalAIService {
     
     /// Translate natural language to terminal command
     func translateNaturalLanguage(input: String, context: NLContext) async -> NLCommandResponse {
-        print("🧠 NL Translation: '\(input)'")
+        Logger.debug("🧠 NL Translation: '\(input)'")
         
         // Simple pattern matching for common commands
         let cleanedInput = input.lowercased()

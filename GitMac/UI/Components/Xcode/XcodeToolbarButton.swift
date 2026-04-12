@@ -69,7 +69,7 @@ struct XcodeToolbarButton: View {
                     height: DesignTokens.Toolbar.iconLabelButtonSize.height
                 )
                 .background(backgroundColor)
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             } else {
                 // Icon-only variant
                 Image(systemName: icon)
@@ -81,7 +81,7 @@ struct XcodeToolbarButton: View {
                         height: DesignTokens.Toolbar.iconOnlyButtonSize.height
                     )
                     .background(backgroundColor)
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
         }
         .buttonStyle(XcodeToolbarButtonStyle(isEnabled: isEnabled))
@@ -185,7 +185,7 @@ struct XcodeToolbarButtonAsync: View {
                     height: DesignTokens.Toolbar.iconLabelButtonSize.height
                 )
                 .background(backgroundColor)
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             } else {
                 // Icon-only variant
                 Group {
@@ -204,7 +204,7 @@ struct XcodeToolbarButtonAsync: View {
                     height: DesignTokens.Toolbar.iconOnlyButtonSize.height
                 )
                 .background(backgroundColor)
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
         }
         .buttonStyle(XcodeToolbarButtonStyle(isEnabled: isEnabled && !isLoading))

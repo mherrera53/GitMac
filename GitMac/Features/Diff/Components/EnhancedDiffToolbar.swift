@@ -18,16 +18,16 @@ struct EnhancedDiffToolbar: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(filename)
                     .font(.system(.body, design: .monospaced))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 HStack(spacing: 12) {
                     Label("\(additions)", systemImage: "plus")
-                        .foregroundColor(AppTheme.gitAdded)
+                        .foregroundStyle(AppTheme.gitAdded)
                     Label("\(deletions)", systemImage: "minus")
-                        .foregroundColor(AppTheme.gitDeleted)
+                        .foregroundStyle(AppTheme.gitDeleted)
                 }
                 .font(.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -37,7 +37,7 @@ struct EnhancedDiffToolbar: View {
                 Button(action: { showHistory.toggle() }) {
                     Image(systemName: "clock")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(showHistory ? AppTheme.accent : AppTheme.textSecondary)
+                        .foregroundStyle(showHistory ? AppTheme.accent : AppTheme.textSecondary)
                 }
                 .buttonStyle(ToolbarButtonStyle(isActive: showHistory))
 
@@ -45,7 +45,7 @@ struct EnhancedDiffToolbar: View {
                 Button(action: { showBlame.toggle() }) {
                     Image(systemName: "person.crop.circle")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(showBlame ? AppTheme.accent : AppTheme.textSecondary)
+                        .foregroundStyle(showBlame ? AppTheme.accent : AppTheme.textSecondary)
                 }
                 .buttonStyle(ToolbarButtonStyle(isActive: showBlame))
 
@@ -53,7 +53,7 @@ struct EnhancedDiffToolbar: View {
                 Button(action: { showMinimap.toggle() }) {
                     Image(systemName: "map")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(showMinimap ? AppTheme.accent : AppTheme.textSecondary)
+                        .foregroundStyle(showMinimap ? AppTheme.accent : AppTheme.textSecondary)
                 }
                 .buttonStyle(ToolbarButtonStyle(isActive: showMinimap))
 
@@ -61,7 +61,7 @@ struct EnhancedDiffToolbar: View {
                 Button(action: { onDiscardLines([]) }) {
                     Image(systemName: "trash")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .buttonStyle(ToolbarButtonStyle(isActive: false))
             }

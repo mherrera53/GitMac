@@ -8,7 +8,7 @@ struct BranchPanelView: View {
 
     @State private var searchText = ""
     @State private var expandedSections: Set<String> = ["local", "remote"]
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -19,7 +19,7 @@ struct BranchPanelView: View {
                 Text("BRANCHES")
                     .font(DesignTokens.Typography.caption2)
                     .fontWeight(.semibold)
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
 
                 Spacer()
 
@@ -28,7 +28,7 @@ struct BranchPanelView: View {
                 }) {
                     Image(systemName: "plus.app.fill")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -140,7 +140,7 @@ struct BranchSection: View {
     let isExpanded: Bool
     let onToggle: () -> Void
 
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -149,26 +149,26 @@ struct BranchSection: View {
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: isExpanded ? "chevron.down.circle.fill" : "chevron.right.circle.fill")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(theme.textMuted)
+                    .foregroundStyle(theme.textMuted)
                     .symbolRenderingMode(.hierarchical)
                     .frame(width: 14)
 
                 Image(systemName: enhancedIcon)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .symbolRenderingMode(.hierarchical)
 
                 Text(title)
                     .font(DesignTokens.Typography.caption)
                     .fontWeight(.semibold)
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
 
                 Spacer()
 
                 Text("\(count)")
                     .font(DesignTokens.Typography.caption2.monospacedDigit())
                     .fontWeight(.bold)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundStyle(theme.textSecondary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(theme.backgroundSecondary)
@@ -201,7 +201,7 @@ struct BranchPanelRow: View {
     let onCheckout: () -> Void
 
     @State private var isHovered = false
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -211,7 +211,7 @@ struct BranchPanelRow: View {
             if isCurrent {
                 Image(systemName: "star.circle.fill")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
                     .symbolRenderingMode(.multicolor)
             } else {
                 ZStack {
@@ -236,7 +236,7 @@ struct BranchPanelRow: View {
             Text(branch.displayName)
                 .font(DesignTokens.Typography.caption)
                 .fontWeight(isCurrent ? .bold : .medium)
-                .foregroundColor(isCurrent ? AppTheme.warning : theme.text)
+                .foregroundStyle(isCurrent ? AppTheme.warning : theme.text)
                 .lineLimit(1)
 
             Spacer()
@@ -253,7 +253,7 @@ struct BranchPanelRow: View {
                                 .font(DesignTokens.Typography.caption2.monospacedDigit())
                                 .fontWeight(.semibold)
                         }
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
                     }
 
                     if upstream.behind > 0 {
@@ -265,7 +265,7 @@ struct BranchPanelRow: View {
                                 .font(DesignTokens.Typography.caption2.monospacedDigit())
                                 .fontWeight(.semibold)
                         }
-                        .foregroundColor(AppTheme.warning)
+                        .foregroundStyle(AppTheme.warning)
                     }
                 }
             }

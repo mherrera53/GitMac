@@ -74,7 +74,7 @@ struct DSTabPanel<Content: View>: View {
                 .id(selectedTab)
         }
         .background(AppTheme.background)
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
     }
 }
 
@@ -104,7 +104,7 @@ private struct DSInternalTabButton: View {
                 // Title
                 Text(tab.title)
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
                     .fontWeight(isSelected ? .semibold : .regular)
 
                 // Badge
@@ -115,7 +115,7 @@ private struct DSInternalTabButton: View {
                         .padding(.horizontal, DesignTokens.Spacing.xs)
                         .padding(.vertical, DesignTokens.Spacing.xxs)
                         .background(AppTheme.accent)
-                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
             }
             .padding(.horizontal, DesignTokens.Spacing.md)
@@ -181,13 +181,13 @@ private struct DSInternalTabButton: View {
                             Text("Build: 2025-12-28")
                             Text("GitMac Team")
                         }
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
 
                     default:
                         Text("Unknown tab")
                     }
                 }
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .padding()
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
@@ -219,7 +219,7 @@ private struct DSInternalTabButton: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
                     Text(tabId.capitalized)
                         .font(DesignTokens.Typography.headline)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     ScrollView {
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
@@ -317,7 +317,7 @@ private struct DSInternalTabButton: View {
                             EmptyView()
                         }
                     }
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .padding()
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .animation(DesignTokens.Animation.spring, value: fileCount)

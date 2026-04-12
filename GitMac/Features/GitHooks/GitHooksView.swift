@@ -68,18 +68,18 @@ struct GitHooksView: View {
                 Text("Git Hooks")
                     .font(DesignTokens.Typography.title2)
                     .fontWeight(.semibold)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Text("\(viewModel.enabledCount) of \(viewModel.hooks.count) hooks enabled")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
 
             Spacer()
 
             Button(action: { Task { await loadHooks() } }) {
                 Label("Refresh", systemImage: "arrow.clockwise")
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
             }
             .buttonStyle(.plain)
         }
@@ -94,7 +94,7 @@ struct GitHooksView: View {
                         Text(category.rawValue)
                             .font(DesignTokens.Typography.caption)
                             .fontWeight(.bold)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                             .padding(.vertical, 4)
                     ) {
                         ForEach(viewModel.hooks(for: category)) { hook in
@@ -128,7 +128,7 @@ struct GitHooksView: View {
                 .scaleEffect(0.8)
             Text("Loading hooks...")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -137,7 +137,7 @@ struct GitHooksView: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "doc.text.fill")
                 .font(DesignTokens.Typography.iconXXXXL)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("No Git Hooks")
                 .font(DesignTokens.Typography.title3)
@@ -145,7 +145,7 @@ struct GitHooksView: View {
 
             Text("Create hooks to automate workflows")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -195,11 +195,11 @@ struct GitHookRow: View {
                 Text(hook.displayName)
                     .font(DesignTokens.Typography.body)
                     .fontWeight(.medium)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Text(hook.description)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(2)
             }
 
@@ -208,14 +208,14 @@ struct GitHookRow: View {
             HStack(spacing: DesignTokens.Spacing.sm) {
                 Button(action: onEdit) {
                     Image(systemName: "pencil")
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
                 .help("Edit hook")
 
                 Button(action: onDelete) {
                     Image(systemName: "trash")
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                 }
                 .buttonStyle(.plain)
                 .help("Delete hook")
@@ -251,7 +251,7 @@ struct GitHookEditorSheet: View {
                 .font(.system(.body, design: .monospaced))
                 .scrollContentBackground(.hidden)
                 .background(AppTheme.backgroundSecondary.opacity(0.3))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .padding()
 
             Separator.horizontal()
@@ -270,7 +270,7 @@ struct GitHookEditorSheet: View {
 
                 Text(hook.description)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
 
             Spacer()

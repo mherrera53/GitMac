@@ -38,7 +38,7 @@ struct DSTextEditor: View {
                 if text.isEmpty {
                     Text(placeholder)
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .padding(.horizontal, DesignTokens.Spacing.sm)
                         .padding(.vertical, DesignTokens.Spacing.sm + 2)
                 }
@@ -46,7 +46,7 @@ struct DSTextEditor: View {
                 // Text Editor
                 TextEditor(text: $text)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(foregroundColor)
+                    .foregroundStyle(foregroundColor)
                     .scrollContentBackground(.hidden)
                     .background(Color.clear)
                     .padding(DesignTokens.Spacing.xs)
@@ -55,7 +55,7 @@ struct DSTextEditor: View {
             }
             .frame(minHeight: minHeight)
             .background(backgroundColor)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                     .stroke(borderColor, lineWidth: 1)
@@ -64,7 +64,7 @@ struct DSTextEditor: View {
             if let error = errorMessage, state == .error {
                 Text(error)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
         }
     }

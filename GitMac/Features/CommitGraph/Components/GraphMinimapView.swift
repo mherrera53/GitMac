@@ -6,7 +6,7 @@ struct GraphMinimapView: View {
     let totalHeight: CGFloat
     let onSeek: (Int) -> Void
 
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @State private var isDragging = false
 
     var body: some View {
@@ -18,7 +18,7 @@ struct GraphMinimapView: View {
                 Text("OVERVIEW")
                     .font(DesignTokens.Typography.caption2)
                     .fontWeight(.semibold)
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
 
                 Spacer()
             }

@@ -13,7 +13,7 @@ import Foundation
 struct CICDSidebarSection: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = CICDSidebarViewModel()
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @State private var showCICDPanel = false
     @State private var selectedTab: CICDTab = .github
 
@@ -63,7 +63,7 @@ struct CICDSidebarSection: View {
                 HStack {
                     Text("No CI/CD configured")
                         .font(.system(size: 10))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Spacer()
                 }
                 .padding(.horizontal, 12)
@@ -174,7 +174,7 @@ struct CICDProviderRow: View {
     let count: Int
     let action: () -> Void
 
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @State private var isHovered = false
 
     var body: some View {
@@ -182,11 +182,11 @@ struct CICDProviderRow: View {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
 
                 Text(name)
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -197,7 +197,7 @@ struct CICDProviderRow: View {
                         Text("\(count)")
                             .font(.system(size: 9, weight: .medium))
                     }
-                    .foregroundColor(AppTheme.info)
+                    .foregroundStyle(AppTheme.info)
                 }
 
                 Circle()
@@ -314,7 +314,7 @@ class CICDSidebarViewModel: ObservableObject {
 
 // MARK: - Workflows Panel (Sheet)
 struct WorkflowsPanel: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {

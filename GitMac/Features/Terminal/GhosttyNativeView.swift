@@ -140,10 +140,10 @@ struct GhosttyNativeView: View {
             Spacer()
             Text("Ghostty Terminal")
                 .font(.title2)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Text("GhosttyKit framework not available")
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

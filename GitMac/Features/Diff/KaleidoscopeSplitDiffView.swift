@@ -22,7 +22,7 @@ struct KaleidoscopeSplitDiffView: View {
     @Binding var contentHeight: CGFloat
     @Binding var minimapScrollTrigger: UUID
 
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     // Scroll state management
     @State private var lastExternalScrollOffset: CGFloat = -1
@@ -689,7 +689,7 @@ private struct KaleidoscopeScrollContainer<Content: View>: NSViewRepresentable {
 }
 
 private struct KaleidoscopeGutterView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -715,7 +715,7 @@ struct KaleidoscopeDiffLine: View {
     let showLineNumber: Bool
     let pairedLine: DiffLine?
 
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     private var lineNumber: Int? {
         side == .left ? line.oldLineNumber : line.newLineNumber
@@ -914,7 +914,7 @@ struct KaleidoscopeHunkHeader: View {
     let header: String
     var onStageHunk: (() -> Void)? = nil
     var onDiscardHunk: (() -> Void)? = nil
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @State private var isHovered = false
 
     var body: some View {
@@ -957,12 +957,12 @@ struct KaleidoscopeHunkHeader: View {
 
                     Image(systemName: "chevron.left.forwardslash.chevron.right")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(theme.accent)
+                        .foregroundStyle(theme.accent)
                 }
 
                 Text(header)
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundColor(theme.accent.opacity(0.9))
+                    .foregroundStyle(theme.accent.opacity(0.9))
 
                 Spacer()
 
@@ -1034,7 +1034,7 @@ struct HunkActionButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isHovered ? color : color.opacity(0.7))
+                .foregroundStyle(isHovered ? color : color.opacity(0.7))
                 .frame(width: 22, height: 22)
                 .background(
                     RoundedRectangle(cornerRadius: 4)
@@ -1052,7 +1052,7 @@ struct HunkActionButton: View {
             if showTooltip {
                 Text(tooltip)
                     .font(.system(size: 11))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(
@@ -1148,10 +1148,10 @@ struct DiffSelectionActionBar: View {
             HStack(spacing: 6) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 14))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 Text("\(selectedCount) line\(selectedCount == 1 ? "" : "s") selected")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
 
             Divider()
@@ -1171,7 +1171,7 @@ struct DiffSelectionActionBar: View {
                     Text("Stage")
                         .font(.system(size: 12, weight: .medium))
                 }
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(
@@ -1191,7 +1191,7 @@ struct DiffSelectionActionBar: View {
                 if showStageTooltip {
                     Text("Stage selected lines (⌘+S)")
                         .font(.system(size: 11))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.85)))
@@ -1215,7 +1215,7 @@ struct DiffSelectionActionBar: View {
                     Text("Discard")
                         .font(.system(size: 12, weight: .medium))
                 }
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(
@@ -1235,7 +1235,7 @@ struct DiffSelectionActionBar: View {
                 if showDiscardTooltip {
                     Text("Discard selected lines (⌘+D)")
                         .font(.system(size: 11))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.85)))
@@ -1249,7 +1249,7 @@ struct DiffSelectionActionBar: View {
             Button(action: onClearSelection) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 16))
-                    .foregroundColor(clearHovered ? AppTheme.textPrimary : AppTheme.textMuted)
+                    .foregroundStyle(clearHovered ? AppTheme.textPrimary : AppTheme.textMuted)
             }
             .buttonStyle(.plain)
             .onHover { hovering in
@@ -1262,7 +1262,7 @@ struct DiffSelectionActionBar: View {
                 if showClearTooltip {
                     Text("Clear selection (Esc)")
                         .font(.system(size: 11))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.85)))
@@ -1380,7 +1380,7 @@ struct FluidScrollViewWithOffset<Content: View>: NSViewRepresentable {
 struct RowConnectionLine: View {
     var isFluidMode: Bool
     let width: CGFloat
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     
     var body: some View {
         let theme = Color.Theme(themeManager.colors)

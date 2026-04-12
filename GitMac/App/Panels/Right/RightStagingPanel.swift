@@ -10,7 +10,7 @@ struct RightStagingPanel: View {
     @State private var commitMessage = ""
     @StateObject private var commitDetailVM = CommitDetailViewModel()
     @StateObject private var stashDetailVM = StashDetailViewModel()
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         VStack(spacing: 0) {

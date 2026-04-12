@@ -24,7 +24,7 @@ class KeyboardShortcutManager: ObservableObject {
         // Check for conflicts
         if let conflict = findConflict(shortcut, excluding: action) {
             // Handle conflict (can show alert to user)
-            print("Conflict with: \(conflict.displayName)")
+            Logger.debug("Conflict with: \(conflict.displayName)")
             return
         }
         
@@ -439,7 +439,7 @@ struct ShortcutSettingsView: View {
                                 Text(preset.displayName)
                                 if manager.currentPreset == preset {
                                     Image(systemName: "checkmark")
-                                        .foregroundColor(AppTheme.accent)
+                                        .foregroundStyle(AppTheme.accent)
                                 }
                             }
                         }
@@ -448,7 +448,7 @@ struct ShortcutSettingsView: View {
                     HStack {
                         Text("Preset: \(manager.currentPreset.displayName)")
                         Image(systemName: "chevron.down")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                 }
                 .menuStyle(.borderlessButton)
@@ -539,10 +539,10 @@ struct ShortcutRow: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(AppTheme.textSecondary.opacity(0.2))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 } else {
                     Text("Not set")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 
                 if isHovered {
@@ -550,7 +550,7 @@ struct ShortcutRow: View {
                         onEdit()
                     } label: {
                         Image(systemName: "pencil")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.borderless)
                     
@@ -559,7 +559,7 @@ struct ShortcutRow: View {
                             onRemove()
                         } label: {
                             Image(systemName: "trash")
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                         .buttonStyle(.borderless)
                     }
@@ -585,19 +585,19 @@ struct ShortcutRecorder: View {
         } label: {
             if isRecording {
                 Text("Press keys...")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             } else if let shortcut = shortcut {
                 Text(shortcut.displayString)
                     .font(.system(.body, design: .monospaced))
             } else {
                 Text("Click to record")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(AppTheme.textSecondary.opacity(0.1))
-        .cornerRadius(6)
+        .clipShape(.rect(cornerRadius: 6))
         // TODO: Implement actual key recording with NSEvent monitor
     }
 }

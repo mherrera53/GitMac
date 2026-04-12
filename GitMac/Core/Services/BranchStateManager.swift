@@ -88,7 +88,7 @@ class BranchStateManager: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         
         let stashResult = await shell.execute(
             "git",
@@ -168,7 +168,7 @@ class BranchStateManager: ObservableObject {
 
     func checkUncommittedChanges() async -> [String] {
         guard let path = currentRepoPath else { return [] }
-        let result = await ShellExecutor().execute("git", arguments: ["status", "--porcelain"], workingDirectory: path)
+        let result = await ShellExecutor.shared.execute("git", arguments: ["status", "--porcelain"], workingDirectory: path)
         guard result.isSuccess else { return [] }
 
         return result.stdout

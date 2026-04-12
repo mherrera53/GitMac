@@ -114,12 +114,12 @@ struct DiffSearchBar: View {
                 if searchState.hasMatches {
                     Text("\(searchState.currentMatchIndex + 1)/\(searchState.matchCount)")
                         .font(DesignTokens.Typography.caption.weight(.medium))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .monospacedDigit()
                 } else {
                     Text("No matches")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                 }
             }
 
@@ -132,7 +132,7 @@ struct DiffSearchBar: View {
             } label: {
                 Image(systemName: "chevron.up")
                     .font(DesignTokens.Typography.caption.weight(.medium))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .buttonStyle(.plain)
             .disabled(!searchState.hasMatches)
@@ -143,7 +143,7 @@ struct DiffSearchBar: View {
             } label: {
                 Image(systemName: "chevron.down")
                     .font(DesignTokens.Typography.caption.weight(.medium))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .buttonStyle(.plain)
             .disabled(!searchState.hasMatches)
@@ -167,7 +167,7 @@ struct DiffSearchBar: View {
             } label: {
                 Image(systemName: "xmark")
                     .font(DesignTokens.Typography.caption2.weight(.medium))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.escape, modifiers: [])
@@ -175,7 +175,7 @@ struct DiffSearchBar: View {
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.sm)
         .background(AppTheme.toolbar)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                 .stroke(AppTheme.border, lineWidth: 1)
@@ -297,7 +297,7 @@ struct DiffNavigationToolbar: View {
             } label: {
                 Image(systemName: "arrow.up")
                     .font(DesignTokens.Typography.caption.weight(.medium))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .buttonStyle(.plain)
             .help("Previous Change (⌘↑)")
@@ -312,7 +312,7 @@ struct DiffNavigationToolbar: View {
             } label: {
                 Image(systemName: "arrow.down")
                     .font(DesignTokens.Typography.caption.weight(.medium))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .buttonStyle(.plain)
             .help("Next Change (⌘↓)")
@@ -334,7 +334,7 @@ struct DiffNavigationToolbar: View {
                     Text("Next")
                         .font(DesignTokens.Typography.caption2)
                 }
-                .foregroundColor(AppTheme.success)
+                .foregroundStyle(AppTheme.success)
             }
             .buttonStyle(.plain)
             .help("Next Addition")
@@ -352,7 +352,7 @@ struct DiffNavigationToolbar: View {
                     Text("Next")
                         .font(DesignTokens.Typography.caption2)
                 }
-                .foregroundColor(AppTheme.error)
+                .foregroundStyle(AppTheme.error)
             }
             .buttonStyle(.plain)
             .help("Next Deletion")
@@ -363,7 +363,7 @@ struct DiffNavigationToolbar: View {
             if navigationState.changeCount > 0 {
                 Text("\(navigationState.currentChangeIndex + 1)/\(navigationState.changeCount) changes")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .monospacedDigit()
             }
         }
@@ -394,7 +394,7 @@ struct ViewerDiffStatusBar: View {
                         Text("\(stats.additions)")
                             .monospacedDigit()
                     }
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
 
                     // Deletions
                     HStack(spacing: DesignTokens.Spacing.xxs) {
@@ -403,7 +403,7 @@ struct ViewerDiffStatusBar: View {
                         Text("\(stats.deletions)")
                             .monospacedDigit()
                     }
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                 }
                 .font(DesignTokens.Typography.caption.weight(.medium))
             }
@@ -419,7 +419,7 @@ struct ViewerDiffStatusBar: View {
                     Text("Large File Mode")
                         .font(DesignTokens.Typography.caption2.weight(.medium))
                 }
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
             }
 
             Spacer()
@@ -429,19 +429,19 @@ struct ViewerDiffStatusBar: View {
             if let parseTime = parseTimeMs {
                 Text("Parse: \(String(format: "%.1f", parseTime))ms")
                     .font(DesignTokens.Typography.caption2.monospaced())
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
 
             if let renderTime = renderTimeMs {
                 Text("Render: \(String(format: "%.1f", renderTime))ms")
                     .font(DesignTokens.Typography.caption2.monospaced())
-                    .foregroundColor(renderTime > 16 ? AppTheme.error : AppTheme.textMuted)
+                    .foregroundStyle(renderTime > 16 ? AppTheme.error : AppTheme.textMuted)
             }
 
             if let cache = cacheStats {
                 Text("Cache: \(cache.entries) (\(formatBytes(cache.bytesUsed)))")
                     .font(DesignTokens.Typography.caption2.monospaced())
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             #endif
         }
@@ -542,7 +542,7 @@ private struct SideBySideHunkView: View {
             HStack {
                 Text(hunk.header)
                     .font(DesignTokens.Typography.caption.monospaced())
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 Spacer()
             }
             .padding(.horizontal, DesignTokens.Spacing.sm)
@@ -579,7 +579,7 @@ private struct SideBySideLineRow: View {
             if showLineNumber {
                 Text(lineNumber)
                     .font(DesignTokens.Typography.caption.monospaced())
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .frame(width: 40, alignment: .trailing)
                     .padding(.trailing, DesignTokens.Spacing.sm)
                     .background(lineNumberBackground)
@@ -587,7 +587,7 @@ private struct SideBySideLineRow: View {
 
             Text(line.content)
                 .font(DesignTokens.Typography.callout.monospaced())
-                .foregroundColor(textColor)
+                .foregroundStyle(textColor)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, DesignTokens.Spacing.xs)
         }
@@ -806,7 +806,7 @@ struct EnhancedDiffViewer: View {
             } label: {
                 Image(systemName: "magnifyingglass")
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .buttonStyle(.plain)
             .keyboardShortcut("f", modifiers: .command)
@@ -826,7 +826,7 @@ struct EnhancedDiffViewer: View {
             ProgressView()
             Text("Loading diff...")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
     }
 
@@ -834,12 +834,12 @@ struct EnhancedDiffViewer: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: "exclamationmark.triangle")
                 .font(DesignTokens.Typography.iconXXXL)
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
             Text("Failed to load diff")
                 .font(.headline)
             Text(error.localizedDescription)
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
     }
 
@@ -847,10 +847,10 @@ struct EnhancedDiffViewer: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: "doc.text")
                 .font(DesignTokens.Typography.iconXXXL)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             Text("No changes")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
     }
 

@@ -95,12 +95,12 @@ private class MockIntegrationViewModel: IntegrationViewModel {
 
             Text("GitHub Integration")
                 .font(DesignTokens.Typography.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Spacer()
 
             DSCloseButton {
-                print("Close tapped")
+                Logger.debug("Close tapped")
             }
         }
         .padding(DesignTokens.Spacing.md)
@@ -113,5 +113,5 @@ private class MockIntegrationViewModel: IntegrationViewModel {
     }
     .frame(width: 400, height: 600)
     .background(AppTheme.background)
-    .cornerRadius(DesignTokens.CornerRadius.lg)
+    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 }

@@ -41,12 +41,12 @@ struct DSLabeledField: View {
             HStack(spacing: DesignTokens.Spacing.xxs) {
                 Text(label)
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 if isRequired {
                     Text("*")
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                 }
             }
 

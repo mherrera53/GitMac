@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct SettingsView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     @AppStorage("settingsSelectedTab") private var selectedTab: String = "general"
 

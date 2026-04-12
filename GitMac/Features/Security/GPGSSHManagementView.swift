@@ -97,14 +97,14 @@ struct GPGSSHManagementView: View {
                     } label: {
                         HStack(spacing: DesignTokens.Spacing.xs) {
                             Image(systemName: tab.icon)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                             Text(tab.title)
                         }
                         .font(DesignTokens.Typography.callout)
                         .padding(.horizontal, DesignTokens.Spacing.lg)
                         .padding(.vertical, DesignTokens.Spacing.sm)
                         .background(selectedTab == tab ? AppTheme.info : Color.clear)
-                        .foregroundColor(selectedTab == tab ? .white : .primary)
+                        .foregroundStyle(selectedTab == tab ? .white : .primary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -138,7 +138,7 @@ struct GPGSSHManagementView: View {
                         .font(DesignTokens.Typography.title3)
                     Text("Manage SSH keys for Git authentication")
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 
                 Spacer()
@@ -179,14 +179,14 @@ struct GPGSSHManagementView: View {
             Image(systemName: "key")
                 // TODO: Replace with appropriate Typography token when available for large icons
                 .font(.system(size: DesignTokens.Size.iconXL))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("No SSH Keys Found")
                 .font(DesignTokens.Typography.headline)
 
             Text("Generate a new SSH key to authenticate with Git servers")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.center)
 
             Button("Generate SSH Key") {
@@ -209,7 +209,7 @@ struct GPGSSHManagementView: View {
                         .font(DesignTokens.Typography.title3)
                     Text("Manage GPG keys for commit signing")
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 
                 Spacer()
@@ -278,7 +278,7 @@ struct GPGSSHManagementView: View {
             }
             .padding(DesignTokens.Spacing.lg)
             .background(Color(NSColor.controlBackgroundColor))
-            .cornerRadius(DesignTokens.CornerRadius.lg)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
             .padding(.horizontal, DesignTokens.Spacing.lg)
         }
     }
@@ -288,14 +288,14 @@ struct GPGSSHManagementView: View {
             Image(systemName: "exclamationmark.triangle")
                 // TODO: Replace with appropriate Typography token when available for large icons
                 .font(.system(size: DesignTokens.Size.iconXL))
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
 
             Text("GPG Not Installed")
                 .font(DesignTokens.Typography.headline)
 
             Text("Install GPG to sign your commits.\nYou can install it via Homebrew:")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.center)
 
             Text("brew install gnupg")
@@ -303,7 +303,7 @@ struct GPGSSHManagementView: View {
                 .fontDesign(.monospaced)
                 .padding(DesignTokens.Spacing.sm)
                 .background(AppTheme.textMuted.opacity(0.2))
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
             Button("Check Again") {
                 Task { await viewModel.checkGPGInstallation() }
@@ -319,14 +319,14 @@ struct GPGSSHManagementView: View {
             Image(systemName: "signature")
                 // TODO: Replace with appropriate Typography token when available for large icons
                 .font(.system(size: DesignTokens.Size.iconXL))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("No GPG Keys Found")
                 .font(DesignTokens.Typography.headline)
 
             Text("Generate a GPG key to sign your commits")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Button("Generate GPG Key") {
                 viewModel.showGenerateGPGSheet = true
@@ -397,34 +397,34 @@ struct SSHKeyRow: View {
                         .padding(.horizontal, DesignTokens.Spacing.xs)
                         .padding(.vertical, 1)
                         .background(AppTheme.info.opacity(0.2))
-                        .foregroundColor(AppTheme.accent)
-                        .cornerRadius(DesignTokens.CornerRadius.sm - 1)
+                        .foregroundStyle(AppTheme.accent)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm - 1))
                 }
                 Text(key.fingerprint)
                     .font(DesignTokens.Typography.caption2)
                     .fontDesign(.monospaced)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             
             Spacer()
 
             Button { onCopy() } label: {
                 Image(systemName: "doc.on.doc")
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .buttonStyle(.plain)
             .help("Copy public key")
 
             Button { onDelete() } label: {
                 Image(systemName: "trash")
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
             .buttonStyle(.plain)
             .help("Delete key")
         }
         .padding(DesignTokens.Spacing.lg)
         .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
         .padding(.horizontal, DesignTokens.Spacing.lg)
     }
 }
@@ -447,37 +447,37 @@ struct GPGKeyRow: View {
                             .padding(.horizontal, DesignTokens.Spacing.xs)
                             .padding(.vertical, 1)
                             .background(AppTheme.error.opacity(0.2))
-                            .foregroundColor(AppTheme.error)
-                            .cornerRadius(DesignTokens.CornerRadius.sm - 1)
+                            .foregroundStyle(AppTheme.error)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm - 1))
                     }
                 }
                 Text(key.email)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Text("Key ID: \(key.keyId.suffix(8))")
                     .font(DesignTokens.Typography.caption2)
                     .fontDesign(.monospaced)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
 
             Spacer()
 
             Button { onCopy() } label: {
                 Image(systemName: "doc.on.doc")
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .buttonStyle(.plain)
             .help("Copy public key")
 
             Button { onDelete() } label: {
                 Image(systemName: "trash")
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
             .buttonStyle(.plain)
         }
         .padding(DesignTokens.Spacing.lg)
         .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
         .padding(.horizontal, DesignTokens.Spacing.lg)
     }
 }

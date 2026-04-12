@@ -17,41 +17,41 @@ struct TaigaLoginPrompt: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "ticket.fill")
                 .font(DesignTokens.Typography.iconXXXL)
-                .foregroundColor(AppTheme.success)
+                .foregroundStyle(AppTheme.success)
 
             Text("Connect to Taiga")
                 .font(DesignTokens.Typography.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Log in to view your project tickets from tree.taiga.io")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
 
             VStack(spacing: DesignTokens.Spacing.sm) {
                 DSTextField(placeholder: "Server URL (e.g. https://api.taiga.io)", text: $viewModel.serverURL)
                     .padding(DesignTokens.Spacing.sm)
                     .background(AppTheme.backgroundSecondary)
-                    .cornerRadius(DesignTokens.CornerRadius.md)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                     .frame(width: 250)
 
                 DSTextField(placeholder: "Username or Email", text: $username)
                     .padding(DesignTokens.Spacing.sm)
                     .background(AppTheme.backgroundSecondary)
-                    .cornerRadius(DesignTokens.CornerRadius.md)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                     .frame(width: 250)
 
                 DSSecureField(placeholder: "Password", text: $password)
                     .padding(DesignTokens.Spacing.sm)
                     .background(AppTheme.backgroundSecondary)
-                    .cornerRadius(DesignTokens.CornerRadius.md)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                     .frame(width: 250)
             }
 
             if let error = viewModel.error {
                 Text(error)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
 
             Button {

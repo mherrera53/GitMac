@@ -25,7 +25,7 @@ struct DSSkeletonBox: View {
         Rectangle()
             .fill(AppTheme.backgroundSecondary)
             .frame(width: width, height: height)
-            .cornerRadius(cornerRadius)
+            .clipShape(.rect(cornerRadius: cornerRadius))
             .overlay(
                 LinearGradient(
                     colors: [
@@ -40,7 +40,7 @@ struct DSSkeletonBox: View {
                 .mask(
                     Rectangle()
                         .frame(width: width, height: height)
-                        .cornerRadius(cornerRadius)
+                        .clipShape(.rect(cornerRadius: cornerRadius))
                 )
             )
             .onAppear {
@@ -84,7 +84,7 @@ struct DSSkeletonBox: View {
             }
             .padding()
             .background(AppTheme.backgroundTertiary.opacity(0.3))
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
 
         Divider()

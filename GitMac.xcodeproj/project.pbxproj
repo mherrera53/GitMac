@@ -55,7 +55,6 @@
 		1E92E3802AEF4561C15A15E8 /* DSSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16DFE5164DF91A0796214C07 /* DSSettingsSheet.swift */; };
 		202918A372C3231F73C2E578 /* GhosttyEnhancedTerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71D743335AA1A3796B0A2723 /* GhosttyEnhancedTerminalView.swift */; };
 		2038FF09A32DA081F716D446 /* SubmoduleComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3856F1845C89352A8A46D281 /* SubmoduleComponents.swift */; };
-		2063193ABD2D00DB87C13D7E /* LayoutConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = C05E76268C1B2E5E38FEFE08 /* LayoutConstants.swift */; };
 		25315F328208FE548BB7046E /* TerminalSharedTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFD1AE5A8CFE26E6E4BD11A6 /* TerminalSharedTypes.swift */; };
 		257E6E17F55F28953F58EC42 /* DSGroupedList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 557CA937B9386B978825F7B6 /* DSGroupedList.swift */; };
 		258ACA9CDDED686CD5E1BAB8 /* CommitDetailPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96C2B56F9C9BF273E8E7A5FD /* CommitDetailPanel.swift */; };
@@ -792,7 +791,6 @@
 		BFCAFD73F48F11025E3F5E23 /* WorktreeComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorktreeComponents.swift; path = GitMac/App/Panels/Left/WorktreeComponents.swift; sourceTree = SOURCE_ROOT; };
 		BFD4F2579543138B566F4DF5 /* AppActivityManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppActivityManager.swift; path = GitMac/Core/Utils/AppActivityManager.swift; sourceTree = SOURCE_ROOT; };
 		BRANCHPR0001FILE0000000001 /* BranchPRTracker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BranchPRTracker.swift; path = Core/Services/BranchPRTracker.swift; sourceTree = "<group>"; };
-		C05E76268C1B2E5E38FEFE08 /* LayoutConstants.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LayoutConstants.swift; path = Components/Common/LayoutConstants.swift; sourceTree = "<group>"; };
 		C0A3477C5429FE5F172621B6 /* TiledDiffView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TiledDiffView.swift; path = ../Features/Diff/TiledDiffView.swift; sourceTree = "<group>"; };
 		C0CBCEB9467ACA32A1448C2B /* TaigaEpicsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TaigaEpicsView.swift; path = Features/Taiga/Views/TaigaEpicsView.swift; sourceTree = "<group>"; };
 		C23DEFD3BDC948044E9F7E59 /* KeyboardShortcutsTab.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KeyboardShortcutsTab.swift; path = ../../Features/Settings/Tabs/KeyboardShortcutsTab.swift; sourceTree = "<group>"; };
@@ -2219,7 +2217,6 @@
 		CDC87F2085C380497492BFF4 /* Common */ = {
 			isa = PBXGroup;
 			children = (
-				C05E76268C1B2E5E38FEFE08 /* LayoutConstants.swift */,
 				F4E9CDA3CADA6831328A87B5 /* UniversalResizer.swift */,
 			);
 			name = Common;
@@ -2679,7 +2676,6 @@
 				77681E64D2ECD6FC80EBF73B /* ViewModifiers.swift in Sources */,
 				0ED6500CDF7088D37F13E92E /* StateManagement.swift in Sources */,
 				258FB68B66F09FCD945C731B /* GestureHandlers.swift in Sources */,
-				2063193ABD2D00DB87C13D7E /* LayoutConstants.swift in Sources */,
 				C1F9A554C25B4FC9A1492EF9 /* UniversalResizer.swift in Sources */,
 				4685EC657E869B0ADA90A2A2 /* FileTypeIcon.swift in Sources */,
 				EB17F46A1960BCDE6F08CBE7 /* StatusIcon.swift in Sources */,

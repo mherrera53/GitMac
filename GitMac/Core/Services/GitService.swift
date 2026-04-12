@@ -227,7 +227,7 @@ class GitService: ObservableObject {
                 // Remote branch: create local tracking branch
                 // origin/feature/foo -> feature/foo
                 let localName = branch.displayName
-                let shell = ShellExecutor()
+                let shell = ShellExecutor.shared
                 let result = await shell.execute(
                     "git",
                     arguments: ["checkout", "-b", localName, "--track", branch.name],
@@ -267,7 +267,7 @@ class GitService: ObservableObject {
             // Perform checkout
             if branch.isRemote {
                 let localName = branch.displayName
-                let shell = ShellExecutor()
+                let shell = ShellExecutor.shared
                 let result = await shell.execute(
                     "git",
                     arguments: ["checkout", "-b", localName, "--track", branch.name],
@@ -655,7 +655,7 @@ class GitService: ObservableObject {
         case .hard: "--hard"
         }
 
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let result = await shell.execute(
             "git",
             arguments: ["reset", modeFlag, commitSHA],
@@ -686,7 +686,7 @@ class GitService: ObservableObject {
         
         args.append(contentsOf: commitSHAs)
 
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let result = await shell.execute(
             "git",
             arguments: args,

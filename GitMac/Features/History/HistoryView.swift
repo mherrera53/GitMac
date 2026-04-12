@@ -17,7 +17,7 @@ struct HistoryView: View {
             // File picker
             HStack {
                 Image(systemName: "doc.text")
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 TextField("Enter file path...", text: Binding(
                     get: { selectedFile ?? "" },
@@ -75,6 +75,12 @@ enum HistoryViewMode {
 
 @MainActor
 class HistoryViewModel: ObservableObject {
+    private static let gitDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
+        return f
+    }()
+
     @Published var fileHistory: [Commit] = []
     @Published var blameLines: [BlameLine] = []
     @Published var isLoading = false
@@ -85,7 +91,7 @@ class HistoryViewModel: ObservableObject {
     func loadFileHistory(for path: String) async {
         isLoading = true
 
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let result = await shell.execute(
             "git",
             arguments: ["log", "--format=%H|%an|%ae|%ai|%s", "--follow", "--", path],
@@ -130,7 +136,7 @@ class HistoryViewModel: ObservableObject {
     func loadBlame(for path: String) async {
         isLoading = true
 
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let result = await shell.execute(
             "git",
             arguments: ["blame", "--line-porcelain", path],
@@ -200,7 +206,7 @@ struct FileHistoryView: View {
                     Text("History")
                         .font(DesignTokens.Typography.headline)
                     Text("(\(viewModel.fileHistory.count) commits)")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Spacer()
                 }
                 .padding(DesignTokens.Spacing.md)
@@ -231,7 +237,7 @@ struct FileHistoryView: View {
                 VStack {
                     Spacer()
                     Text("Select a commit to view changes")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
@@ -251,32 +257,32 @@ struct FileCommitRow: View {
             HStack(spacing: 8) {
                 Text(commit.shortSHA)
                     .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(AppTheme.accent.opacity(0.1))
-                    .cornerRadius(4)
+                    .clipShape(.rect(cornerRadius: 4))
 
                 Text(commit.summary)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
             }
 
             HStack {
                 Image(systemName: "person.fill")
                     .font(.system(size: 10))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                 
                 Text(commit.author)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 Spacer()
 
                 Text(commit.relativeDate)
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             .padding(.leading, 2)
         }
@@ -297,15 +303,15 @@ struct CommitFileDiffView: View {
             HStack(spacing: 8) {
                 Text(commit.shortSHA)
                     .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(AppTheme.accent.opacity(0.1))
-                    .cornerRadius(4)
+                    .clipShape(.rect(cornerRadius: 4))
 
                 Text(commit.summary)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
                 
                 Spacer()
@@ -337,7 +343,7 @@ struct CommitFileDiffView: View {
 
     private func loadDiff() async {
         isLoading = true
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let result = await shell.execute(
             "git",
             arguments: ["show", commit.sha, "--", path],
@@ -375,7 +381,7 @@ struct BlameView: View {
                 Spacer()
 
                 Text("\(viewModel.blameLines.count) lines")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             .padding(DesignTokens.Spacing.md)
             .padding(DesignTokens.Spacing.md)
@@ -442,18 +448,18 @@ struct BlameLineRow: View {
 
                 Text(line.shortSHA)
                     .font(.system(size: 11, weight: .bold, design: .monospaced)) // Monospaced & Bold
-                    .foregroundColor(AppTheme.accent) // Accent color
+                    .foregroundStyle(AppTheme.accent) // Accent color
                     .frame(width: Layout.shaColumnWidth, alignment: .leading)
 
                 Text(line.author)
                     .font(.system(size: 11, weight: .medium)) // Medium weight
-                    .foregroundColor(AppTheme.textSecondary) // Secondary text color
+                    .foregroundStyle(AppTheme.textSecondary) // Secondary text color
                     .frame(width: Layout.authorColumnWidth, alignment: .leading)
                     .lineLimit(1)
 
                 Text(line.relativeDate)
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textMuted) // Muted text color
+                    .foregroundStyle(AppTheme.textMuted) // Muted text color
                     .frame(width: Layout.dateColumnWidth, alignment: .trailing)
             }
             .frame(width: Layout.blameInfoWidth)
@@ -465,7 +471,7 @@ struct BlameLineRow: View {
             // Line number
             Text("\(line.lineNumber)")
                 .font(DesignTokens.Typography.commitHash)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .frame(width: Layout.lineNumberWidth, alignment: .trailing)
                 .padding(.horizontal, DesignTokens.Spacing.xs)
 
@@ -484,13 +490,13 @@ struct EmptyHistoryView: View {
             Image(systemName: "clock")
                 .font(.system(size: DesignTokens.Size.iconXL))
                 .fontWeight(.regular)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Enter a file path")
                 .font(DesignTokens.Typography.headline)
 
             Text("View the commit history or blame for any file")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

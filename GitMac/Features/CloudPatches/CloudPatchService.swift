@@ -10,7 +10,7 @@ actor CloudPatchService {
 
     private let baseURL = "https://api.github.com/gists" // Using GitHub Gists as backend
     private var token: String?
-    private let shell = ShellExecutor()
+    private let shell = ShellExecutor.shared
     
     // MARK: - Models
     

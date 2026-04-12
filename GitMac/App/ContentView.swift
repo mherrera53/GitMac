@@ -382,93 +382,6 @@ struct MainLayout: View {
         }
     }
 
-    // Simplified Toolbar Sections
-    private var toolbarGitActions: some View {
-        Group {
-            if appState.currentRepository != nil {
-                HStack(spacing: 0) {
-                    // Separator
-                    Rectangle()
-                        .fill(AppTheme.border)
-                        .frame(width: 1, height: 24)
-                        .padding(.horizontal, 8)
-                    
-                    // Toolbar Actions - Using XcodeToolbarButton for proper rendering
-                    HStack(spacing: 4) {
-                        XcodeToolbarButton(icon: "arrow.down.to.line", color: Color(nsColor: .systemBlue)) {
-                            NotificationCenter.default.post(name: .pull, object: nil)
-                        }
-                        .help("Pull")
-
-                        XcodeToolbarButton(icon: "arrow.counterclockwise", color: Color(nsColor: .systemBlue)) {
-                            NotificationCenter.default.post(name: .fetch, object: nil)
-                        }
-                        .help("Fetch")
-
-                        XcodeToolbarButton(icon: "arrow.up.to.line", color: Color(nsColor: .systemGreen)) {
-                            NotificationCenter.default.post(name: .push, object: nil)
-                        }
-                        .help("Push")
-
-                        XcodeToolbarButton(icon: "arrow.triangle.branch", color: Color(nsColor: .systemBlue)) {
-                            NotificationCenter.default.post(name: .newBranch, object: nil)
-                        }
-                        .help("New Branch")
-
-                        XcodeToolbarButton(icon: "tray.and.arrow.down", color: Color(nsColor: .systemOrange)) {
-                            NotificationCenter.default.post(name: .stash, object: nil)
-                        }
-                        .help("Stash")
-
-                        XcodeToolbarButton(icon: "tray.and.arrow.up", color: Color(nsColor: .systemOrange)) {
-                            NotificationCenter.default.post(name: .popStash, object: nil)
-                        }
-                        .help("Pop Stash")
-
-                        XcodeToolbarButton(icon: "terminal", color: Color(nsColor: .labelColor)) {
-                            bottomPanelManager.openTab(type: .terminal)
-                        }
-                        .help("Terminal")
-                    }
-                }
-            }
-        }
-    }
-    
-    // Right side toolbar buttons (Settings + Sidebar toggles)
-    private var toolbarRightActions: some View {
-        Group {
-            // Settings Button
-            if #available(macOS 14.0, *) {
-                SettingsLink {
-                    Image(systemName: "gearshape.fill")
-                        .renderingMode(.template)
-                        .font(.system(size: DesignTokens.Toolbar.iconSize, weight: .regular))
-                        .foregroundStyle(AppTheme.textSecondary)
-                        .frame(
-                            width: DesignTokens.Toolbar.iconOnlyButtonSize.width,
-                            height: DesignTokens.Toolbar.iconOnlyButtonSize.height
-                        )
-                }
-                .buttonStyle(.plain)
-                .help("Settings (⌘,)")
-            } else {
-                XcodeToolbarButton(icon: "gearshape.fill", color: AppTheme.textSecondary) {
-                    NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
-                }
-                .help("Settings (⌘,)")
-            }
-
-            // Inspector Toggle (Right Panel)
-            XcodeToolbarButton(icon: "sidebar.trailing", color: showInspector ? AppTheme.accent : AppTheme.textSecondary) {
-                withAnimation {
-                    showInspector.toggle()
-                }
-            }
-            .help("Toggle Inspector")
-        }
-    }
-
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             // Left Panel - Branches/Remotes/Tags
@@ -600,24 +513,24 @@ struct CollapsedBottomPanelBar: View {
             // Drag handle indicator
             Image(systemName: "chevron.up")
                 .font(.system(size: 8, weight: .bold))
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
 
             // Show open tabs icons
             if !panelManager.openTabs.isEmpty {
                 ForEach(panelManager.openTabs.prefix(4)) { tab in
                     Image(systemName: tab.type.icon)
                         .font(.system(size: 9))
-                        .foregroundColor(panelManager.activeTabId == tab.id ? AppTheme.accent : AppTheme.textMuted)
+                        .foregroundStyle(panelManager.activeTabId == tab.id ? AppTheme.accent : AppTheme.textMuted)
                 }
                 if panelManager.openTabs.count > 4 {
                     Text("+\(panelManager.openTabs.count - 4)")
                         .font(.system(size: 9))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
             } else {
                 Text("Terminal")
                     .font(.system(size: 10))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
 
             Spacer()
@@ -628,7 +541,7 @@ struct CollapsedBottomPanelBar: View {
             } label: {
                 Image(systemName: "terminal")
                     .font(.system(size: 9))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             .buttonStyle(.plain)
         }

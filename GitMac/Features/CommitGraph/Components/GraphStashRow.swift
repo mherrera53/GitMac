@@ -91,7 +91,7 @@ struct GraphStashRow: View {
                 // Box icon - positioned at lane 1
                 Image(systemName: "shippingbox.fill")
                     .font(.system(size: 8 * zoomLevel, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .offset(x: x(1) - (graphColumnWidth / 2))
             }
 
@@ -100,7 +100,7 @@ struct GraphStashRow: View {
                 HStack(spacing: 4) {
                     Text(stash.stash.displayMessage.isEmpty ? "Stashed changes" : stash.stash.displayMessage)
                         .font(settings?.compactMode == true ? DesignTokens.Typography.caption : DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
 
                     Image(systemName: "shippingbox")
@@ -114,16 +114,16 @@ struct GraphStashRow: View {
                         if let branch = stash.stash.branchName {
                             Text("on \(branch)")
                                 .font(DesignTokens.Typography.caption2)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
 
                         Text("•")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
 
                         Text(stash.stash.relativeDate)
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                 }
             }
@@ -136,7 +136,7 @@ struct GraphStashRow: View {
             if settings?.shouldShowSHAColumn ?? false {
                 Text(stash.stash.shortSHA)
                     .font(DesignTokens.Typography.caption2.monospaced())
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .frame(width: settings?.shaColumnWidth ?? 80, alignment: .trailing)
                     .padding(.trailing, DesignTokens.Spacing.sm)
             }

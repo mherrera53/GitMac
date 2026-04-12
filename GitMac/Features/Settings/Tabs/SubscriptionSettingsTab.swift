@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SubscriptionSettingsView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @StateObject private var storeManager = StoreManager.shared
     @State private var showSubscriptionSheet = false
 
@@ -11,16 +11,16 @@ struct SubscriptionSettingsView: View {
                 if storeManager.isProUser {
                     HStack {
                         Image(systemName: "star.fill")
-                            .foregroundColor(AppTheme.warning)
+                            .foregroundStyle(AppTheme.warning)
                         VStack(alignment: .leading) {
                             Text("GitMac Pro")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .fontWeight(.semibold)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                             Text(storeManager.subscriptionStatus.description)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                         Spacer()
                         DSButton("Manage", variant: .secondary, size: .sm) {
@@ -32,16 +32,16 @@ struct SubscriptionSettingsView: View {
                 } else {
                     HStack {
                         Image(systemName: "person.fill")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         VStack(alignment: .leading) {
                             Text("Free Plan")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .fontWeight(.semibold)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                             Text("Limited features")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                         Spacer()
                         DSButton("Upgrade to Pro", variant: .primary, size: .sm) {
@@ -55,23 +55,23 @@ struct SubscriptionSettingsView: View {
                 ForEach(StoreManager.ProFeature.allCases, id: \.self) { feature in
                     HStack {
                         Image(systemName: feature.icon)
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                             .frame(width: 24)
                         VStack(alignment: .leading) {
                             Text(feature.rawValue)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                             Text(feature.description)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                         Spacer()
                         if storeManager.isProUser {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(AppTheme.success)
+                                .foregroundStyle(AppTheme.success)
                         } else {
                             Image(systemName: "lock.fill")
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                     }
                 }
@@ -81,24 +81,24 @@ struct SubscriptionSettingsView: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     HStack {
                         Text("Annual")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Spacer()
                         Text(storeManager.formattedAnnualPrice + "/year")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     HStack {
                         Text("Monthly")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Spacer()
                         Text(storeManager.formattedMonthlyPrice + "/month")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                 }
 
                 Text("Subscriptions auto-renew unless cancelled 24 hours before the end of the current period.")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             Section {

@@ -8,7 +8,7 @@ struct StagingAreaPanel: View {
     @Binding var commitMessage: String
     @Binding var selectedStagingFile: StagingFile?
     @EnvironmentObject var appState: AppState
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @State private var viewMode: StagingViewMode = .tree
     @State private var extensionFilter: String? = nil
     @State private var showCreatePRSheet = false

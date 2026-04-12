@@ -21,21 +21,21 @@ struct LeftSidebarPanel: View {
                 VStack(spacing: 4) {
                     HStack(spacing: 8) {
                         Image(systemName: "folder.fill")
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                             .font(.system(size: 12))
                         Text(repo.name)
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Spacer()
                     }
 
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.triangle.branch")
                             .font(.system(size: 10))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         Text(appState.branchManager?.currentBranch?.name ?? "No Branch")
                             .font(.system(size: 10, weight: .medium, design: .monospaced))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                             .lineLimit(1)
                         Spacer()
                     }
@@ -86,7 +86,7 @@ struct LeftSidebarPanel: View {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
 
                     DSTextField(placeholder: "Search branches...", text: $branchSearchText)
                         .font(.system(size: 11))
@@ -95,7 +95,7 @@ struct LeftSidebarPanel: View {
                         Button(action: { branchSearchText = "" }) {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 11))
-                                .foregroundColor(AppTheme.textMuted)
+                                .foregroundStyle(AppTheme.textMuted)
                         }
                         .buttonStyle(.plain)
                     }
@@ -103,7 +103,7 @@ struct LeftSidebarPanel: View {
                 .padding(.horizontal, DesignTokens.Spacing.md)
                 .padding(.vertical, DesignTokens.Spacing.sm)
                 .background(.quaternary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.bottom, DesignTokens.Spacing.sm)
             }
@@ -161,7 +161,7 @@ struct LeftSidebarPanel: View {
                     HStack {
                         Text("Remote")
                             .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                             .textCase(.uppercase)
                         Spacer()
                     }

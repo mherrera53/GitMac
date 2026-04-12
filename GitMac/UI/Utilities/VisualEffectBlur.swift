@@ -88,6 +88,55 @@ extension VisualEffectBlur {
     }
 }
 
+// MARK: - Liquid Glass View Extension (macOS 26+ ready)
+
+extension View {
+    /// Apply glass effect on macOS 26+, falling back to material on older versions.
+    /// Use this for toolbar, sidebar, and card backgrounds that should adopt Liquid Glass.
+    ///
+    /// - Parameters:
+    ///   - cornerRadius: Corner radius for the glass shape
+    ///   - fallbackMaterial: NSVisualEffectView material for pre-macOS 26
+    ///   - fallbackBlending: Blending mode for the fallback
+    @ViewBuilder
+    func glassBackground(
+        cornerRadius: CGFloat = 0,
+        fallbackMaterial: NSVisualEffectView.Material = DesignTokens.Materials.content,
+        fallbackBlending: NSVisualEffectView.BlendingMode = .withinWindow
+    ) -> some View {
+        if #available(macOS 26, *) {
+            self.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+        } else {
+            self.background(
+                VisualEffectBlur(
+                    material: fallbackMaterial,
+                    blendingMode: fallbackBlending
+                ).clipShape(.rect(cornerRadius: cornerRadius))
+            )
+        }
+    }
+
+    /// Interactive glass effect for buttons and tappable elements.
+    /// Falls back to material on older macOS.
+    @ViewBuilder
+    func interactiveGlass(
+        in shape: some Shape = .rect(cornerRadius: 8),
+        fallbackMaterial: NSVisualEffectView.Material = DesignTokens.Materials.content,
+        fallbackBlending: NSVisualEffectView.BlendingMode = .withinWindow
+    ) -> some View {
+        if #available(macOS 26, *) {
+            self.glassEffect(.regular.interactive(), in: shape)
+        } else {
+            self.background(
+                VisualEffectBlur(
+                    material: fallbackMaterial,
+                    blendingMode: fallbackBlending
+                ).clipShape(shape)
+            )
+        }
+    }
+}
+
 // MARK: - Preview
 
 #Preview("Blur Materials") {

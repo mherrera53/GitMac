@@ -36,12 +36,12 @@ struct TaigaEpicRow: View {
             // Ref
             Text("#\(epic.ref)")
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
 
             // Subject
             Text(epic.subject)
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .lineLimit(1)
 
             Spacer()
@@ -53,8 +53,8 @@ struct TaigaEpicRow: View {
                     .padding(.horizontal, DesignTokens.Spacing.xs)
                     .padding(.vertical, 2)
                     .background(SwiftUI.Color(hex: status.color).opacity(0.2))
-                    .foregroundColor(SwiftUI.Color(hex: status.color))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .foregroundStyle(SwiftUI.Color(hex: status.color))
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
         }
         .padding(.vertical, DesignTokens.Spacing.xs)

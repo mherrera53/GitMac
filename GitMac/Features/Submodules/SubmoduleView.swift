@@ -62,11 +62,11 @@ struct SubmoduleView: View {
                 Text("Submodules")
                     .font(.title2)
                     .fontWeight(.semibold)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Text("\(viewModel.submodules.count) submodules")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
 
             Spacer()
@@ -74,19 +74,19 @@ struct SubmoduleView: View {
             HStack(spacing: DesignTokens.Spacing.md) {
                 Button(action: { Task { await syncSubmodules() } }) {
                     Label("Sync", systemImage: "arrow.triangle.2.circlepath")
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
                 
                 Button(action: { modalCoordinator.show(.add) }) {
                     Label("Add Submodule", systemImage: "plus")
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
                 
                 Button(action: { Task { await loadSubmodules() } }) {
                     Label("Refresh", systemImage: "arrow.clockwise")
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
             }
@@ -117,7 +117,7 @@ struct SubmoduleView: View {
                 .scaleEffect(0.8)
             Text("Loading submodules...")
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -127,7 +127,7 @@ struct SubmoduleView: View {
             Image(systemName: "square.stack.3d.down.right")
                 // TODO: Replace with appropriate Typography token when available for large icons
                 .font(.system(size: DesignTokens.Size.iconXL * 2))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("No Submodules")
                 .font(.title3)
@@ -135,11 +135,11 @@ struct SubmoduleView: View {
 
             Text("Add submodules to include external repositories")
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Button(action: { modalCoordinator.show(.add) }) {
                 Text("Add Submodule")
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
             }
             .buttonStyle(.plain)
         }
@@ -196,16 +196,16 @@ struct SubmoduleRow: View {
                 Text(submodule.displayName)
                     .font(.body)
                     .fontWeight(.medium)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Text(submodule.path)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 if let branch = submodule.branch {
                     Text("Branch: \(branch)")
                         .font(.caption2)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
 
@@ -218,7 +218,7 @@ struct SubmoduleRow: View {
     
     private var statusIndicator: some View {
         Image(systemName: submodule.status.icon)
-            .foregroundColor(statusColor)
+            .foregroundStyle(statusColor)
             .font(DesignTokens.Typography.callout)
     }
 
@@ -236,14 +236,14 @@ struct SubmoduleRow: View {
                 Button(action: { Task { await onInitialize() } }) {
                     Text("Initialize")
                         .font(.caption)
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
                 .help("Initialize submodule")
             } else {
                 Button(action: { Task { await onUpdate() } }) {
                     Image(systemName: "arrow.down.circle")
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
                 .help("Update submodule")
@@ -251,7 +251,7 @@ struct SubmoduleRow: View {
             
             Button(action: onRemove) {
                 Image(systemName: "trash")
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
             .buttonStyle(.plain)
             .help("Remove submodule")
@@ -305,7 +305,7 @@ struct AddSubmoduleSheet: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                 Text("Repository URL")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 DSTextField(placeholder: "https://github.com/user/repo.git", text: $url)
             }
@@ -313,7 +313,7 @@ struct AddSubmoduleSheet: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                 Text("Path")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 DSTextField(placeholder: "path/to/submodule", text: $path)
             }
@@ -321,7 +321,7 @@ struct AddSubmoduleSheet: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                 Text("Branch (Optional)")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 DSTextField(placeholder: "main", text: $branch)
             }

@@ -271,14 +271,14 @@ struct ToastNotificationView: View {
                 // Icon
                 Image(systemName: notification.type.icon)
                     .font(.system(size: 20))
-                    .foregroundColor(notification.type.color)
+                    .foregroundStyle(notification.type.color)
                 
                 // Message
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(notification.message.components(separatedBy: "\n"), id: \.self) { line in
                         Text(shouldCapitalize(line) ? line.capitalizedFirst : line)
                             .font(line == notification.message.components(separatedBy: "\n").first ? .body : .caption)
-                            .foregroundColor(line == notification.message.components(separatedBy: "\n").first ? .primary : .secondary)
+                            .foregroundStyle(line == notification.message.components(separatedBy: "\n").first ? .primary : .secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -287,7 +287,7 @@ struct ToastNotificationView: View {
                 // Close button - larger and more visible with high priority gesture
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 18))
-                    .foregroundColor(isHovered ? AppTheme.textPrimary : AppTheme.textSecondary)
+                    .foregroundStyle(isHovered ? AppTheme.textPrimary : AppTheme.textSecondary)
                     .frame(width: 32, height: 32) // Larger click area
                     .background(Color.clear)
                     .contentShape(Rectangle())
@@ -309,7 +309,7 @@ struct ToastNotificationView: View {
                     if let hint = notification.actionHint {
                         Text("💡 \(hint)")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     
@@ -319,7 +319,7 @@ struct ToastNotificationView: View {
                     } label: {
                         HStack {
                             Image(systemName: "arrow.right.circle.fill")
-                                .foregroundColor(AppTheme.info)
+                                .foregroundStyle(AppTheme.info)
                             Text(title)
                         }
                     }

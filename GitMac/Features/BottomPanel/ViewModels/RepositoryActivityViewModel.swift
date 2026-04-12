@@ -68,7 +68,7 @@ class RepositoryActivityViewModel: ObservableObject {
     
     private var currentRepositoryPath: String?
     private var cancellables = Set<AnyCancellable>()
-    private let shell = ShellExecutor()
+    private let shell = ShellExecutor.shared
     
     // MARK: - Load Data
     

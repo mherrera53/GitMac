@@ -18,7 +18,7 @@ struct ResetView: View {
             HStack {
                 Image(systemName: "arrow.uturn.backward.circle.fill")
                     .font(.system(size: 32))
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Reset Branch")
@@ -27,7 +27,7 @@ struct ResetView: View {
 
                     Text("Move current branch to a different commit")
                         .font(.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
 
                 Spacer()
@@ -54,27 +54,27 @@ struct ResetView: View {
                         HStack(spacing: 8) {
                             Text(targetCommit.shortSHA)
                                 .font(.system(.caption, design: .monospaced))
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
 
                             Text("•")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
 
                             Text(targetCommit.author)
                                 .font(.caption)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
 
                             Text("•")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
 
                             Text(targetCommit.date.formatted(.relative(presentation: .named)))
                                 .font(.caption)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                         }
                     }
                 }
                 .padding()
                 .background(AppTheme.info.opacity(0.1))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
             }
             
             Divider()
@@ -130,17 +130,17 @@ struct ResetView: View {
             if resetMode == .hard {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
 
                     Text("Hard reset will permanently delete all uncommitted changes!")
                         .font(.caption)
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
 
                     Spacer()
                 }
                 .padding()
                 .background(AppTheme.error.opacity(0.1))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
             }
             
             // Action buttons
@@ -235,26 +235,26 @@ struct ResetModeOption: View {
                 // Icon
                 Image(systemName: icon)
                     .font(.system(size: 20))
-                    .foregroundColor(color)
+                    .foregroundStyle(color)
                     .frame(width: 32, height: 32)
                     .background(color.opacity(0.15))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                 
                 // Content
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title)
                         .font(.headline)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     Text(description)
                         .font(.subheadline)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                     
                     if isSelected || isHovered {
                         Text(details)
                             .font(.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .padding(.top, 4)
                     }
                 }
@@ -264,7 +264,7 @@ struct ResetModeOption: View {
                 // Selection indicator
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(color)
+                        .foregroundStyle(color)
                         .font(.system(size: 24))
                 }
             }
@@ -374,7 +374,7 @@ struct QuickResetMenu: View {
             }
         } label: {
             Image(systemName: "arrow.uturn.backward.circle")
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
         }
         .menuStyle(.borderlessButton)
         .help("Reset branch")

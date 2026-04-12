@@ -34,11 +34,11 @@ struct DSErrorState: View {
             VStack(spacing: DesignTokens.Spacing.sm) {
                 Text(title)
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Text(message)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .multilineTextAlignment(.center)
             }
 
@@ -74,7 +74,7 @@ struct DSErrorState: View {
         message: "Could not connect to the remote repository. Please check your internet connection and try again.",
         retryTitle: "Retry",
         onRetry: {
-            print("Retry tapped")
+            Logger.debug("Retry tapped")
         }
     )
     .frame(width: 400, height: 300)
@@ -87,7 +87,7 @@ struct DSErrorState: View {
         message: "Failed to push commits to origin/main. The remote contains work that you do not have locally.",
         retryTitle: "Pull and Retry",
         onRetry: {
-            print("Pull and retry tapped")
+            Logger.debug("Pull and retry tapped")
         }
     )
     .frame(width: 450, height: 300)

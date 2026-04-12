@@ -35,7 +35,7 @@ struct TerminalCommandPaletteView: View {
                 HStack(spacing: DesignTokens.Spacing.md) {
                     Image(systemName: "command.circle.fill")
                         .font(.system(size: 18))
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
 
                     DSTextField(placeholder: "Search workflows or type command...", text: $searchText)
                         .font(DesignTokens.Typography.body)
@@ -48,7 +48,7 @@ struct TerminalCommandPaletteView: View {
                             searchText = ""
                         } label: {
                             Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                         }
                         .buttonStyle(.plain)
                     }
@@ -95,7 +95,7 @@ struct TerminalCommandPaletteView: View {
             }
             .frame(width: 480)
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.lg)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
             .shadow(color: AppTheme.background.opacity(0.3), radius: 10, x: 0, y: 4)
         }
         .onAppear {
@@ -140,19 +140,19 @@ struct WorkflowRow: View {
                 // Category icon
                 Image(systemName: categoryIcon)
                     .font(.system(size: DesignTokens.Size.iconSM))
-                    .foregroundColor(categoryColor)
+                    .foregroundStyle(categoryColor)
                     .frame(width: DesignTokens.Size.iconLG)
 
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                     // Name
                     Text(workflow.name)
                         .font(DesignTokens.Typography.callout.weight(.semibold))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     // Command preview
                     Text(workflow.command)
                         .font(DesignTokens.Typography.caption2.monospaced())
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .lineLimit(1)
                 }
 
@@ -161,11 +161,11 @@ struct WorkflowRow: View {
                 // Category tag
                 Text(workflow.category)
                     .font(.system(size: 9, weight: .medium))
-                    .foregroundColor(categoryColor)
+                    .foregroundStyle(categoryColor)
                     .padding(.horizontal, DesignTokens.Spacing.sm)
                     .padding(.vertical, DesignTokens.Spacing.xxs)
                     .background(categoryColor.opacity(0.15))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
             .padding(.horizontal, DesignTokens.Spacing.md)
             .padding(.vertical, DesignTokens.Spacing.sm)
@@ -205,7 +205,7 @@ struct EmptyPaletteState: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: "magnifyingglass")
                 .font(DesignTokens.Typography.iconXXXL)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text(searchText.isEmpty ? "No workflows yet" : "No workflows found")
                 .font(DesignTokens.Typography.headline)
@@ -214,7 +214,7 @@ struct EmptyPaletteState: View {
                 "Workflows will appear here" :
                 "Try a different search term")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity)
         .padding(DesignTokens.Spacing.xxl)
@@ -231,15 +231,15 @@ struct PaletteHint: View {
         HStack(spacing: DesignTokens.Spacing.xs) {
             Text(icon)
                 .font(DesignTokens.Typography.caption2.monospaced())
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .padding(.horizontal, DesignTokens.Spacing.xs)
                 .padding(.vertical, DesignTokens.Spacing.xxs)
                 .background(AppTheme.textSecondary.opacity(0.15))
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
             Text(text)
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
     }
 }

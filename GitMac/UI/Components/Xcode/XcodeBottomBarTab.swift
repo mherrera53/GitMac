@@ -40,18 +40,18 @@ struct XcodeBottomBarTab: View {
         HStack(spacing: DesignTokens.Spacing.xs) {
             Image(systemName: icon)
                 .font(.system(size: DesignTokens.BottomBar.tabIconSize))
-                .foregroundColor(tabColor)
+                .foregroundStyle(tabColor)
 
             Text(title)
                 .font(.system(size: DesignTokens.BottomBar.tabFontSize, weight: .regular))
-                .foregroundColor(tabColor)
+                .foregroundStyle(tabColor)
                 .lineLimit(1)
 
             if isHovered || isSelected {
                 Button(action: onClose) {
                     Image(systemName: "xmark")
                         .font(.system(size: DesignTokens.BottomBar.closeIconSize))
-                        .foregroundColor(isCloseHovered ? AppTheme.textPrimary : AppTheme.textSecondary)
+                        .foregroundStyle(isCloseHovered ? AppTheme.textPrimary : AppTheme.textSecondary)
                         .frame(
                             width: DesignTokens.BottomBar.closeButtonSize,
                             height: DesignTokens.BottomBar.closeButtonSize
@@ -72,7 +72,7 @@ struct XcodeBottomBarTab: View {
         .padding(.horizontal, DesignTokens.BottomBar.tabHorizontalPadding)
         .padding(.vertical, DesignTokens.BottomBar.tabVerticalPadding)
         .background(backgroundColor)
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         .overlay(
             // Active indicator
             Group {

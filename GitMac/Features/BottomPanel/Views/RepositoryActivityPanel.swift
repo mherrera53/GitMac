@@ -61,16 +61,16 @@ struct RepositoryActivityPanel: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Repository Activity")
                     .font(.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 if let repo = appState.currentRepository {
                     Text(repo.name)
                         .font(.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 } else {
                     Text("No repository selected")
                         .font(.caption)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
             }
             
@@ -100,7 +100,7 @@ struct RepositoryActivityPanel: View {
                 Image(systemName: "arrow.clockwise")
                     .rotationEffect(.degrees(viewModel.isLoading ? 360 : 0))
                     .animation(viewModel.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: viewModel.isLoading)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .buttonStyle(.borderless)
             .disabled(viewModel.isLoading)
@@ -122,13 +122,13 @@ struct RepositoryActivityPanel: View {
                     Text(tab.rawValue)
                         .font(.subheadline)
                         .fontWeight(selectedTab == tab ? .semibold : .regular)
-                        .foregroundColor(selectedTab == tab ? AppTheme.accent : AppTheme.textSecondary)
+                        .foregroundStyle(selectedTab == tab ? AppTheme.accent : AppTheme.textSecondary)
                         .padding(.horizontal, DesignTokens.Spacing.md)
                         .padding(.vertical, DesignTokens.Spacing.sm)
                         .background(
                             selectedTab == tab ? AppTheme.accent.opacity(0.1) : Color.clear
                         )
-                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
                 .buttonStyle(.plain)
             }
@@ -169,7 +169,7 @@ struct RepositoryActivityPanel: View {
                     Text("Contribution Activity")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     if !viewModel.contributionDays.isEmpty {
                         ContributionGraphView(
@@ -179,20 +179,20 @@ struct RepositoryActivityPanel: View {
                     } else {
                         Text("No contribution data available")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                             .frame(height: 100)
                     }
                 }
                 .padding()
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 
                 // Top Contributors
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Top Contributors")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     ForEach(viewModel.contributors.prefix(5)) { contributor in
                         ContributorRow(
@@ -206,14 +206,14 @@ struct RepositoryActivityPanel: View {
                 }
                 .padding()
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 
                 // Recent Commits
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Recent Commits")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     ForEach(viewModel.recentCommits.prefix(5)) { commit in
                         CommitActivityRow(commit: commit)
@@ -221,7 +221,7 @@ struct RepositoryActivityPanel: View {
                 }
                 .padding()
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             }
             .padding()
         }
@@ -272,15 +272,15 @@ struct RepositoryActivityPanel: View {
                 VStack(spacing: DesignTokens.Spacing.md) {
                     Image(systemName: "person.circle")
                         .font(.system(size: 48))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     
                     Text("Select a Contributor")
                         .font(.headline)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     Text("Choose a contributor from the list to view their activity")
                         .font(.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -298,7 +298,7 @@ struct RepositoryActivityPanel: View {
                     } placeholder: {
                         Image(systemName: "person.circle.fill")
                             .resizable()
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .frame(width: 64, height: 64)
                     .clipShape(Circle())
@@ -307,16 +307,16 @@ struct RepositoryActivityPanel: View {
                         Text(contributor.name)
                             .font(.title2)
                             .fontWeight(.bold)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         
                         Text(contributor.email)
                             .font(.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         
                         HStack(spacing: DesignTokens.Spacing.sm) {
                             Label("\(contributor.commitCount) commits", systemImage: "arrow.triangle.branch")
                                 .font(.caption)
-                                .foregroundColor(AppTheme.accent)
+                                .foregroundStyle(AppTheme.accent)
                         }
                     }
                     
@@ -324,14 +324,14 @@ struct RepositoryActivityPanel: View {
                 }
                 .padding()
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 
                 // Commits by this contributor
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("Commits by \(contributor.name)")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     let contributorCommits = viewModel.recentCommits.filter {
                         $0.authorEmail.lowercased() == contributor.email.lowercased()
@@ -340,7 +340,7 @@ struct RepositoryActivityPanel: View {
                     if contributorCommits.isEmpty {
                         Text("No recent commits found")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     } else {
                         ForEach(contributorCommits) { commit in
                             CommitActivityRow(commit: commit)
@@ -358,15 +358,15 @@ struct RepositoryActivityPanel: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: "folder.badge.questionmark")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             
             Text("No Repository Selected")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text("Select a repository to view its activity")
                 .font(.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -378,7 +378,7 @@ struct RepositoryActivityPanel: View {
             
             Text("Loading repository activity...")
                 .font(.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -387,15 +387,15 @@ struct RepositoryActivityPanel: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
             
             Text("Error Loading Activity")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text(error)
                 .font(.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
             
             Button("Retry") {
@@ -418,21 +418,21 @@ struct ActivityStatBadge: View {
         HStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.caption2)
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
             
             Text(value)
                 .font(.caption)
                 .fontWeight(.semibold)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text(label)
                 .font(.caption2)
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
         }
         .padding(.horizontal, DesignTokens.Spacing.sm)
         .padding(.vertical, DesignTokens.Spacing.xs)
         .background(AppTheme.backgroundTertiary)
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
     }
 }
 
@@ -448,7 +448,7 @@ struct ContributorRow: View {
             } placeholder: {
                 Image(systemName: "person.circle.fill")
                     .resizable()
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .frame(width: 32, height: 32)
             .clipShape(Circle())
@@ -457,12 +457,12 @@ struct ContributorRow: View {
                 Text(contributor.name)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
                 
                 Text("\(contributor.commitCount) commits")
                     .font(.caption2)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             
             Spacer()
@@ -481,7 +481,7 @@ struct ContributorRow: View {
         }
         .padding(DesignTokens.Spacing.sm)
         .background(isSelected ? AppTheme.accent.opacity(0.15) : Color.clear)
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         .contentShape(Rectangle())
         .onTapGesture { onSelect() }
     }
@@ -505,22 +505,22 @@ struct CommitActivityRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(commit.message)
                     .font(.subheadline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(2)
                 
                 HStack(spacing: DesignTokens.Spacing.sm) {
                     Text(String(commit.id.prefix(7)))
                         .font(.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                     
                     Text(commit.author)
                         .font(.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     
                     Text(formatRelativeDate(commit.date))
                         .font(.caption)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
             }
             
@@ -528,7 +528,7 @@ struct CommitActivityRow: View {
         }
         .padding(DesignTokens.Spacing.sm)
         .background(AppTheme.backgroundSecondary.opacity(0.5))
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
     }
     
     private func formatRelativeDate(_ date: Date) -> String {

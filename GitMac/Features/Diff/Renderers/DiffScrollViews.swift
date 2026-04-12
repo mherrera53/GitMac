@@ -12,7 +12,7 @@ struct UnifiedDiffScrollView<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        ScrollView(enableHorizontalScroll ? [.vertical, .horizontal] : [.vertical], showsIndicators: true) {
+        ScrollView(enableHorizontalScroll ? [.vertical, .horizontal] : [.vertical]) {
             ZStack(alignment: .top) {
                 // Reliable Scroll Tracker
                 GeometryReader { geo in

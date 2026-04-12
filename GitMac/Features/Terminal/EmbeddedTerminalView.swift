@@ -8,7 +8,7 @@ import SwiftTerm
 
 /// A real terminal emulator embedded in GitMac using SwiftTerm
 struct EmbeddedTerminalView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     @EnvironmentObject var appState: AppState
     @State private var showAIChat = false
@@ -98,11 +98,11 @@ struct EmbeddedTerminalToolbar: View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             // Terminal icon
             Image(systemName: "terminal.fill")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Terminal")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Spacer()
 
@@ -114,11 +114,11 @@ struct EmbeddedTerminalToolbar: View {
                     Text("lazygit")
                         .font(DesignTokens.Typography.caption2)
                 }
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.vertical, DesignTokens.Spacing.xs)
                 .background(AppTheme.warning.opacity(0.15))
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
             .buttonStyle(.plain)
             .help("Run lazygit in terminal")
@@ -131,11 +131,11 @@ struct EmbeddedTerminalToolbar: View {
                     Text("AI Chat")
                         .font(DesignTokens.Typography.caption2)
                 }
-                .foregroundColor(AppTheme.accentPurple)
+                .foregroundStyle(AppTheme.accentPurple)
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.vertical, DesignTokens.Spacing.xs)
                 .background(AppTheme.accentPurple.opacity(0.15))
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
             .buttonStyle(.plain)
             .help("Open AI Assistant")
@@ -147,7 +147,7 @@ struct EmbeddedTerminalToolbar: View {
             Button(action: onClear) {
                 Image(systemName: "trash")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             .buttonStyle(.plain)
             .help("Clear and restart terminal")
@@ -173,7 +173,7 @@ struct TerminalAIChatView: View {
             // Header
             HStack {
                 Image(systemName: "sparkles")
-                    .foregroundColor(AppTheme.accentPurple)
+                    .foregroundStyle(AppTheme.accentPurple)
                 Text("AI Terminal Assistant")
                     .font(.headline)
                 Spacer()
@@ -200,7 +200,7 @@ struct TerminalAIChatView: View {
                                     .scaleEffect(0.7)
                                 Text("Thinking...")
                                     .font(.caption)
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
                             }
                             .padding(.horizontal)
                         }
@@ -223,15 +223,15 @@ struct TerminalAIChatView: View {
                 DSTextField(placeholder: "Ask about git commands, errors, or code...", text: $inputText)
                     .padding(DesignTokens.Spacing.sm + DesignTokens.Spacing.xxs)
                     .background(AppTheme.backgroundSecondary)
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                     .onSubmit { sendMessage() }
 
                 Button(action: sendMessage) {
                     Image(systemName: "paperplane.fill")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .padding(DesignTokens.Spacing.sm + DesignTokens.Spacing.xxs)
                         .background(inputText.isEmpty ? AppTheme.textMuted : AppTheme.accentPurple)
-                        .cornerRadius(DesignTokens.CornerRadius.lg)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                 }
                 .buttonStyle(.plain)
                 .disabled(inputText.isEmpty || isLoading)
@@ -317,7 +317,7 @@ struct AIChatBubble: View {
         HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
             if message.role == .assistant {
                 Image(systemName: "sparkles")
-                    .foregroundColor(AppTheme.accentPurple)
+                    .foregroundStyle(AppTheme.accentPurple)
                     .frame(width: DesignTokens.Size.iconXL, height: DesignTokens.Size.iconXL)
             }
 
@@ -328,15 +328,15 @@ struct AIChatBubble: View {
 
                 Text(message.timestamp, style: .time)
                     .font(.caption2)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             .padding(DesignTokens.Spacing.sm + DesignTokens.Spacing.xxs)
             .background(message.role == .user ? AppTheme.info.opacity(0.15) : AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.xl)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
 
             if message.role == .user {
                 Image(systemName: "person.circle.fill")
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .frame(width: DesignTokens.Size.iconXL, height: DesignTokens.Size.iconXL)
             }
         }
@@ -355,7 +355,7 @@ struct EmbeddedTerminalView: View {
                 .font(.title2)
             Text("SwiftTerm package not available")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Spacer()
         }
     }

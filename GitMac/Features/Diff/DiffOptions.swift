@@ -145,7 +145,7 @@ extension UserDefaults {
             do {
                 return try JSONDecoder().decode(DiffPreferences.self, from: data)
             } catch {
-                print("Failed to decode DiffPreferences: \(error)")
+                Logger.debug("Failed to decode DiffPreferences: \(error)")
                 return .default
             }
         }
@@ -154,7 +154,7 @@ extension UserDefaults {
                 let data = try JSONEncoder().encode(newValue)
                 set(data, forKey: Self.diffPreferencesKey)
             } catch {
-                print("Failed to encode DiffPreferences: \(error)")
+                Logger.debug("Failed to encode DiffPreferences: \(error)")
             }
         }
     }

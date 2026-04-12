@@ -100,7 +100,7 @@ struct DSGenericIntegrationPanel<Plugin: IntegrationPlugin, LoginPrompt: View, S
 
             Text(plugin.name)
                 .font(DesignTokens.Typography.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Spacer()
 
@@ -163,7 +163,7 @@ struct DSGenericIntegrationPanel<Plugin: IntegrationPlugin, LoginPrompt: View, S
             HStack {
                 Text("\(plugin.name) Settings")
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -172,7 +172,7 @@ struct DSGenericIntegrationPanel<Plugin: IntegrationPlugin, LoginPrompt: View, S
                 } label: {
                     Image(systemName: "xmark")
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
@@ -199,15 +199,15 @@ struct DSGenericIntegrationPanel<Plugin: IntegrationPlugin, LoginPrompt: View, S
             if viewModel.isAuthenticated {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
                     Text("Connected to \(plugin.name)")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             } else {
                 Text("Not connected to \(plugin.name)")
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             Spacer()

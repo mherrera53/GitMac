@@ -29,7 +29,7 @@ struct DSIntegrationPanel<ViewModel: IntegrationViewModel, Content: View, LoginV
 
                 Text(title)
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -80,7 +80,7 @@ struct DSIntegrationPanel<ViewModel: IntegrationViewModel, Content: View, LoginV
         }
         .frame(width: 400, height: 600)
         .background(AppTheme.background)
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
     }
 }
 
@@ -116,7 +116,7 @@ struct DSIntegrationBottomPanel<ViewModel: IntegrationViewModel, Content: View, 
 
                 Text(title)
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -208,15 +208,15 @@ private class MockIntegrationViewModel: IntegrationViewModel {
         content: {
             VStack {
                 Text("Issue content goes here")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         },
         loginView: {
             DSLoginPrompt(viewModel: MockIntegrationViewModel())
         },
-        onSettings: { print("Settings tapped") },
-        onClose: { print("Close tapped") }
+        onSettings: { Logger.debug("Settings tapped") },
+        onClose: { Logger.debug("Close tapped") }
     )
     .padding()
     .background(AppTheme.background)
@@ -234,8 +234,8 @@ private class MockIntegrationViewModel: IntegrationViewModel {
         loginView: {
             DSLoginPrompt(viewModel: MockIntegrationViewModel())
         },
-        onSettings: { print("Settings tapped") },
-        onClose: { print("Close tapped") }
+        onSettings: { Logger.debug("Settings tapped") },
+        onClose: { Logger.debug("Close tapped") }
     )
     .padding()
     .background(AppTheme.background)
@@ -254,7 +254,7 @@ private class MockIntegrationViewModel: IntegrationViewModel {
                 content: {
                     VStack {
                         Text("Task content goes here")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 },
@@ -262,8 +262,8 @@ private class MockIntegrationViewModel: IntegrationViewModel {
                     DSLoginPrompt(viewModel: MockIntegrationViewModel())
                 },
                 height: $height,
-                onSettings: { print("Settings tapped") },
-                onClose: { print("Close tapped") }
+                onSettings: { Logger.debug("Settings tapped") },
+                onClose: { Logger.debug("Close tapped") }
             )
         }
     }

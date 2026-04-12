@@ -21,7 +21,7 @@ struct TeamMemberRow: View {
             } placeholder: {
                 Image(systemName: "person.circle.fill")
                     .resizable()
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .frame(width: 32, height: 32)
             .clipShape(Circle())
@@ -30,21 +30,21 @@ struct TeamMemberRow: View {
                 Text(member.user.login)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 HStack(spacing: 8) {
                     Label("\(member.activePRs.count)", systemImage: "arrow.triangle.pull")
                         .font(.caption2)
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
 
                     Label("\(member.filesBeingModified.count)", systemImage: "doc.text")
                         .font(.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
 
                     if member.filesBeingModified.contains(where: { $0.hasConflict }) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.caption2)
-                            .foregroundColor(AppTheme.warning)
+                            .foregroundStyle(AppTheme.warning)
                     }
                 }
             }
@@ -53,7 +53,7 @@ struct TeamMemberRow: View {
         }
         .padding(12)
         .background(isSelected ? AppTheme.accent.opacity(0.2) : Color.clear)
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .onTapGesture { onSelect() }
     }
 }

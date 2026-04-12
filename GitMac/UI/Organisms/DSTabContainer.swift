@@ -74,7 +74,7 @@ struct DSTabContainer<Content: View>: View {
             .padding(.horizontal, DesignTokens.Spacing.md)
             .padding(.vertical, DesignTokens.Spacing.sm)
             .background(buttonBackground(for: tab))
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
         .buttonStyle(.plain)
     }

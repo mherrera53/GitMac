@@ -139,29 +139,29 @@ struct AIInputBar: View {
         HStack(alignment: .bottom, spacing: 8) {
             Text((workingDirectory as NSString).lastPathComponent)
                 .font(.system(size: 10, weight: .medium))
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
                 .padding(.bottom, 8)
             Text("$")
                 .font(.system(size: 13, weight: .bold, design: .monospaced))
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
                 .padding(.bottom, 6)
             VStack(alignment: .leading, spacing: 0) {
                 ZStack(alignment: .topLeading) {
                     if !ghostText.isEmpty {
                         HStack(spacing: 0) {
                             Text(text).font(.system(size: 13, design: .monospaced)).opacity(0)
-                            Text(ghostText).font(.system(size: 13, design: .monospaced)).foregroundColor(AppTheme.accent.opacity(0.5))
-                            Text(" ⇥").font(.system(size: 9)).foregroundColor(AppTheme.textMuted.opacity(0.4))
+                            Text(ghostText).font(.system(size: 13, design: .monospaced)).foregroundStyle(AppTheme.accent.opacity(0.5))
+                            Text(" ⇥").font(.system(size: 9)).foregroundStyle(AppTheme.textMuted.opacity(0.4))
                         }.padding(.top, 6)
                     }
                     if isLoadingAI && ghostText.isEmpty {
                         HStack(spacing: 0) {
                             Text(text).font(.system(size: 13, design: .monospaced)).opacity(0)
-                            Text("...").font(.system(size: 13, design: .monospaced)).foregroundColor(AppTheme.textMuted.opacity(0.3))
+                            Text("...").font(.system(size: 13, design: .monospaced)).foregroundStyle(AppTheme.textMuted.opacity(0.3))
                         }.padding(.top, 6)
                     }
                     if text.isEmpty {
-                        Text("Enter command...").font(.system(size: 13, design: .monospaced)).foregroundColor(AppTheme.textMuted.opacity(0.4)).padding(.top, 6)
+                        Text("Enter command...").font(.system(size: 13, design: .monospaced)).foregroundStyle(AppTheme.textMuted.opacity(0.4)).padding(.top, 6)
                     }
                     AITextEditor(text: $text, isFocused: isFocused, onSubmit: { onSubmit(text) }, onTab: applyInlineSuggestion, onArrowUp: { navigateSuggestion(up: true) }, onArrowDown: { navigateSuggestion(up: false) }, onEscape: clearSuggestions).frame(height: dynamicHeight)
                 }
@@ -169,7 +169,7 @@ struct AIInputBar: View {
             }
             if isMultiline {
                 Button { onSubmit(text) } label: {
-                    Image(systemName: "paperplane.fill").font(.system(size: 12)).foregroundColor(AppTheme.accent)
+                    Image(systemName: "paperplane.fill").font(.system(size: 12)).foregroundStyle(AppTheme.accent)
                 }.buttonStyle(.plain).padding(.bottom, 6)
             }
         }
@@ -197,14 +197,14 @@ struct AIInputBar: View {
             ForEach(Array(allSuggestions.enumerated()), id: \.offset) { idx, sug in
                 Button { selectedIndex = idx; applyInlineSuggestion() } label: {
                     HStack(spacing: 8) {
-                        Image(systemName: idx == selectedIndex ? "chevron.right" : "").font(.system(size: 8, weight: .bold)).foregroundColor(AppTheme.accent).frame(width: 10)
-                        Text(sug).font(.system(size: 12, design: .monospaced)).foregroundColor(idx == selectedIndex ? AppTheme.accent : AppTheme.textSecondary).lineLimit(1)
+                        Image(systemName: idx == selectedIndex ? "chevron.right" : "").font(.system(size: 8, weight: .bold)).foregroundStyle(AppTheme.accent).frame(width: 10)
+                        Text(sug).font(.system(size: 12, design: .monospaced)).foregroundStyle(idx == selectedIndex ? AppTheme.accent : AppTheme.textSecondary).lineLimit(1)
                         Spacer()
-                        if idx == selectedIndex { Text("⇥ Tab").font(.system(size: 9)).foregroundColor(AppTheme.textMuted.opacity(0.5)) }
+                        if idx == selectedIndex { Text("⇥ Tab").font(.system(size: 9)).foregroundStyle(AppTheme.textMuted.opacity(0.5)) }
                     }.padding(.horizontal, 8).padding(.vertical, 4).background(idx == selectedIndex ? AppTheme.accent.opacity(0.1) : Color.clear)
                 }.buttonStyle(.plain)
             }
-        }.padding(.vertical, 4).background(AppTheme.backgroundTertiary.opacity(0.95)).cornerRadius(6).overlay(RoundedRectangle(cornerRadius: 6).stroke(AppTheme.border.opacity(0.3), lineWidth: 1)).padding(.top, 4)
+        }.padding(.vertical, 4).background(AppTheme.backgroundTertiary.opacity(0.95)).clipShape(.rect(cornerRadius: 6)).overlay(RoundedRectangle(cornerRadius: 6).stroke(AppTheme.border.opacity(0.3), lineWidth: 1)).padding(.top, 4)
     }
 
     private func navigateSuggestion(up: Bool) {

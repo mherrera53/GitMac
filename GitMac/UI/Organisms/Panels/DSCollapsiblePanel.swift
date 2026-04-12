@@ -52,14 +52,14 @@ struct DSCollapsiblePanel<Content: View>: View {
                 // Title
                 Text(title)
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
                 // Expand/collapse hint
                 Text(isExpanded ? "Collapse" : "Expand")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .opacity(0)
                     .animation(DesignTokens.Animation.spring, value: isExpanded)
             }
@@ -89,7 +89,7 @@ struct DSCollapsiblePanel<Content: View>: View {
             }
         }
         .background(backgroundColor ?? AppTheme.background)
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
         .animation(DesignTokens.Animation.spring, value: isExpanded)
     }
 }
@@ -175,7 +175,7 @@ struct DSCollapsiblePanel<Content: View>: View {
                         Text("Author: GitMac Team")
                     }
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .padding()
                 }
             }

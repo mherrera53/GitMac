@@ -64,9 +64,9 @@ struct DSButton<Label: View>: View {
             .padding(.horizontal, horizontalPaddingForSize)
             .padding(.vertical, verticalPaddingForSize)
             .frame(height: heightForSize)
-            .foregroundColor(foregroundColor)
+            .foregroundStyle(foregroundColor)
             .background(backgroundColor)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                     .stroke(borderColor, lineWidth: variant == .outline ? 1 : 0)
@@ -220,37 +220,37 @@ extension DSButton {
 #Preview("Button Variants") {
     VStack(spacing: DesignTokens.Spacing.md) {
         DSButton(variant: .primary) {
-            print("Primary clicked")
+            Logger.debug("Primary clicked")
         } label: {
             Text("Primary")
         }
 
         DSButton(variant: .secondary) {
-            print("Secondary clicked")
+            Logger.debug("Secondary clicked")
         } label: {
             Text("Secondary")
         }
 
         DSButton(variant: .danger) {
-            print("Danger clicked")
+            Logger.debug("Danger clicked")
         } label: {
             Text("Danger")
         }
 
         DSButton(variant: .ghost) {
-            print("Ghost clicked")
+            Logger.debug("Ghost clicked")
         } label: {
             Text("Ghost")
         }
 
         DSButton(variant: .outline) {
-            print("Outline clicked")
+            Logger.debug("Outline clicked")
         } label: {
             Text("Outline")
         }
 
         DSButton(variant: .link) {
-            print("Link clicked")
+            Logger.debug("Link clicked")
         } label: {
             Text("Link")
         }
@@ -261,19 +261,19 @@ extension DSButton {
 #Preview("Button Sizes") {
     VStack(spacing: DesignTokens.Spacing.md) {
         DSButton(size: .sm) {
-            print("Small clicked")
+            Logger.debug("Small clicked")
         } label: {
             Text("Small")
         }
 
         DSButton(size: .md) {
-            print("Medium clicked")
+            Logger.debug("Medium clicked")
         } label: {
             Text("Medium")
         }
 
         DSButton(size: .lg) {
-            print("Large clicked")
+            Logger.debug("Large clicked")
         } label: {
             Text("Large")
         }
@@ -284,13 +284,13 @@ extension DSButton {
 #Preview("Button States") {
     VStack(spacing: DesignTokens.Spacing.md) {
         DSButton {
-            print("Normal clicked")
+            Logger.debug("Normal clicked")
         } label: {
             Text("Normal")
         }
 
         DSButton(isDisabled: true) {
-            print("Disabled clicked")
+            Logger.debug("Disabled clicked")
         } label: {
             Text("Disabled")
         }

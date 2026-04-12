@@ -63,7 +63,7 @@ struct DSText: View {
     var body: some View {
         Text(text)
             .font(variant.font)
-            .foregroundColor(color ?? variant.defaultColor)
+            .foregroundStyle(color ?? variant.defaultColor)
     }
 }
 

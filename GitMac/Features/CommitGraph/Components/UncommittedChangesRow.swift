@@ -58,7 +58,7 @@ struct UncommittedChangesRow: View {
                 Image(systemName: "pencil")
                     .font(DesignTokens.Typography.callout)
                     .fontWeight(.bold)
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
                     .offset(x: -(graphColumnWidth / 2) + W / 2 + 8)
             }
 
@@ -68,10 +68,10 @@ struct UncommittedChangesRow: View {
                     Text("Uncommitted changes")
                         .font(DesignTokens.Typography.callout)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.warning)
+                        .foregroundStyle(AppTheme.warning)
                     Text("\(stagedCount) staged, \(unstagedCount) unstaged")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 Spacer()
             }

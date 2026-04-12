@@ -24,7 +24,7 @@ struct AICommandSuggestionsOverlay: View {
                         .scaleEffect(0.7)
                     Text("Getting AI suggestions...")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 .padding(DesignTokens.Spacing.md)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -68,19 +68,19 @@ struct SuggestionRow: View {
                 // Icon
                 Image(systemName: suggestion.isFromAI ? "sparkles" : "terminal")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(suggestion.isFromAI ? AppTheme.accent : AppTheme.accent)
+                    .foregroundStyle(suggestion.isFromAI ? AppTheme.accent : AppTheme.accent)
                     .frame(width: DesignTokens.Size.iconLG)
 
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                     // Command
                     Text(suggestion.command)
                         .font(DesignTokens.Typography.body.monospaced())
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     // Description
                     Text(suggestion.description)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(2)
                 }
 
@@ -90,11 +90,11 @@ struct SuggestionRow: View {
                 if isSelected {
                     Text("↩")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .padding(.horizontal, DesignTokens.Spacing.sm)
                         .padding(.vertical, DesignTokens.Spacing.xxs)
                         .background(AppTheme.accent.opacity(0.15))
-                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 } else if suggestion.isFromAI {
                     HStack(spacing: DesignTokens.Spacing.xxs) {
                         Circle()
@@ -102,7 +102,7 @@ struct SuggestionRow: View {
                             .frame(width: 6, height: 6)
                         Text("\(Int(suggestion.confidence * 100))%")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
             }

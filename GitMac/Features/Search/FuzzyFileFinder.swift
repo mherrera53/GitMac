@@ -48,7 +48,7 @@ struct FuzzyFileFinder: View {
         HStack(spacing: 12) {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 24))
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
             
             DSTextField(placeholder: "Search files...", text: $searchText)
                 .font(.system(size: 16))
@@ -60,7 +60,7 @@ struct FuzzyFileFinder: View {
                     selectedIndex = 0
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 .buttonStyle(.plain)
             }
@@ -100,7 +100,7 @@ struct FuzzyFileFinder: View {
         VStack(spacing: 12) {
             ProgressView()
             Text("Indexing files...")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -109,16 +109,16 @@ struct FuzzyFileFinder: View {
         VStack(spacing: 12) {
             Image(systemName: searchText.isEmpty ? "doc.text" : "magnifyingglass")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text(searchText.isEmpty ? "Start typing to search files" : "No files found")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             if !searchText.isEmpty {
                 Text("Try a different search term")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -138,11 +138,11 @@ struct FuzzyFileFinder: View {
             if !searchText.isEmpty {
                 Text("\(filteredFiles.count) of \(viewModel.allFiles.count) files")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             } else {
                 Text("\(viewModel.allFiles.count) files")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
         .padding(.horizontal)
@@ -277,10 +277,10 @@ struct FileResultRow: View {
                 // File icon
                 Image(systemName: "doc.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(AppTheme.info)
+                    .foregroundStyle(AppTheme.info)
                     .frame(width: 32, height: 32)
                     .background(AppTheme.info.opacity(0.15))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                 
                 // File info
                 VStack(alignment: .leading, spacing: 2) {
@@ -293,7 +293,7 @@ struct FileResultRow: View {
                     // Path
                     Text(file.directory)
                         .font(.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
                 }
                 
@@ -306,7 +306,7 @@ struct FileResultRow: View {
                             NSWorkspace.shared.selectFile(file.path, inFileViewerRootedAtPath: "")
                         } label: {
                             Image(systemName: "folder")
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                         .buttonStyle(.borderless)
                         .help("Reveal in Finder")
@@ -316,7 +316,7 @@ struct FileResultRow: View {
                             NSPasteboard.general.setString(file.path, forType: .string)
                         } label: {
                             Image(systemName: "doc.on.doc")
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                         .buttonStyle(.borderless)
                         .help("Copy Path")
@@ -327,7 +327,7 @@ struct FileResultRow: View {
                 if let size = file.size {
                     Text(formatFileSize(size))
                         .font(.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .monospacedDigit()
                 }
             }
@@ -419,7 +419,7 @@ class FuzzyFileFinderViewModel: ObservableObject {
             isLoading = true
             
             // Use git ls-files for speed (only tracked files)
-            let shell = ShellExecutor()
+            let shell = ShellExecutor.shared
             let result = await shell.execute(
                 "git",
                 arguments: ["ls-files"],

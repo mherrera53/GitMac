@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct GitConfigView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @State private var userName = ""
     @State private var userEmail = ""
     @State private var defaultBranch = "main"
@@ -25,15 +25,15 @@ struct GitConfigView: View {
                     }
 
                 Text("These values are used for commits in repositories without local config")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 if let status = saveStatus {
                     Text(status)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
                 }
             }
 
@@ -51,7 +51,7 @@ struct GitConfigView: View {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                         Text("Fetch interval")
                             .font(DesignTokens.Typography.callout)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
 
                         DSPicker(
                             items: ["1 minute", "5 minutes", "10 minutes", "15 minutes", "30 minutes"],
@@ -106,7 +106,7 @@ struct GitConfigView: View {
     }
 
     private func loadGitConfig() async {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let nameResult = await shell.execute("git", arguments: ["config", "--global", "user.name"])
         let emailResult = await shell.execute("git", arguments: ["config", "--global", "user.email"])
         let branchResult = await shell.execute("git", arguments: ["config", "--global", "init.defaultBranch"])
@@ -126,7 +126,7 @@ struct GitConfigView: View {
     private func saveGitConfig(key: String, value: String) {
         guard !isLoading, !value.isEmpty else { return }
         Task {
-            let shell = ShellExecutor()
+            let shell = ShellExecutor.shared
             let result = await shell.execute("git", arguments: ["config", "--global", key, value])
             if result.isSuccess {
                 saveStatus = "Saved"
@@ -439,7 +439,7 @@ struct AdvancedGitConfigEditor: View {
 
     private func loadAllConfig() async {
         isLoading = true
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
 
         // Load global config
         let globalResult = await shell.execute("git", arguments: ["config", "--global", "--list"])
@@ -463,7 +463,7 @@ struct AdvancedGitConfigEditor: View {
     }
 
     private func loadRawConfig() async {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let scope = selectedScope == .global ? "--global" : "--local"
         let result = await shell.execute("git", arguments: ["config", scope, "--list"])
         if result.isSuccess {
@@ -484,7 +484,7 @@ struct AdvancedGitConfigEditor: View {
     private func addEntry() {
         let scope = selectedScope == .global ? "--global" : "--local"
         Task {
-            let shell = ShellExecutor()
+            let shell = ShellExecutor.shared
             let result = await shell.execute("git", arguments: ["config", scope, newKey, newValue])
             if result.isSuccess {
                 newKey = ""
@@ -497,7 +497,7 @@ struct AdvancedGitConfigEditor: View {
     private func saveEditedEntry(_ entry: GitConfigEntry) {
         let scope = selectedScope == .global ? "--global" : "--local"
         Task {
-            let shell = ShellExecutor()
+            let shell = ShellExecutor.shared
             let result = await shell.execute("git", arguments: ["config", scope, entry.key, editValue])
             if result.isSuccess {
                 editingEntry = nil
@@ -509,7 +509,7 @@ struct AdvancedGitConfigEditor: View {
     private func deleteEntry(_ entry: GitConfigEntry) {
         let scope = selectedScope == .global ? "--global" : "--local"
         Task {
-            let shell = ShellExecutor()
+            let shell = ShellExecutor.shared
             let _ = await shell.execute("git", arguments: ["config", scope, "--unset", entry.key])
             await loadAllConfig()
         }
@@ -517,7 +517,7 @@ struct AdvancedGitConfigEditor: View {
 
     private func saveRawConfig() async {
         // Write raw config back by parsing and setting each key
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let scope = selectedScope == .global ? "--global" : "--local"
 
         // Get the config file path and write directly
@@ -549,16 +549,16 @@ struct GitConfigEntry: Identifiable {
 // MARK: - Email Aliases View
 
 struct EmailAliasesView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @StateObject private var settings = EmailAliasSettings.shared
     @State private var newAlias = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
             Text("Add email aliases to show your avatar on commits with different emails")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             HStack {
                 DSTextField(placeholder: "Email alias (e.g. work@company.com)", text: $newAlias)
@@ -573,11 +573,11 @@ struct EmailAliasesView: View {
                 ForEach(settings.aliases, id: \.self) { alias in
                     HStack {
                         Image(systemName: "envelope")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         Text(alias)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .font(DesignTokens.Typography.body.monospaced())
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Spacer()
                         DSIconButton(iconName: "xmark.circle.fill", variant: .ghost, size: .sm) {
                             settings.removeAlias(alias)

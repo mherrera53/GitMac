@@ -18,7 +18,7 @@ struct CardStyle: ViewModifier {
         content
             .padding(10)
             .background(isHovered ? AppTheme.hover : AppTheme.backgroundSecondary)
-            .cornerRadius(cornerRadius)
+            .clipShape(.rect(cornerRadius: cornerRadius))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .stroke(isHovered ? accentColor.opacity(0.5) : AppTheme.border, lineWidth: 1)
@@ -78,11 +78,11 @@ private struct CardPreviewExample: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Hover to see border highlight")
                 .font(.system(size: 10))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .cardStyle(isHovered: $isHovered, accentColor: accentColor)
     }

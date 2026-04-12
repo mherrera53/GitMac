@@ -45,14 +45,14 @@ struct BranchComparisonView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Base")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 Button {
                     showBasePicker = true
                 } label: {
                     HStack {
                         Image(systemName: "arrow.branch")
-                            .foregroundColor(AppTheme.info)
+                            .foregroundStyle(AppTheme.info)
 
                         Text(baseBranch.isEmpty ? "Select branch..." : baseBranch)
                             .lineLimit(1)
@@ -61,12 +61,12 @@ struct BranchComparisonView: View {
                         
                         Image(systemName: "chevron.down")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(Color(nsColor: .controlBackgroundColor))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
                 .popover(isPresented: $showBasePicker) {
@@ -81,21 +81,21 @@ struct BranchComparisonView: View {
             // Comparison arrow
             Image(systemName: "arrow.left.arrow.right")
                 .font(.title3)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .padding(.top, 20)
             
             // Compare branch
             VStack(alignment: .leading, spacing: 6) {
                 Text("Compare")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 Button {
                     showComparePicker = true
                 } label: {
                     HStack {
                         Image(systemName: "arrow.branch")
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
 
                         Text(compareBranch.isEmpty ? "Select branch..." : compareBranch)
                             .lineLimit(1)
@@ -104,12 +104,12 @@ struct BranchComparisonView: View {
                         
                         Image(systemName: "chevron.down")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(Color(nsColor: .controlBackgroundColor))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
                 .popover(isPresented: $showComparePicker) {
@@ -137,7 +137,7 @@ struct BranchComparisonView: View {
                 swap(&baseBranch, &compareBranch)
             } label: {
                 Image(systemName: "arrow.up.arrow.down")
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .buttonStyle(.borderless)
             .help("Swap branches")
@@ -254,7 +254,7 @@ struct BranchComparisonView: View {
                             Text(contributor.name)
                             Spacer()
                             Text("\(contributor.commits) commits")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                         }
                     }
                 }
@@ -276,7 +276,7 @@ struct BranchComparisonView: View {
                             Spacer()
 
                             Text("\(stat.count) files")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                         }
                     }
                 }
@@ -289,15 +289,15 @@ struct BranchComparisonView: View {
         VStack(spacing: 12) {
             Image(systemName: "arrow.left.arrow.right.circle")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text("Select branches to compare")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text("Choose a base and compare branch to see differences")
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -331,7 +331,7 @@ struct BranchPickerPopover: View {
                         } label: {
                             HStack {
                                 Image(systemName: "arrow.branch")
-                                    .foregroundColor(branch.isHead ? AppTheme.success : AppTheme.info)
+                                    .foregroundStyle(branch.isHead ? AppTheme.success : AppTheme.info)
 
                                 Text(branch.name)
                                     .lineLimit(1)
@@ -340,7 +340,7 @@ struct BranchPickerPopover: View {
 
                                 if branch.isHead {
                                     Image(systemName: "checkmark")
-                                        .foregroundColor(AppTheme.success)
+                                        .foregroundStyle(AppTheme.success)
                                 }
                             }
                             .padding(.horizontal, 12)
@@ -384,21 +384,21 @@ struct ComparisonCommitRow: View {
                 HStack(spacing: 8) {
                     Text(commit.shortSHA)
                         .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     Text("•")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     Text(commit.author)
                         .font(.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     Text("•")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     Text(commit.date.formatted(.relative(presentation: .named)))
                         .font(.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
             
@@ -442,18 +442,18 @@ struct ComparisonStatCard: View {
         VStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.system(size: 32))
-                .foregroundColor(color)
+                .foregroundStyle(color)
             
             Text(value)
                 .font(.system(size: 24, weight: .bold))
             
             Text(label)
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(width: 140, height: 120)
         .background(color.opacity(0.1))
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
     }
 }
 
@@ -505,7 +505,7 @@ class BranchComparisonViewModel: ObservableObject {
     }
     
     private func loadCommits(base: String, compare: String, repoPath: String) async -> [Commit] {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let result = await shell.execute(
             "git",
             arguments: ["log", "--format=%H|%an|%ae|%ai|%s", "\(base)..\(compare)"],
@@ -541,7 +541,7 @@ class BranchComparisonViewModel: ObservableObject {
     }
     
     private func loadChangedFiles(base: String, compare: String, repoPath: String) async -> [FileStatus] {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let result = await shell.execute(
             "git",
             arguments: ["diff", "--name-status", "--numstat", base, compare],

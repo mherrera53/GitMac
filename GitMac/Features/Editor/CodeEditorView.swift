@@ -173,9 +173,9 @@ struct FileCodeEditorView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 48))
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                     Text(error)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Button("Retry") {
                         Task { await loadFile() }
                     }
@@ -203,7 +203,7 @@ struct FileCodeEditorView: View {
             // File info
             HStack(spacing: 6) {
                 Image(systemName: "doc.fill")
-                    .foregroundColor(.accentColor)
+                    .foregroundStyle(.accentColor)
                 Text(filename)
                     .font(.system(size: 13, weight: .medium))
                     .lineLimit(1)
@@ -215,7 +215,7 @@ struct FileCodeEditorView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(Color.accentColor.opacity(0.2))
-                .cornerRadius(4)
+                .clipShape(.rect(cornerRadius: 4))
 
             // Unsaved indicator
             if hasChanges {
@@ -225,7 +225,7 @@ struct FileCodeEditorView: View {
                         .frame(width: 8, height: 8)
                     Text("Unsaved")
                         .font(.system(size: 11))
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                 }
             }
 
@@ -247,8 +247,8 @@ struct FileCodeEditorView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(hasChanges ? Color.accentColor : Color.gray.opacity(0.3))
-                .foregroundColor(hasChanges ? .white : .gray)
-                .cornerRadius(6)
+                .foregroundStyle(hasChanges ? .white : .gray)
+                .clipShape(.rect(cornerRadius: 6))
             }
             .buttonStyle(.plain)
             .disabled(!hasChanges || isSaving)
@@ -329,7 +329,7 @@ struct EditorSheet: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(Color.accentColor.opacity(0.2))
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                 }
 
                 Spacer()
@@ -351,7 +351,7 @@ struct EditorSheet: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -399,7 +399,7 @@ struct MarkdownPreviewSheet: View {
             // Header
             HStack {
                 Image(systemName: "eye")
-                    .foregroundColor(.accentColor)
+                    .foregroundStyle(.accentColor)
                 Text("Preview: \(filename)")
                     .font(.headline)
 
@@ -410,7 +410,7 @@ struct MarkdownPreviewSheet: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
             }
