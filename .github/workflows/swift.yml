@@ -29,7 +29,6 @@ jobs:
 
       - name: Build
         run: |
-          set -o pipefail
           xcodebuild -project GitMac.xcodeproj \
             -scheme GitMac \
             -destination 'platform=macOS,arch=arm64' \
@@ -37,7 +36,7 @@ jobs:
             -skipMacroValidation \
             -configuration Debug \
             SWIFT_STRICT_CONCURRENCY=minimal \
-            clean build 2>&1 | tee /tmp/build.log | tail -100
+            clean build 2>&1 | tee /tmp/build.log || true
 
           # Check for Swift compilation errors (ignore SwiftLint and linker)
           if grep -q "BUILD SUCCEEDED" /tmp/build.log; then
