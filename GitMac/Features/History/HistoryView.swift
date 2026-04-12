@@ -112,9 +112,7 @@ class HistoryViewModel: ObservableObject {
                     let dateStr = parts[3]
                     let message = parts[4...].joined(separator: "|")
 
-                    let formatter = DateFormatter()
-                    formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
-                    let date = formatter.date(from: dateStr) ?? Date()
+                    let date = Self.gitDateFormatter.date(from: dateStr) ?? Date()
 
                     return Commit(
                         sha: sha,

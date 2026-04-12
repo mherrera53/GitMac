@@ -8,14 +8,20 @@
 import SwiftUI
 
 struct ContributionGraphView: View {
+    private static let monthFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM"
+        return f
+    }()
+
     let contributionDays: [ContributionDay]
     let weeks: Int
-    
+
     init(contributionDays: [ContributionDay], weeks: Int = 52) {
         self.contributionDays = contributionDays
         self.weeks = weeks
     }
-    
+
     private let cellSize: CGFloat = 10
     private let cellSpacing: CGFloat = 2
     private let daysInWeek = 7
@@ -168,9 +174,7 @@ struct ContributionGraphView: View {
     // MARK: - Helpers
     
     private func monthName(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM"
-        return formatter.string(from: date)
+        Self.monthFormatter.string(from: date)
     }
     
     private func dayName(_ day: Int) -> String {
@@ -194,10 +198,16 @@ struct ContributionGraphView: View {
 // MARK: - Contribution Cell
 
 struct ContributionCell: View {
+    private static let tooltipDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        return f
+    }()
+
     let intensity: Double
     let commitCount: Int
     let date: Date?
-    
+
     @State private var isHovered = false
     
     var body: some View {
