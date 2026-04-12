@@ -48,7 +48,7 @@ jobs:
           CODE_SIGN_IDENTITY="-" \
           CODE_SIGN_STYLE=Manual \
           DEVELOPMENT_TEAM="" \
-          SWIFT_STRICT_CONCURRENCY=targeted
+          SWIFT_STRICT_CONCURRENCY=minimal
 
         echo "✅ Build completed successfully"
 
