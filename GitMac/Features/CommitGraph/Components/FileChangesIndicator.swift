@@ -20,32 +20,43 @@ struct FileChangesIndicator: View {
         let theme = Color.Theme(themeManager.colors)
 
         return HStack(spacing: DesignTokens.Spacing.xs) {
-            // File count icon
-            HStack(spacing: DesignTokens.Spacing.xxs) {
+            // File count with icon -- always show count
+            HStack(spacing: 2) {
                 Image(systemName: "doc.fill")
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(theme.textMuted)
 
-                if filesChanged > 0 {
-                    Text("\(filesChanged)")
-                        .font(DesignTokens.Typography.caption2)
-                        .foregroundStyle(theme.text)
-                }
+                Text("\(filesChanged)")
+                    .font(DesignTokens.Typography.caption2.monospacedDigit())
+                    .foregroundStyle(theme.text)
             }
 
-            if !compact && (additions > 0 || deletions > 0) {
+            // Compact: show mini +/- counts inline
+            if compact {
+                if additions > 0 || deletions > 0 {
+                    HStack(spacing: 2) {
+                        if additions > 0 {
+                            Text("+\(additions)")
+                                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                .foregroundStyle(AppTheme.diffAddition)
+                        }
+                        if deletions > 0 {
+                            Text("-\(deletions)")
+                                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                .foregroundStyle(AppTheme.diffDeletion)
+                        }
+                    }
+                }
+            } else if additions > 0 || deletions > 0 {
                 // Visual bar (proportional to changes)
                 GeometryReader { geo in
                     HStack(spacing: 1) {
-                        // Green bar for additions
                         if additions > 0 {
                             Rectangle()
                                 .fill(AppTheme.diffAddition)
                                 .frame(width: barWidth(for: additions, in: geo.size.width))
                                 .frame(height: 8)
                         }
-
-                        // Red bar for deletions
                         if deletions > 0 {
                             Rectangle()
                                 .fill(AppTheme.diffDeletion)
@@ -56,9 +67,7 @@ struct FileChangesIndicator: View {
                 }
                 .frame(width: 60, height: 8)
                 .clipShape(.rect(cornerRadius: 2))
-            }
 
-            if !compact {
                 // Text indicators
                 HStack(spacing: DesignTokens.Spacing.xxs) {
                     if additions > 0 {
@@ -66,7 +75,6 @@ struct FileChangesIndicator: View {
                             .font(DesignTokens.Typography.caption2.monospacedDigit())
                             .foregroundStyle(AppTheme.diffAddition)
                     }
-
                     if deletions > 0 {
                         Text("-\(deletions)")
                             .font(DesignTokens.Typography.caption2.monospacedDigit())

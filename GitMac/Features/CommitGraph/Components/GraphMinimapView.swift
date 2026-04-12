@@ -9,18 +9,27 @@ struct GraphMinimapView: View {
     @EnvironmentObject private var themeManager: ThemeManager
     @State private var isDragging = false
 
+    private let minimapWidth: CGFloat = 80
+
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
 
         return VStack(spacing: 0) {
             // Header
             HStack {
+                Image(systemName: "map.fill")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(theme.textMuted)
                 Text("OVERVIEW")
                     .font(DesignTokens.Typography.caption2)
                     .fontWeight(.semibold)
                     .foregroundStyle(theme.text)
 
                 Spacer()
+
+                Text("\(nodes.count)")
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundStyle(theme.textMuted)
             }
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .padding(.vertical, DesignTokens.Spacing.xs)
@@ -34,18 +43,33 @@ struct GraphMinimapView: View {
                     // Background
                     theme.background
 
-                    // Commit dots
+                    // Branch lines + commit dots
                     Canvas { ctx, size in
-                        let scale = size.height / max(totalHeight, 1)
+                        let totalCount = max(nodes.count, 1)
+                        let rowHeight = size.height / CGFloat(totalCount)
+                        let maxLane = (nodes.map(\.lane).max() ?? 0) + 1
+                        let laneWidth = min(size.width / CGFloat(max(maxLane, 1)), 12.0)
 
+                        // Draw vertical lane lines (faint)
+                        for lane in 0..<maxLane {
+                            let x = CGFloat(lane) * laneWidth + laneWidth / 2
+                            let color = Color.branchColor(lane).opacity(0.15)
+                            let linePath = Path { p in
+                                p.move(to: CGPoint(x: x, y: 0))
+                                p.addLine(to: CGPoint(x: x, y: size.height))
+                            }
+                            ctx.stroke(linePath, with: .color(color), lineWidth: 0.5)
+                        }
+
+                        // Draw commit dots
                         for (index, node) in nodes.enumerated() {
-                            let y = CGFloat(index) * 3 * scale // Simplified positioning
-                            let x = CGFloat(node.lane) * 4 + 4
+                            let y = CGFloat(index) * rowHeight + rowHeight / 2
+                            let x = CGFloat(node.lane) * laneWidth + laneWidth / 2
 
-                            let dotSize: CGFloat = 2
+                            let dotSize: CGFloat = node.isMerge ? 3 : 2
                             let dotRect = CGRect(
-                                x: x - dotSize/2,
-                                y: y,
+                                x: x - dotSize / 2,
+                                y: y - dotSize / 2,
                                 width: dotSize,
                                 height: dotSize
                             )
@@ -56,17 +80,18 @@ struct GraphMinimapView: View {
                     }
 
                     // Visible viewport indicator
-                    Rectangle()
-                        .fill(theme.selection.opacity(0.3))
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(AppTheme.accent.opacity(isDragging ? 0.2 : 0.1))
                         .overlay(
-                            Rectangle()
-                                .stroke(AppTheme.accent, lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 3)
+                                .stroke(AppTheme.accent.opacity(isDragging ? 0.8 : 0.5), lineWidth: 1.5)
                         )
                         .frame(
-                            width: geo.size.width,
-                            height: viewportHeight(in: geo.size)
+                            width: geo.size.width - 4,
+                            height: max(viewportHeight(in: geo.size), 12)
                         )
-                        .offset(y: viewportOffset(in: geo.size))
+                        .offset(x: 2, y: viewportOffset(in: geo.size))
+                        .animation(.easeOut(duration: 0.1), value: visibleRange.lowerBound)
                 }
                 .gesture(
                     DragGesture()
@@ -84,9 +109,9 @@ struct GraphMinimapView: View {
                     onSeek(newIndex)
                 }
             }
-            .frame(width: 60)
+            .frame(width: minimapWidth)
         }
-        .frame(width: 60)
+        .frame(width: minimapWidth)
         .background(theme.background)
     }
 
