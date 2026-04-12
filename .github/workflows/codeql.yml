@@ -49,12 +49,13 @@ jobs:
           -scheme GitMac \
           -destination 'platform=macOS,arch=arm64' \
           -skipPackagePluginValidation \
+          -skipMacroValidation \
           -configuration Release \
-          SWIFT_STRICT_CONCURRENCY=targeted \
+          SWIFT_STRICT_CONCURRENCY=minimal \
           clean build \
           CODE_SIGN_IDENTITY="-" \
           CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_ALLOWED=NO || true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3

@@ -431,47 +431,6 @@ struct AdvancedHunkHeaderView: View {
     }
 }
 
-// MARK: - Advanced Features
-
-/// Inline change highlighting within lines
-struct InlineChangeHighlighter {
-    /// Highlight character-level differences between two strings
-    static func highlightDifferences(old: String, new: String) -> (AttributedString, AttributedString) {
-        let oldChars = Array(old)
-        let newChars = Array(new)
-        
-        // Use LCS (Longest Common Subsequence) for better diff
-        _ = longestCommonSubsequence(oldChars, newChars)
-
-        let oldAttr = AttributedString(old)
-        let newAttr = AttributedString(new)
-        
-        // Highlight differences
-        // TODO: Implement character-level highlighting
-        
-        return (oldAttr, newAttr)
-    }
-    
-    /// Compute Longest Common Subsequence for character-level diff
-    private static func longestCommonSubsequence<T: Equatable>(_ a: [T], _ b: [T]) -> [[Int]] {
-        let m = a.count
-        let n = b.count
-        var lcs = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
-        
-        for i in 1...m {
-            for j in 1...n {
-                if a[i-1] == b[j-1] {
-                    lcs[i][j] = lcs[i-1][j-1] + 1
-                } else {
-                    lcs[i][j] = max(lcs[i-1][j], lcs[i][j-1])
-                }
-            }
-        }
-        
-        return lcs
-    }
-}
-
 // MARK: - Performance Optimizations
 
 /// Virtual scrolling for large diffs (render only visible lines)

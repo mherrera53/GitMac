@@ -16,10 +16,19 @@ FRAMEWORK_PATH="$FRAMEWORK_DIR/$FRAMEWORK_NAME"
 REPO="mherrera53/GitMac"
 RELEASE_TAG="dependencies"
 
-# Check if the framework already exists
-if [ -d "$FRAMEWORK_PATH" ]; then
-    echo -e "${GREEN}✓ GhosttyKit framework already exists${NC}"
-    exit 0
+# Check if the framework already exists AND has the required files
+if [ -d "$FRAMEWORK_PATH" ] && \
+   [ -f "$FRAMEWORK_PATH/Info.plist" ] && \
+   [ -f "$FRAMEWORK_PATH/macos-arm64_x86_64/libghostty.a" ] && \
+   [ -f "$FRAMEWORK_PATH/macos-arm64_x86_64/Headers/ghostty.h" ]; then
+    echo -e "${GREEN}[OK] GhosttyKit framework already exists and is complete${NC}"
+    # Verify the library contains arm64
+    if lipo -info "$FRAMEWORK_PATH/macos-arm64_x86_64/libghostty.a" 2>/dev/null | grep -q "arm64"; then
+        echo -e "${GREEN}[OK] Library contains arm64 architecture${NC}"
+        exit 0
+    else
+        echo -e "${YELLOW}[!] Library missing arm64 - will re-download${NC}"
+    fi
 fi
 
 echo -e "${YELLOW}Downloading GhosttyKit framework from GitHub release...${NC}"
@@ -44,7 +53,7 @@ fi
 # Extract the framework
 echo -e "${YELLOW}Extracting framework...${NC}"
 cd "$FRAMEWORK_DIR"
-unzip -q "$FRAMEWORK_NAME.zip"
+unzip -o -q "$FRAMEWORK_NAME.zip"
 rm "$FRAMEWORK_NAME.zip"
 cd ..
 

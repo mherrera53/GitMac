@@ -66,7 +66,7 @@ class SyntaxHighlighter {
     }
 
     func highlight(_ code: String, language: ProgrammingLanguage) -> AttributedString {
-        let cacheKey = "\(language.rawValue):\(code.hashValue)"
+        let cacheKey = "\(language.rawValue):\(code.count):\(code.prefix(200))"
         
         // Check cache
         if let cached = getCached(cacheKey) {
