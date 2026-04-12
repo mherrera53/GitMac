@@ -9,7 +9,7 @@ struct GraphMinimapView: View {
     @EnvironmentObject private var themeManager: ThemeManager
     @State private var isDragging = false
 
-    private let minimapWidth: CGFloat = 80
+    private let minimapWidth: CGFloat = 50
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -37,37 +37,22 @@ struct GraphMinimapView: View {
                     // Background
                     theme.background
 
-                    // Branch lines + commit dots (uses lightweight minimapNodes)
+                    // Compact minimap: collapse lanes to max 5 columns, tiny dots
                     Canvas { ctx, size in
                         let totalCount = max(minimapNodes.count, 1)
                         let rowHeight = size.height / CGFloat(totalCount)
-                        let maxLane = (minimapNodes.map(\.lane).max() ?? 0) + 1
-                        let laneWidth = min(size.width / CGFloat(max(maxLane, 1)), 12.0)
+                        let maxVisualLanes = 5
+                        let padding: CGFloat = 3
+                        let usableWidth = size.width - padding * 2
+                        let laneWidth = usableWidth / CGFloat(maxVisualLanes)
 
-                        // Draw vertical lane lines (faint)
-                        for lane in 0..<maxLane {
-                            let x = CGFloat(lane) * laneWidth + laneWidth / 2
-                            let color = Color.branchColor(lane).opacity(0.15)
-                            let linePath = Path { p in
-                                p.move(to: CGPoint(x: x, y: 0))
-                                p.addLine(to: CGPoint(x: x, y: size.height))
-                            }
-                            ctx.stroke(linePath, with: .color(color), lineWidth: 0.5)
-                        }
-
-                        // Draw loaded region indicator
-                        if loadedCount < totalCount {
-                            let loadedHeight = CGFloat(loadedCount) * rowHeight
-                            let unloadedRect = CGRect(x: 0, y: loadedHeight, width: size.width, height: size.height - loadedHeight)
-                            ctx.fill(Rectangle().path(in: unloadedRect), with: .color(Color.gray.opacity(0.05)))
-                        }
-
-                        // Draw commit dots
+                        // Draw commit dots (collapsed to max 5 lanes)
                         for node in minimapNodes {
                             let y = CGFloat(node.index) * rowHeight + rowHeight / 2
-                            let x = CGFloat(node.lane) * laneWidth + laneWidth / 2
+                            let visualLane = node.lane % maxVisualLanes
+                            let x = padding + CGFloat(visualLane) * laneWidth + laneWidth / 2
 
-                            let dotSize: CGFloat = node.isMerge ? 3 : 2
+                            let dotSize: CGFloat = node.isMerge ? 1.5 : 1.0
                             let dotRect = CGRect(
                                 x: x - dotSize / 2,
                                 y: y - dotSize / 2,
@@ -76,23 +61,23 @@ struct GraphMinimapView: View {
                             )
 
                             let color = Color.branchColor(node.lane)
-                            ctx.fill(Circle().path(in: dotRect), with: .color(color))
+                            ctx.fill(Circle().path(in: dotRect), with: .color(color.opacity(0.7)))
                         }
                     }
 
-                    // Visible viewport indicator
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(AppTheme.accent.opacity(isDragging ? 0.2 : 0.1))
+                    // Visible viewport indicator -- prominent
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.white.opacity(isDragging ? 0.12 : 0.06))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 3)
-                                .stroke(AppTheme.accent.opacity(isDragging ? 0.8 : 0.5), lineWidth: 1.5)
+                            RoundedRectangle(cornerRadius: 2)
+                                .stroke(Color.white.opacity(isDragging ? 0.6 : 0.35), lineWidth: 1)
                         )
                         .frame(
-                            width: geo.size.width - 4,
-                            height: max(viewportHeight(in: geo.size), 12)
+                            width: geo.size.width - 2,
+                            height: max(viewportHeight(in: geo.size), 8)
                         )
-                        .offset(x: 2, y: viewportOffset(in: geo.size))
-                        .animation(.easeOut(duration: 0.1), value: visibleRange.lowerBound)
+                        .offset(x: 1, y: viewportOffset(in: geo.size))
+                        .animation(.easeOut(duration: 0.08), value: visibleRange.lowerBound)
                 }
                 .gesture(
                     DragGesture()
