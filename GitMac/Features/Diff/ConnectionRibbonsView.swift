@@ -257,15 +257,7 @@ struct ConnectionRibbonsView: View {
         )
         band.closeSubpath()
 
-        let gradient = Gradient(stops: [
-            .init(color: color.opacity(0.0), location: 0.0),
-            .init(color: color.opacity(0.16), location: 0.10),
-            .init(color: color.opacity(0.28), location: 0.30),
-            .init(color: color.opacity(0.34), location: 0.50),
-            .init(color: color.opacity(0.28), location: 0.70),
-            .init(color: color.opacity(0.16), location: 0.90),
-            .init(color: color.opacity(0.0), location: 1.0)
-        ])
+        // Transition gradient: deletion color (left) -> addition color (right)
 
         // Transition gradient: deletion color (left) -> addition color (right)
         let leftColor = AppTheme.diffDeletion

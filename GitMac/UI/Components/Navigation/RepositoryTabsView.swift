@@ -234,11 +234,11 @@ struct TabDropDelegate: DropDelegate {
 
     func performDrop(info: DropInfo) -> Bool {
         guard let itemProvider = info.itemProviders(for: [.text]).first else { return false }
-        
+        let targetId = item.id
         itemProvider.loadObject(ofClass: NSString.self) { string, error in
             guard let uuidString = string as? String,
                   let sourceId = UUID(uuidString: uuidString),
-                  sourceId != item.id else { return }
+                  sourceId != targetId else { return }
             
             DispatchQueue.main.async {
                 withAnimation {

@@ -74,7 +74,7 @@ class EnhancedTerminalTabManager: ObservableObject {
 }
 
 struct EnhancedTerminalPanel: View {
-    nonisolated(unsafe) private static let sessionDateFormatter: DateFormatter = {
+    private static let sessionDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .short
         f.timeStyle = .short

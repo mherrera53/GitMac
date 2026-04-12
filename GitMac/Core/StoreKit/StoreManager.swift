@@ -165,7 +165,7 @@ class StoreManager: ObservableObject {
 // MARK: - Subscription Status
 
 enum SubscriptionStatus {
-    nonisolated(unsafe) private static let mediumDateFormatter: DateFormatter = {
+    private static let mediumDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
         return f

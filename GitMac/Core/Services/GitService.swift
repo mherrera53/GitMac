@@ -108,7 +108,7 @@ class GitService: ObservableObject {
 
     /// Execute operation with watcher temporarily suspended
     /// Prevents race conditions between manual refresh and file watcher
-    func withSuspendedWatcher<T>(_ operation: () async throws -> T) async rethrows -> T {
+    func withSuspendedWatcher<T: Sendable>(_ operation: @Sendable () async throws -> T) async rethrows -> T {
         isManualOperationInProgress = true
         defer { isManualOperationInProgress = false }
         return try await operation()
@@ -228,25 +228,20 @@ class GitService: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        var checkedOutName = branch.name
+        let checkedOutName = branch.isRemote ? branch.displayName : branch.name
         try await withSuspendedWatcher {
             if branch.isRemote {
-                // Remote branch: create local tracking branch
-                // origin/feature/foo -> feature/foo
-                let localName = branch.displayName
                 let shell = ShellExecutor.shared
                 let result = await shell.execute(
                     "git",
-                    arguments: ["checkout", "-b", localName, "--track", branch.name],
+                    arguments: ["checkout", "-b", checkedOutName, "--track", branch.name],
                     workingDirectory: path
                 )
                 if result.exitCode != 0 {
                     throw GitServiceError.checkoutFailed(result.stderr)
                 }
-                checkedOutName = localName
             } else {
                 try await engine.checkout(branch.name, at: path)
-                checkedOutName = branch.name
             }
             try await refresh()
         }

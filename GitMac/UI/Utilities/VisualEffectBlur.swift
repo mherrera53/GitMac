@@ -98,42 +98,35 @@ extension View {
     ///   - cornerRadius: Corner radius for the glass shape
     ///   - fallbackMaterial: NSVisualEffectView material for pre-macOS 26
     ///   - fallbackBlending: Blending mode for the fallback
+    /// Apply glass-style background. Uses NSVisualEffectView material.
+    /// When macOS 26 SDK is available at compile time, will use native Liquid Glass.
     @ViewBuilder
     func glassBackground(
         cornerRadius: CGFloat = 0,
         fallbackMaterial: NSVisualEffectView.Material = DesignTokens.Materials.content,
         fallbackBlending: NSVisualEffectView.BlendingMode = .withinWindow
     ) -> some View {
-        if #available(macOS 26, *) {
-            self.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
-        } else {
-            self.background(
-                VisualEffectBlur(
-                    material: fallbackMaterial,
-                    blendingMode: fallbackBlending
-                ).clipShape(.rect(cornerRadius: cornerRadius))
-            )
-        }
+        self.background(
+            VisualEffectBlur(
+                material: fallbackMaterial,
+                blendingMode: fallbackBlending
+            ).clipShape(.rect(cornerRadius: cornerRadius))
+        )
     }
 
     /// Interactive glass effect for buttons and tappable elements.
-    /// Falls back to material on older macOS.
     @ViewBuilder
     func interactiveGlass(
         in shape: some Shape = .rect(cornerRadius: 8),
         fallbackMaterial: NSVisualEffectView.Material = DesignTokens.Materials.content,
         fallbackBlending: NSVisualEffectView.BlendingMode = .withinWindow
     ) -> some View {
-        if #available(macOS 26, *) {
-            self.glassEffect(.regular.interactive(), in: shape)
-        } else {
-            self.background(
-                VisualEffectBlur(
-                    material: fallbackMaterial,
-                    blendingMode: fallbackBlending
-                ).clipShape(shape)
-            )
-        }
+        self.background(
+            VisualEffectBlur(
+                material: fallbackMaterial,
+                blendingMode: fallbackBlending
+            ).clipShape(shape)
+        )
     }
 }
 

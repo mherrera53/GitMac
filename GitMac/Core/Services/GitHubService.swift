@@ -6,7 +6,7 @@ private let githubLog = OSLog(subsystem: "com.gitmac", category: "github")
 /// GitHub API service with caching, ETag support, and rate limit handling
 actor GitHubService {
     nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
-    nonisolated(unsafe) private static let timeOnlyFormatter: DateFormatter = {
+    private static let timeOnlyFormatter: DateFormatter = {
         let f = DateFormatter()
         f.timeStyle = .short
         return f
@@ -925,7 +925,7 @@ enum ReviewEvent: String {
 // MARK: - Errors
 
 enum GitHubError: LocalizedError {
-    nonisolated(unsafe) private static let timeOnlyFormatter: DateFormatter = {
+    private static let timeOnlyFormatter: DateFormatter = {
         let f = DateFormatter()
         f.timeStyle = .short
         return f

@@ -165,7 +165,7 @@ protocol DSLoadableViewModel: ObservableObject {
 
 extension DSLoadableViewModel {
     /// Performs async load and updates state automatically
-    func performLoad(_ operation: () async throws -> DataType) async {
+    func performLoad(_ operation: @Sendable () async throws -> DataType) async {
         loadingState = .loading
 
         do {
@@ -218,7 +218,7 @@ class DSTaskStateManager<T>: ObservableObject {
     private var task: Task<Void, Never>?
 
     /// Executes the operation and updates state
-    func execute(_ operation: @escaping () async throws -> T) {
+    func execute(_ operation: @Sendable @escaping () async throws -> T) {
         task?.cancel()
 
         task = Task {
@@ -238,7 +238,7 @@ class DSTaskStateManager<T>: ObservableObject {
     }
 
     /// Retries the last operation
-    func retry(_ operation: @escaping () async throws -> T) {
+    func retry(_ operation: @Sendable @escaping () async throws -> T) {
         execute(operation)
     }
 

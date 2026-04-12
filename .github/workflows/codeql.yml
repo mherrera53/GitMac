@@ -47,9 +47,10 @@ jobs:
       run: |
         xcodebuild -project GitMac.xcodeproj \
           -scheme GitMac \
-          -destination 'platform=macOS' \
+          -destination 'platform=macOS,arch=arm64' \
           -skipPackagePluginValidation \
           -configuration Release \
+          SWIFT_STRICT_CONCURRENCY=targeted \
           clean build \
           CODE_SIGN_IDENTITY="-" \
           CODE_SIGNING_REQUIRED=NO \
