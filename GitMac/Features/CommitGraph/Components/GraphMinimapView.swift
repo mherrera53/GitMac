@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct GraphMinimapView: View {
-    let nodes: [GraphNode]
+    let minimapNodes: [MinimapCommitNode]
+    let loadedCount: Int
     let visibleRange: ClosedRange<Int>
-    let totalHeight: CGFloat
     let onSeek: (Int) -> Void
 
     @EnvironmentObject private var themeManager: ThemeManager
@@ -16,22 +16,16 @@ struct GraphMinimapView: View {
 
         return VStack(spacing: 0) {
             // Header
-            HStack {
+            HStack(spacing: 3) {
                 Image(systemName: "map.fill")
-                    .font(.system(size: 9, weight: .medium))
+                    .font(.system(size: 8))
                     .foregroundStyle(theme.textMuted)
-                Text("OVERVIEW")
-                    .font(DesignTokens.Typography.caption2)
-                    .fontWeight(.semibold)
+                Text("\(minimapNodes.count)")
+                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
                     .foregroundStyle(theme.text)
-
-                Spacer()
-
-                Text("\(nodes.count)")
-                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                    .foregroundStyle(theme.textMuted)
+                    .lineLimit(1)
             }
-            .padding(.horizontal, DesignTokens.Spacing.sm)
+            .frame(maxWidth: .infinity)
             .padding(.vertical, DesignTokens.Spacing.xs)
             .background(theme.backgroundSecondary)
 
@@ -43,11 +37,11 @@ struct GraphMinimapView: View {
                     // Background
                     theme.background
 
-                    // Branch lines + commit dots
+                    // Branch lines + commit dots (uses lightweight minimapNodes)
                     Canvas { ctx, size in
-                        let totalCount = max(nodes.count, 1)
+                        let totalCount = max(minimapNodes.count, 1)
                         let rowHeight = size.height / CGFloat(totalCount)
-                        let maxLane = (nodes.map(\.lane).max() ?? 0) + 1
+                        let maxLane = (minimapNodes.map(\.lane).max() ?? 0) + 1
                         let laneWidth = min(size.width / CGFloat(max(maxLane, 1)), 12.0)
 
                         // Draw vertical lane lines (faint)
@@ -61,9 +55,16 @@ struct GraphMinimapView: View {
                             ctx.stroke(linePath, with: .color(color), lineWidth: 0.5)
                         }
 
+                        // Draw loaded region indicator
+                        if loadedCount < totalCount {
+                            let loadedHeight = CGFloat(loadedCount) * rowHeight
+                            let unloadedRect = CGRect(x: 0, y: loadedHeight, width: size.width, height: size.height - loadedHeight)
+                            ctx.fill(Rectangle().path(in: unloadedRect), with: .color(Color.gray.opacity(0.05)))
+                        }
+
                         // Draw commit dots
-                        for (index, node) in nodes.enumerated() {
-                            let y = CGFloat(index) * rowHeight + rowHeight / 2
+                        for node in minimapNodes {
+                            let y = CGFloat(node.index) * rowHeight + rowHeight / 2
                             let x = CGFloat(node.lane) * laneWidth + laneWidth / 2
 
                             let dotSize: CGFloat = node.isMerge ? 3 : 2
@@ -117,17 +118,17 @@ struct GraphMinimapView: View {
 
     private func viewportHeight(in size: CGSize) -> CGFloat {
         let visibleCount = visibleRange.upperBound - visibleRange.lowerBound + 1
-        let totalCount = max(nodes.count, 1)
+        let totalCount = max(minimapNodes.count, 1)
         return size.height * CGFloat(visibleCount) / CGFloat(totalCount)
     }
 
     private func viewportOffset(in size: CGSize) -> CGFloat {
-        let totalCount = max(nodes.count, 1)
+        let totalCount = max(minimapNodes.count, 1)
         return size.height * CGFloat(visibleRange.lowerBound) / CGFloat(totalCount)
     }
 
     private func indexFromY(_ y: CGFloat, in size: CGSize) -> Int {
-        let totalCount = nodes.count
+        let totalCount = minimapNodes.count
         let ratio = y / size.height
         let index = Int(ratio * CGFloat(totalCount))
         return max(0, min(index, totalCount - 1))

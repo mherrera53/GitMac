@@ -16,3 +16,10 @@ struct GraphNode: Identifiable {
     var isMerge: Bool { commit.parentSHAs.count > 1 }
     var shortSha: String { String(commit.sha.prefix(7)) }
 }
+
+/// Lightweight node for minimap rendering (no commit data, just position)
+struct MinimapCommitNode {
+    let index: Int
+    let lane: Int
+    let isMerge: Bool
+}

@@ -126,21 +126,25 @@ struct CommitGraphView: View {
                     Divider()
 
                     GraphMinimapView(
-                        nodes: vm.timelineItems.compactMap { item in
-                            if case .commit(let node) = item {
-                                return node
-                            }
-                            return nil
-                        },
+                        minimapNodes: vm.minimapNodes,
+                        loadedCount: vm.timelineItems.count,
                         visibleRange: visibleMinIndex...max(visibleMaxIndex, visibleMinIndex),
-                        totalHeight: CGFloat(vm.timelineItems.count * 30),
                         onSeek: { index in
-                            // Scroll to the target index
-                            scrollToIndex = index
-                            if index < vm.timelineItems.count,
-                               case .commit(let node) = vm.timelineItems[index] {
-                                selectedIds = [node.commit.sha]
-                                lastSelectedId = node.commit.sha
+                            // If clicking beyond loaded data, load more first
+                            if index >= vm.timelineItems.count {
+                                Task {
+                                    await vm.loadUpTo(index: index)
+                                    // After loading, scroll to target
+                                    if index < vm.timelineItems.count {
+                                        scrollToIndex = index
+                                    }
+                                }
+                            } else {
+                                scrollToIndex = index
+                                if case .commit(let node) = vm.timelineItems[index] {
+                                    selectedIds = [node.commit.sha]
+                                    lastSelectedId = node.commit.sha
+                                }
                             }
                         }
                     )
