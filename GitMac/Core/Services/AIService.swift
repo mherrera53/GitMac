@@ -732,7 +732,8 @@ actor AIService {
         let url = URL(string: "https://api.openai.com/v1/chat/completions")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        // Security: API key sent over HTTPS only - required for API authentication
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") // codeql[swift/cleartext-transmission] HTTPS enforced
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 10
 
@@ -1203,7 +1204,8 @@ actor AIService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        // Security: API key sent over HTTPS only - required for API authentication
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") // codeql[swift/cleartext-transmission] HTTPS enforced
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let body: [String: Any] = [

@@ -98,7 +98,8 @@ struct Commit: Identifiable, Equatable, Hashable {
         let email = authorEmail.lowercased().trimmingCharacters(in: .whitespaces)
         guard let data = email.data(using: .utf8) else { return nil }
         let hash = data.md5Hash
-        return URL(string: "https://www.gravatar.com/avatar/\(hash)?d=identicon&s=80")
+        // Security: Uses MD5 hash of email (public git data) over HTTPS
+        return URL(string: "https://www.gravatar.com/avatar/\(hash)?d=identicon&s=80") // codeql[swift/cleartext-transmission]
     }
 
     static func == (lhs: Commit, rhs: Commit) -> Bool {

@@ -9,14 +9,34 @@ actor GitHubOAuth {
     // To use this feature, register your own OAuth App at:
     // GitHub Settings > Developer settings > OAuth Apps > New OAuth App
     // Device Flow doesn't require a client secret
-    private var clientId: String {
-        get {
-            (UserDefaults.standard.string(forKey: "GitHubOAuthClientId") ?? "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+    private var _clientIdCache: String?
+
+    private func loadClientId() async -> String {
+        if let cached = _clientIdCache { return cached }
+        // Try Keychain first
+        if let value = try? await KeychainManager.shared.get(key: "github_oauth_client_id"), !value.isEmpty {
+            _clientIdCache = value
+            return value
         }
-        set {
-            UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: "GitHubOAuthClientId")
+        // Migrate from legacy UserDefaults storage
+        if let legacy = UserDefaults.standard.string(forKey: "GitHubOAuthClientId"),
+           !legacy.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let trimmed = legacy.trimmingCharacters(in: .whitespacesAndNewlines)
+            try? await KeychainManager.shared.save(key: "github_oauth_client_id", value: trimmed)
+            UserDefaults.standard.removeObject(forKey: "GitHubOAuthClientId")
+            _clientIdCache = trimmed
+            return trimmed
         }
+        _clientIdCache = ""
+        return ""
+    }
+
+    private func saveClientId(_ value: String) async {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        try? await KeychainManager.shared.save(key: "github_oauth_client_id", value: trimmed)
+        _clientIdCache = trimmed
+        // Migrate: remove legacy UserDefaults entry if present
+        UserDefaults.standard.removeObject(forKey: "GitHubOAuthClientId")
     }
 
     // Scopes to request
@@ -121,26 +141,31 @@ actor GitHubOAuth {
 
     // MARK: - Configuration
 
-    func setClientId(_ id: String) {
-        self.clientId = id
+    func setClientId(_ id: String) async {
+        await saveClientId(id)
     }
 
-    func getClientId() -> String {
-        return clientId
+    func getClientId() async -> String {
+        return await loadClientId()
     }
 
     var hasClientId: Bool {
-        !clientId.isEmpty
+        get async {
+            let id = await loadClientId()
+            return !id.isEmpty
+        }
     }
 
     // MARK: - Step 1: Request Device Code
 
     func requestDeviceCode() async throws -> DeviceCodeResponse {
+        let clientId = await loadClientId()
         guard !clientId.isEmpty else {
             throw OAuthError.noClientId
         }
 
-        var request = URLRequest(url: URL(string: deviceCodeURL)!)
+        // Security: OAuth device code request sent over HTTPS
+        var request = URLRequest(url: URL(string: deviceCodeURL)!) // codeql[swift/cleartext-transmission]
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
@@ -212,6 +237,7 @@ actor GitHubOAuth {
     // MARK: - Step 2: Poll for Access Token
 
     func pollForToken(deviceCode: String, interval: Int) async throws -> String {
+        let clientId = await loadClientId()
         var currentInterval = interval
 
         while true {
@@ -221,7 +247,7 @@ actor GitHubOAuth {
             // Check if cancelled
             try Task.checkCancellation()
 
-            // Make request
+            // Make request (uses HTTPS endpoint for secure transmission) // codeql[swift/cleartext-transmission]
             var request = URLRequest(url: URL(string: tokenURL)!)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Accept")

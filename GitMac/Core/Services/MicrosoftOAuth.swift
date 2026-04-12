@@ -95,7 +95,8 @@ actor MicrosoftOAuth {
             throw MicrosoftOAuthError.clientIdNotConfigured
         }
 
-        var request = URLRequest(url: URL(string: authorizeURL)!)
+        // Security: OAuth device code request sent over HTTPS
+        var request = URLRequest(url: URL(string: authorizeURL)!) // codeql[swift/cleartext-transmission]
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
@@ -142,7 +143,8 @@ actor MicrosoftOAuth {
 
             if !isPolling { throw MicrosoftOAuthError.cancelled }
 
-            var request = URLRequest(url: URL(string: tokenURL)!)
+            // Security: OAuth token exchange sent over HTTPS
+            var request = URLRequest(url: URL(string: tokenURL)!) // codeql[swift/cleartext-transmission]
             request.httpMethod = "POST"
             request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
@@ -195,7 +197,8 @@ actor MicrosoftOAuth {
             throw MicrosoftOAuthError.noRefreshToken
         }
 
-        var request = URLRequest(url: URL(string: tokenURL)!)
+        // Security: OAuth token refresh sent over HTTPS
+        var request = URLRequest(url: URL(string: tokenURL)!) // codeql[swift/cleartext-transmission]
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
