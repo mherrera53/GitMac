@@ -420,6 +420,12 @@ class GitService: ObservableObject {
         var options = PullOptions()
         options.rebase = rebase
 
+        // If branch has no tracking, specify the branch name explicitly
+        let trackingBranch = currentRepository?.currentBranch?.trackingBranch
+        if trackingBranch == nil || trackingBranch?.isEmpty == true {
+            options.branch = currentRepository?.currentBranch?.name
+        }
+
         try await engine.pull(options: options, at: path)
         try await refresh()
     }
@@ -458,6 +464,12 @@ class GitService: ObservableObject {
         // Perform pull
         var pullOptions = PullOptions()
         pullOptions.rebase = rebase
+
+        // If branch has no tracking, specify the branch name explicitly
+        let trackingBranch = currentRepository?.currentBranch?.trackingBranch
+        if trackingBranch == nil || trackingBranch?.isEmpty == true {
+            pullOptions.branch = currentRepository?.currentBranch?.name
+        }
 
         do {
             try await engine.pull(options: pullOptions, at: path)

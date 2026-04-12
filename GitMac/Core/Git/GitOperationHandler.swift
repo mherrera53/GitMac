@@ -97,12 +97,14 @@ class GitOperationHandler: ObservableObject {
     }
 
     func handlePush(force: Bool = false, forceWithLease: Bool = false) async {
+        Logger.debug("Push: handlePush called, appState=\(appState != nil), repo=\(appState?.currentRepository?.path ?? "nil")")
         guard let repo = appState?.currentRepository else {
             Logger.debug("Push: No current repository in appState")
             NotificationManager.shared.error("Push failed", detail: "No repository selected")
             return
         }
         let branchName = repo.currentBranch?.name ?? "unknown"
+        Logger.debug("Push: branch=\(branchName), tracking=\(repo.currentBranch?.trackingBranch ?? "none")")
 
         // Check branch protection
         let protection = BranchProtectionService.shared
@@ -112,8 +114,10 @@ class GitOperationHandler: ObservableObject {
             isForceWithLease: forceWithLease
         )
 
+        Logger.debug("Push: protection result=\(result)")
         switch result {
         case .blocked(let reason, _):
+            Logger.debug("Push: BLOCKED by protection: \(reason)")
             NotificationManager.shared.error("Push Blocked", detail: reason)
             return
 

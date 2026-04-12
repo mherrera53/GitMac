@@ -35,6 +35,7 @@ struct PushToolbarButton: View {
 
     var body: some View {
         Button {
+            Logger.debug("PushButton tapped: isEnabled=\(isEnabled), aheadCount=\(aheadCount), branch=\(currentBranchName ?? "nil")")
             if isEnabled {
                 NotificationCenter.default.post(name: .push, object: nil)
             }
