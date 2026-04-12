@@ -158,7 +158,7 @@ struct DSStatefulView<Content: View>: View {
 /// Protocol for ViewModels that handle async loading states
 @MainActor
 protocol DSLoadableViewModel: ObservableObject {
-    associatedtype DataType
+    associatedtype DataType: Sendable
     var loadingState: DSAsyncState<DataType> { get set }
     func load() async
 }
@@ -212,7 +212,7 @@ extension View {
 
 /// Manages the state of an async task with automatic retry
 @MainActor
-class DSTaskStateManager<T>: ObservableObject {
+class DSTaskStateManager<T: Sendable>: ObservableObject {
     @Published private(set) var state: DSAsyncState<T> = .idle
 
     private var task: Task<Void, Never>?
