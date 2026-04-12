@@ -2,9 +2,9 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
   schedule:
     - cron: '0 0 * * 1'  # Run weekly on Mondays
 
@@ -48,6 +48,7 @@ jobs:
         xcodebuild -project GitMac.xcodeproj \
           -scheme GitMac \
           -destination 'platform=macOS' \
+          -skipPackagePluginValidation \
           -configuration Release \
           clean build \
           CODE_SIGN_IDENTITY="-" \
