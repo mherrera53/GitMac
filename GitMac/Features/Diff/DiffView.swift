@@ -59,6 +59,10 @@ struct DiffView: View {
     @State private var cachedUnifiedLines: [UnifiedLine] = []
     @State private var kaleidoscopeRenderVersion: Int = 0
 
+    // Cached line counts (avoid recomputing on every body call)
+    @State private var cachedTotalLineCount: Int = 0
+    @State private var cachedVisualRowCount: Int = 0
+
     private var effectiveHunks: [DiffHunk] {
         overrideHunks ?? fileDiff.hunks
     }
@@ -68,33 +72,43 @@ struct DiffView: View {
         overrideHunks == nil
     }
 
-    // Calculate line count for accurate minimap
-    // Calculate line count for accurate minimap
-    private var totalLineCount: Int {
-        var count = 0
+    // Threshold for "large file" - switch to optimized inline view
+    private let largeFileLineThreshold = 1000000
+
+    private var isLargeFile: Bool {
+        cachedTotalLineCount > largeFileLineThreshold
+    }
+
+    // Estimated content height (22px per line)
+    private var estimatedContentHeight: CGFloat {
+        CGFloat(cachedVisualRowCount) * 22.0
+    }
+
+    /// Recompute cached line counts from current hunks and view mode
+    private func recalculateCounts() {
+        // totalLineCount
+        var total = 0
         for hunk in effectiveHunks {
-            count += 1 // hunk header
+            total += 1 // hunk header
 
             if viewMode == .inline || viewMode == .preview {
-                // Inline mode counts all lines
-                count += hunk.lines.count
+                total += hunk.lines.count
             } else {
-                // Split mode collapses deletions and additions into single rows
                 var i = 0
                 let lines = hunk.lines
                 while i < lines.count {
                     let line = lines[i]
                     if line.type == .context {
-                        count += 1
+                        total += 1
                         i += 1
                     } else if line.type == .deletion {
                         var dels = 0
                         while i < lines.count && lines[i].type == .deletion { dels += 1; i += 1 }
                         var adds = 0
                         while i < lines.count && lines[i].type == .addition { adds += 1; i += 1 }
-                        count += max(dels, adds)
+                        total += max(dels, adds)
                     } else if line.type == .addition {
-                        count += 1
+                        total += 1
                         i += 1
                     } else {
                          i += 1
@@ -102,30 +116,13 @@ struct DiffView: View {
                 }
             }
         }
-        return max(count, 1)
-    }
+        cachedTotalLineCount = max(total, 1)
 
-    // Threshold for "large file" - switch to optimized inline view
-    // Threshold for "large file" - switch to optimized inline view
-    private let largeFileLineThreshold = 1000000
-
-    private var isLargeFile: Bool {
-        totalLineCount > largeFileLineThreshold
-    }
-
-    // Estimated content height (22px per line)
-    private var estimatedContentHeight: CGFloat {
-        CGFloat(visualRowCount) * 22.0
-    }
-
-    private var visualRowCount: Int {
+        // visualRowCount
         if viewMode == .split {
-            // In split view, we pair simultaneous deletions and additions.
-            // visualRows ≈ hunks + context + max(deletions, additions) in blocks
             var count = 0
             for hunk in effectiveHunks {
                 count += 1 // Header
-                
                 var i = 0
                 let lines = hunk.lines
                 while i < lines.count {
@@ -134,31 +131,27 @@ struct DiffView: View {
                         count += 1
                         i += 1
                     } else {
-                        // Block counting logic (matches OptimizedSplitDiffView)
                         var deletions = 0
                         var j = i
                         while j < lines.count && lines[j].type == .deletion {
                             deletions += 1
                             j += 1
                         }
-                        
                         var additions = 0
                         var k = j
                         while k < lines.count && lines[k].type == .addition {
                             additions += 1
                             k += 1
                         }
-                        
                         count += max(deletions, additions)
                         i = k
                         if i == j { i += 1 } // Safety
                     }
                 }
             }
-            return count
+            cachedVisualRowCount = count
         } else {
-            // Unified/Inline: just sum of lines + headers
-            return effectiveHunks.reduce(0) { $0 + $1.lines.count + 1 }
+            cachedVisualRowCount = effectiveHunks.reduce(0) { $0 + $1.lines.count + 1 }
         }
     }
 
@@ -287,9 +280,14 @@ struct DiffView: View {
         .background(theme.backgroundSecondary)
         .onAppear {
             rebuildKaleidoscopeCaches()
+            recalculateCounts()
         }
         .onChange(of: fileDiff.hunks) { _, _ in
             rebuildKaleidoscopeCaches()
+            recalculateCounts()
+        }
+        .onChange(of: effectiveHunks.count) { _, _ in
+            recalculateCounts()
         }
         .onChange(of: fileDiff.newPath) { _, _ in
             commitsLoaded = false
@@ -327,6 +325,7 @@ struct DiffView: View {
                 rebuildKaleidoscopeCaches()
             }
             kaleidoscopeRenderVersion &+= 1
+            recalculateCounts()
         }
         .sheet(isPresented: $showBlame) {
             BlameSheet(path: fileDiff.newPath, repoPath: repoPath ?? "")
@@ -934,7 +933,10 @@ struct OptimizedSplitDiffView: View {
     @State private var isStaging = false
     @State private var isDiscarding = false
 
-    private var pairs: [DiffPair] {
+    // Cached pairs to avoid recomputing on every body call
+    @State private var cachedPairs: [DiffPair] = []
+
+    private func buildPairs() -> [DiffPair] {
         var pairs: [DiffPair] = []
         var pairId = 0
 
@@ -993,7 +995,7 @@ struct OptimizedSplitDiffView: View {
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
-        let rows = pairs
+        let rows = cachedPairs
 
         let contentVersion = {
             var v = showLineNumbers ? 1 : 0
@@ -1062,21 +1064,25 @@ struct OptimizedSplitDiffView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: selectedPairIds.isEmpty)
         .onAppear {
+            cachedPairs = buildPairs()
             // Defer binding update to avoid SwiftUI appearance deadlock
             DispatchQueue.main.async {
-                if abs(contentHeight - desiredHeight) > 0.5 {
-                    contentHeight = desiredHeight
+                let newDesired = desiredContentHeight(from: cachedPairs)
+                if abs(contentHeight - newDesired) > 0.5 {
+                    contentHeight = newDesired
                 }
             }
         }
         .onChange(of: hunks.count) { _, _ in
-            let newDesired = desiredContentHeight(from: rows)
+            cachedPairs = buildPairs()
+            let newDesired = desiredContentHeight(from: cachedPairs)
             if abs(contentHeight - newDesired) > 0.5 {
                 contentHeight = newDesired
             }
         }
         .onChange(of: hunks.reduce(0) { $0 + $1.lines.count }) { _, _ in
-            let newDesired = desiredContentHeight(from: rows)
+            cachedPairs = buildPairs()
+            let newDesired = desiredContentHeight(from: cachedPairs)
             if abs(contentHeight - newDesired) > 0.5 {
                 contentHeight = newDesired
             }
@@ -1096,7 +1102,7 @@ struct OptimizedSplitDiffView: View {
             var stagedCount = 0
             var errors: [String] = []
 
-            let selectedPairs = pairs.filter { selectedPairIds.contains($0.id) }
+            let selectedPairs = cachedPairs.filter { selectedPairIds.contains($0.id) }
 
             for (_, hunk) in hunks.enumerated() {
                 for (lineIndex, line) in hunk.lines.enumerated() {
@@ -1141,7 +1147,7 @@ struct OptimizedSplitDiffView: View {
             var discardedCount = 0
             var errors: [String] = []
 
-            let selectedPairs = pairs.filter { selectedPairIds.contains($0.id) }
+            let selectedPairs = cachedPairs.filter { selectedPairIds.contains($0.id) }
 
             for (_, hunk) in hunks.enumerated() {
                 for (lineIndex, line) in hunk.lines.enumerated() {
@@ -1906,7 +1912,8 @@ struct SelectableInlineLineRow: View {
     }
 
     var body: some View {
-        FastInlineLine(line: item.line!, showLineNumber: showLineNumbers)
+        if let line = item.line {
+        FastInlineLine(line: line, showLineNumber: showLineNumbers)
             .overlay(alignment: .leading) {
                 if isSelected {
                     Rectangle()
@@ -1930,6 +1937,7 @@ struct SelectableInlineLineRow: View {
                     onSelect()
                 }
             }
+        }
     }
 }
 
