@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContributionGraphView: View {
-    nonisolated(unsafe) private static let monthFormatter: DateFormatter = {
+    private static let monthFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "MMM"
         return f
@@ -198,7 +198,7 @@ struct ContributionGraphView: View {
 // MARK: - Contribution Cell
 
 struct ContributionCell: View {
-    nonisolated(unsafe) private static let tooltipDateFormatter: DateFormatter = {
+    private static let tooltipDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
         return f

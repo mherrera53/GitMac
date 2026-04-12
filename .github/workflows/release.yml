@@ -41,13 +41,14 @@ jobs:
         xcodebuild -project GitMac.xcodeproj \
           -scheme GitMac \
           -configuration Release \
-          -destination 'platform=macOS' \
+          -destination 'platform=macOS,arch=arm64' \
           -skipPackagePluginValidation \
           clean build \
           -derivedDataPath build/DerivedData \
           CODE_SIGN_IDENTITY="-" \
           CODE_SIGN_STYLE=Manual \
-          DEVELOPMENT_TEAM=""
+          DEVELOPMENT_TEAM="" \
+          SWIFT_STRICT_CONCURRENCY=targeted
 
         echo "✅ Build completed successfully"
 

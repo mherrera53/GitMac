@@ -60,7 +60,7 @@ struct CommitActivity: Identifiable {
 @MainActor
 class RepositoryActivityViewModel: ObservableObject {
     nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
-    nonisolated(unsafe) private static let shortDateFormatter: DateFormatter = {
+    private static let shortDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
         return f

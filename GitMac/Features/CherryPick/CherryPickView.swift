@@ -403,7 +403,7 @@ struct QuickCherryPickSheet: View {
 
 /// Multi-commit cherry-pick wizard
 struct CherryPickWizard: View {
-    nonisolated(unsafe) private static let gitDateFormatter: DateFormatter = {
+    private static let gitDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
         return f

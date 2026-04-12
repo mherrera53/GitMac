@@ -67,7 +67,7 @@ struct SessionExport: Codable {
 class TerminalSessionSharingService: ObservableObject {
     static let shared = TerminalSessionSharingService()
 
-    nonisolated(unsafe) private static let filenameDateFormatter: DateFormatter = {
+    private static let filenameDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd-HHmmss"
         return f

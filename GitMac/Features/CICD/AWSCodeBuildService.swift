@@ -432,17 +432,17 @@ struct FilterChip: View {
 // MARK: - Build Row
 
 struct AWSBuildRow: View {
-    nonisolated(unsafe) private static let todayTimeFormatter: DateFormatter = {
+    private static let todayTimeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "h:mm a"
         return f
     }()
-    nonisolated(unsafe) private static let yesterdayTimeFormatter: DateFormatter = {
+    private static let yesterdayTimeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "'Yesterday' h:mm a"
         return f
     }()
-    nonisolated(unsafe) private static let dateTimeFormatter: DateFormatter = {
+    private static let dateTimeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "MMM d, h:mm a"
         return f
@@ -608,7 +608,7 @@ struct AWSBuildRow: View {
 
 @MainActor
 class AWSCodeBuildViewModel: ObservableObject {
-    nonisolated(unsafe) private static let awsDateFormatter: DateFormatter = {
+    private static let awsDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
         f.locale = Locale(identifier: "en_US_POSIX")

@@ -2,7 +2,7 @@ import Foundation
 
 /// Parsed search query with filters
 struct SearchQuery {
-    nonisolated(unsafe) private static let shortDateFormatter: DateFormatter = {
+    private static let shortDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .short
         return f

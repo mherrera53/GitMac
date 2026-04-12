@@ -138,7 +138,7 @@ class AnalyticsViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
     
-    nonisolated(unsafe) private static let shortDateFormatter: DateFormatter = {
+    private static let shortDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
         return f

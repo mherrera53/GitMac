@@ -120,8 +120,8 @@ struct AvatarImageView: View {
         guard !normalizedEmail.isEmpty else { return }
 
         // Check cache first
-        if let cached = await AvatarCache.shared.image(for: cacheKey) {
-            nsImage = cached
+        if let cached: NSImage = await AvatarCache.shared.image(for: cacheKey) {
+            await MainActor.run { nsImage = cached }
             return
         }
 

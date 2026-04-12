@@ -290,7 +290,7 @@ extension View {
         delay: Double = 0.1,
         duration: Double = DesignTokens.Animation.normal
     ) -> some View {
-        let calculatedDelay = Double(index) * delay
+        _ = Double(index) * delay
         return self
             .transition(.opacity.combined(with: .move(edge: .top)))
     }

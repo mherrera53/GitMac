@@ -9,7 +9,7 @@ actor GitEngine {
         return f
     }()
 
-    nonisolated(unsafe) fileprivate static let gitDateFormatters: [DateFormatter] = {
+    fileprivate static let gitDateFormatters: [DateFormatter] = {
         let formats = [
             "yyyy-MM-dd HH:mm:ss Z",
             "yyyy-MM-dd HH:mm:ss",

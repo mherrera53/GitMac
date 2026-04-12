@@ -410,9 +410,8 @@ class AppState: ObservableObject {
         do {
             let repo = try await gitService.openRepository(at: path)
             if let index = openTabs.firstIndex(where: { $0.id == activeTabId }) {
-                var updatedTab = openTabs[index]
-                updatedTab.repository = repo
-                openTabs[index] = updatedTab
+                let tab = openTabs[index]
+                tab.repository = repo
             }
             await branchManager?.refresh()
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
