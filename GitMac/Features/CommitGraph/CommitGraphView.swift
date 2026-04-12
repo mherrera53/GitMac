@@ -28,6 +28,11 @@ struct CommitGraphView: View {
     @State private var selectedFileDiff: FileDiff? = nil
     @State private var dismissedOperationIds: Set<UUID> = []
 
+    // Minimap visible range tracking
+    @State private var visibleMinIndex: Int = 0
+    @State private var visibleMaxIndex: Int = 0
+    @State private var scrollToIndex: Int? = nil
+
     // Commit comparison mode - state managed in appState
     @State private var showStaleBranchCleanup = false
     @State private var zoomBaseLevel: CGFloat = 1.0
@@ -127,10 +132,11 @@ struct CommitGraphView: View {
                             }
                             return nil
                         },
-                        visibleRange: 0...max(vm.timelineItems.count - 1, 0),
+                        visibleRange: visibleMinIndex...max(visibleMaxIndex, visibleMinIndex),
                         totalHeight: CGFloat(vm.timelineItems.count * 30),
                         onSeek: { index in
-                            // Scroll to index
+                            // Scroll to the target index
+                            scrollToIndex = index
                             if index < vm.timelineItems.count,
                                case .commit(let node) = vm.timelineItems[index] {
                                 selectedIds = [node.commit.sha]
@@ -706,15 +712,47 @@ struct CommitGraphView: View {
     }
 
     private var graphScrollView: some View {
-        DSVirtualizedList(items: vm.timelineItems) { item in
-            itemView(for: item)
-        }
-        .estimatedItemHeight(settings.rowHeight)
-        .spacing(0)  // Zero spacing so graph lines connect perfectly between rows
-        .bufferSize(20)
-        .onReachEnd {
-            if vm.hasMore && !vm.isLoading {
-                Task { await vm.loadMore() }
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(vm.timelineItems.enumerated()), id: \.element.id) { index, item in
+                        itemView(for: item)
+                            .frame(minHeight: settings.rowHeight)
+                            .id(item.id)
+                            .onAppear {
+                                // Track visible range for minimap
+                                if index < visibleMinIndex || visibleMinIndex == 0 {
+                                    visibleMinIndex = index
+                                }
+                                if index > visibleMaxIndex {
+                                    visibleMaxIndex = index
+                                }
+                                // Trigger load more when near end
+                                if index >= vm.timelineItems.count - 10,
+                                   vm.hasMore, !vm.isLoading {
+                                    Task { await vm.loadMore() }
+                                }
+                            }
+                            .onDisappear {
+                                // Update visible range when items scroll out
+                                if index == visibleMinIndex {
+                                    visibleMinIndex = min(index + 1, vm.timelineItems.count - 1)
+                                }
+                                if index == visibleMaxIndex {
+                                    visibleMaxIndex = max(index - 1, 0)
+                                }
+                            }
+                    }
+                }
+                .padding(.horizontal, DesignTokens.Spacing.md)
+            }
+            .onChange(of: scrollToIndex) { _, newIndex in
+                if let targetIndex = newIndex, targetIndex < vm.timelineItems.count {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        proxy.scrollTo(vm.timelineItems[targetIndex].id, anchor: .center)
+                    }
+                    scrollToIndex = nil
+                }
             }
         }
         .gesture(
