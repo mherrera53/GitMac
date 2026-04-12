@@ -37,22 +37,65 @@ struct GraphMinimapView: View {
                     // Background
                     theme.background
 
-                    // Compact minimap: collapse lanes to max 5 columns, tiny dots
+                    // Graph minimap: lines + dots showing real merge topology
                     Canvas { ctx, size in
                         let totalCount = max(minimapNodes.count, 1)
                         let rowHeight = size.height / CGFloat(totalCount)
                         let maxVisualLanes = 5
-                        let padding: CGFloat = 3
+                        let padding: CGFloat = 4
                         let usableWidth = size.width - padding * 2
                         let laneWidth = usableWidth / CGFloat(maxVisualLanes)
 
-                        // Draw commit dots (collapsed to max 5 lanes)
-                        for node in minimapNodes {
-                            let y = CGFloat(node.index) * rowHeight + rowHeight / 2
-                            let visualLane = node.lane % maxVisualLanes
-                            let x = padding + CGFloat(visualLane) * laneWidth + laneWidth / 2
+                        func xFor(lane: Int) -> CGFloat {
+                            padding + CGFloat(lane % maxVisualLanes) * laneWidth + laneWidth / 2
+                        }
+                        func yFor(index: Int) -> CGFloat {
+                            CGFloat(index) * rowHeight + rowHeight / 2
+                        }
 
-                            let dotSize: CGFloat = node.isMerge ? 1.5 : 1.0
+                        // Draw connection lines (parent edges) -- the graph structure
+                        for node in minimapNodes {
+                            let childY = yFor(index: node.index)
+                            let childX = xFor(lane: node.lane)
+
+                            for i in 0..<node.parentIndices.count {
+                                let parentIdx = node.parentIndices[i]
+                                let parentLane = i < node.parentLanes.count ? node.parentLanes[i] : node.lane
+                                let parentY = yFor(index: parentIdx)
+                                let parentX = xFor(lane: parentLane)
+
+                                let color = Color.branchColor(node.lane)
+                                let isMergeLine = i > 0 // secondary parent = merge line
+
+                                var linePath = Path()
+                                if childX == parentX {
+                                    // Straight vertical line (same lane)
+                                    linePath.move(to: CGPoint(x: childX, y: childY))
+                                    linePath.addLine(to: CGPoint(x: parentX, y: parentY))
+                                } else {
+                                    // Curved merge/branch line
+                                    linePath.move(to: CGPoint(x: childX, y: childY))
+                                    linePath.addCurve(
+                                        to: CGPoint(x: parentX, y: parentY),
+                                        control1: CGPoint(x: childX, y: childY + (parentY - childY) * 0.4),
+                                        control2: CGPoint(x: parentX, y: childY + (parentY - childY) * 0.6)
+                                    )
+                                }
+
+                                ctx.stroke(
+                                    linePath,
+                                    with: .color(color.opacity(isMergeLine ? 0.25 : 0.35)),
+                                    lineWidth: isMergeLine ? 0.5 : 0.7
+                                )
+                            }
+                        }
+
+                        // Draw commit dots on top
+                        for node in minimapNodes {
+                            let y = yFor(index: node.index)
+                            let x = xFor(lane: node.lane)
+
+                            let dotSize: CGFloat = node.isMerge ? 1.8 : 1.0
                             let dotRect = CGRect(
                                 x: x - dotSize / 2,
                                 y: y - dotSize / 2,
@@ -61,11 +104,11 @@ struct GraphMinimapView: View {
                             )
 
                             let color = Color.branchColor(node.lane)
-                            ctx.fill(Circle().path(in: dotRect), with: .color(color.opacity(0.7)))
+                            ctx.fill(Circle().path(in: dotRect), with: .color(color.opacity(0.8)))
                         }
                     }
 
-                    // Visible viewport indicator -- prominent
+                    // Visible viewport indicator
                     RoundedRectangle(cornerRadius: 2)
                         .fill(Color.white.opacity(isDragging ? 0.12 : 0.06))
                         .overlay(
@@ -80,11 +123,16 @@ struct GraphMinimapView: View {
                         .animation(.easeOut(duration: 0.08), value: visibleRange.lowerBound)
                 }
                 .gesture(
-                    DragGesture()
+                    DragGesture(minimumDistance: 0)
                         .onChanged { value in
                             isDragging = true
-                            let newIndex = indexFromY(value.location.y, in: geo.size)
-                            onSeek(newIndex)
+                            // Calculate the center of where the viewport should be
+                            let vpHeight = viewportHeight(in: geo.size)
+                            let centerY = value.location.y - vpHeight / 2
+                            let ratio = centerY / (geo.size.height - vpHeight)
+                            let clampedRatio = max(0, min(1, ratio))
+                            let targetIndex = Int(clampedRatio * CGFloat(minimapNodes.count))
+                            onSeek(max(0, min(targetIndex, minimapNodes.count - 1)))
                         }
                         .onEnded { _ in
                             isDragging = false

@@ -17,9 +17,11 @@ struct GraphNode: Identifiable {
     var shortSha: String { String(commit.sha.prefix(7)) }
 }
 
-/// Lightweight node for minimap rendering (no commit data, just position)
+/// Lightweight node for minimap rendering (no commit data, just position + parent connections)
 struct MinimapCommitNode {
     let index: Int
     let lane: Int
     let isMerge: Bool
+    let parentIndices: [Int]  // indices into the minimapNodes array
+    let parentLanes: [Int]    // lane of each parent
 }

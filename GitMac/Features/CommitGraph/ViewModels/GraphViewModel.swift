@@ -112,41 +112,58 @@ class GraphViewModel: ObservableObject {
         guard result.exitCode == 0 else { return }
 
         let lines = result.stdout.components(separatedBy: "\n").filter { !$0.isEmpty }
-        var minimapItems: [MinimapCommitNode] = []
-        // Simple lane assignment based on parent count
+
+        // First pass: build SHA -> index + lane maps
+        var shaToIndex: [String: Int] = [:]
         var shaToLane: [String: Int] = [:]
+        var shaToParents: [String: [String]] = [:]
         var nextLane = 0
 
         for (index, line) in lines.enumerated() {
             let parts = line.components(separatedBy: " ")
             let sha = parts[0]
             let parents = Array(parts.dropFirst())
-            let isMerge = parents.count > 1
 
-            // Assign lane: reuse parent's lane or create new one
+            shaToIndex[sha] = index
+            shaToParents[sha] = parents
+
+            // Assign lane: reuse first parent's lane or create new
             let lane: Int
             if let firstParent = parents.first, let parentLane = shaToLane[firstParent] {
                 lane = parentLane
             } else {
-                lane = nextLane % 8  // Cap at 8 lanes for minimap
+                lane = nextLane % 6
                 nextLane += 1
             }
             shaToLane[sha] = lane
 
-            // For merge commits, assign secondary parent a new lane
-            if isMerge, parents.count > 1 {
-                for secondaryParent in parents.dropFirst() {
-                    if shaToLane[secondaryParent] == nil {
-                        shaToLane[secondaryParent] = (nextLane % 8)
-                        nextLane += 1
-                    }
+            // Assign lanes for secondary parents (merge sources)
+            for secondaryParent in parents.dropFirst() {
+                if shaToLane[secondaryParent] == nil {
+                    shaToLane[secondaryParent] = nextLane % 6
+                    nextLane += 1
                 }
             }
+        }
+
+        // Second pass: build nodes with parent references
+        var minimapItems: [MinimapCommitNode] = []
+        for (index, line) in lines.enumerated() {
+            let parts = line.components(separatedBy: " ")
+            let sha = parts[0]
+            let parents = Array(parts.dropFirst())
+            let isMerge = parents.count > 1
+            let lane = shaToLane[sha] ?? 0
+
+            let parentIdxs = parents.compactMap { shaToIndex[$0] }
+            let parentLns = parents.compactMap { shaToLane[$0] }
 
             minimapItems.append(MinimapCommitNode(
                 index: index,
                 lane: lane,
-                isMerge: isMerge
+                isMerge: isMerge,
+                parentIndices: parentIdxs,
+                parentLanes: parentLns
             ))
         }
 

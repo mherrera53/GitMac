@@ -326,9 +326,23 @@ struct ConnectionRibbonsView: View {
             .init(color: color.opacity(0.0), location: 1.0)
         ])
 
-        let strokeWidth: CGFloat = 1.25
-        let markerWidth: CGFloat = 4
-        let fadeWidth: CGFloat = min(18, max(10, panelWidth * 0.06))
+        // Transition gradient: deletion color (left) -> addition color (right)
+        let leftColor = AppTheme.diffDeletion
+        let rightColor = AppTheme.diffAddition
+
+        let fillGradient = Gradient(stops: [
+            .init(color: leftColor.opacity(0.0), location: 0.0),
+            .init(color: leftColor.opacity(0.20), location: 0.12),
+            .init(color: leftColor.opacity(0.22), location: 0.30),
+            .init(color: color.opacity(0.12), location: 0.50),
+            .init(color: rightColor.opacity(0.22), location: 0.70),
+            .init(color: rightColor.opacity(0.20), location: 0.88),
+            .init(color: rightColor.opacity(0.0), location: 1.0)
+        ])
+
+        let strokeWidth: CGFloat = 1.0
+        let markerWidth: CGFloat = 3
+        let fadeWidth: CGFloat = min(14, max(8, panelWidth * 0.05))
 
         let top = min(lt, rt)
         let bottom = max(lb, rb)
@@ -347,18 +361,19 @@ struct ConnectionRibbonsView: View {
             layer.fill(
                 band,
                 with: .linearGradient(
-                    gradient,
+                    fillGradient,
                     startPoint: CGPoint(x: leftX, y: (topMidY + bottomMidY) / 2),
                     endPoint: CGPoint(x: rightX, y: (topMidY + bottomMidY) / 2)
                 )
             )
 
+            // Border gradient: red edge -> green edge
             let borderGradient = Gradient(stops: [
-                .init(color: color.opacity(0.0), location: 0.0),
-                .init(color: color.opacity(0.60), location: 0.12),
-                .init(color: color.opacity(0.60), location: 0.50),
-                .init(color: color.opacity(0.60), location: 0.88),
-                .init(color: color.opacity(0.0), location: 1.0)
+                .init(color: leftColor.opacity(0.0), location: 0.0),
+                .init(color: leftColor.opacity(0.50), location: 0.15),
+                .init(color: color.opacity(0.30), location: 0.50),
+                .init(color: rightColor.opacity(0.50), location: 0.85),
+                .init(color: rightColor.opacity(0.0), location: 1.0)
             ])
 
             var topEdge = Path()
@@ -387,32 +402,32 @@ struct ConnectionRibbonsView: View {
                 style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round, lineJoin: .round)
             )
 
-            // Left panel inner edge marker (just inside the left panel, next to gutter)
+            // Left panel marker (deletion side -- red tint)
             let leftMarkerRect = CGRect(x: max(0, gutterLeft - markerWidth - 1), y: top, width: markerWidth, height: height)
-            layer.fill(Path(leftMarkerRect), with: .color(color.opacity(0.32)))
+            layer.fill(Path(leftMarkerRect), with: .color(leftColor.opacity(0.28)))
             let leftFadeRect = CGRect(x: max(0, gutterLeft - markerWidth - 1 - fadeWidth), y: top, width: fadeWidth, height: height)
             layer.fill(
                 Path(leftFadeRect),
                 with: .linearGradient(
                     Gradient(stops: [
-                        .init(color: color.opacity(0.18), location: 0.0),
-                        .init(color: color.opacity(0.0), location: 1.0)
+                        .init(color: leftColor.opacity(0.14), location: 0.0),
+                        .init(color: leftColor.opacity(0.0), location: 1.0)
                     ]),
                     startPoint: CGPoint(x: gutterLeft, y: midY),
                     endPoint: CGPoint(x: gutterLeft - fadeWidth, y: midY)
                 )
             )
 
-            // Right panel inner edge marker (just inside the right panel, next to gutter)
+            // Right panel marker (addition side -- green tint)
             let rightMarkerRect = CGRect(x: min(layoutWidth - markerWidth, gutterRight + 1), y: top, width: markerWidth, height: height)
-            layer.fill(Path(rightMarkerRect), with: .color(color.opacity(0.32)))
+            layer.fill(Path(rightMarkerRect), with: .color(rightColor.opacity(0.28)))
             let rightFadeRect = CGRect(x: min(layoutWidth, gutterRight + 1 + markerWidth), y: top, width: fadeWidth, height: height)
             layer.fill(
                 Path(rightFadeRect),
                 with: .linearGradient(
                     Gradient(stops: [
-                        .init(color: color.opacity(0.18), location: 0.0),
-                        .init(color: color.opacity(0.0), location: 1.0)
+                        .init(color: rightColor.opacity(0.14), location: 0.0),
+                        .init(color: rightColor.opacity(0.0), location: 1.0)
                     ]),
                     startPoint: CGPoint(x: gutterRight, y: midY),
                     endPoint: CGPoint(x: gutterRight + fadeWidth, y: midY)
