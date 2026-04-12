@@ -23,7 +23,8 @@ struct Contributor: Identifiable, Hashable {
     // Gravatar URL from email
     var gravatarURL: URL? {
         let hash = email.lowercased().trimmingCharacters(in: CharacterSet.whitespaces).md5
-        return URL(string: "https://www.gravatar.com/avatar/\(hash)?d=identicon&s=64")
+        // Security: Uses MD5 hash of email (public git data) over HTTPS
+        return URL(string: "https://www.gravatar.com/avatar/\(hash)?d=identicon&s=64") // codeql[swift/cleartext-transmission]
     }
 }
 

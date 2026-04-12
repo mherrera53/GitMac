@@ -37,7 +37,8 @@ struct ActiveUser: Identifiable, Equatable, Codable {
     
     var gravatarURL: URL? {
         let hash = email.lowercased().trimmingCharacters(in: .whitespaces).md5Hash
-        return URL(string: "https://www.gravatar.com/avatar/\(hash)?d=identicon&s=32")
+        // Security: Uses MD5 hash of email (public git data) over HTTPS
+        return URL(string: "https://www.gravatar.com/avatar/\(hash)?d=identicon&s=32") // codeql[swift/cleartext-transmission]
     }
 }
 
