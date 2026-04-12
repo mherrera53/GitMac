@@ -74,6 +74,13 @@ class EnhancedTerminalTabManager: ObservableObject {
 }
 
 struct EnhancedTerminalPanel: View {
+    nonisolated(unsafe) private static let sessionDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .short
+        f.timeStyle = .short
+        return f
+    }()
+
     @EnvironmentObject var appState: AppState
     @StateObject private var tabManager = EnhancedTerminalTabManager()
     @State private var viewMode: TerminalViewMode = .terminal
@@ -653,10 +660,7 @@ struct EnhancedTerminalPanel: View {
     private func createCurrentSession(from enhancedViewModel: GhosttyEnhancedViewModel) -> TerminalSession? {
         guard !enhancedViewModel.trackedCommands.isEmpty else { return nil }
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .short
-        dateFormatter.timeStyle = .short
-        let sessionName = "Session \(dateFormatter.string(from: Date()))"
+        let sessionName = "Session \(Self.sessionDateFormatter.string(from: Date()))"
 
         return TerminalSession(
             name: sessionName,

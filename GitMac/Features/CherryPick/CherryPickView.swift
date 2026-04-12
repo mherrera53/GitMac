@@ -403,6 +403,12 @@ struct QuickCherryPickSheet: View {
 
 /// Multi-commit cherry-pick wizard
 struct CherryPickWizard: View {
+    nonisolated(unsafe) private static let gitDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
+        return f
+    }()
+
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
@@ -485,9 +491,7 @@ struct CherryPickWizard: View {
                         let parts = line.components(separatedBy: "|")
                         guard parts.count >= 4 else { return nil }
 
-                        let formatter = DateFormatter()
-                        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
-                        let date = formatter.date(from: parts[2]) ?? Date()
+                        let date = Self.gitDateFormatter.date(from: parts[2]) ?? Date()
 
                         return Commit(
                             sha: parts[0],

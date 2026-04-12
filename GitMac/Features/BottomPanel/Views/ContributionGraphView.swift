@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContributionGraphView: View {
-    private static let monthFormatter: DateFormatter = {
+    nonisolated(unsafe) private static let monthFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "MMM"
         return f
@@ -198,7 +198,7 @@ struct ContributionGraphView: View {
 // MARK: - Contribution Cell
 
 struct ContributionCell: View {
-    private static let tooltipDateFormatter: DateFormatter = {
+    nonisolated(unsafe) private static let tooltipDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
         return f
@@ -235,15 +235,14 @@ struct ContributionCell: View {
     private var tooltipText: String {
         guard let date = date else { return "No data" }
         
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        
+        let dateStr = Self.tooltipDateFormatter.string(from: date)
+
         if commitCount == 0 {
-            return "No commits on \(formatter.string(from: date))"
+            return "No commits on \(dateStr)"
         } else if commitCount == 1 {
-            return "1 commit on \(formatter.string(from: date))"
+            return "1 commit on \(dateStr)"
         } else {
-            return "\(commitCount) commits on \(formatter.string(from: date))"
+            return "\(commitCount) commits on \(dateStr)"
         }
     }
 }

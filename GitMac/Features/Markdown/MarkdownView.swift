@@ -191,7 +191,7 @@ private struct MermaidSegmentView: View {
             .padding(.horizontal, DesignTokens.Spacing.md)
             .padding(.vertical, DesignTokens.Spacing.md - 6) // 6px custom
             .background(isDarkMode ? AppTheme.textPrimary.opacity(0.05) : AppTheme.background.opacity(0.03))
-            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md, corners: [.topLeft, .topRight]))
+            .clipShape(UnevenRoundedRectangle(topLeadingRadius: DesignTokens.CornerRadius.md, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: DesignTokens.CornerRadius.md))
 
             // Diagram view
             MermaidDiagramView(
@@ -201,7 +201,7 @@ private struct MermaidSegmentView: View {
             )
             .frame(minHeight: 200, idealHeight: diagramHeight, maxHeight: 600)
             .background(isDarkMode ? AppTheme.background.opacity(0.2) : AppTheme.textPrimary)
-            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md, corners: [.bottomLeft, .bottomRight]))
+            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: DesignTokens.CornerRadius.md, bottomTrailingRadius: DesignTokens.CornerRadius.md, topTrailingRadius: 0))
         }
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
@@ -659,7 +659,7 @@ struct PreviewSheet: View {
             // Header
             HStack {
                 Image(systemName: isImage ? "photo" : (isMarkdown ? "doc.richtext" : "doc.text"))
-                    .foregroundStyle(.accentColor)
+                    .foregroundStyle(Color.accentColor)
                 Text("Preview: \(fileName)")
                     .font(.headline)
 

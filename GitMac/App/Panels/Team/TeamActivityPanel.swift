@@ -33,6 +33,8 @@ struct TeamActivityPanel: View {
 
 /// Team activity view to prevent merge conflicts
 struct TeamActivityView: View {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = TeamActivityViewModel()
     @State private var selectedMember: TeamMember?
@@ -393,8 +395,7 @@ struct TeamActivityView: View {
     }
 
     private func formatDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return dateString }
+        guard let date = Self.isoFormatter.date(from: dateString) else { return dateString }
 
         let relative = RelativeDateTimeFormatter()
         relative.unitsStyle = .abbreviated

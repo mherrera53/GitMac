@@ -2,6 +2,12 @@ import Foundation
 
 /// Parsed search query with filters
 struct SearchQuery {
+    nonisolated(unsafe) private static let shortDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .short
+        return f
+    }()
+
     var freeText: String?
     var message: String?
     var author: String?
@@ -98,14 +104,10 @@ struct SearchQuery {
         if let f = file { parts.append("File: \(f)") }
         if let t = type { parts.append("Type: \(t.rawValue)") }
         if let after = afterDate {
-            let formatter = DateFormatter()
-            formatter.dateStyle = .short
-            parts.append("After: \(formatter.string(from: after))")
+            parts.append("After: \(Self.shortDateFormatter.string(from: after))")
         }
         if let before = beforeDate {
-            let formatter = DateFormatter()
-            formatter.dateStyle = .short
-            parts.append("Before: \(formatter.string(from: before))")
+            parts.append("Before: \(Self.shortDateFormatter.string(from: before))")
         }
 
         return parts.isEmpty ? "All commits" : parts.joined(separator: ", ")

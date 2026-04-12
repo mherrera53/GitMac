@@ -432,6 +432,22 @@ struct FilterChip: View {
 // MARK: - Build Row
 
 struct AWSBuildRow: View {
+    nonisolated(unsafe) private static let todayTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        return f
+    }()
+    nonisolated(unsafe) private static let yesterdayTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "'Yesterday' h:mm a"
+        return f
+    }()
+    nonisolated(unsafe) private static let dateTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d, h:mm a"
+        return f
+    }()
+
     @EnvironmentObject private var themeManager: ThemeManager
     let build: CodeBuild
     @State private var isHovered = false
@@ -567,17 +583,14 @@ struct AWSBuildRow: View {
     }
     
     private func formatStartTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        // Show date if not today, otherwise just time
         let calendar = Calendar.current
         if calendar.isDateInToday(date) {
-            formatter.dateFormat = "h:mm a"
+            return Self.todayTimeFormatter.string(from: date)
         } else if calendar.isDateInYesterday(date) {
-            formatter.dateFormat = "'Yesterday' h:mm a"
+            return Self.yesterdayTimeFormatter.string(from: date)
         } else {
-            formatter.dateFormat = "MMM d, h:mm a"
+            return Self.dateTimeFormatter.string(from: date)
         }
-        return formatter.string(from: date)
     }
     
     private func openInAWSConsole() {
@@ -595,6 +608,18 @@ struct AWSBuildRow: View {
 
 @MainActor
 class AWSCodeBuildViewModel: ObservableObject {
+    nonisolated(unsafe) private static let awsDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+    nonisolated(unsafe) private static let awsISOFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
     @Published var projects: [CodeBuildProject] = []
     @Published var builds: [CodeBuild] = []
     @Published var isLoading = false
@@ -769,26 +794,16 @@ class AWSCodeBuildViewModel: ObservableObject {
                         var startTime: Date?
                         var endTime: Date?
 
-                        // AWS returns ISO8601 date strings with timezone offset
-                        let dateFormatter = DateFormatter()
-                        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
-                        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-
                         if let startTimeStr = buildDict["startTime"] as? String {
-                            startTime = dateFormatter.date(from: startTimeStr)
+                            startTime = Self.awsDateFormatter.date(from: startTimeStr)
                             if startTime == nil {
-                                // Try ISO8601 as fallback
-                                let iso = ISO8601DateFormatter()
-                                iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                                startTime = iso.date(from: startTimeStr)
+                                startTime = Self.awsISOFormatter.date(from: startTimeStr)
                             }
                         }
                         if let endTimeStr = buildDict["endTime"] as? String {
-                            endTime = dateFormatter.date(from: endTimeStr)
+                            endTime = Self.awsDateFormatter.date(from: endTimeStr)
                             if endTime == nil {
-                                let iso = ISO8601DateFormatter()
-                                iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                                endTime = iso.date(from: endTimeStr)
+                                endTime = Self.awsISOFormatter.date(from: endTimeStr)
                             }
                         }
 

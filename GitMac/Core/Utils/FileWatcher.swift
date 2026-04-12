@@ -2,7 +2,6 @@ import Foundation
 import Combine
 
 /// Watches for file system changes in a directory
-@MainActor
 class FileWatcher: ObservableObject {
     @Published var lastChange: Date = Date()
 
@@ -91,7 +90,6 @@ enum RepositoryChangeSignal: String, CaseIterable {
 
 /// Watches a Git repository's .git directory and working directory for changes
 /// Emits differentiated signals for incremental updates
-@MainActor
 class GitRepositoryWatcher: ObservableObject {
     // Legacy properties for backward compatibility
     @Published var hasChanges = false

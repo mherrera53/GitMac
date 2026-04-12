@@ -3,13 +3,13 @@ import Foundation
 /// Main wrapper for Git operations
 /// Uses git CLI commands as the primary backend for reliability
 actor GitEngine {
-    private static let isoDateFormatter: ISO8601DateFormatter = {
+    nonisolated(unsafe) private static let isoDateFormatter: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withFullDate, .withTime, .withSpaceBetweenDateAndTime]
         return f
     }()
 
-    private static let gitDateFormatters: [DateFormatter] = {
+    nonisolated(unsafe) fileprivate static let gitDateFormatters: [DateFormatter] = {
         let formats = [
             "yyyy-MM-dd HH:mm:ss Z",
             "yyyy-MM-dd HH:mm:ss",
@@ -1927,7 +1927,7 @@ actor GitEngine {
 
 /// Parse git date format
 private func parseGitDate(_ dateString: String) -> Date? {
-    for formatter in Self.gitDateFormatters {
+    for formatter in GitEngine.gitDateFormatters {
         if let date = formatter.date(from: dateString) {
             return date
         }

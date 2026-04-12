@@ -461,6 +461,8 @@ struct ComparisonStatCard: View {
 
 @MainActor
 class BranchComparisonViewModel: ObservableObject {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     @Published var commits: [Commit] = []
     @Published var changedFiles: [FileStatus] = []
     @Published var diff = ""
@@ -520,8 +522,7 @@ class BranchComparisonViewModel: ObservableObject {
                     let parts = line.components(separatedBy: "|")
                     guard parts.count >= 5 else { return nil }
 
-                    let dateFormatter = ISO8601DateFormatter()
-                    let parsedDate = dateFormatter.date(from: parts[3]) ?? Date()
+                    let parsedDate = Self.isoFormatter.date(from: parts[3]) ?? Date()
 
                     return Commit(
                         sha: parts[0],

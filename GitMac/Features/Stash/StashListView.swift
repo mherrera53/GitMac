@@ -627,7 +627,7 @@ struct StashFileTreeView: View {
 
 @MainActor
 class StashTreeNode: Identifiable, ObservableObject {
-    var id: String { path.isEmpty ? UUID().uuidString : path }
+    nonisolated var id: String { path.isEmpty ? name : path }
     let name: String
     let path: String
     let isFolder: Bool

@@ -2,7 +2,7 @@ import Foundation
 
 /// Represents a Git commit
 struct Commit: Identifiable, Equatable, Hashable {
-    private static let displayDateFormatter: DateFormatter = {
+    nonisolated(unsafe) private static let displayDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
         f.timeStyle = .short

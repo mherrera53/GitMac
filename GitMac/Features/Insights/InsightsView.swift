@@ -397,6 +397,8 @@ struct InsightMetrics {
 
 @MainActor
 class InsightsViewModel: ObservableObject {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     @Published var metrics: InsightMetrics?
     @Published var isLoading = false
 
@@ -407,8 +409,7 @@ class InsightsViewModel: ObservableObject {
         isLoading = true
 
         let sinceDate = Calendar.current.date(byAdding: .day, value: -timeRange.days, to: Date()) ?? Date()
-        let dateFormatter = ISO8601DateFormatter()
-        let sinceString = dateFormatter.string(from: sinceDate)
+        let sinceString = Self.isoFormatter.string(from: sinceDate)
 
         // Get commits in time range
         let commitsResult = await shell.execute(
@@ -428,7 +429,7 @@ class InsightsViewModel: ObservableObject {
         for line in commitsResult.stdout.components(separatedBy: "\n") where !line.isEmpty {
             let parts = line.components(separatedBy: "|")
             if parts.count >= 4 {
-                if let date = dateFormatter.date(from: parts[3]) {
+                if let date = Self.isoFormatter.date(from: parts[3]) {
                     commits.append((parts[0], parts[1], parts[2], date))
                 }
             }

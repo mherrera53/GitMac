@@ -421,7 +421,7 @@ enum SearchResultType {
 
 @MainActor
 class SearchViewModel: ObservableObject {
-    private static let isoFormatter = ISO8601DateFormatter()
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
 
     @Published var results: [SearchResult] = []
     @Published var authors: [String] = []

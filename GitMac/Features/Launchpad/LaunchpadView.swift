@@ -415,6 +415,8 @@ struct LaunchpadFilterChip: View {
 
 @MainActor
 class LaunchpadViewModel: ObservableObject {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     @Published var items: [LaunchpadItem] = []
     @Published var repositories: [String] = []
     @Published var selectedRepo: String?
@@ -507,8 +509,8 @@ class LaunchpadViewModel: ObservableObject {
                 return LaunchpadItem.Label(id: "\(id)", name: name, color: color)
             }
 
-            let createdAt = ISO8601DateFormatter().date(from: item["created_at"] as? String ?? "") ?? Date()
-            let updatedAt = ISO8601DateFormatter().date(from: item["updated_at"] as? String ?? "") ?? Date()
+            let createdAt = Self.isoFormatter.date(from: item["created_at"] as? String ?? "") ?? Date()
+            let updatedAt = Self.isoFormatter.date(from: item["updated_at"] as? String ?? "") ?? Date()
 
             var launchpadItem = LaunchpadItem(
                 id: "\(id)", type: .pullRequest, title: title, number: number, repository: repo,
@@ -562,8 +564,8 @@ class LaunchpadViewModel: ObservableObject {
                 return LaunchpadItem.Label(id: "\(id)", name: name, color: color)
             }
 
-            let createdAt = ISO8601DateFormatter().date(from: item["created_at"] as? String ?? "") ?? Date()
-            let updatedAt = ISO8601DateFormatter().date(from: item["updated_at"] as? String ?? "") ?? Date()
+            let createdAt = Self.isoFormatter.date(from: item["created_at"] as? String ?? "") ?? Date()
+            let updatedAt = Self.isoFormatter.date(from: item["updated_at"] as? String ?? "") ?? Date()
 
             var launchpadItem = LaunchpadItem(
                 id: "\(id)", type: .issue, title: title, number: number, repository: repo,

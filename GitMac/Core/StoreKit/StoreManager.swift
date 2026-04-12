@@ -165,6 +165,12 @@ class StoreManager: ObservableObject {
 // MARK: - Subscription Status
 
 enum SubscriptionStatus {
+    nonisolated(unsafe) private static let mediumDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        return f
+    }()
+
     case unknown
     case inactive
     case active(expiresAt: Date)
@@ -185,9 +191,7 @@ enum SubscriptionStatus {
         case .inactive:
             return "Inactive"
         case .active(let date):
-            let formatter = DateFormatter()
-            formatter.dateStyle = .medium
-            return "Active until \(formatter.string(from: date))"
+            return "Active until \(Self.mediumDateFormatter.string(from: date))"
         }
     }
 }

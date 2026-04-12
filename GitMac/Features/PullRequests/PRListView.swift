@@ -315,6 +315,8 @@ class PRListViewModel: ObservableObject {
 // MARK: - Subviews
 
 struct PRRow: View {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     let pr: GitHubPullRequest
     let isSelected: Bool
     var onMerge: ((MergeMethod) -> Void)?
@@ -463,8 +465,7 @@ struct PRRow: View {
     }
 
     func formatDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return dateString }
+        guard let date = Self.isoFormatter.date(from: dateString) else { return dateString }
 
         let relative = RelativeDateTimeFormatter()
         relative.unitsStyle = .abbreviated
@@ -473,6 +474,8 @@ struct PRRow: View {
 }
 
 struct PRDetailView: View {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     let pr: GitHubPullRequest
     @ObservedObject var viewModel: PRListViewModel
     @EnvironmentObject private var themeManager: ThemeManager
@@ -873,8 +876,7 @@ struct PRDetailView: View {
     }
 
     private func formatCommentDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return dateString }
+        guard let date = Self.isoFormatter.date(from: dateString) else { return dateString }
 
         let relative = RelativeDateTimeFormatter()
         relative.unitsStyle = .abbreviated
@@ -1910,6 +1912,8 @@ struct DiffCodeView: View {
 }
 
 struct ReviewCommentRow: View {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     let comment: GitHubReviewComment
     @EnvironmentObject private var themeManager: ThemeManager
 
@@ -1951,8 +1955,7 @@ struct ReviewCommentRow: View {
     }
 
     private func formatDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return dateString }
+        guard let date = Self.isoFormatter.date(from: dateString) else { return dateString }
 
         let relative = RelativeDateTimeFormatter()
         relative.unitsStyle = .abbreviated

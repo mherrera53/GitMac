@@ -153,6 +153,8 @@ class IssueListViewModel: ObservableObject {
 // MARK: - Subviews
 
 struct IssueRow: View {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     let issue: GitHubIssue
     let isSelected: Bool
 
@@ -217,8 +219,7 @@ struct IssueRow: View {
     }
 
     func formatDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return dateString }
+        guard let date = Self.isoFormatter.date(from: dateString) else { return dateString }
 
         let relative = RelativeDateTimeFormatter()
         relative.unitsStyle = .abbreviated
@@ -241,6 +242,8 @@ struct IssueLabelBadge: View {
 }
 
 struct IssueDetailView: View {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     let issue: GitHubIssue
     @ObservedObject var viewModel: IssueListViewModel
 
@@ -352,8 +355,7 @@ struct IssueDetailView: View {
     }
 
     func formatDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return dateString }
+        guard let date = Self.isoFormatter.date(from: dateString) else { return dateString }
 
         let relative = RelativeDateTimeFormatter()
         relative.unitsStyle = .full

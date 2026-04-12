@@ -221,7 +221,7 @@ struct DSSelectionHighlight: ViewModifier {
                     Rectangle()
                         .fill(color)
                         .frame(width: 3)
-                        .clipShape(.rect(cornerRadius: 1.5, corners: [.topRight, .bottomRight]))
+                        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 0, bottomTrailingRadius: 1.5, topTrailingRadius: 1.5))
                     : nil,
                     alignment: .leading
                 )

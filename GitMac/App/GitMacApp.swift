@@ -164,7 +164,6 @@ struct GitMacApp: App {
 }
 
 // MARK: - Repository Tab
-@MainActor
 class RepositoryTab: Identifiable, ObservableObject, Hashable, Equatable {
     let id = UUID()
     @Published var repository: Repository

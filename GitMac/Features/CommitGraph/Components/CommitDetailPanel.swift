@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct CommitDetailPanel: View {
-    private static let displayDateFormatter: DateFormatter = {
+    nonisolated(unsafe) private static let displayDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
         f.timeStyle = .short

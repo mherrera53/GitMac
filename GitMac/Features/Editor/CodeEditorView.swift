@@ -203,7 +203,7 @@ struct FileCodeEditorView: View {
             // File info
             HStack(spacing: 6) {
                 Image(systemName: "doc.fill")
-                    .foregroundStyle(.accentColor)
+                    .foregroundStyle(Color.accentColor)
                 Text(filename)
                     .font(.system(size: 13, weight: .medium))
                     .lineLimit(1)
@@ -399,7 +399,7 @@ struct MarkdownPreviewSheet: View {
             // Header
             HStack {
                 Image(systemName: "eye")
-                    .foregroundStyle(.accentColor)
+                    .foregroundStyle(Color.accentColor)
                 Text("Preview: \(filename)")
                     .font(.headline)
 

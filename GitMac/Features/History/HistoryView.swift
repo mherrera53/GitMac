@@ -75,7 +75,7 @@ enum HistoryViewMode {
 
 @MainActor
 class HistoryViewModel: ObservableObject {
-    private static let gitDateFormatter: DateFormatter = {
+    nonisolated(unsafe) private static let gitDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
         return f

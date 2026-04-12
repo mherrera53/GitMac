@@ -67,6 +67,12 @@ struct SessionExport: Codable {
 class TerminalSessionSharingService: ObservableObject {
     static let shared = TerminalSessionSharingService()
 
+    nonisolated(unsafe) private static let filenameDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd-HHmmss"
+        return f
+    }()
+
     @Published var currentSession: TerminalSession?
     @Published var savedSessions: [TerminalSession] = []
     @Published var sharedSessions: [TerminalSession] = []
@@ -119,9 +125,7 @@ class TerminalSessionSharingService: ObservableObject {
         let data = try exportSession(session)
 
         // Create filename
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd-HHmmss"
-        let timestamp = formatter.string(from: Date())
+        let timestamp = Self.filenameDateFormatter.string(from: Date())
         let filename = "terminal-session-\(session.name.replacingOccurrences(of: " ", with: "-"))-\(timestamp).json"
 
         // Save to Downloads folder

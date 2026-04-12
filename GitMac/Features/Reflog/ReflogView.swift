@@ -2,6 +2,8 @@ import SwiftUI
 
 /// Reflog viewer - Git's safety net
 struct ReflogView: View {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = ReflogViewModel()
     @State private var selectedEntry: ReflogEntry?
@@ -170,7 +172,7 @@ struct ReflogView: View {
     }
     
     private func formatDateHeader(_ dateString: String) -> String {
-        guard let date = ISO8601DateFormatter().date(from: dateString) else {
+        guard let date = Self.isoFormatter.date(from: dateString) else {
             return dateString
         }
         

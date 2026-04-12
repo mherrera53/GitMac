@@ -137,6 +137,13 @@ class AnalyticsViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
     
+    nonisolated(unsafe) private static let shortDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     private var currentRepositoryPath: String?
     private let shell = ShellExecutor.shared
     
@@ -239,11 +246,8 @@ class AnalyticsViewModel: ObservableObject {
     
     private func loadCommitActivity(repoPath: String) async throws -> [CommitActivityItem] {
         let days = timeRange.days
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        
         let startDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
-        let startStr = dateFormatter.string(from: startDate)
+        let startStr = Self.shortDateFormatter.string(from: startDate)
         
         let result = await shell.execute(
             "sh", arguments: ["-c", "git log --all --since=\"\(startStr)\" --format=\"%ad\" --date=short 2>/dev/null | sort | uniq -c"],
@@ -263,7 +267,7 @@ class AnalyticsViewModel: ObservableObject {
         let endDate = Date()
         
         while currentDate <= endDate {
-            let dateKey = dateFormatter.string(from: currentDate)
+            let dateKey = Self.shortDateFormatter.string(from: currentDate)
             let count = commitsByDate[dateKey] ?? 0
             items.append(CommitActivityItem(date: currentDate, count: count))
             currentDate = Calendar.current.date(byAdding: .day, value: 1, to: currentDate) ?? endDate
@@ -394,16 +398,14 @@ class AnalyticsViewModel: ObservableObject {
             workingDirectory: repoPath
         )
         
-        let dateFormatter = ISO8601DateFormatter()
-        
         return result.output.components(separatedBy: "\n").compactMap { line -> ActivityItem? in
             guard !line.isEmpty else { return nil }
             let parts = line.components(separatedBy: "|")
             guard parts.count >= 2 else { return nil }
-            
+
             let message = parts[0]
             let dateStr = parts[1]
-            let date = dateFormatter.date(from: dateStr) ?? Date()
+            let date = Self.isoFormatter.date(from: dateStr) ?? Date()
             
             // Determine activity type from message
             let type: ActivityItem.ActivityType

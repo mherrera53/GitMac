@@ -5,6 +5,13 @@ private let githubLog = OSLog(subsystem: "com.gitmac", category: "github")
 
 /// GitHub API service with caching, ETag support, and rate limit handling
 actor GitHubService {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+    nonisolated(unsafe) private static let timeOnlyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        return f
+    }()
+
     private let baseURL = "https://api.github.com"
     private let keychainManager = KeychainManager.shared
 
@@ -433,8 +440,7 @@ actor GitHubService {
     func getCommitsForBranch(owner: String, repo: String, branch: String, since: Date? = nil) async throws -> [GitHubCommit] {
         var endpoint = "/repos/\(owner)/\(repo)/commits?sha=\(branch)"
         if let since = since {
-            let formatter = ISO8601DateFormatter()
-            endpoint += "&since=\(formatter.string(from: since))"
+            endpoint += "&since=\(Self.isoFormatter.string(from: since))"
         }
         let data = try await request(endpoint: endpoint)
         return try JSONDecoder().decode([GitHubCommit].self, from: data)
@@ -919,6 +925,12 @@ enum ReviewEvent: String {
 // MARK: - Errors
 
 enum GitHubError: LocalizedError {
+    nonisolated(unsafe) private static let timeOnlyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        return f
+    }()
+
     case invalidURL
     case invalidResponse
     case unauthorized
@@ -946,9 +958,7 @@ enum GitHubError: LocalizedError {
             return "Request failed (\(code)): \(message)"
         case .rateLimited(let resetTime):
             if let reset = resetTime {
-                let formatter = DateFormatter()
-                formatter.timeStyle = .short
-                return "Rate limit exceeded. Resets at \(formatter.string(from: reset))"
+                return "Rate limit exceeded. Resets at \(Self.timeOnlyFormatter.string(from: reset))"
             }
             return "Rate limit exceeded. Please wait before retrying."
         }
