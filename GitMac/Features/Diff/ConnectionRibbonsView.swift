@@ -289,30 +289,27 @@ struct ConnectionRibbonsView: View {
         let rt = rightTop
         let rb = max(rt + lineHeight, rightBottom)
 
-        let topMidY = (lt + rt) / 2
-        let bottomMidY = (lb + rb) / 2
-
-        let ribbonWidth = rightX - leftX
-        let curvatureX = ribbonWidth * (isFluid ? 0.46 : 0.38)
-        let curvatureY = max(6, lineHeight * (isFluid ? 0.55 : 0.35))
+        let gutterMidX = (gutterLeft + gutterRight) / 2
 
         let topLeft = CGPoint(x: leftX, y: lt)
         let topRight = CGPoint(x: rightX, y: rt)
         let bottomRight = CGPoint(x: rightX, y: rb)
         let bottomLeft = CGPoint(x: leftX, y: lb)
 
+        // Smooth S-curve: control points pull horizontally through the gutter center
+        // This prevents crossing artifacts when left/right heights differ greatly
         var band = Path()
         band.move(to: topLeft)
         band.addCurve(
             to: topRight,
-            control1: CGPoint(x: leftX + curvatureX, y: topMidY + curvatureY),
-            control2: CGPoint(x: rightX - curvatureX, y: topMidY - curvatureY)
+            control1: CGPoint(x: gutterMidX, y: lt),
+            control2: CGPoint(x: gutterMidX, y: rt)
         )
         band.addLine(to: bottomRight)
         band.addCurve(
             to: bottomLeft,
-            control1: CGPoint(x: rightX - curvatureX, y: bottomMidY - curvatureY),
-            control2: CGPoint(x: leftX + curvatureX, y: bottomMidY + curvatureY)
+            control1: CGPoint(x: gutterMidX, y: rb),
+            control2: CGPoint(x: gutterMidX, y: lb)
         )
         band.closeSubpath()
 
@@ -362,8 +359,8 @@ struct ConnectionRibbonsView: View {
                 band,
                 with: .linearGradient(
                     fillGradient,
-                    startPoint: CGPoint(x: leftX, y: (topMidY + bottomMidY) / 2),
-                    endPoint: CGPoint(x: rightX, y: (topMidY + bottomMidY) / 2)
+                    startPoint: CGPoint(x: leftX, y: midY),
+                    endPoint: CGPoint(x: rightX, y: midY)
                 )
             )
 
@@ -380,8 +377,8 @@ struct ConnectionRibbonsView: View {
             topEdge.move(to: topLeft)
             topEdge.addCurve(
                 to: topRight,
-                control1: CGPoint(x: leftX + curvatureX, y: topMidY + curvatureY),
-                control2: CGPoint(x: rightX - curvatureX, y: topMidY - curvatureY)
+                control1: CGPoint(x: gutterMidX, y: lt),
+                control2: CGPoint(x: gutterMidX, y: rt)
             )
             layer.stroke(
                 topEdge,
@@ -393,8 +390,8 @@ struct ConnectionRibbonsView: View {
             bottomEdge.move(to: bottomLeft)
             bottomEdge.addCurve(
                 to: bottomRight,
-                control1: CGPoint(x: leftX + curvatureX, y: bottomMidY + curvatureY),
-                control2: CGPoint(x: rightX - curvatureX, y: bottomMidY - curvatureY)
+                control1: CGPoint(x: gutterMidX, y: lb),
+                control2: CGPoint(x: gutterMidX, y: rb)
             )
             layer.stroke(
                 bottomEdge,
@@ -434,17 +431,20 @@ struct ConnectionRibbonsView: View {
                 )
             )
 
+            // Center flow line -- connects midpoints of left and right blocks
+            let leftMidY = (lt + lb) / 2
+            let rightMidY = (rt + rb) / 2
             var center = Path()
-            center.move(to: CGPoint(x: leftX + 2, y: (lt + lb) / 2))
+            center.move(to: CGPoint(x: leftX + 2, y: leftMidY))
             center.addCurve(
-                to: CGPoint(x: rightX - 2, y: (rt + rb) / 2),
-                control1: CGPoint(x: leftX + curvatureX, y: (topMidY + bottomMidY) / 2 + curvatureY * 0.35),
-                control2: CGPoint(x: rightX - curvatureX, y: (topMidY + bottomMidY) / 2 - curvatureY * 0.35)
+                to: CGPoint(x: rightX - 2, y: rightMidY),
+                control1: CGPoint(x: gutterMidX, y: leftMidY),
+                control2: CGPoint(x: gutterMidX, y: rightMidY)
             )
             layer.stroke(
                 center,
                 with: .linearGradient(borderGradient, startPoint: CGPoint(x: leftX, y: midY), endPoint: CGPoint(x: rightX, y: midY)),
-                style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round)
+                style: StrokeStyle(lineWidth: 0.75, lineCap: .round, lineJoin: .round, dash: [3, 2])
             )
         }
     }
