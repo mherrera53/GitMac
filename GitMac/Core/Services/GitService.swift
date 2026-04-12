@@ -168,6 +168,8 @@ class GitService: ObservableObject {
             try await engine.checkout(ref, at: path)
             try await refresh()
         }
+
+        NotificationCenter.default.post(name: .branchDidCheckout, object: ref)
     }
 
     func checkoutForce(_ ref: String) async throws {
@@ -182,6 +184,8 @@ class GitService: ObservableObject {
             try await engine.checkoutForce(ref, at: path)
             try await refresh()
         }
+
+        NotificationCenter.default.post(name: .branchDidCheckout, object: ref)
     }
 
     /// Checkout with automatic stash/pop for uncommitted changes
@@ -210,6 +214,8 @@ class GitService: ObservableObject {
 
             try await refresh()
         }
+
+        NotificationCenter.default.post(name: .branchDidCheckout, object: ref)
     }
 
     /// Checkout a branch (handles both local and remote branches)
@@ -222,6 +228,7 @@ class GitService: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
+        var checkedOutName = branch.name
         try await withSuspendedWatcher {
             if branch.isRemote {
                 // Remote branch: create local tracking branch
@@ -236,11 +243,16 @@ class GitService: ObservableObject {
                 if result.exitCode != 0 {
                     throw GitServiceError.checkoutFailed(result.stderr)
                 }
+                checkedOutName = localName
             } else {
                 try await engine.checkout(branch.name, at: path)
+                checkedOutName = branch.name
             }
             try await refresh()
         }
+
+        // Notify graph and other views to do a full reload
+        NotificationCenter.default.post(name: .branchDidCheckout, object: checkedOutName)
     }
 
     /// Checkout a branch with auto-stash (handles both local and remote)
@@ -291,6 +303,10 @@ class GitService: ObservableObject {
 
             try await refresh()
         }
+
+        // Notify graph and other views to do a full reload
+        let checkedOutName = branch.isRemote ? branch.displayName : branch.name
+        NotificationCenter.default.post(name: .branchDidCheckout, object: checkedOutName)
     }
 
     // MARK: - Staging Operations
