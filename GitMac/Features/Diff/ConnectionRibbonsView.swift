@@ -130,139 +130,148 @@ struct ConnectionRibbonsView: View {
         let panelWidth = max(0, (layoutWidth - gutterWidth) / 2)
         let gutterLeft = panelWidth
         let gutterRight = panelWidth + gutterWidth
-
-        let effectiveOverlap = min(panelOverlap, panelWidth)
-        let leftX: CGFloat
-        let rightX: CGFloat
-        
-        switch side {
-        case .left:
-            leftX = max(0, gutterLeft - effectiveOverlap)
-            rightX = gutterLeft
-        case .right:
-            leftX = gutterRight
-            rightX = min(layoutWidth, gutterRight + effectiveOverlap)
-        }
+        let gutterMidX = (gutterLeft + gutterRight) / 2
 
         let height = max(lineHeight, bottomY - topY)
         let midY = topY + height / 2
         let top = topY
         let bottom = topY + height
 
-        // EXACTLY the same gradient as change ribbons
-        let gradient = Gradient(stops: [
-            .init(color: color.opacity(0.0), location: 0.0),
-            .init(color: color.opacity(0.16), location: 0.10),
-            .init(color: color.opacity(0.28), location: 0.30),
-            .init(color: color.opacity(0.34), location: 0.50),
-            .init(color: color.opacity(0.28), location: 0.70),
-            .init(color: color.opacity(0.16), location: 0.90),
-            .init(color: color.opacity(0.0), location: 1.0)
-        ])
-
-        let borderGradient = Gradient(stops: [
-            .init(color: color.opacity(0.0), location: 0.0),
-            .init(color: color.opacity(0.60), location: 0.12),
-            .init(color: color.opacity(0.60), location: 0.50),
-            .init(color: color.opacity(0.60), location: 0.88),
-            .init(color: color.opacity(0.0), location: 1.0)
-        ])
-
-        let markerWidth: CGFloat = 4
-        let fadeWidth: CGFloat = min(18, max(10, panelWidth * 0.06))
-
-        // Create main ribbon shape
-        let topLeft = CGPoint(x: leftX, y: top)
-        let topRight = CGPoint(x: rightX, y: top)
-        let bottomRight = CGPoint(x: rightX, y: bottom)
-        let bottomLeft = CGPoint(x: leftX, y: bottom)
-
-        var band = Path()
-        band.move(to: topLeft)
-        band.addLine(to: topRight)
-        band.addLine(to: bottomRight)
-        band.addLine(to: bottomLeft)
-        band.closeSubpath()
+        // Funnel shape: wide at the block side, converging to a point on the opposite side
+        // This shows clearly WHERE the insertion/deletion connects
+        let fadeWidth: CGFloat = min(14, max(8, panelWidth * 0.05))
 
         context.drawLayer { layer in
-            // Main ribbon fill with gradient (SAME as change ribbons)
-            layer.fill(
-                band,
-                with: .linearGradient(
-                    gradient,
-                    startPoint: CGPoint(x: leftX, y: midY),
-                    endPoint: CGPoint(x: rightX, y: midY)
-                )
-            )
+            switch side {
+            case .right:
+                // Addition-only: funnel from right panel converging to insertion point on left
+                let blockTop = CGPoint(x: gutterRight, y: top)
+                let blockBottom = CGPoint(x: gutterRight, y: bottom)
+                let pointY = midY  // Insertion point on left side
 
-            // Top edge border (SAME as change ribbons)
-            var topEdge = Path()
-            topEdge.move(to: topLeft)
-            topEdge.addLine(to: topRight)
-            layer.stroke(
-                topEdge,
-                with: .linearGradient(borderGradient, startPoint: CGPoint(x: leftX, y: midY), endPoint: CGPoint(x: rightX, y: midY)),
-                style: StrokeStyle(lineWidth: 1.25, lineCap: .round, lineJoin: .round)
-            )
-
-            // Bottom edge border (SAME as change ribbons)
-            var bottomEdge = Path()
-            bottomEdge.move(to: bottomLeft)
-            bottomEdge.addLine(to: bottomRight)
-            layer.stroke(
-                bottomEdge,
-                with: .linearGradient(borderGradient, startPoint: CGPoint(x: leftX, y: midY), endPoint: CGPoint(x: rightX, y: midY)),
-                style: StrokeStyle(lineWidth: 1.25, lineCap: .round, lineJoin: .round)
-            )
-
-            // Panel inner edge marker and fade (EXACTLY like change ribbons)
-            if side == .left {
-                // Left panel marker (at gutter edge)
-                let markerRect = CGRect(x: max(0, gutterLeft - markerWidth - 1), y: top, width: markerWidth, height: height)
-                layer.fill(Path(markerRect), with: .color(color.opacity(0.32)))
-                
-                // Left fade
-                let leftFadeRect = CGRect(x: max(0, gutterLeft - markerWidth - 1 - fadeWidth), y: top, width: fadeWidth, height: height)
-                layer.fill(
-                    Path(leftFadeRect),
-                    with: .linearGradient(
-                        Gradient(stops: [
-                            .init(color: color.opacity(0.18), location: 0.0),
-                            .init(color: color.opacity(0.0), location: 1.0)
-                        ]),
-                        startPoint: CGPoint(x: gutterLeft, y: midY),
-                        endPoint: CGPoint(x: gutterLeft - fadeWidth, y: midY)
-                    )
+                // Funnel shape
+                var funnel = Path()
+                funnel.move(to: blockTop)
+                funnel.addCurve(
+                    to: CGPoint(x: gutterLeft, y: pointY),
+                    control1: CGPoint(x: gutterMidX, y: top),
+                    control2: CGPoint(x: gutterLeft + 2, y: pointY - 1)
                 )
-            } else {
-                // Right panel marker (at gutter edge)
-                let markerRect = CGRect(x: min(layoutWidth - markerWidth, gutterRight + 1), y: top, width: markerWidth, height: height)
-                layer.fill(Path(markerRect), with: .color(color.opacity(0.32)))
-                
-                // Right fade
-                let rightFadeRect = CGRect(x: min(layoutWidth, gutterRight + 1 + markerWidth), y: top, width: fadeWidth, height: height)
-                layer.fill(
-                    Path(rightFadeRect),
-                    with: .linearGradient(
-                        Gradient(stops: [
-                            .init(color: color.opacity(0.18), location: 0.0),
-                            .init(color: color.opacity(0.0), location: 1.0)
-                        ]),
-                        startPoint: CGPoint(x: gutterRight, y: midY),
-                        endPoint: CGPoint(x: gutterRight + fadeWidth, y: midY)
-                    )
+                funnel.addCurve(
+                    to: blockBottom,
+                    control1: CGPoint(x: gutterLeft + 2, y: pointY + 1),
+                    control2: CGPoint(x: gutterMidX, y: bottom)
                 )
+                funnel.closeSubpath()
+
+                // Fill with gradient fading from gutter edge
+                layer.fill(funnel, with: .color(color.opacity(0.14)))
+
+                // Top edge curve
+                var topEdge = Path()
+                topEdge.move(to: blockTop)
+                topEdge.addCurve(
+                    to: CGPoint(x: gutterLeft, y: pointY),
+                    control1: CGPoint(x: gutterMidX, y: top),
+                    control2: CGPoint(x: gutterLeft + 2, y: pointY - 1)
+                )
+                layer.stroke(topEdge, with: .color(color.opacity(0.40)),
+                    style: StrokeStyle(lineWidth: 0.75, lineCap: .round))
+
+                // Bottom edge curve
+                var bottomEdge = Path()
+                bottomEdge.move(to: blockBottom)
+                bottomEdge.addCurve(
+                    to: CGPoint(x: gutterLeft, y: pointY),
+                    control1: CGPoint(x: gutterMidX, y: bottom),
+                    control2: CGPoint(x: gutterLeft + 2, y: pointY + 1)
+                )
+                layer.stroke(bottomEdge, with: .color(color.opacity(0.40)),
+                    style: StrokeStyle(lineWidth: 0.75, lineCap: .round))
+
+                // Insertion point line extending into left panel
+                var insertionLine = Path()
+                insertionLine.move(to: CGPoint(x: gutterLeft - fadeWidth, y: pointY))
+                insertionLine.addLine(to: CGPoint(x: gutterLeft, y: pointY))
+                layer.stroke(insertionLine, with: .color(color.opacity(0.35)),
+                    style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [4, 3]))
+
+                // Right panel edge marker
+                let markerRect = CGRect(x: gutterRight + 1, y: top, width: 3, height: height)
+                layer.fill(Path(markerRect), with: .color(color.opacity(0.25)))
+
+                // Right panel fade into content
+                let rightFadeRect = CGRect(x: gutterRight + 4, y: top, width: fadeWidth, height: height)
+                layer.fill(Path(rightFadeRect), with: .linearGradient(
+                    Gradient(colors: [color.opacity(0.12), color.opacity(0.0)]),
+                    startPoint: CGPoint(x: gutterRight + 4, y: midY),
+                    endPoint: CGPoint(x: gutterRight + 4 + fadeWidth, y: midY)
+                ))
+
+            case .left:
+                // Deletion-only: funnel from left panel converging to removal point on right
+                let blockTop = CGPoint(x: gutterLeft, y: top)
+                let blockBottom = CGPoint(x: gutterLeft, y: bottom)
+                let pointY = midY  // Removal point on right side
+
+                // Funnel shape
+                var funnel = Path()
+                funnel.move(to: blockTop)
+                funnel.addCurve(
+                    to: CGPoint(x: gutterRight, y: pointY),
+                    control1: CGPoint(x: gutterMidX, y: top),
+                    control2: CGPoint(x: gutterRight - 2, y: pointY - 1)
+                )
+                funnel.addCurve(
+                    to: blockBottom,
+                    control1: CGPoint(x: gutterRight - 2, y: pointY + 1),
+                    control2: CGPoint(x: gutterMidX, y: bottom)
+                )
+                funnel.closeSubpath()
+
+                layer.fill(funnel, with: .color(color.opacity(0.14)))
+
+                // Top edge curve
+                var topEdge = Path()
+                topEdge.move(to: blockTop)
+                topEdge.addCurve(
+                    to: CGPoint(x: gutterRight, y: pointY),
+                    control1: CGPoint(x: gutterMidX, y: top),
+                    control2: CGPoint(x: gutterRight - 2, y: pointY - 1)
+                )
+                layer.stroke(topEdge, with: .color(color.opacity(0.40)),
+                    style: StrokeStyle(lineWidth: 0.75, lineCap: .round))
+
+                // Bottom edge curve
+                var bottomEdge = Path()
+                bottomEdge.move(to: blockBottom)
+                bottomEdge.addCurve(
+                    to: CGPoint(x: gutterRight, y: pointY),
+                    control1: CGPoint(x: gutterMidX, y: bottom),
+                    control2: CGPoint(x: gutterRight - 2, y: pointY + 1)
+                )
+                layer.stroke(bottomEdge, with: .color(color.opacity(0.40)),
+                    style: StrokeStyle(lineWidth: 0.75, lineCap: .round))
+
+                // Removal point line extending into right panel
+                var removalLine = Path()
+                removalLine.move(to: CGPoint(x: gutterRight, y: pointY))
+                removalLine.addLine(to: CGPoint(x: gutterRight + fadeWidth, y: pointY))
+                layer.stroke(removalLine, with: .color(color.opacity(0.35)),
+                    style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [4, 3]))
+
+                // Left panel edge marker
+                let markerRect = CGRect(x: gutterLeft - 4, y: top, width: 3, height: height)
+                layer.fill(Path(markerRect), with: .color(color.opacity(0.25)))
+
+                // Left panel fade into content
+                let leftFadeRect = CGRect(x: gutterLeft - 4 - fadeWidth, y: top, width: fadeWidth, height: height)
+                layer.fill(Path(leftFadeRect), with: .linearGradient(
+                    Gradient(colors: [color.opacity(0.12), color.opacity(0.0)]),
+                    startPoint: CGPoint(x: gutterLeft - 4, y: midY),
+                    endPoint: CGPoint(x: gutterLeft - 4 - fadeWidth, y: midY)
+                ))
             }
-
-            // Center line for continuity (SAME as change ribbons)
-            var center = Path()
-            center.move(to: CGPoint(x: leftX + 2, y: midY))
-            center.addLine(to: CGPoint(x: rightX - 2, y: midY))
-            layer.stroke(
-                center,
-                with: .linearGradient(borderGradient, startPoint: CGPoint(x: leftX, y: midY), endPoint: CGPoint(x: rightX, y: midY)),
-                style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round)
-            )
         }
     }
 
