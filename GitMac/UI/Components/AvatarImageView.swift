@@ -2,6 +2,9 @@ import SwiftUI
 import AppKit
 import CryptoKit
 
+// NSImage is thread-safe for read-only use but not marked Sendable in Swift 6
+extension NSImage: @unchecked @retroactive Sendable {}
+
 // MARK: - Avatar cache (memoria + disco)
 actor AvatarCache {
     static let shared = AvatarCache()
@@ -119,9 +122,10 @@ struct AvatarImageView: View {
     private func loadAvatar() async {
         guard !normalizedEmail.isEmpty else { return }
 
-        // Check cache first
-        if let cached: NSImage = await AvatarCache.shared.image(for: cacheKey) {
-            await MainActor.run { nsImage = cached }
+        // Check cache first (NSImage is not Sendable but is safe for this use)
+        let cached: NSImage? = await AvatarCache.shared.image(for: cacheKey)
+        if let image = cached {
+            nsImage = image
             return
         }
 
