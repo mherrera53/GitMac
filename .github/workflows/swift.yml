@@ -32,6 +32,7 @@ jobs:
           xcodebuild -project GitMac.xcodeproj \
             -scheme GitMac \
             -destination 'platform=macOS' \
+            -skipPackagePluginValidation \
             -configuration Debug \
             clean build \
             | grep -E "error:|warning:|BUILD SUCCEEDED|BUILD FAILED" || true

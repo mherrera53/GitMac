@@ -42,6 +42,7 @@ jobs:
           -scheme GitMac \
           -configuration Release \
           -destination 'platform=macOS' \
+          -skipPackagePluginValidation \
           clean build \
           -derivedDataPath build/DerivedData \
           CODE_SIGN_IDENTITY="-" \
