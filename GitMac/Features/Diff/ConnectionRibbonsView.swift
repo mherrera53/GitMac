@@ -133,144 +133,79 @@ struct ConnectionRibbonsView: View {
         let gutterMidX = (gutterLeft + gutterRight) / 2
 
         let height = max(lineHeight, bottomY - topY)
-        let midY = topY + height / 2
         let top = topY
         let bottom = topY + height
 
-        // Funnel shape: wide at the block side, converging to a point on the opposite side
-        // This shows clearly WHERE the insertion/deletion connects
+        // Convergence point: top of the block (where insertion/deletion happens in the other panel)
+        // This creates a proper funnel: wide at block, narrowing to a thin line at the insertion point
+        let pointY = top
         let fadeWidth: CGFloat = min(14, max(8, panelWidth * 0.05))
 
         context.drawLayer { layer in
             switch side {
             case .right:
-                // Addition-only: funnel from right panel converging to insertion point on left
-                let blockTop = CGPoint(x: gutterRight, y: top)
-                let blockBottom = CGPoint(x: gutterRight, y: bottom)
-                let pointY = midY  // Insertion point on left side
-
-                // Funnel shape
+                // Addition-only: smooth teardrop -- wide at right, rounded point at left
+                let tipY = pointY + lineHeight * 0.5
                 var funnel = Path()
-                funnel.move(to: blockTop)
+                funnel.move(to: CGPoint(x: gutterRight, y: top))
                 funnel.addCurve(
-                    to: CGPoint(x: gutterLeft, y: pointY),
+                    to: CGPoint(x: gutterLeft, y: tipY),
                     control1: CGPoint(x: gutterMidX, y: top),
-                    control2: CGPoint(x: gutterLeft + 2, y: pointY - 1)
+                    control2: CGPoint(x: gutterLeft, y: tipY - lineHeight * 0.3)
                 )
                 funnel.addCurve(
-                    to: blockBottom,
-                    control1: CGPoint(x: gutterLeft + 2, y: pointY + 1),
+                    to: CGPoint(x: gutterRight, y: bottom),
+                    control1: CGPoint(x: gutterLeft, y: tipY + lineHeight * 0.3),
                     control2: CGPoint(x: gutterMidX, y: bottom)
                 )
                 funnel.closeSubpath()
 
-                // Fill with gradient fading from gutter edge
-                layer.fill(funnel, with: .color(color.opacity(0.14)))
+                layer.fill(funnel, with: .color(color.opacity(0.10)))
+                layer.stroke(funnel, with: .color(color.opacity(0.28)),
+                    style: StrokeStyle(lineWidth: 0.75, lineCap: .round, lineJoin: .round))
 
-                // Top edge curve
-                var topEdge = Path()
-                topEdge.move(to: blockTop)
-                topEdge.addCurve(
-                    to: CGPoint(x: gutterLeft, y: pointY),
-                    control1: CGPoint(x: gutterMidX, y: top),
-                    control2: CGPoint(x: gutterLeft + 2, y: pointY - 1)
-                )
-                layer.stroke(topEdge, with: .color(color.opacity(0.40)),
-                    style: StrokeStyle(lineWidth: 0.75, lineCap: .round))
-
-                // Bottom edge curve
-                var bottomEdge = Path()
-                bottomEdge.move(to: blockBottom)
-                bottomEdge.addCurve(
-                    to: CGPoint(x: gutterLeft, y: pointY),
-                    control1: CGPoint(x: gutterMidX, y: bottom),
-                    control2: CGPoint(x: gutterLeft + 2, y: pointY + 1)
-                )
-                layer.stroke(bottomEdge, with: .color(color.opacity(0.40)),
-                    style: StrokeStyle(lineWidth: 0.75, lineCap: .round))
-
-                // Insertion point line extending into left panel
-                var insertionLine = Path()
-                insertionLine.move(to: CGPoint(x: gutterLeft - fadeWidth, y: pointY))
-                insertionLine.addLine(to: CGPoint(x: gutterLeft, y: pointY))
-                layer.stroke(insertionLine, with: .color(color.opacity(0.35)),
-                    style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [4, 3]))
+                // Insertion reference line into left panel
+                var refLine = Path()
+                refLine.move(to: CGPoint(x: gutterLeft - fadeWidth * 2, y: tipY))
+                refLine.addLine(to: CGPoint(x: gutterLeft, y: tipY))
+                layer.stroke(refLine, with: .color(color.opacity(0.25)),
+                    style: StrokeStyle(lineWidth: 1, lineCap: .butt))
 
                 // Right panel edge marker
-                let markerRect = CGRect(x: gutterRight + 1, y: top, width: 3, height: height)
-                layer.fill(Path(markerRect), with: .color(color.opacity(0.25)))
-
-                // Right panel fade into content
-                let rightFadeRect = CGRect(x: gutterRight + 4, y: top, width: fadeWidth, height: height)
-                layer.fill(Path(rightFadeRect), with: .linearGradient(
-                    Gradient(colors: [color.opacity(0.12), color.opacity(0.0)]),
-                    startPoint: CGPoint(x: gutterRight + 4, y: midY),
-                    endPoint: CGPoint(x: gutterRight + 4 + fadeWidth, y: midY)
-                ))
+                let markerRect = CGRect(x: gutterRight + 1, y: top, width: 2, height: height)
+                layer.fill(Path(markerRect), with: .color(color.opacity(0.18)))
 
             case .left:
-                // Deletion-only: funnel from left panel converging to removal point on right
-                let blockTop = CGPoint(x: gutterLeft, y: top)
-                let blockBottom = CGPoint(x: gutterLeft, y: bottom)
-                let pointY = midY  // Removal point on right side
-
-                // Funnel shape
+                // Deletion-only: smooth teardrop -- wide at left, rounded point at right
+                let tipY = pointY + lineHeight * 0.5
                 var funnel = Path()
-                funnel.move(to: blockTop)
+                funnel.move(to: CGPoint(x: gutterLeft, y: top))
                 funnel.addCurve(
-                    to: CGPoint(x: gutterRight, y: pointY),
+                    to: CGPoint(x: gutterRight, y: tipY),
                     control1: CGPoint(x: gutterMidX, y: top),
-                    control2: CGPoint(x: gutterRight - 2, y: pointY - 1)
+                    control2: CGPoint(x: gutterRight, y: tipY - lineHeight * 0.3)
                 )
                 funnel.addCurve(
-                    to: blockBottom,
-                    control1: CGPoint(x: gutterRight - 2, y: pointY + 1),
+                    to: CGPoint(x: gutterLeft, y: bottom),
+                    control1: CGPoint(x: gutterRight, y: tipY + lineHeight * 0.3),
                     control2: CGPoint(x: gutterMidX, y: bottom)
                 )
                 funnel.closeSubpath()
 
-                layer.fill(funnel, with: .color(color.opacity(0.14)))
+                layer.fill(funnel, with: .color(color.opacity(0.10)))
+                layer.stroke(funnel, with: .color(color.opacity(0.28)),
+                    style: StrokeStyle(lineWidth: 0.75, lineCap: .round, lineJoin: .round))
 
-                // Top edge curve
-                var topEdge = Path()
-                topEdge.move(to: blockTop)
-                topEdge.addCurve(
-                    to: CGPoint(x: gutterRight, y: pointY),
-                    control1: CGPoint(x: gutterMidX, y: top),
-                    control2: CGPoint(x: gutterRight - 2, y: pointY - 1)
-                )
-                layer.stroke(topEdge, with: .color(color.opacity(0.40)),
-                    style: StrokeStyle(lineWidth: 0.75, lineCap: .round))
-
-                // Bottom edge curve
-                var bottomEdge = Path()
-                bottomEdge.move(to: blockBottom)
-                bottomEdge.addCurve(
-                    to: CGPoint(x: gutterRight, y: pointY),
-                    control1: CGPoint(x: gutterMidX, y: bottom),
-                    control2: CGPoint(x: gutterRight - 2, y: pointY + 1)
-                )
-                layer.stroke(bottomEdge, with: .color(color.opacity(0.40)),
-                    style: StrokeStyle(lineWidth: 0.75, lineCap: .round))
-
-                // Removal point line extending into right panel
-                var removalLine = Path()
-                removalLine.move(to: CGPoint(x: gutterRight, y: pointY))
-                removalLine.addLine(to: CGPoint(x: gutterRight + fadeWidth, y: pointY))
-                layer.stroke(removalLine, with: .color(color.opacity(0.35)),
-                    style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [4, 3]))
+                // Removal reference line into right panel
+                var refLine = Path()
+                refLine.move(to: CGPoint(x: gutterRight, y: tipY))
+                refLine.addLine(to: CGPoint(x: gutterRight + fadeWidth * 2, y: tipY))
+                layer.stroke(refLine, with: .color(color.opacity(0.25)),
+                    style: StrokeStyle(lineWidth: 1, lineCap: .butt))
 
                 // Left panel edge marker
-                let markerRect = CGRect(x: gutterLeft - 4, y: top, width: 3, height: height)
-                layer.fill(Path(markerRect), with: .color(color.opacity(0.25)))
-
-                // Left panel fade into content
-                let leftFadeRect = CGRect(x: gutterLeft - 4 - fadeWidth, y: top, width: fadeWidth, height: height)
-                layer.fill(Path(leftFadeRect), with: .linearGradient(
-                    Gradient(colors: [color.opacity(0.12), color.opacity(0.0)]),
-                    startPoint: CGPoint(x: gutterLeft - 4, y: midY),
-                    endPoint: CGPoint(x: gutterLeft - 4 - fadeWidth, y: midY)
-                ))
+                let markerRect = CGRect(x: gutterLeft - 3, y: top, width: 2, height: height)
+                layer.fill(Path(markerRect), with: .color(color.opacity(0.18)))
             }
         }
     }
