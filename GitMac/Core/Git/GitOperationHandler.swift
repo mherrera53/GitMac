@@ -97,7 +97,11 @@ class GitOperationHandler: ObservableObject {
     }
 
     func handlePush(force: Bool = false, forceWithLease: Bool = false) async {
-        guard let repo = appState?.currentRepository else { return }
+        guard let repo = appState?.currentRepository else {
+            Logger.debug("Push: No current repository in appState")
+            NotificationManager.shared.error("Push failed", detail: "No repository selected")
+            return
+        }
         let branchName = repo.currentBranch?.name ?? "unknown"
 
         // Check branch protection
