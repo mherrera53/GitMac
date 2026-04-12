@@ -53,7 +53,7 @@ fi
 # Extract the framework
 echo -e "${YELLOW}Extracting framework...${NC}"
 cd "$FRAMEWORK_DIR"
-unzip -q "$FRAMEWORK_NAME.zip"
+unzip -o -q "$FRAMEWORK_NAME.zip"
 rm "$FRAMEWORK_NAME.zip"
 cd ..
 
