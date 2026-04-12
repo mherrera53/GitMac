@@ -35,12 +35,12 @@ struct DSStatusBadge: View {
 
             Text(text)
                 .font(font)
-                .foregroundColor(foregroundColor)
+                .foregroundStyle(foregroundColor)
         }
         .padding(.horizontal, horizontalPadding)
         .padding(.vertical, verticalPadding)
         .background(backgroundColor)
-        .cornerRadius(cornerRadius)
+        .clipShape(.rect(cornerRadius: cornerRadius))
     }
 
     // MARK: - Variant Colors

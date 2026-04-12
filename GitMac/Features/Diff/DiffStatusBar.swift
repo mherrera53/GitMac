@@ -57,10 +57,10 @@ struct DiffStatusBar: View {
     private var lfmIndicator: some View {
         HStack(spacing: DesignTokens.Spacing.xs) {
             Image(systemName: "bolt.fill")
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
             Text("Large File Mode")
                 .fontWeight(.semibold)
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
         }
     }
     
@@ -70,7 +70,7 @@ struct DiffStatusBar: View {
                 .font(DesignTokens.Typography.caption2)
             Text(degradation.description)
         }
-        .foregroundColor(colorForSeverity(degradation.severity))
+        .foregroundStyle(colorForSeverity(degradation.severity))
         .help(degradation.description)
     }
     
@@ -79,7 +79,7 @@ struct DiffStatusBar: View {
             Image(systemName: "magnifyingglass")
             Text("\(count) match\(count == 1 ? "" : "es")")
         }
-        .foregroundColor(AppTheme.accent)
+        .foregroundStyle(AppTheme.accent)
     }
     
     private func performanceStats(_ stats: DiffPerformanceStats) -> some View {
@@ -90,7 +90,7 @@ struct DiffStatusBar: View {
                         .font(DesignTokens.Typography.caption2)
                     Text("Parse: \(parseTime, format: .number.precision(.fractionLength(2)))s")
                 }
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             }
 
             if let memoryUsage = stats.memoryUsage {
@@ -99,7 +99,7 @@ struct DiffStatusBar: View {
                         .font(DesignTokens.Typography.caption2)
                     Text(ByteCountFormatter.string(fromByteCount: Int64(memoryUsage), countStyle: .memory))
                 }
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             }
 
             if let frameTime = stats.averageFrameTime {
@@ -109,7 +109,7 @@ struct DiffStatusBar: View {
                         .font(DesignTokens.Typography.caption2)
                     Text("\(frameTime, format: .number.precision(.fractionLength(1))) ms/frame")
                 }
-                .foregroundColor(color)
+                .foregroundStyle(color)
             }
         }
     }

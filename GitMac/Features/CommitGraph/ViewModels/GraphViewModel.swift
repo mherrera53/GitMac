@@ -23,6 +23,10 @@ class GraphViewModel: ObservableObject {
     // Maximum lane number for dynamic graph width calculation
     @Published var maxLane: Int = 0
 
+    // Minimap: lightweight data for ALL commits in repo
+    @Published var minimapNodes: [MinimapCommitNode] = []
+    @Published var totalCommitCount: Int = 0
+
     private let engine = GitEngine()
     private var path: String?
     private var page = 0
@@ -47,7 +51,7 @@ class GraphViewModel: ObservableObject {
             }
 
             // Load current user email for @me filter
-            let result = await ShellExecutor().execute(
+            let result = await ShellExecutor.shared.execute(
                 "git",
                 arguments: ["config", "user.email"],
                 workingDirectory: p
@@ -83,12 +87,122 @@ class GraphViewModel: ObservableObject {
             // Build merged timeline (commits + stashes sorted by date)
             buildTimeline()
 
+            // Load lightweight minimap data for ALL commits in background
+            Task.detached(priority: .utility) {
+                await self.loadMinimapData(at: p)
+            }
+
             // Load avatars from GitHub repository in background
             Task.detached(priority: .utility) {
                 await self.loadAvatarsFromGitHub(at: p)
             }
         } catch {
             // Loading failed silently
+        }
+        isLoading = false
+    }
+
+    /// Load lightweight commit data for the minimap (SHA + parent count only)
+    private func loadMinimapData(at repoPath: String) async {
+        let result = await ShellExecutor.shared.execute(
+            "git",
+            arguments: ["log", "--all", "--format=%H %P"],
+            workingDirectory: repoPath
+        )
+        guard result.exitCode == 0 else { return }
+
+        let lines = result.stdout.components(separatedBy: "\n").filter { !$0.isEmpty }
+
+        // First pass: build SHA -> index + lane maps
+        var shaToIndex: [String: Int] = [:]
+        var shaToLane: [String: Int] = [:]
+        var shaToParents: [String: [String]] = [:]
+        var nextLane = 0
+
+        for (index, line) in lines.enumerated() {
+            let parts = line.components(separatedBy: " ")
+            let sha = parts[0]
+            let parents = Array(parts.dropFirst())
+
+            shaToIndex[sha] = index
+            shaToParents[sha] = parents
+
+            // Assign lane: reuse first parent's lane or create new
+            let lane: Int
+            if let firstParent = parents.first, let parentLane = shaToLane[firstParent] {
+                lane = parentLane
+            } else {
+                lane = nextLane % 6
+                nextLane += 1
+            }
+            shaToLane[sha] = lane
+
+            // Assign lanes for secondary parents (merge sources)
+            for secondaryParent in parents.dropFirst() {
+                if shaToLane[secondaryParent] == nil {
+                    shaToLane[secondaryParent] = nextLane % 6
+                    nextLane += 1
+                }
+            }
+        }
+
+        // Second pass: build nodes with parent references
+        var minimapItems: [MinimapCommitNode] = []
+        for (index, line) in lines.enumerated() {
+            let parts = line.components(separatedBy: " ")
+            let sha = parts[0]
+            let parents = Array(parts.dropFirst())
+            let isMerge = parents.count > 1
+            let lane = shaToLane[sha] ?? 0
+
+            let parentIdxs = parents.compactMap { shaToIndex[$0] }
+            let parentLns = parents.compactMap { shaToLane[$0] }
+
+            minimapItems.append(MinimapCommitNode(
+                index: index,
+                lane: lane,
+                isMerge: isMerge,
+                parentIndices: parentIdxs,
+                parentLanes: parentLns
+            ))
+        }
+
+        await MainActor.run {
+            self.minimapNodes = minimapItems
+            self.totalCommitCount = lines.count
+        }
+    }
+
+    /// Load commits up to a specific index (for minimap navigation)
+    func loadUpTo(index targetIndex: Int) async {
+        guard let p = path else { return }
+        let needed = targetIndex + 50 // Load a bit past target
+        let currentCount = commits.count
+
+        guard needed > currentCount, hasMore else { return }
+
+        isLoading = true
+        do {
+            let toLoad = needed - currentCount
+            let pages = (toLoad + 99) / 100 // Ceil division
+
+            for _ in 0..<pages {
+                guard hasMore else { break }
+                page += 1
+                let more = try await engine.getCommitsV2(at: p, limit: 100, skip: page * 100)
+                commits.append(contentsOf: more)
+                hasMore = more.count == 100
+            }
+
+            let newNodes = await buildNodes()
+            nodes = newNodes
+            maxLane = nodes.reduce(0) { maxVal, node in
+                let nodeLanes = [node.lane] + Array(node.passThroughLanes) + node.curvesToBottom
+                return max(maxVal, nodeLanes.max() ?? 0)
+            }
+            buildTimeline()
+        } catch {
+            // Loading failed
         }
         isLoading = false
     }

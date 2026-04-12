@@ -28,7 +28,7 @@ class StashDetailViewModel: ObservableObject {
     }
 
     func getDiff(for file: StashFile, stash: Stash, at path: String) async -> FileDiff? {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         // Use git diff between stash parent and stash for specific file
         // Syntax: git diff stash@{n}^ stash@{n} -- file.path
         let result = await shell.execute(
@@ -48,7 +48,7 @@ class StashDetailViewModel: ObservableObject {
     func applyStashFile(stash: Stash, file: StashFile, at path: String) async {
         isLoading = true
         do {
-            let shell = ShellExecutor()
+            let shell = ShellExecutor.shared
             let result = await shell.execute(
                 "git",
                 arguments: ["checkout", stash.reference, "--", file.path],
@@ -57,7 +57,7 @@ class StashDetailViewModel: ObservableObject {
 
             if result.exitCode != 0 {
                 // Handle error if needed (maybe via a published error property)
-                print("Error applying file: \(result.stderr)")
+                Logger.debug("Error applying file: \(result.stderr)")
             } else {
                 NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
             }
@@ -79,18 +79,18 @@ struct StashDetailFileRow: View {
                 // Status icon
                 Image(systemName: statusIcon)
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(file.statusColor)
+                    .foregroundStyle(file.statusColor)
                     .frame(width: 14)
 
                 // File icon
                 Image(systemName: fileIcon(for: file.filename))
                     .font(.system(size: 10))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
 
                 // File path
                 Text(file.filename)
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
 
@@ -100,7 +100,7 @@ struct StashDetailFileRow: View {
                 if file.path != file.filename {
                     Text(String(file.path.dropLast(file.filename.count + 1)))
                         .font(.system(size: 10))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .lineLimit(1)
                         .truncationMode(.head)
                 }

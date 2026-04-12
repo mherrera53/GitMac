@@ -51,7 +51,7 @@ final class BranchNamingSuggestionService {
             
             return parseBranchNamesFromAI(response: response, detectedType: detectedType, context: context)
         } catch {
-            print("❌ AI suggestion failed: \(error)")
+            Logger.debug("❌ AI suggestion failed: \(error)")
             return []
         }
     }

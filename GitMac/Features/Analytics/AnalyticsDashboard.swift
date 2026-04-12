@@ -67,12 +67,12 @@ struct AnalyticsDashboard: View {
                 Text("Repository Analytics")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 if let repo = appState.currentRepository {
                     Text(repo.name)
                         .font(.subheadline)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
             
@@ -91,7 +91,7 @@ struct AnalyticsDashboard: View {
                 Task { await viewModel.refresh() }
             } label: {
                 Image(systemName: "arrow.clockwise")
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .buttonStyle(.borderless)
         }
@@ -150,7 +150,7 @@ struct AnalyticsDashboard: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             Text("Commit Activity")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             if #available(macOS 14.0, *) {
                 Chart(viewModel.commitActivity) { item in
@@ -159,7 +159,7 @@ struct AnalyticsDashboard: View {
                         y: .value("Commits", item.count)
                     )
                     .foregroundStyle(AppTheme.accent.gradient)
-                    .cornerRadius(4)
+                    .clipShape(.rect(cornerRadius: 4))
                 }
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: 7)) { _ in
@@ -179,13 +179,13 @@ struct AnalyticsDashboard: View {
             } else {
                 // Fallback for older macOS
                 Text("Charts require macOS 14+")
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .frame(height: 200)
             }
         }
         .padding()
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     }
     
     // MARK: - Language Breakdown
@@ -194,7 +194,7 @@ struct AnalyticsDashboard: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             Text("Language Breakdown")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             if #available(macOS 14.0, *) {
                 Chart(viewModel.languageBreakdown) { item in
@@ -204,7 +204,7 @@ struct AnalyticsDashboard: View {
                         angularInset: 2
                     )
                     .foregroundStyle(by: .value("Language", item.language))
-                    .cornerRadius(4)
+                    .clipShape(.rect(cornerRadius: 4))
                 }
                 .chartLegend(position: .trailing)
                 .frame(height: 200)
@@ -215,7 +215,7 @@ struct AnalyticsDashboard: View {
                         HStack {
                             Text(lang.language)
                                 .font(.caption)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                             
                             GeometryReader { geo in
                                 RoundedRectangle(cornerRadius: 4)
@@ -226,7 +226,7 @@ struct AnalyticsDashboard: View {
                             
                             Text("\(Int(lang.percentage * 100))%")
                                 .font(.caption2)
-                                .foregroundColor(AppTheme.textMuted)
+                                .foregroundStyle(AppTheme.textMuted)
                         }
                     }
                 }
@@ -235,7 +235,7 @@ struct AnalyticsDashboard: View {
         }
         .padding()
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     }
     
     // MARK: - Top Contributors
@@ -244,7 +244,7 @@ struct AnalyticsDashboard: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             Text("Top Contributors")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             ForEach(viewModel.topContributors.prefix(5)) { contributor in
                 HStack(spacing: DesignTokens.Spacing.sm) {
@@ -252,7 +252,7 @@ struct AnalyticsDashboard: View {
                     Text("#\(contributor.rank)")
                         .font(.caption)
                         .fontWeight(.bold)
-                        .foregroundColor(contributor.rank <= 3 ? AppTheme.accent : AppTheme.textMuted)
+                        .foregroundStyle(contributor.rank <= 3 ? AppTheme.accent : AppTheme.textMuted)
                         .frame(width: 24)
                     
                     // Avatar
@@ -261,7 +261,7 @@ struct AnalyticsDashboard: View {
                     } placeholder: {
                         Image(systemName: "person.circle.fill")
                             .resizable()
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .frame(width: 28, height: 28)
                     .clipShape(Circle())
@@ -270,11 +270,11 @@ struct AnalyticsDashboard: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(contributor.name)
                             .font(.subheadline)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         
                         Text("\(contributor.commits) commits")
                             .font(.caption2)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     
                     Spacer()
@@ -295,7 +295,7 @@ struct AnalyticsDashboard: View {
         }
         .padding()
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     }
     
     // MARK: - Recent Activity
@@ -304,24 +304,24 @@ struct AnalyticsDashboard: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             Text("Recent Activity")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             ForEach(viewModel.recentActivity.prefix(5)) { activity in
                 HStack(spacing: DesignTokens.Spacing.sm) {
                     Image(systemName: activity.icon)
                         .font(.caption)
-                        .foregroundColor(activity.color)
+                        .foregroundStyle(activity.color)
                         .frame(width: 20)
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text(activity.description)
                             .font(.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .lineLimit(1)
                         
                         Text(activity.relativeTime)
                             .font(.caption2)
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                     
                     Spacer()
@@ -330,7 +330,7 @@ struct AnalyticsDashboard: View {
         }
         .padding()
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     }
     
     // MARK: - Repository Health
@@ -340,18 +340,18 @@ struct AnalyticsDashboard: View {
             HStack {
                 Text("Repository Health")
                     .font(.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 Spacer()
                 
                 // Health score
                 HStack(spacing: 4) {
                     Image(systemName: viewModel.healthScore >= 80 ? "heart.fill" : "heart")
-                        .foregroundColor(viewModel.healthScore >= 80 ? AppTheme.success : AppTheme.warning)
+                        .foregroundStyle(viewModel.healthScore >= 80 ? AppTheme.success : AppTheme.warning)
                     
                     Text("\(viewModel.healthScore)%")
                         .font(.headline)
-                        .foregroundColor(viewModel.healthScore >= 80 ? AppTheme.success : AppTheme.warning)
+                        .foregroundStyle(viewModel.healthScore >= 80 ? AppTheme.success : AppTheme.warning)
                 }
             }
             
@@ -382,7 +382,7 @@ struct AnalyticsDashboard: View {
         }
         .padding()
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     }
     
     // MARK: - Loading/Error States
@@ -393,7 +393,7 @@ struct AnalyticsDashboard: View {
                 .scaleEffect(1.5)
             Text("Analyzing repository...")
                 .font(.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, minHeight: 400)
     }
@@ -402,15 +402,15 @@ struct AnalyticsDashboard: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
             
             Text("Error Loading Analytics")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text(error)
                 .font(.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
             
             Button("Retry") {
                 Task { await viewModel.refresh() }
@@ -445,7 +445,7 @@ struct AnalyticsMetricCard: View {
             HStack {
                 Image(systemName: icon)
                     .font(.caption)
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 
                 Spacer()
                 
@@ -455,22 +455,22 @@ struct AnalyticsMetricCard: View {
                         Text("\(abs(Int(trend * 100)))%")
                     }
                     .font(.caption2)
-                    .foregroundColor(trend >= 0 ? AppTheme.success : AppTheme.error)
+                    .foregroundStyle(trend >= 0 ? AppTheme.success : AppTheme.error)
                 }
             }
             
             Text(value)
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text(title)
                 .font(.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     }
 }
 
@@ -502,21 +502,21 @@ struct HealthIndicator: View {
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: status.icon)
-                .foregroundColor(status.color)
+                .foregroundStyle(status.color)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.caption2)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                 
                 Text(value)
                     .font(.caption)
                     .fontWeight(.medium)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
         .padding(DesignTokens.Spacing.sm)
         .background(status.color.opacity(0.1))
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
     }
 }

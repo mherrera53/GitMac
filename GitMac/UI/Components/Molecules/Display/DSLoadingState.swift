@@ -33,7 +33,7 @@ struct DSLoadingState: View {
 
             Text(message)
                 .font(style == .large ? DesignTokens.Typography.body : DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding(style == .large ? DesignTokens.Spacing.xl : DesignTokens.Spacing.md)
         .frame(maxWidth: style == .inline ? nil : .infinity, maxHeight: style == .inline ? nil : .infinity)
@@ -81,17 +81,17 @@ enum DSLoadingStyle {
         DSLoadingState(message: "Inline loading", style: .inline)
             .padding()
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
 
         DSLoadingState(message: "Standard loading", style: .standard)
             .frame(height: 150)
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
 
         DSLoadingState(message: "Large loading", style: .large)
             .frame(height: 200)
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     }
     .padding()
     .background(AppTheme.background)

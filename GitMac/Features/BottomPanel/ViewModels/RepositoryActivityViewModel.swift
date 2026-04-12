@@ -58,6 +58,13 @@ struct CommitActivity: Identifiable {
 
 @MainActor
 class RepositoryActivityViewModel: ObservableObject {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+    nonisolated(unsafe) private static let shortDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
     @Published var contributors: [Contributor] = []
     @Published var recentCommits: [CommitActivity] = []
     @Published var contributionDays: [ContributionDay] = []
@@ -65,10 +72,10 @@ class RepositoryActivityViewModel: ObservableObject {
     @Published var error: String?
     @Published var totalCommits: Int = 0
     @Published var activeDays: Int = 0
-    
+
     private var currentRepositoryPath: String?
     private var cancellables = Set<AnyCancellable>()
-    private let shell = ShellExecutor()
+    private let shell = ShellExecutor.shared
     
     // MARK: - Load Data
     
@@ -154,19 +161,18 @@ class RepositoryActivityViewModel: ObservableObject {
         )
         
         var commits: [CommitActivity] = []
-        let dateFormatter = ISO8601DateFormatter()
-        
+
         for line in result.output.components(separatedBy: "\n") where !line.isEmpty {
             let parts = line.components(separatedBy: "|")
             guard parts.count >= 5 else { continue }
-            
+
             let hash = parts[0]
             let message = parts[1]
             let author = parts[2]
             let email = parts[3]
             let dateStr = parts[4]
-            
-            let date = dateFormatter.date(from: dateStr) ?? Date()
+
+            let date = Self.isoFormatter.date(from: dateStr) ?? Date()
             
             commits.append(CommitActivity(
                 id: hash,
@@ -188,11 +194,8 @@ class RepositoryActivityViewModel: ObservableObject {
         let endDate = Date()
         let startDate = calendar.date(byAdding: .day, value: -days, to: endDate) ?? endDate
         
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        
         // Get commit counts per day
-        let startStr = dateFormatter.string(from: startDate)
+        let startStr = Self.shortDateFormatter.string(from: startDate)
         let result = await shell.execute(
             "sh", arguments: ["-c", "git log --all --since=\"\(startStr)\" --format=\"%ad\" --date=short 2>/dev/null | sort | uniq -c"],
             workingDirectory: repoPath
@@ -213,7 +216,7 @@ class RepositoryActivityViewModel: ObservableObject {
         var currentDate = startDate
         
         while currentDate <= endDate {
-            let dateKey = dateFormatter.string(from: currentDate)
+            let dateKey = Self.shortDateFormatter.string(from: currentDate)
             let count = commitsByDate[dateKey] ?? 0
             contributionDays.append(ContributionDay(date: currentDate, commitCount: count))
             currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate

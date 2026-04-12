@@ -45,7 +45,7 @@ actor ViewDiffEngine {
     private let shellExecutor: ShellExecutor
     private let cache: DiffCache
     
-    init(shellExecutor: ShellExecutor = ShellExecutor(), cacheSize: Int = 50_000_000) {
+    init(shellExecutor: ShellExecutor = ShellExecutor.shared, cacheSize: Int = 50_000_000) {
         self.shellExecutor = shellExecutor
         self.cache = DiffCache(maxBytes: cacheSize)
     }

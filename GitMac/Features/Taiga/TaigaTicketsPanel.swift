@@ -11,7 +11,7 @@ import SwiftUI
 // MARK: - Taiga Tickets Panel (Bottom Panel)
 
 struct TaigaTicketsPanel: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     @Binding var height: CGFloat
     let onClose: () -> Void
@@ -35,7 +35,7 @@ struct TaigaTicketsPanel: View {
 
                     Text("Taiga")
                         .font(DesignTokens.Typography.headline)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Spacer()
 

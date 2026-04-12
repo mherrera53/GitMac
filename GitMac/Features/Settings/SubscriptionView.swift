@@ -64,7 +64,7 @@ struct SubscriptionView: View {
 
             Text("Unlock the full power of GitMac")
                 .font(.subheadline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .padding(.vertical, DesignTokens.Spacing.xl)
         .frame(maxWidth: .infinity)
@@ -77,21 +77,21 @@ struct SubscriptionView: View {
         HStack {
             Image(systemName: "checkmark.seal.fill")
                 .font(.title)
-                .foregroundColor(AppTheme.success)
+                .foregroundStyle(AppTheme.success)
 
             VStack(alignment: .leading) {
                 Text("You're a Pro!")
                     .font(.headline)
                 Text(storeManager.subscriptionStatus.description)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
 
             Spacer()
         }
         .padding()
         .background(AppTheme.success.opacity(0.1))
-        .cornerRadius(DesignTokens.CornerRadius.xl)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
     }
 
     // MARK: - Features
@@ -107,7 +107,7 @@ struct SubscriptionView: View {
         }
         .padding()
         .background(AppTheme.textSecondary.opacity(0.05))
-        .cornerRadius(DesignTokens.CornerRadius.xl)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
     }
 
     // MARK: - Pricing
@@ -144,7 +144,7 @@ struct SubscriptionView: View {
                     ProgressView()
                     Text("Loading plans...")
                         .font(.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 .padding()
             }
@@ -160,7 +160,7 @@ struct SubscriptionView: View {
             }
         }
         .font(.caption)
-        .foregroundColor(AppTheme.textPrimary)
+        .foregroundStyle(AppTheme.textPrimary)
     }
 
     // MARK: - Purchase
@@ -189,7 +189,7 @@ struct ProFeatureRow: View {
         HStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: feature.icon)
                 .font(.title3)
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
                 .frame(width: 30)
 
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
@@ -197,14 +197,14 @@ struct ProFeatureRow: View {
                     .fontWeight(.medium)
                 Text(feature.description)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
 
             Spacer()
 
             if isIncluded {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
             }
         }
     }
@@ -224,11 +224,11 @@ struct PlanCard: View {
                 Text("BEST VALUE")
                     .font(.caption2)
                     .fontWeight(.bold)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .padding(.horizontal, DesignTokens.Spacing.sm)
                     .padding(.vertical, DesignTokens.Spacing.xs)
                     .background(AppTheme.warning)
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
 
             Text(product.displayName)
@@ -240,7 +240,7 @@ struct PlanCard: View {
 
             Text(periodDescription)
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Button {
                 Task { await onPurchase() }
@@ -258,7 +258,7 @@ struct PlanCard: View {
         .padding()
         .frame(maxWidth: .infinity)
         .background(isRecommended ? AppTheme.accent.opacity(0.1) : AppTheme.textSecondary.opacity(0.05))
-        .cornerRadius(DesignTokens.CornerRadius.xl)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xl)
                 .stroke(isRecommended ? AppTheme.accent : Color.clear, lineWidth: 2)
@@ -285,14 +285,14 @@ struct PaywallView: View {
         VStack(spacing: DesignTokens.Spacing.xl) {
             Image(systemName: "lock.fill")
                 .font(DesignTokens.Typography.iconXXXXL)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Pro Feature")
                 .font(.title2)
                 .fontWeight(.bold)
 
             Text("\(feature.rawValue) requires GitMac Pro")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.center)
 
             HStack(spacing: DesignTokens.Spacing.lg) {
@@ -321,7 +321,7 @@ struct ProBadge: View {
         Text("PRO")
             .font(.caption2)
             .fontWeight(.bold)
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
             .padding(.horizontal, DesignTokens.Spacing.xs)
             .padding(.vertical, DesignTokens.Spacing.xxs)
             .background(
@@ -331,7 +331,7 @@ struct ProBadge: View {
                     endPoint: .trailing
                 )
             )
-            .cornerRadius(DesignTokens.CornerRadius.sm)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
     }
 }
 

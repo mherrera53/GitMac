@@ -38,13 +38,13 @@ struct DSHeader<Actions: View>: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                     Text(title)
                         .font(DesignTokens.Typography.title3)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .fontWeight(.semibold)
 
                     if let subtitle = subtitle {
                         Text(subtitle)
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                 }
             }
@@ -56,7 +56,7 @@ struct DSHeader<Actions: View>: View {
         }
         .padding(DesignTokens.Spacing.md)
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     }
 }
 
@@ -89,13 +89,13 @@ struct DSHeader<Actions: View>: View {
     ) {
         HStack(spacing: DesignTokens.Spacing.sm) {
             DSButton(variant: .ghost, size: .sm) {
-                print("Refresh tapped")
+                Logger.debug("Refresh tapped")
             } label: {
                 DSIcon("arrow.clockwise", size: .sm)
             }
 
             DSButton(variant: .primary, size: .sm) {
-                print("New branch tapped")
+                Logger.debug("New branch tapped")
             } label: {
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     DSIcon("plus", size: .sm)
@@ -116,19 +116,19 @@ struct DSHeader<Actions: View>: View {
     ) {
         HStack(spacing: DesignTokens.Spacing.sm) {
             DSButton(variant: .ghost, size: .sm) {
-                print("Filter tapped")
+                Logger.debug("Filter tapped")
             } label: {
                 DSIcon("line.3.horizontal.decrease.circle", size: .sm)
             }
 
             DSButton(variant: .ghost, size: .sm) {
-                print("Sort tapped")
+                Logger.debug("Sort tapped")
             } label: {
                 DSIcon("arrow.up.arrow.down", size: .sm)
             }
 
             DSButton(variant: .primary, size: .sm) {
-                print("Create PR tapped")
+                Logger.debug("Create PR tapped")
             } label: {
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     DSIcon("plus", size: .sm)
@@ -147,7 +147,7 @@ struct DSHeader<Actions: View>: View {
         icon: "gearshape.fill"
     ) {
         DSButton(variant: .ghost, size: .sm) {
-            print("Reset tapped")
+            Logger.debug("Reset tapped")
         } label: {
             Text("Reset")
         }

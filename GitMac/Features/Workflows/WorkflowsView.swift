@@ -139,7 +139,7 @@ struct WorkflowsResponse: Codable {
 // MARK: - Workflows View
 
 struct WorkflowsView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = WorkflowsViewModel()
     @State private var selectedFilter: WorkflowFilter = .all
@@ -172,7 +172,7 @@ struct WorkflowsView: View {
                 notConfiguredView
             } else {
                 // Filters usando HStack con botones DS
-                ScrollView(.horizontal, showsIndicators: false) {
+                ScrollView(.horizontal) {
                     HStack(spacing: DesignTokens.Spacing.xs) {
                         ForEach(WorkflowFilter.allCases, id: \.self) { filter in
                             FilterButton(
@@ -188,6 +188,7 @@ struct WorkflowsView: View {
                     .padding(.horizontal, DesignTokens.Spacing.sm)
                     .padding(.vertical, DesignTokens.Spacing.sm)
                 }
+                .scrollIndicators(.hidden)
 
                 // Search usando DSSearchField
                 DSSearchField(
@@ -235,7 +236,7 @@ struct WorkflowsView: View {
                     if let lastUpdate = viewModel.lastUpdate {
                         Text("Updated \(lastUpdate, style: .relative) ago")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                 }
                 .padding(DesignTokens.Spacing.sm)
@@ -337,7 +338,7 @@ enum WorkflowFilter: CaseIterable {
 }
 
 struct FilterButton: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     let title: String
     let count: Int
@@ -369,7 +370,7 @@ struct FilterButton: View {
 // MARK: - Workflow Run Row
 
 struct WorkflowRunRow: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     let run: WorkflowRun
     let onTap: (() -> Void)?
@@ -567,7 +568,7 @@ class WorkflowsViewModel: ObservableObject {
 // MARK: - Workflow Status Badge (for use in other views)
 
 struct WorkflowStatusBadge: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     let status: String
     let conclusion: String?

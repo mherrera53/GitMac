@@ -12,6 +12,11 @@ import Foundation
 /// - after:date or since:date
 /// - before:date or until:date
 class SearchSyntaxParser {
+    nonisolated(unsafe) private static let isoDateFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withFullDate]
+        return f
+    }()
 
     /// Parse search string into structured query
     static func parse(_ input: String) -> SearchQuery {
@@ -101,11 +106,8 @@ class SearchSyntaxParser {
 
     /// Parse date from string (supports various formats)
     private static func parseDate(_ value: String) -> Date? {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withFullDate]
-
         // Try ISO format first (YYYY-MM-DD)
-        if let date = formatter.date(from: value) {
+        if let date = isoDateFormatter.date(from: value) {
             return date
         }
 

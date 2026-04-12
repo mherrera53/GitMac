@@ -42,7 +42,7 @@ class StoreManager: ObservableObject {
             products = try await Product.products(for: productIDs)
             products.sort { $0.price < $1.price }
         } catch {
-            print("Failed to load products: \(error)")
+            Logger.debug("Failed to load products: \(error)")
         }
     }
 
@@ -76,7 +76,7 @@ class StoreManager: ObservableObject {
             try await AppStore.sync()
             await updateSubscriptionStatus()
         } catch {
-            print("Failed to restore purchases: \(error)")
+            Logger.debug("Failed to restore purchases: \(error)")
         }
     }
 
@@ -117,7 +117,7 @@ class StoreManager: ObservableObject {
                     await self.updateSubscriptionStatus()
                     await transaction.finish()
                 } catch {
-                    print("Transaction failed verification: \(error)")
+                    Logger.debug("Transaction failed verification: \(error)")
                 }
             }
         }
@@ -165,6 +165,12 @@ class StoreManager: ObservableObject {
 // MARK: - Subscription Status
 
 enum SubscriptionStatus {
+    nonisolated(unsafe) private static let mediumDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        return f
+    }()
+
     case unknown
     case inactive
     case active(expiresAt: Date)
@@ -185,9 +191,7 @@ enum SubscriptionStatus {
         case .inactive:
             return "Inactive"
         case .active(let date):
-            let formatter = DateFormatter()
-            formatter.dateStyle = .medium
-            return "Active until \(formatter.string(from: date))"
+            return "Active until \(Self.mediumDateFormatter.string(from: date))"
         }
     }
 }

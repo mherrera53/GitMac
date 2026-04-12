@@ -11,7 +11,7 @@ struct GitFlowView: View {
             // Header
             HStack {
                 Image(systemName: "arrow.triangle.branch")
-                    .foregroundColor(AppTheme.accentPurple)
+                    .foregroundStyle(AppTheme.accentPurple)
 
                 Text("Git Flow")
                     .font(.headline)
@@ -24,8 +24,8 @@ struct GitFlowView: View {
                         .padding(.horizontal, DesignTokens.Spacing.sm)
                         .padding(.vertical, DesignTokens.Spacing.xxs)
                         .background(AppTheme.success.opacity(0.2))
-                        .foregroundColor(AppTheme.success)
-                        .cornerRadius(DesignTokens.CornerRadius.lg)
+                        .foregroundStyle(AppTheme.success)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                 } else {
                     Button("Initialize") {
                         showInitSheet = true
@@ -58,13 +58,13 @@ struct GitFlowView: View {
                 VStack(spacing: DesignTokens.Spacing.lg) {
                     Image(systemName: "arrow.triangle.branch")
                         .font(DesignTokens.Typography.iconXXXXL)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Text("Git Flow Not Initialized")
                         .font(.headline)
 
                     Text("Git Flow provides a robust branching model for your project")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .multilineTextAlignment(.center)
 
                     Button("Initialize Git Flow") {
@@ -107,7 +107,7 @@ class GitFlowViewModel: ObservableObject {
     @Published var error: String?
 
     private var repositoryPath = ""
-    private let shell = ShellExecutor()
+    private let shell = ShellExecutor.shared
 
     func checkGitFlow(in repo: Repository) async {
         repositoryPath = repo.path
@@ -428,17 +428,17 @@ struct ActiveBranchesSection: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     HStack {
                         Image(systemName: "star")
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                         Text("Features")
                             .fontWeight(.medium)
                         Text("(\(viewModel.activeFeatures.count))")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
 
                     if viewModel.activeFeatures.isEmpty {
                         Text("No active features")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     } else {
                         ForEach(viewModel.activeFeatures, id: \.self) { feature in
                             ActiveBranchRow(
@@ -459,17 +459,17 @@ struct ActiveBranchesSection: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     HStack {
                         Image(systemName: "shippingbox")
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                         Text("Releases")
                             .fontWeight(.medium)
                         Text("(\(viewModel.activeReleases.count))")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
 
                     if viewModel.activeReleases.isEmpty {
                         Text("No active releases")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     } else {
                         ForEach(viewModel.activeReleases, id: \.self) { release in
                             ActiveBranchRow(
@@ -490,17 +490,17 @@ struct ActiveBranchesSection: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     HStack {
                         Image(systemName: "flame")
-                            .foregroundColor(AppTheme.warning)
+                            .foregroundStyle(AppTheme.warning)
                         Text("Hotfixes")
                             .fontWeight(.medium)
                         Text("(\(viewModel.activeHotfixes.count))")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
 
                     if viewModel.activeHotfixes.isEmpty {
                         Text("No active hotfixes")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     } else {
                         ForEach(viewModel.activeHotfixes, id: \.self) { hotfix in
                             ActiveBranchRow(
@@ -637,19 +637,19 @@ struct StartButton: View {
             VStack(spacing: DesignTokens.Spacing.sm) {
                 Image(systemName: icon)
                     .font(.title2)
-                    .foregroundColor(color)
+                    .foregroundStyle(color)
 
                 Text(title)
                     .font(.headline)
 
                 Text(description)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             .frame(maxWidth: .infinity)
             .padding()
             .background(Color(nsColor: .controlBackgroundColor))
-            .cornerRadius(DesignTokens.CornerRadius.lg)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                     .stroke(color.opacity(0.3), lineWidth: 1)
@@ -688,7 +688,7 @@ struct PrefixRow: View {
     var body: some View {
         HStack {
             Text(label)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Spacer()
             Text(value)
                 .font(.system(.body, design: .monospaced))
@@ -715,7 +715,7 @@ struct StartBranchSheet: View {
 
             Text("Branch will be created: \(prefix)\(name.isEmpty ? placeholder : name)")
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             HStack {
                 Button("Cancel") {

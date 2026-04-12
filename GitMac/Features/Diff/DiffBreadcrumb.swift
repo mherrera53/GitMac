@@ -12,7 +12,7 @@ struct DiffBreadcrumb: View {
     @Binding var selectedVersionB: String?
     let versions: [FileVersion]
 
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     private var pathComponents: [String] {
         filePath.components(separatedBy: "/").filter { !$0.isEmpty }
@@ -45,7 +45,7 @@ struct DiffBreadcrumb: View {
                     if index > 0 {
                         Image(systemName: "chevron.right")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
 
                     if index == pathComponents.count - 1 {
@@ -53,17 +53,17 @@ struct DiffBreadcrumb: View {
                         HStack(spacing: DesignTokens.Spacing.xs) {
                             Image(systemName: fileIcon(for: component))
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.accent)
+                                .foregroundStyle(AppTheme.accent)
 
                             Text(component)
                                 .font(DesignTokens.Typography.body.weight(.semibold))
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                         }
                     } else {
                         // Directory path
                         Text(component)
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                 }
             }
@@ -79,7 +79,7 @@ struct DiffBreadcrumb: View {
                 Text("Additions")
                     .font(DesignTokens.Typography.caption2)
             }
-            .foregroundColor(AppTheme.diffAddition)
+            .foregroundStyle(AppTheme.diffAddition)
 
             // Deletions
             HStack(spacing: 2) {
@@ -88,7 +88,7 @@ struct DiffBreadcrumb: View {
                 Text("Deletions")
                     .font(DesignTokens.Typography.caption2)
             }
-            .foregroundColor(AppTheme.diffDeletion)
+            .foregroundStyle(AppTheme.diffDeletion)
 
             // Changes
             HStack(spacing: 2) {
@@ -97,12 +97,12 @@ struct DiffBreadcrumb: View {
                 Text("Changes")
                     .font(DesignTokens.Typography.caption2)
             }
-            .foregroundColor(AppTheme.info)
+            .foregroundStyle(AppTheme.info)
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.xs)
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     }
 
     private var versionSelectors: some View {
@@ -139,14 +139,14 @@ struct DiffBreadcrumb: View {
                                 .font(DesignTokens.Typography.body)
                             Text(version.description)
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.textMuted)
+                                .foregroundStyle(AppTheme.textMuted)
                         }
 
                         Spacer()
 
                         if selectedVersion.wrappedValue == version.identifier {
                             Image(systemName: "checkmark")
-                                .foregroundColor(color)
+                                .foregroundStyle(color)
                         }
                     }
                 }
@@ -159,29 +159,29 @@ struct DiffBreadcrumb: View {
                     .foregroundStyle(AppTheme.buttonTextOnColor)
                     .frame(width: 20, height: 20)
                     .background(color)
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
                 // Selected version name
                 if let identifier = selectedVersion.wrappedValue,
                    let version = versions.first(where: { $0.identifier == identifier }) {
                     Text(version.name)
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
                 } else {
                     Text("Select version...")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
 
                 Image(systemName: "chevron.down")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .padding(.vertical, DesignTokens.Spacing.xs)
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                     .stroke(AppTheme.border, lineWidth: 1)

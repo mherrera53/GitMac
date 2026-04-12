@@ -62,7 +62,7 @@ struct FileAnnotationView: View {
                     Label("\(viewModel.uniqueCommits.count)", systemImage: "number")
                 }
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             }
         }
         .padding()
@@ -98,7 +98,7 @@ struct FileAnnotationView: View {
         VStack(spacing: 12) {
             ProgressView()
             Text("Loading annotations...")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -107,14 +107,14 @@ struct FileAnnotationView: View {
         VStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
             
             Text("Failed to load annotations")
                 .font(.headline)
             
             Text(message)
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Button("Retry") {
                 Task { await viewModel.loadBlame(for: filePath) }
@@ -165,7 +165,7 @@ struct AnnotationRow: View {
             // Line number
             Text("\(lineNumber)")
                 .frame(width: 50, alignment: .trailing)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .padding(.horizontal, 8)
                 .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
             
@@ -245,7 +245,7 @@ struct AnnotationRow: View {
             // Author avatar (first letter)
             Text(annotation.author.prefix(1).uppercased())
                 .font(.system(size: 10, weight: .bold))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .frame(width: 24, height: 24)
                 .background(
                     Circle()
@@ -261,13 +261,13 @@ struct AnnotationRow: View {
             // Commit SHA
             Text(annotation.shortSHA)
                 .font(.system(.caption, design: .monospaced))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .frame(width: 60, alignment: .leading)
             
             // Date
             Text(annotation.relativeDate)
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .frame(width: 100, alignment: .leading)
         }
         .frame(width: 350)
@@ -499,7 +499,7 @@ struct AnnotationLegendView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Each author has a unique color")
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
     }
     
@@ -521,7 +521,7 @@ struct LegendItem: View {
             Rectangle()
                 .fill(color.opacity(0.6))
                 .frame(width: 20, height: 12)
-                .cornerRadius(3)
+                .clipShape(.rect(cornerRadius: 3))
             
             Text(label)
                 .font(.caption)
@@ -554,7 +554,7 @@ struct EnhancedFileAnnotationView: View {
                         showLegend.toggle()
                     } label: {
                         Image(systemName: "questionmark.circle")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.borderless)
                     .help("Show Legend")
@@ -567,7 +567,7 @@ struct EnhancedFileAnnotationView: View {
                         showStats.toggle()
                     } label: {
                         Image(systemName: "chart.bar")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.borderless)
                     .help("Show Stats")
@@ -602,9 +602,9 @@ struct AnnotationStatsView: View {
                         Text(stat.author)
                         Spacer()
                         Text("\(stat.lines) lines")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Text("(\(stat.percentage)%)")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
             }

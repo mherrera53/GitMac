@@ -74,11 +74,11 @@ class TerminalNLTranslationService {
         input: String,
         context: NLContext
     ) async throws -> NLCommandResponse {
-        print("🧠 NL Translation: '\(input)'")
+        Logger.debug("🧠 NL Translation: '\(input)'")
         
         // First try pattern matching for common commands
         if let patternResult = patternMatcher.match(input: input, context: context) {
-            print("✅ Matched pattern: \(patternResult.command)")
+            Logger.debug("✅ Matched pattern: \(patternResult.command)")
             return patternResult
         }
         
@@ -95,7 +95,7 @@ class TerminalNLTranslationService {
             do {
                 return try await callOllama(prompt: prompt, temperature: 0.3, maxTokens: 300)
             } catch {
-                print("⚠️ Ollama failed for explanation, falling back")
+                Logger.debug("⚠️ Ollama failed for explanation, falling back")
             }
         }
         
@@ -350,7 +350,7 @@ class TerminalNLTranslationService {
                 let response = try await callOllama(prompt: prompt, temperature: 0.3, maxTokens: 500)
                 return try parseAIResponse(response)
             } catch {
-                print("⚠️ Ollama failed, falling back to OpenAI")
+                Logger.debug("⚠️ Ollama failed, falling back to OpenAI")
             }
         }
         
@@ -469,7 +469,7 @@ class TerminalNLTranslationService {
                 return available
             }
         } catch {
-            print("⚠️ Ollama not available: \(error.localizedDescription)")
+            Logger.debug("⚠️ Ollama not available: \(error.localizedDescription)")
             isOllamaAvailable = false
             lastOllamaCheck = Date()
         }

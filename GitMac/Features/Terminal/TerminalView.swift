@@ -16,7 +16,7 @@ struct TerminalTab: Identifiable, Equatable {
 // MARK: - Multi-Tab Terminal View
 
 struct TerminalView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     @EnvironmentObject var appState: AppState
     @StateObject private var tabManager = TerminalTabManager()
@@ -121,7 +121,7 @@ struct TerminalTabBar: View {
     var body: some View {
         HStack(spacing: 0) {
             // Tabs
-            ScrollView(.horizontal, showsIndicators: false) {
+            ScrollView(.horizontal) {
                 HStack(spacing: 1) {
                     ForEach(tabs) { tab in
                         TerminalTabButton(
@@ -140,6 +140,7 @@ struct TerminalTabBar: View {
                 }
                 .padding(.horizontal, DesignTokens.Spacing.xs)
             }
+            .scrollIndicators(.hidden)
 
             Spacer()
 
@@ -166,7 +167,7 @@ struct TerminalTabButton: View {
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: "terminal")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 Text(tab.name)
                     .font(DesignTokens.Typography.caption)
@@ -176,16 +177,16 @@ struct TerminalTabButton: View {
                     Button(action: onClose) {
                         Image(systemName: "xmark")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(TerminalColors.textMuted)
+                            .foregroundStyle(TerminalColors.textMuted)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .foregroundColor(isSelected ? TerminalColors.textPrimary : TerminalColors.textSecondary)
+            .foregroundStyle(isSelected ? TerminalColors.textPrimary : TerminalColors.textSecondary)
             .padding(.horizontal, DesignTokens.Spacing.sm + DesignTokens.Spacing.xxs)
             .padding(.vertical, DesignTokens.Spacing.xs)
             .background(isSelected ? TerminalColors.blockBackground : (isHovered ? TerminalColors.blockBackground.opacity(0.5) : Color.clear))
-            .cornerRadius(DesignTokens.CornerRadius.sm)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
@@ -384,12 +385,12 @@ struct CommandBlockView: View {
                 // Directory
                 Text((block.workingDirectory as NSString).lastPathComponent)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(TerminalColors.textSecondary)
+                    .foregroundStyle(TerminalColors.textSecondary)
 
                 // Command
                 Text(block.command)
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(TerminalColors.command)
+                    .foregroundStyle(TerminalColors.command)
                     .lineLimit(1)
 
                 Spacer()
@@ -397,7 +398,7 @@ struct CommandBlockView: View {
                 // Timestamp
                 Text(block.timestamp.formatted(.dateTime.hour().minute().second()))
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(TerminalColors.textMuted)
+                    .foregroundStyle(TerminalColors.textMuted)
 
                 // Buttons (visible on hover)
                 if isHovered {
@@ -413,11 +414,11 @@ struct CommandBlockView: View {
                                     Text("Explain")
                                         .font(DesignTokens.Typography.caption2)
                                 }
-                                .foregroundColor(TerminalColors.accent)
+                                .foregroundStyle(TerminalColors.accent)
                                 .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                                 .padding(.vertical, DesignTokens.Spacing.xxs)
                                 .background(TerminalColors.accent.opacity(0.15))
-                                .cornerRadius(DesignTokens.CornerRadius.sm)
+                                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                             }
                             .buttonStyle(.plain)
                             .help("Explain error with AI")
@@ -428,7 +429,7 @@ struct CommandBlockView: View {
                         } label: {
                             Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
                                 .font(DesignTokens.Typography.caption2)
-                                .foregroundColor(isCopied ? TerminalColors.success : TerminalColors.textSecondary)
+                                .foregroundStyle(isCopied ? TerminalColors.success : TerminalColors.textSecondary)
                         }
                         .buttonStyle(.plain)
                         .help("Copy output")
@@ -458,7 +459,7 @@ struct CommandBlockView: View {
                     Text("Exit code: \(block.exitCode)")
                         .font(DesignTokens.Typography.caption2)
                 }
-                .foregroundColor(TerminalColors.error)
+                .foregroundStyle(TerminalColors.error)
                 .padding(.horizontal, DesignTokens.Spacing.md)
                 .padding(.bottom, DesignTokens.Spacing.sm)
             }
@@ -468,22 +469,22 @@ struct CommandBlockView: View {
                 HStack(alignment: .top, spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
                     Image(systemName: "sparkles")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(TerminalColors.accent)
+                        .foregroundStyle(TerminalColors.accent)
                     Text(explanation)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(TerminalColors.textSecondary)
+                        .foregroundStyle(TerminalColors.textSecondary)
                         .textSelection(.enabled)
                 }
                 .padding(DesignTokens.Spacing.sm + DesignTokens.Spacing.xxs)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(TerminalColors.accent.opacity(0.08))
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 .padding(.horizontal, DesignTokens.Spacing.md)
                 .padding(.bottom, DesignTokens.Spacing.sm + DesignTokens.Spacing.xxs)
             }
         }
         .background(TerminalColors.blockBackground)
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                 .stroke(isHovered ? TerminalColors.accent.opacity(0.5) : TerminalColors.blockBorder, lineWidth: 1)
@@ -516,7 +517,7 @@ struct OutputLineView: View {
     var body: some View {
         Text(line.text)
             .font(DesignTokens.Typography.callout)
-            .foregroundColor(textColor)
+            .foregroundStyle(textColor)
             .textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -545,7 +546,7 @@ struct SimpleCommandInputAndOutput: View {
         HStack(spacing: 6) {
             Text(prompt)
                 .font(.system(size: 13, weight: .bold, design: .monospaced))
-                .foregroundColor(TerminalColors.prompt)
+                .foregroundStyle(TerminalColors.prompt)
             
             TextField("", text: $commandInput)
                 .font(.system(size: 13, design: .monospaced))
@@ -591,7 +592,7 @@ struct ExpandableTextEditor: View {
             if text.isEmpty {
                 Text(placeholder)
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(TerminalColors.textMuted)
+                    .foregroundStyle(TerminalColors.textMuted)
                     .padding(.top, DesignTokens.Spacing.xxs)
                     .padding(.leading, DesignTokens.Spacing.xs)
             }
@@ -599,7 +600,7 @@ struct ExpandableTextEditor: View {
             // Text Editor
             TextEditor(text: $text)
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(TerminalColors.command)
+                .foregroundStyle(TerminalColors.command)
                 .scrollContentBackground(.hidden)
                 .focused($isInputFocused)
                 .frame(minHeight: 22, maxHeight: dynamicHeight)
@@ -661,10 +662,10 @@ struct AISuggestionsPopup: View {
                 HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
                     Image(systemName: "sparkles")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(TerminalColors.accent)
+                        .foregroundStyle(TerminalColors.accent)
                     Text("Getting AI suggestions...")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(TerminalColors.textMuted)
+                        .foregroundStyle(TerminalColors.textMuted)
                     Spacer()
                     ProgressView()
                         .scaleEffect(0.5)
@@ -679,22 +680,22 @@ struct AISuggestionsPopup: View {
                     if suggestion.isFromAI {
                         Image(systemName: "sparkles")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(TerminalColors.accent)
+                            .foregroundStyle(TerminalColors.accent)
                     } else {
                         Image(systemName: "terminal")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(TerminalColors.textMuted)
+                            .foregroundStyle(TerminalColors.textMuted)
                     }
 
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                         Text(suggestion.command)
                             .font(DesignTokens.Typography.callout)
-                            .foregroundColor(index == selectedIndex ? TerminalColors.textPrimary : TerminalColors.textSecondary)
+                            .foregroundStyle(index == selectedIndex ? TerminalColors.textPrimary : TerminalColors.textSecondary)
 
                         if !suggestion.description.isEmpty {
                             Text(suggestion.description)
                                 .font(DesignTokens.Typography.caption2)
-                                .foregroundColor(TerminalColors.textMuted)
+                                .foregroundStyle(TerminalColors.textMuted)
                                 .lineLimit(1)
                         }
                     }
@@ -704,11 +705,11 @@ struct AISuggestionsPopup: View {
                     if index == selectedIndex {
                         Text("Tab ↹")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(TerminalColors.textMuted)
+                            .foregroundStyle(TerminalColors.textMuted)
                             .padding(.horizontal, DesignTokens.Spacing.xs)
                             .padding(.vertical, DesignTokens.Spacing.xxs)
                             .background(TerminalColors.blockBackground)
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                     }
                 }
                 .padding(.horizontal, 12)
@@ -720,7 +721,7 @@ struct AISuggestionsPopup: View {
             }
         }
         .background(TerminalColors.inputBackground)
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                 .stroke(TerminalColors.blockBorder, lineWidth: 1)
@@ -743,7 +744,7 @@ class TerminalViewModel: ObservableObject {
     private var commandHistory: [String] = []
     private var historyIndex: Int = -1
     private var currentProcess: Process?
-    private let shellExecutor = ShellExecutor()
+    private let shellExecutor = ShellExecutor.shared
 
     // AI suggestions
     private var aiSuggestionTask: Task<Void, Never>?
@@ -1220,14 +1221,14 @@ struct TerminalAIChatView: View {
             // Header
             HStack {
                 Image(systemName: "sparkles")
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 Text("AI Terminal Assistant")
                     .font(.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Button("Done") { dismiss() }
                     .buttonStyle(.plain)
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
             }
             .padding()
             .background(AppTheme.backgroundSecondary)
@@ -1249,7 +1250,7 @@ struct TerminalAIChatView: View {
                                     .scaleEffect(0.7)
                                 Text("Thinking...")
                                     .font(.caption)
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
                             }
                             .padding(.horizontal)
                         }
@@ -1273,15 +1274,15 @@ struct TerminalAIChatView: View {
                 DSTextField(placeholder: "Ask about git commands, errors, or code...", text: $inputText)
                     .padding(DesignTokens.Spacing.sm + DesignTokens.Spacing.xxs)
                     .background(AppTheme.backgroundSecondary)
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                     .onSubmit { sendMessage() }
 
                 Button(action: sendMessage) {
                     Image(systemName: "paperplane.fill")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .padding(DesignTokens.Spacing.sm + DesignTokens.Spacing.xxs)
                         .background(inputText.isEmpty ? AppTheme.textMuted : AppTheme.accent)
-                        .cornerRadius(DesignTokens.CornerRadius.lg)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                 }
                 .buttonStyle(.plain)
                 .disabled(inputText.isEmpty || isLoading)
@@ -1359,21 +1360,21 @@ struct TerminalAIChatBubble: View {
         HStack(alignment: .top, spacing: DesignTokens.Spacing.sm) {
             if message.role == .assistant {
                 Image(systemName: "sparkles")
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .frame(width: DesignTokens.Size.iconXL, height: DesignTokens.Size.iconXL)
             }
 
             Text(message.content)
                 .textSelection(.enabled)
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .padding(DesignTokens.Spacing.sm + DesignTokens.Spacing.xxs)
                 .background(message.role == .user ? AppTheme.info.opacity(0.15) : AppTheme.backgroundSecondary)
-                .cornerRadius(DesignTokens.CornerRadius.xl)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
 
             if message.role == .user {
                 Image(systemName: "person.circle.fill")
-                    .foregroundColor(AppTheme.info)
+                    .foregroundStyle(AppTheme.info)
                     .frame(width: DesignTokens.Size.iconXL, height: DesignTokens.Size.iconXL)
             }
         }
@@ -1478,18 +1479,18 @@ struct GhosttyHeaderBar: View {
             HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
                 Image(systemName: "folder.fill")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(TerminalGhosttyColors.accent)
+                    .foregroundStyle(TerminalGhosttyColors.accent)
 
                 Text(repositoryName)
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(TerminalGhosttyColors.textPrimary)
+                    .foregroundStyle(TerminalGhosttyColors.textPrimary)
 
                 Text("•")
-                    .foregroundColor(TerminalGhosttyColors.textMuted)
+                    .foregroundStyle(TerminalGhosttyColors.textMuted)
 
                 Text(currentDirectory)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(TerminalGhosttyColors.textMuted)
+                    .foregroundStyle(TerminalGhosttyColors.textMuted)
                     .lineLimit(1)
             }
             .padding(.leading, DesignTokens.Spacing.md)
@@ -1509,11 +1510,11 @@ struct GhosttyHeaderBar: View {
                             Text("Palette")
                                 .font(DesignTokens.Typography.caption2)
                         }
-                        .foregroundColor(TerminalGhosttyColors.accent)
+                        .foregroundStyle(TerminalGhosttyColors.accent)
                         .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                         .padding(.vertical, DesignTokens.Spacing.xs)
                         .background(TerminalGhosttyColors.accent.opacity(0.1))
-                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                     }
                     .buttonStyle(.plain)
                     .help("Command Palette (⌘K)")
@@ -1530,11 +1531,11 @@ struct GhosttyHeaderBar: View {
                         Text("Chat")
                             .font(DesignTokens.Typography.caption2)
                     }
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                     .padding(.vertical, DesignTokens.Spacing.xs)
                     .background(AppTheme.accent.opacity(0.1))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
                 .buttonStyle(.plain)
                 .help("AI Terminal Assistant")
@@ -1553,11 +1554,11 @@ struct GhosttyHeaderBar: View {
                         Text("AI")
                             .font(DesignTokens.Typography.caption2)
                     }
-                    .foregroundColor(aiEnabled ? TerminalGhosttyColors.accent : TerminalGhosttyColors.textMuted)
+                    .foregroundStyle(aiEnabled ? TerminalGhosttyColors.accent : TerminalGhosttyColors.textMuted)
                     .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                     .padding(.vertical, DesignTokens.Spacing.xs)
                     .background(aiEnabled ? TerminalGhosttyColors.accent.opacity(0.15) : Color.clear)
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
                 .buttonStyle(.plain)
                 .help(aiEnabled ? "AI suggestions enabled" : "AI suggestions disabled")
@@ -1566,7 +1567,7 @@ struct GhosttyHeaderBar: View {
                 Button(action: onClear) {
                     Image(systemName: "trash")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(TerminalGhosttyColors.textMuted)
+                        .foregroundStyle(TerminalGhosttyColors.textMuted)
                 }
                 .buttonStyle(.plain)
                 .help("Clear terminal (Cmd+K)")
@@ -1684,9 +1685,9 @@ struct TerminalGhosttyRepresentable: NSViewRepresentable {
         ghosttyInitialized = (result == GHOSTTY_SUCCESS)
 
         if ghosttyInitialized {
-            print("✅ Ghostty library initialized successfully")
+            Logger.debug("✅ Ghostty library initialized successfully")
         } else {
-            print("❌ Ghostty initialization failed with code: \(result)")
+            Logger.debug("❌ Ghostty initialization failed with code: \(result)")
         }
 
         return ghosttyInitialized
@@ -1706,8 +1707,8 @@ struct TerminalGhosttyRepresentable: NSViewRepresentable {
         // Get working directory from initialDirectory parameter (passed from appState)
         let workingDir = initialDirectory
         viewModel.currentDirectory = workingDir // Update viewModel to match
-        print("🔧 Terminal working directory: \(workingDir)")
-        print("🔍 Repository detected: \(workingDir.contains("isi.hospital") ? "ISI Hospital" : workingDir.contains("anysubscription") ? "AnySubscription" : "Other")")
+        Logger.debug("🔧 Terminal working directory: \(workingDir)")
+        Logger.debug("🔍 Repository detected: \(workingDir.contains("isi.hospital") ? "ISI Hospital" : workingDir.contains("anysubscription") ? "AnySubscription" : "Other")")
 
         // Create custom container view with keyboard handling
         let containerView = GhosttyTerminalNSView(frame: NSMakeRect(0, 0, 800, 600))
@@ -1785,7 +1786,7 @@ struct TerminalGhosttyRepresentable: NSViewRepresentable {
         // Connect surface to container view for keyboard events
         containerView.surface = surface
 
-        print("✅ Terminal created in directory: \(workingDir)")
+        Logger.debug("✅ Terminal created in directory: \(workingDir)")
 
         return containerView
     }
@@ -1889,7 +1890,7 @@ struct InlineAISuggestionBar: View {
             // Icon
             Image(systemName: suggestion.isFromAI ? "sparkles" : "command.circle")
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(suggestion.isFromAI ? AppTheme.accent : AppTheme.textSecondary)
+                .foregroundStyle(suggestion.isFromAI ? AppTheme.accent : AppTheme.textSecondary)
                 .symbolRenderingMode(.hierarchical)
             
             // Inline suggestion with ghosted completion
@@ -1897,7 +1898,7 @@ struct InlineAISuggestionBar: View {
                 // Current input
                 Text(currentInput)
                     .font(.system(size: 13, design: .monospaced))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .fontWeight(.medium)
                 
                 // Ghosted completion (the part that will be auto-completed)
@@ -1905,12 +1906,12 @@ struct InlineAISuggestionBar: View {
                     let completion = String(suggestion.command.dropFirst(currentInput.count))
                     Text(completion)
                         .font(.system(size: 13, design: .monospaced))
-                        .foregroundColor(AppTheme.textMuted.opacity(0.5))
+                        .foregroundStyle(AppTheme.textMuted.opacity(0.5))
                         .fontWeight(.regular)
                 } else {
                     Text(suggestion.command)
                         .font(.system(size: 13, design: .monospaced))
-                        .foregroundColor(AppTheme.textMuted.opacity(0.5))
+                        .foregroundStyle(AppTheme.textMuted.opacity(0.5))
                         .fontWeight(.regular)
                 }
             }
@@ -1921,7 +1922,7 @@ struct InlineAISuggestionBar: View {
             if !suggestion.description.isEmpty {
                 Text(suggestion.description)
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .lineLimit(1)
             }
             
@@ -1932,11 +1933,11 @@ struct InlineAISuggestionBar: View {
                 Text("Tab")
                     .font(.system(size: 10, weight: .medium))
             }
-            .foregroundColor(AppTheme.textMuted)
+            .foregroundStyle(AppTheme.textMuted)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(AppTheme.backgroundTertiary.opacity(0.5))
-            .cornerRadius(6)
+            .clipShape(.rect(cornerRadius: 6))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

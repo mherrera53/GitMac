@@ -61,14 +61,14 @@ struct DSResizablePanel<Content: View>: View {
                     HStack {
                         Text(title)
                             .font(DesignTokens.Typography.headline)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
 
                         Spacer()
 
                         // Height indicator
                         Text("\(Int(height))px")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                             .monospacedDigit()
                     }
                     .padding(DesignTokens.Spacing.md)
@@ -84,7 +84,7 @@ struct DSResizablePanel<Content: View>: View {
             }
             .frame(height: height)
             .background(AppTheme.background)
-            .cornerRadius(DesignTokens.CornerRadius.lg)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 
             // Bottom resizer
             if resizePosition == .bottom {
@@ -117,7 +117,7 @@ struct DSResizablePanel<Content: View>: View {
                 ) {
                     VStack(spacing: DesignTokens.Spacing.md) {
                         Text("Drag the handle to resize")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
 
                         ScrollView {
                             VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
@@ -160,7 +160,7 @@ struct DSResizablePanel<Content: View>: View {
                 ) {
                     VStack(spacing: DesignTokens.Spacing.md) {
                         Text("Resize from top")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
 
                         HStack(spacing: DesignTokens.Spacing.lg) {
                             VStack {
@@ -174,7 +174,7 @@ struct DSResizablePanel<Content: View>: View {
                                     .font(DesignTokens.Typography.caption)
                             }
                         }
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     }
                     .padding()
                 }
@@ -214,7 +214,7 @@ struct DSResizablePanel<Content: View>: View {
                             Spacer()
                             Text("Details")
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.textMuted)
+                                .foregroundStyle(AppTheme.textMuted)
                         }
                         .padding(.vertical, DesignTokens.Spacing.xxs)
                         .transition(.opacity.combined(with: .move(edge: .top)))

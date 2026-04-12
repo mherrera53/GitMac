@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Linear Connected View
 
 struct LinearConnectedView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     let teams: [LinearTeam]
     let onDisconnect: () -> Void
 
@@ -11,13 +11,13 @@ struct LinearConnectedView: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
             HStack {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 Text("Connected")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 if !teams.isEmpty {
                     Text("\(teams.count) teams")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 DSButton("Disconnect", variant: .danger, size: .sm, action: onDisconnect)
             }
@@ -26,11 +26,11 @@ struct LinearConnectedView: View {
                 ForEach(teams) { team in
                     HStack {
                         Text(team.key)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .font(DesignTokens.Typography.caption.monospaced())
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         Text(team.name)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
             }
@@ -54,7 +54,7 @@ struct LinearLoginSettingsView: View {
 
         if let error = error {
             Text(error)
-                .foregroundColor(AppTheme.error)
+                .foregroundStyle(AppTheme.error)
                 .font(DesignTokens.Typography.caption)
         }
 
@@ -67,7 +67,7 @@ struct LinearLoginSettingsView: View {
                         .scaleEffect(0.8)
                 } else {
                     Text("Connect")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
 

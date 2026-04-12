@@ -11,7 +11,7 @@ final class AutoFetchService {
     var lastFetchDate: Date?
     var isFetching = false
 
-    private let shellExecutor = ShellExecutor()
+    private let shellExecutor = ShellExecutor.shared
     private var timerCancellable: AnyCancellable?
     private var activityCancellable: AnyCancellable?
     private var settingsCancellable: AnyCancellable?

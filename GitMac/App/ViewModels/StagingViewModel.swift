@@ -80,7 +80,7 @@ class StagingViewModel: ObservableObject {
                 hasMoreStaged = false
             }
         } catch {
-            print("Error loading status: \(error)")
+            Logger.debug("Error loading status: \(error)")
         }
     }
 
@@ -129,7 +129,7 @@ class StagingViewModel: ObservableObject {
                 try await engine.stage(files: [file.path], at: path)
                 await loadStatus(at: path)
             } catch {
-                print("Error staging: \(error)")
+                Logger.debug("Error staging: \(error)")
             }
         }
     }
@@ -141,7 +141,7 @@ class StagingViewModel: ObservableObject {
                 try await engine.unstage(files: [file.path], at: path)
                 await loadStatus(at: path)
             } catch {
-                print("Error unstaging: \(error)")
+                Logger.debug("Error unstaging: \(error)")
             }
         }
     }
@@ -153,7 +153,7 @@ class StagingViewModel: ObservableObject {
                 try await engine.stageAll(at: path)
                 await loadStatus(at: path)
             } catch {
-                print("Error staging all: \(error)")
+                Logger.debug("Error staging all: \(error)")
             }
         }
     }
@@ -166,7 +166,7 @@ class StagingViewModel: ObservableObject {
                 try await engine.unstage(files: files, at: path)
                 await loadStatus(at: path)
             } catch {
-                print("Error unstaging all: \(error)")
+                Logger.debug("Error unstaging all: \(error)")
             }
         }
     }
@@ -183,7 +183,7 @@ class StagingViewModel: ObservableObject {
                     await loadStatus(at: path)
                 }
             } catch {
-                print("Error staging folder: \(error)")
+                Logger.debug("Error staging folder: \(error)")
             }
         }
     }
@@ -200,7 +200,7 @@ class StagingViewModel: ObservableObject {
                     await loadStatus(at: path)
                 }
             } catch {
-                print("Error unstaging folder: \(error)")
+                Logger.debug("Error unstaging folder: \(error)")
             }
         }
     }
@@ -212,7 +212,7 @@ class StagingViewModel: ObservableObject {
                 try await engine.discardChanges(files: [file.path], at: path)
                 await loadStatus(at: path)
             } catch {
-                print("Error discarding changes: \(error)")
+                Logger.debug("Error discarding changes: \(error)")
             }
         }
     }
@@ -225,7 +225,7 @@ class StagingViewModel: ObservableObject {
                 try FileManager.default.removeItem(atPath: absolutePath)
                 await loadStatus(at: repoPath)
             } catch {
-                print("Error deleting file: \(error)")
+                Logger.debug("Error deleting file: \(error)")
             }
         }
     }
@@ -280,7 +280,7 @@ class StagingViewModel: ObservableObject {
                 deleted += 1
             } catch {
                 failed += 1
-                print("Error deleting \(file.path): \(error)")
+                Logger.debug("Error deleting \(file.path): \(error)")
             }
         }
         Task {
@@ -307,7 +307,7 @@ class StagingViewModel: ObservableObject {
                 deleted += 1
             } catch {
                 failed += 1
-                print("Error deleting \(file.path): \(error)")
+                Logger.debug("Error deleting \(file.path): \(error)")
             }
         }
         Task {
@@ -395,7 +395,7 @@ class StagingViewModel: ObservableObject {
             try hunkPatch.write(toFile: tempFile, atomically: true, encoding: .utf8)
             defer { try? FileManager.default.removeItem(atPath: tempFile) }
 
-            let shell = ShellExecutor()
+            let shell = ShellExecutor.shared
             let result = await shell.execute(
                 "git",
                 arguments: ["apply", "--reverse", tempFile],
@@ -478,7 +478,7 @@ class StagingViewModel: ObservableObject {
             let diffs = await DiffParser.parseAsync(diffString)
             return diffs.first
         } catch {
-            print("Error getting diff: \(error)")
+            Logger.debug("Error getting diff: \(error)")
             return nil
         }
     }

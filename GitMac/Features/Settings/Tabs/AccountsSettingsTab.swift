@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AccountsSettingsView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @State private var githubToken = ""
     @State private var isGitHubConnected = false
     @State private var githubUser: GitHubUser?
@@ -28,20 +28,20 @@ struct AccountsSettingsView: View {
                             image.resizable()
                         } placeholder: {
                             Image(systemName: "person.circle.fill")
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                         .frame(width: 40, height: 40)
                         .clipShape(Circle())
 
                         VStack(alignment: .leading) {
                             Text(user.name ?? user.login)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .fontWeight(.semibold)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                             Text("@\(user.login)")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .font(.caption)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
 
                         Spacer()
@@ -67,27 +67,27 @@ struct AccountsSettingsView: View {
                     // Not connected - show login options
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
                         Text("Connect to GitHub")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .font(DesignTokens.Typography.headline)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
 
                         Text("Sign in to enable pull requests, issues, and repository features.")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
 
                         // OAuth Login (recommended)
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                             Text("Sign in with Browser (Recommended)")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .font(DesignTokens.Typography.subheadline)
                                 .fontWeight(.medium)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
 
                             Text("Uses GitHub's secure OAuth flow. Supports 2FA.")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
 
                             DSButton(variant: .primary, isDisabled: isLoading) {
                                 startOAuthFlow()
@@ -95,7 +95,7 @@ struct AccountsSettingsView: View {
                                 HStack {
                                     Image(systemName: "arrow.up.forward.app")
                                     Text("Sign in with GitHub")
-                                        .foregroundColor(AppTheme.textPrimary)
+                                        .foregroundStyle(AppTheme.textPrimary)
                                 }
                                 .frame(maxWidth: .infinity)
                             }
@@ -106,10 +106,10 @@ struct AccountsSettingsView: View {
                         // Personal Access Token (alternative)
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                             Text("Or use Personal Access Token")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .font(DesignTokens.Typography.subheadline)
                                 .fontWeight(.medium)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
 
                             DSSecureField(placeholder: "Personal Access Token", text: $githubToken)
 
@@ -128,7 +128,7 @@ struct AccountsSettingsView: View {
 
                         if let error = errorMessage {
                             Text(error)
-                                .foregroundColor(AppTheme.error)
+                                .foregroundStyle(AppTheme.error)
                                 .font(DesignTokens.Typography.caption)
                         }
                     }
@@ -138,16 +138,16 @@ struct AccountsSettingsView: View {
             SettingsSection(title: "OAuth Configuration") {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                     Text("To use OAuth sign-in, you need a GitHub OAuth App Client ID.")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
 
                     if oauthConfigured {
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(AppTheme.success)
+                                .foregroundStyle(AppTheme.success)
                             Text("Client ID configured")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                             Spacer()
                             DSButton("Change", variant: .link, size: .sm) {
                                 oauthConfigured = false
@@ -178,7 +178,7 @@ struct AccountsSettingsView: View {
                     Label("read:org - Read organization membership", systemImage: "checkmark.circle")
                 }
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
             }
         }
         .padding()
@@ -268,7 +268,7 @@ struct AccountsSettingsView: View {
 // MARK: - OAuth Waiting View
 
 struct GitHubOAuthWaitingView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     let userCode: String
     let verificationUri: String
     let onCancel: () -> Void
@@ -279,16 +279,16 @@ struct GitHubOAuthWaitingView: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "link.circle.fill")
                 .font(DesignTokens.Typography.iconXXXXL)
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
 
             Text("Enter this code on GitHub")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .font(DesignTokens.Typography.headline)
 
             // User code - large and copyable
             HStack(spacing: DesignTokens.Spacing.md) {
                 Text(userCode)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.title1.bold().monospaced())
                     .tracking(4)
 
@@ -303,19 +303,19 @@ struct GitHubOAuthWaitingView: View {
             }
             .padding()
             .background(AppTheme.textSecondary.opacity(0.1))
-            .cornerRadius(DesignTokens.CornerRadius.lg)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 
             if copied {
                 Text("Copied!")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
             }
 
             Text("Waiting for authorization...")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             ProgressView()
                 .scaleEffect(0.8)

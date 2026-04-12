@@ -35,7 +35,7 @@ struct LaunchpadView: View {
         HStack {
             Image(systemName: "rocket.fill")
                 .font(DesignTokens.Typography.subheadline)
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
 
             Text("Launchpad")
                 .font(DesignTokens.Typography.subheadline)
@@ -58,7 +58,7 @@ struct LaunchpadView: View {
             } label: {
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     Image(systemName: "bookmark")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Text("Views")
                 }
                 .font(DesignTokens.Typography.caption)
@@ -70,7 +70,7 @@ struct LaunchpadView: View {
             } label: {
                 Image(systemName: "arrow.clockwise")
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .buttonStyle(.plain)
             .disabled(viewModel.isLoading)
@@ -88,7 +88,7 @@ struct LaunchpadView: View {
                 } label: {
                     HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
                         Image(systemName: tab.icon)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         Text(tab.title)
                         if let count = viewModel.count(for: tab) {
                             Text("\(count)")
@@ -96,14 +96,14 @@ struct LaunchpadView: View {
                                 .padding(.horizontal, DesignTokens.Spacing.xs + 1)
                                 .padding(.vertical, 1)  // Precise 1px for tight badge padding
                                 .background(selectedTab == tab ? AppTheme.textPrimary.opacity(0.3) : AppTheme.textMuted.opacity(0.2))
-                                .cornerRadius(DesignTokens.CornerRadius.sm)
+                                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                         }
                     }
                     .font(DesignTokens.Typography.callout)
                     .padding(.horizontal, DesignTokens.Spacing.lg)
                     .padding(.vertical, DesignTokens.Spacing.sm)
                     .background(selectedTab == tab ? tab.color : Color.clear)
-                    .foregroundColor(selectedTab == tab ? .white : .primary)
+                    .foregroundStyle(selectedTab == tab ? .white : .primary)
                 }
                 .buttonStyle(.plain)
             }
@@ -116,12 +116,12 @@ struct LaunchpadView: View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             HStack {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 DSTextField(placeholder: "Search...", text: $searchText)
             }
             .padding(DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
             .background(AppTheme.textMuted.opacity(0.1))
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .frame(maxWidth: 200)
 
             ForEach(LaunchpadFilter.allCases, id: \.self) { filter in
@@ -141,17 +141,17 @@ struct LaunchpadView: View {
             } label: {
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     Image(systemName: "folder")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Text(viewModel.selectedRepo ?? "All Repos")
                     Image(systemName: "chevron.down")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.chevronColor)
+                        .foregroundStyle(AppTheme.chevronColor)
                 }
                 .font(DesignTokens.Typography.caption)
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.vertical, DesignTokens.Spacing.xs)
                 .background(AppTheme.textMuted.opacity(0.1))
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
             .menuStyle(.borderlessButton)
         }
@@ -202,7 +202,7 @@ struct LaunchpadView: View {
     private var loadingView: some View {
         VStack(spacing: DesignTokens.Spacing.md) {
             ProgressView()
-            Text("Loading...").font(DesignTokens.Typography.callout).foregroundColor(AppTheme.textPrimary)
+            Text("Loading...").font(DesignTokens.Typography.callout).foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -211,7 +211,7 @@ struct LaunchpadView: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: selectedTab.icon)
                 .font(DesignTokens.Typography.title3)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Text("No \(selectedTab.title.lowercased()) found")
                 .font(DesignTokens.Typography.subheadline)
         }
@@ -221,10 +221,10 @@ struct LaunchpadView: View {
     private var statusBar: some View {
         HStack {
             if viewModel.isLoading { ProgressView().scaleEffect(0.6) }
-            Text("\(filteredItems.count) items").font(DesignTokens.Typography.caption2).foregroundColor(AppTheme.textPrimary)
+            Text("\(filteredItems.count) items").font(DesignTokens.Typography.caption2).foregroundStyle(AppTheme.textPrimary)
             Spacer()
             if let lastUpdate = viewModel.lastUpdate {
-                Text("Updated \(lastUpdate, style: .relative) ago").font(DesignTokens.Typography.caption2).foregroundColor(AppTheme.textPrimary)
+                Text("Updated \(lastUpdate, style: .relative) ago").font(DesignTokens.Typography.caption2).foregroundStyle(AppTheme.textPrimary)
             }
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
@@ -343,17 +343,17 @@ struct LaunchpadItemRow: View {
         HStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: item.status.icon)
                 .font(.system(size: DesignTokens.Size.iconSM, weight: .regular))
-                .foregroundColor(item.status.color)
+                .foregroundStyle(item.status.color)
                 .frame(width: DesignTokens.Size.iconXL)
 
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                 HStack(spacing: DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs) {
                     Text(item.title).font(DesignTokens.Typography.callout).lineLimit(1)
-                    Text("#\(item.number)").font(DesignTokens.Typography.caption).foregroundColor(AppTheme.textPrimary)
+                    Text("#\(item.number)").font(DesignTokens.Typography.caption).foregroundStyle(AppTheme.textPrimary)
                 }
 
                 HStack(spacing: DesignTokens.Spacing.sm) {
-                    Text(item.repository).font(DesignTokens.Typography.caption2).foregroundColor(AppTheme.textPrimary)
+                    Text(item.repository).font(DesignTokens.Typography.caption2).foregroundStyle(AppTheme.textPrimary)
 
                     ForEach(item.labels.prefix(3)) { label in
                         Text(label.name)
@@ -361,13 +361,13 @@ struct LaunchpadItemRow: View {
                             .padding(.horizontal, DesignTokens.Spacing.xs)
                             .padding(.vertical, 1)  // Precise 1px for tight label padding
                             .background(AppTheme.textMuted.opacity(0.2))
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                     }
                 }
             }
 
             Spacer()
-            Text(item.updatedAt, style: .relative).font(DesignTokens.Typography.caption2).foregroundColor(AppTheme.textPrimary)
+            Text(item.updatedAt, style: .relative).font(DesignTokens.Typography.caption2).foregroundStyle(AppTheme.textPrimary)
 
             if isHovered {
                 Button {
@@ -376,7 +376,7 @@ struct LaunchpadItemRow: View {
                     Image(systemName: "arrow.up.forward.square").font(DesignTokens.Typography.caption)
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             }
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
@@ -404,8 +404,8 @@ struct LaunchpadFilterChip: View {
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.vertical, DesignTokens.Spacing.xs)
                 .background(isSelected ? AppTheme.info : AppTheme.textMuted.opacity(0.1))
-                .foregroundColor(isSelected ? .white : .primary)
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .foregroundStyle(isSelected ? .white : .primary)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         }
         .buttonStyle(.plain)
     }
@@ -415,6 +415,8 @@ struct LaunchpadFilterChip: View {
 
 @MainActor
 class LaunchpadViewModel: ObservableObject {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     @Published var items: [LaunchpadItem] = []
     @Published var repositories: [String] = []
     @Published var selectedRepo: String?
@@ -443,7 +445,7 @@ class LaunchpadViewModel: ObservableObject {
             repositories = Array(Set(items.map { $0.repository })).sorted()
             lastUpdate = Date()
         } catch {
-            print("Launchpad error: \(error)")
+            Logger.debug("Launchpad error: \(error)")
         }
 
         isLoading = false
@@ -507,8 +509,8 @@ class LaunchpadViewModel: ObservableObject {
                 return LaunchpadItem.Label(id: "\(id)", name: name, color: color)
             }
 
-            let createdAt = ISO8601DateFormatter().date(from: item["created_at"] as? String ?? "") ?? Date()
-            let updatedAt = ISO8601DateFormatter().date(from: item["updated_at"] as? String ?? "") ?? Date()
+            let createdAt = Self.isoFormatter.date(from: item["created_at"] as? String ?? "") ?? Date()
+            let updatedAt = Self.isoFormatter.date(from: item["updated_at"] as? String ?? "") ?? Date()
 
             var launchpadItem = LaunchpadItem(
                 id: "\(id)", type: .pullRequest, title: title, number: number, repository: repo,
@@ -562,8 +564,8 @@ class LaunchpadViewModel: ObservableObject {
                 return LaunchpadItem.Label(id: "\(id)", name: name, color: color)
             }
 
-            let createdAt = ISO8601DateFormatter().date(from: item["created_at"] as? String ?? "") ?? Date()
-            let updatedAt = ISO8601DateFormatter().date(from: item["updated_at"] as? String ?? "") ?? Date()
+            let createdAt = Self.isoFormatter.date(from: item["created_at"] as? String ?? "") ?? Date()
+            let updatedAt = Self.isoFormatter.date(from: item["updated_at"] as? String ?? "") ?? Date()
 
             var launchpadItem = LaunchpadItem(
                 id: "\(id)", type: .issue, title: title, number: number, repository: repo,

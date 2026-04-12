@@ -54,7 +54,7 @@ extension UserDefaults {
             do {
                 return try JSONDecoder().decode(DiffUIPreferences.self, from: data)
             } catch {
-                print("Failed to decode DiffUIPreferences: \(error)")
+                Logger.debug("Failed to decode DiffUIPreferences: \(error)")
                 return .default
             }
         }
@@ -63,7 +63,7 @@ extension UserDefaults {
                 let data = try JSONEncoder().encode(newValue)
                 set(data, forKey: Self.diffUIPreferencesKey)
             } catch {
-                print("Failed to encode DiffUIPreferences: \(error)")
+                Logger.debug("Failed to encode DiffUIPreferences: \(error)")
             }
         }
     }

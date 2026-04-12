@@ -85,7 +85,7 @@ class BranchPRTracker: ObservableObject {
 
             await refresh()
         } catch {
-            print("BranchPRTracker: Failed to get remotes: \(error)")
+            Logger.debug("BranchPRTracker: Failed to get remotes: \(error)")
             clear()
         }
     }
@@ -180,9 +180,9 @@ class BranchPRTracker: ObservableObject {
             // Post notification that PR data was updated
             NotificationCenter.default.post(name: .branchPRsDidUpdate, object: nil)
 
-            print("BranchPRTracker: Loaded \(prs.count) PRs, mapped \(branchPRs.count) branches")
+            Logger.debug("BranchPRTracker: Loaded \(prs.count) PRs, mapped \(branchPRs.count) branches")
         } catch {
-            print("BranchPRTracker: Failed to load PRs: \(error)")
+            Logger.debug("BranchPRTracker: Failed to load PRs: \(error)")
         }
     }
 
@@ -198,7 +198,7 @@ class BranchPRTracker: ObservableObject {
         }
 
         let branchKey = pr.head.ref.lowercased()
-        print("🔀 MERGE PR: #\(pr.number) with method \(method.rawValue) on \(owner)/\(repo)")
+        Logger.debug("🔀 MERGE PR: #\(pr.number) with method \(method.rawValue) on \(owner)/\(repo)")
 
         // API call waits for response - when it returns, PR is merged
         try await githubService.mergePullRequest(

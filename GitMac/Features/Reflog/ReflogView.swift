@@ -2,6 +2,8 @@ import SwiftUI
 
 /// Reflog viewer - Git's safety net
 struct ReflogView: View {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = ReflogViewModel()
     @State private var selectedEntry: ReflogEntry?
@@ -33,7 +35,7 @@ struct ReflogView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "line.3.horizontal.decrease.circle")
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                             Text(filterRef ?? "All")
                                 .lineLimit(1)
                         }
@@ -46,7 +48,7 @@ struct ReflogView: View {
                         Task { await viewModel.load() }
                     } label: {
                         Image(systemName: "arrow.clockwise")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.borderless)
                     .help("Refresh")
@@ -76,9 +78,9 @@ struct ReflogView: View {
                     Spacer()
                     Image(systemName: "clock.arrow.circlepath")
                         .font(.system(size: 48))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Text("Select an entry to view details")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
@@ -109,7 +111,7 @@ struct ReflogView: View {
                             Text(formatDateHeader(date))
                                 .font(.caption)
                                 .fontWeight(.semibold)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                             
                             Spacer()
                         }
@@ -126,16 +128,16 @@ struct ReflogView: View {
         VStack(spacing: 12) {
             Image(systemName: "clock.arrow.circlepath")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text("No reflog entries found")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             if !searchText.isEmpty {
                 Text("Try adjusting your search")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -170,7 +172,7 @@ struct ReflogView: View {
     }
     
     private func formatDateHeader(_ dateString: String) -> String {
-        guard let date = ISO8601DateFormatter().date(from: dateString) else {
+        guard let date = Self.isoFormatter.date(from: dateString) else {
             return dateString
         }
         
@@ -198,10 +200,10 @@ struct ReflogEntryRow: View {
             // Operation icon
             Image(systemName: entry.operationType.icon)
                 .font(.system(size: 16))
-                .foregroundColor(entry.operationType.color)
+                .foregroundStyle(entry.operationType.color)
                 .frame(width: 24, height: 24)
                 .background(entry.operationType.color.opacity(0.15))
-                .cornerRadius(6)
+                .clipShape(.rect(cornerRadius: 6))
             
             VStack(alignment: .leading, spacing: 4) {
                 // Message
@@ -214,23 +216,23 @@ struct ReflogEntryRow: View {
                     // SHA
                     Text(entry.shortSHA)
                         .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     Text("•")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     // Ref
                     Text(entry.ref)
                         .font(.caption)
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                     
                     Text("•")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     // Time
                     Text(entry.date.formatted(.relative(presentation: .named)))
                         .font(.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
             
@@ -243,7 +245,7 @@ struct ReflogEntryRow: View {
                         // TODO: Checkout
                     } label: {
                         Image(systemName: "arrow.right.circle")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.borderless)
                     .help("Checkout")
@@ -252,7 +254,7 @@ struct ReflogEntryRow: View {
                         // TODO: Reset here
                     } label: {
                         Image(systemName: "arrow.uturn.backward.circle")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.borderless)
                     .help("Reset to here")
@@ -308,7 +310,7 @@ struct ReflogEntryDetailView: View {
                 HStack {
                     Image(systemName: entry.operationType.icon)
                         .font(.system(size: 24))
-                        .foregroundColor(entry.operationType.color)
+                        .foregroundStyle(entry.operationType.color)
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text(entry.message)
@@ -317,21 +319,21 @@ struct ReflogEntryDetailView: View {
                         HStack(spacing: 8) {
                             Text(entry.shortSHA)
                                 .font(.system(.caption, design: .monospaced))
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                             
                             Text("•")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                             
                             Text(entry.ref)
                                 .font(.caption)
-                                .foregroundColor(AppTheme.accent)
+                                .foregroundStyle(AppTheme.accent)
                             
                             Text("•")
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                             
                             Text(entry.date.formatted(date: .abbreviated, time: .shortened))
                                 .font(.caption)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                         }
                     }
                     
@@ -365,7 +367,7 @@ struct ReflogEntryDetailView: View {
                         NSPasteboard.general.setString(entry.sha, forType: .string)
                     } label: {
                         Image(systemName: "doc.on.doc")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .help("Copy SHA")
                 }
@@ -391,9 +393,9 @@ struct ReflogEntryDetailView: View {
                 VStack {
                     Image(systemName: "doc.text")
                         .font(.system(size: 48))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Text("No diff available")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -504,7 +506,7 @@ class ReflogViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let result = await shell.execute(
             "git",
             arguments: ["reflog", "--all", "--date=iso"],

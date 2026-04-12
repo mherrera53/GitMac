@@ -35,12 +35,12 @@ struct PullSheet: View {
 
             if let error {
                 HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill").foregroundColor(AppTheme.warning)
-                    Text(error).foregroundColor(AppTheme.textPrimary)
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(AppTheme.warning)
+                    Text(error).foregroundStyle(AppTheme.textPrimary)
                 }
                 .padding(8)
                 .background(AppTheme.warning.opacity(0.1))
-                .cornerRadius(6)
+                .clipShape(.rect(cornerRadius: 6))
             }
 
             if !conflictedFiles.isEmpty {
@@ -52,7 +52,7 @@ struct PullSheet: View {
                         ForEach(conflictedFiles) { file in
                             HStack {
                                 Image(systemName: "doc.fill")
-                                    .foregroundColor(AppTheme.warning)
+                                    .foregroundStyle(AppTheme.warning)
                                 Text(file.path)
                                     .lineLimit(1)
                                 Spacer()
@@ -193,12 +193,12 @@ struct PullResultView: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: result.isFullySuccessful ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                .foregroundColor(result.isFullySuccessful ? AppTheme.success : AppTheme.warning)
+                .foregroundStyle(result.isFullySuccessful ? AppTheme.success : AppTheme.warning)
             Text(result.message)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .padding(8)
         .background((result.isFullySuccessful ? AppTheme.success : AppTheme.warning).opacity(0.08))
-        .cornerRadius(6)
+        .clipShape(.rect(cornerRadius: 6))
     }
 }

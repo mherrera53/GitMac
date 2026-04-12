@@ -349,39 +349,55 @@ enum AppTheme {
         Color(red: 0.9, green: 0.4, blue: 0.8)    // Magenta
     ]
 
-    // MARK: - Diff Colors (Kaleidoscope-style)
+    // MARK: - Diff Colors (GitHub-inspired, refined for dark/light modes)
 
     static var diffAddition: Color {
         if ThemeManager.shared.currentTheme == .custom {
             return Color.Theme(ThemeManager.shared.colors).diffAddition
         }
-        return Color(nsColor: .systemGreen)
+        // Refined green -- less saturated, more natural (GitHub-style)
+        return Color(red: 0.34, green: 0.72, blue: 0.39) // #57B863
     }
 
     static var diffDeletion: Color {
         if ThemeManager.shared.currentTheme == .custom {
             return Color.Theme(ThemeManager.shared.colors).diffDeletion
         }
-        return Color(nsColor: .systemRed)
+        // Warm rose -- less aggressive than pure red (GitHub-style)
+        return Color(red: 0.85, green: 0.35, blue: 0.38) // #D95961
     }
 
     static var diffChange: Color {
         if ThemeManager.shared.currentTheme == .custom {
             return Color.Theme(ThemeManager.shared.colors).diffChange
         }
-        return Color(nsColor: .systemBlue)
+        // Soft amber for modifications
+        return Color(red: 0.85, green: 0.65, blue: 0.30) // #D9A64D
     }
 
     static var diffAdditionBg: Color {
-        diffAddition.opacity(0.15)
+        // Subtle green tint -- blends naturally with dark backgrounds
+        Color(red: 0.18, green: 0.30, blue: 0.18).opacity(0.8) // Dark mode optimized
     }
 
     static var diffDeletionBg: Color {
-        diffDeletion.opacity(0.15)
+        // Subtle warm red tint -- not aggressive
+        Color(red: 0.32, green: 0.16, blue: 0.16).opacity(0.8) // Dark mode optimized
     }
 
     static var diffChangeBg: Color {
-        diffChange.opacity(0.15)
+        // Subtle amber tint for changes
+        Color(red: 0.30, green: 0.26, blue: 0.14).opacity(0.8)
+    }
+
+    /// Highlighted word-level addition (more visible than line bg)
+    static var diffAdditionHighlight: Color {
+        Color(red: 0.22, green: 0.42, blue: 0.22).opacity(0.9)
+    }
+
+    /// Highlighted word-level deletion (more visible than line bg)
+    static var diffDeletionHighlight: Color {
+        Color(red: 0.45, green: 0.18, blue: 0.18).opacity(0.9)
     }
 
     static var diffLineNumberBg: Color {
@@ -389,7 +405,7 @@ enum AppTheme {
     }
 
     static var diffLineNumber: Color {
-        textMuted.opacity(0.8)
+        textMuted.opacity(0.6)
     }
 }
 
@@ -595,11 +611,11 @@ extension Color {
         var diffAddition: Color { colors.diffAddition.color }
         var diffDeletion: Color { colors.diffDeletion.color }
         var diffChange: Color { colors.diffChange.color }
-        var diffAdditionBg: Color { diffAddition.opacity(0.15) }
-        var diffDeletionBg: Color { diffDeletion.opacity(0.15) }
-        var diffChangeBg: Color { diffChange.opacity(0.15) }
+        var diffAdditionBg: Color { Color(red: 0.18, green: 0.30, blue: 0.18).opacity(0.8) }
+        var diffDeletionBg: Color { Color(red: 0.32, green: 0.16, blue: 0.16).opacity(0.8) }
+        var diffChangeBg: Color { Color(red: 0.30, green: 0.26, blue: 0.14).opacity(0.8) }
         var diffLineNumberBg: Color { backgroundSecondary }
-        var diffLineNumber: Color { textMuted }
+        var diffLineNumber: Color { textMuted.opacity(0.6) }
 
         // MARK: - Button Colors
         var buttonTextOnColor: Color { background }

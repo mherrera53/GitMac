@@ -15,7 +15,7 @@ struct CommandPalette: View {
             HStack(spacing: DesignTokens.Spacing.md) {
                 Image(systemName: "command.circle.fill")
                     .font(DesignTokens.Typography.title3)
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
 
                 DSSearchField(
                     placeholder: "Type a command...",
@@ -76,15 +76,15 @@ struct CommandPalette: View {
         VStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text("No commands found")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text("Try a different search term")
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -99,7 +99,7 @@ struct CommandPalette: View {
             
             Text("\(filteredCommands.count) commands")
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .padding(.horizontal)
         .padding(.vertical, DesignTokens.Spacing.sm)
@@ -429,10 +429,10 @@ struct CommandRow: View {
             // Icon
             Image(systemName: command.icon)
                 .font(.system(size: 20))
-                .foregroundColor(command.category.color)
+                .foregroundStyle(command.category.color)
                 .frame(width: 32, height: 32)
                 .background(command.category.color.opacity(0.15))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
             
             // Title & Description
             VStack(alignment: .leading, spacing: 2) {
@@ -442,7 +442,7 @@ struct CommandRow: View {
                 
                 Text(command.description)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
             }
             
@@ -452,21 +452,21 @@ struct CommandRow: View {
             if let shortcut = command.shortcut {
                 Text(shortcut)
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
                     .background(AppTheme.textSecondary.opacity(0.1))
-                    .cornerRadius(4)
+                    .clipShape(.rect(cornerRadius: 4))
             }
             
             // Category badge
             Text(command.category.displayName)
                 .font(.system(size: 9))
-                .foregroundColor(command.category.color)
+                .foregroundStyle(command.category.color)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(command.category.color.opacity(0.1))
-                .cornerRadius(4)
+                .clipShape(.rect(cornerRadius: 4))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -502,11 +502,11 @@ struct KeyboardShortcutHint: View {
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(AppTheme.textSecondary.opacity(0.15))
-                .cornerRadius(4)
+                .clipShape(.rect(cornerRadius: 4))
             
             Text(label)
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
     }
 }

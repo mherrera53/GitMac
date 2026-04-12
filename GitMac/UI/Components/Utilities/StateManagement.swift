@@ -274,10 +274,10 @@ private struct AsyncContentSuccessPreview: View {
                 ForEach(items, id: \.self) { item in
                     Text(item)
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .padding()
                         .background(AppTheme.backgroundSecondary)
-                        .cornerRadius(DesignTokens.CornerRadius.md)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 }
             }
             .padding()
@@ -400,13 +400,13 @@ private struct StatefulViewInteractivePreview: View {
                 VStack(spacing: DesignTokens.Spacing.md) {
                     Text("Success! Here's your content")
                         .font(DesignTokens.Typography.headline)
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
 
                     ForEach(Array(0..<5), id: \.self) { index in
                         HStack {
                             Text("Data item \(index + 1)")
                                 .font(DesignTokens.Typography.body)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
 
                             Spacer()
 
@@ -414,7 +414,7 @@ private struct StatefulViewInteractivePreview: View {
                         }
                         .padding()
                         .background(AppTheme.backgroundSecondary)
-                        .cornerRadius(DesignTokens.CornerRadius.md)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                     }
                 }
             }
@@ -441,10 +441,10 @@ private struct TaskStateManagerPreview: View {
                     ForEach(items, id: \.self) { item in
                         Text(item)
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .padding()
                             .background(AppTheme.backgroundSecondary)
-                            .cornerRadius(DesignTokens.CornerRadius.md)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                     }
                 }
             }

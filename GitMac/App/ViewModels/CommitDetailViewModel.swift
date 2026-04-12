@@ -27,7 +27,7 @@ class CommitDetailViewModel: ObservableObject {
             changedFiles = files
         } catch {
             guard currentLoadingSHA == sha else { return }
-            print("Error loading commit files: \(error)")
+            Logger.debug("Error loading commit files: \(error)")
             changedFiles = []
         }
         guard currentLoadingSHA == sha else { return }
@@ -54,7 +54,7 @@ class CommitDetailViewModel: ObservableObject {
             let diffs = await DiffParser.parseAsync(diffString)
             return diffs.first
         } catch {
-            print("Error getting streaming diff: \(error)")
+            Logger.debug("Error getting streaming diff: \(error)")
             return nil
         }
     }

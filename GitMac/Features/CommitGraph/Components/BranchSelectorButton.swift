@@ -5,7 +5,7 @@ struct BranchSelectorButton: View {
     let currentBranch: Branch?
     let onCheckout: (Branch) -> Void
 
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @State private var searchText = ""
 
     var body: some View {
@@ -20,14 +20,14 @@ struct BranchSelectorButton: View {
                     } label: {
                         HStack {
                             Image(systemName: branch.isCurrent ? "star.circle.fill" : "arrow.triangle.branch")
-                                .foregroundColor(branch.isCurrent ? AppTheme.warning : .primary)
+                                .foregroundStyle(branch.isCurrent ? AppTheme.warning : .primary)
                                 .symbolRenderingMode(.hierarchical)
                             Text(branch.name)
                                 .fontWeight(branch.isCurrent ? .bold : .regular)
                             Spacer()
                             if branch.isCurrent {
                                 Image(systemName: "checkmark.seal.fill")
-                                    .foregroundColor(AppTheme.success)
+                                    .foregroundStyle(AppTheme.success)
                                     .symbolRenderingMode(.multicolor)
                             }
                         }
@@ -66,24 +66,24 @@ struct BranchSelectorButton: View {
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Image(systemName: currentBranch != nil ? "point.3.connected.trianglepath.dotted" : "arrow.triangle.branch")
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .symbolRenderingMode(.hierarchical)
 
                 Text(currentBranch?.name ?? "No Branch")
                     .font(DesignTokens.Typography.callout)
                     .fontWeight(currentBranch != nil ? .semibold : .regular)
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
                     .lineLimit(1)
 
                 Image(systemName: "chevron.down.circle.fill")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(theme.textMuted)
+                    .foregroundStyle(theme.textMuted)
                     .symbolRenderingMode(.hierarchical)
             }
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .padding(.vertical, DesignTokens.Spacing.xs)
             .background(theme.backgroundTertiary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
         .menuStyle(.borderlessButton)
     }

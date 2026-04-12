@@ -53,12 +53,12 @@ struct RightCommitDetailPanel: View {
                 HStack {
                     Text("Commit Details")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     Spacer()
                     Button(action: onClose) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 16))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                     .buttonStyle(.borderless)
                     .frame(width: 24, height: 24)
@@ -68,7 +68,7 @@ struct RightCommitDetailPanel: View {
                 // Commit message
                 Text(commit.message)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(3)
 
                 // Author and date
@@ -76,25 +76,25 @@ struct RightCommitDetailPanel: View {
                     AuthorAvatar(name: commit.author, size: 20)
                     Text(commit.author)
                         .font(.system(size: 12))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Spacer()
                     Text(commit.relativeDate)
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
 
                 // SHA
                 HStack {
                     Text(String(commit.sha.prefix(8)))
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                     Button {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(commit.sha, forType: .string)
                     } label: {
                         Image(systemName: "doc.on.doc")
                             .font(.system(size: 10))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                     .buttonStyle(.plain)
                     Spacer()
@@ -110,7 +110,7 @@ struct RightCommitDetailPanel: View {
                 HStack {
                     Text("Changed Files")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     Spacer()
 
                     // Filter toggle
@@ -132,11 +132,11 @@ struct RightCommitDetailPanel: View {
 
                     Text("\(filteredFiles.count)\(filteredFiles.count != viewModel.changedFiles.count ? "/\(viewModel.changedFiles.count)" : "")")
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(AppTheme.backgroundTertiary)
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
@@ -169,7 +169,7 @@ struct RightCommitDetailPanel: View {
                                 VStack(spacing: 4) {
                                     Text("No files match filter")
                                         .font(.system(size: 11))
-                                        .foregroundColor(AppTheme.textMuted)
+                                        .foregroundStyle(AppTheme.textMuted)
                                     Button("Clear filter") {
                                         fileFilterText = ""
                                         filterByStatus = nil
@@ -182,7 +182,7 @@ struct RightCommitDetailPanel: View {
                             } else if viewModel.changedFiles.isEmpty {
                                 Text("No files changed")
                                     .font(.system(size: 11))
-                                    .foregroundColor(AppTheme.textMuted)
+                                    .foregroundStyle(AppTheme.textMuted)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
                             }
@@ -225,11 +225,11 @@ struct RightCommitDetailPanel: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 4)
             .background(AppTheme.backgroundTertiary)
-            .cornerRadius(4)
+            .clipShape(.rect(cornerRadius: 4))
 
             // Status filter chips
             if availableStatuses.count > 1 {
-                ScrollView(.horizontal, showsIndicators: false) {
+                ScrollView(.horizontal) {
                     HStack(spacing: 4) {
                         fileFilterChip(label: "All", isActive: filterByStatus == nil) {
                             filterByStatus = nil
@@ -245,11 +245,12 @@ struct RightCommitDetailPanel: View {
                         }
                     }
                 }
+                .scrollIndicators(.hidden)
             }
 
             // Extension filter chips
             if availableExtensions.count > 1 {
-                ScrollView(.horizontal, showsIndicators: false) {
+                ScrollView(.horizontal) {
                     HStack(spacing: 4) {
                         ForEach(availableExtensions, id: \.self) { ext in
                             fileFilterChip(
@@ -261,6 +262,7 @@ struct RightCommitDetailPanel: View {
                         }
                     }
                 }
+                .scrollIndicators(.hidden)
             }
         }
         .padding(.horizontal, 12)
@@ -284,7 +286,7 @@ struct RightCommitDetailPanel: View {
             .padding(.vertical, 3)
             .background(isActive ? AppTheme.accent.opacity(0.2) : AppTheme.backgroundTertiary)
             .foregroundStyle(isActive ? AppTheme.accent : AppTheme.textSecondary)
-            .cornerRadius(4)
+            .clipShape(.rect(cornerRadius: 4))
         }
         .buttonStyle(.plain)
     }

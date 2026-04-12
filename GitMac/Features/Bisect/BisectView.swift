@@ -74,7 +74,7 @@ enum BisectCommitStatus {
 // MARK: - Bisect View
 
 struct BisectView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = BisectViewModel()
@@ -87,7 +87,7 @@ struct BisectView: View {
                 Text("GIT BISECT")
                     .font(DesignTokens.Typography.caption)
                     .fontWeight(.semibold)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -95,11 +95,11 @@ struct BisectView: View {
                     Text("In Progress")
                         .font(DesignTokens.Typography.caption2)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.warning)
+                        .foregroundStyle(AppTheme.warning)
                         .padding(.horizontal, DesignTokens.Spacing.md - 6)
                         .padding(.vertical, DesignTokens.Spacing.xxs)
                         .background(AppTheme.warning.opacity(0.2))
-                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
             }
             .padding(.horizontal, DesignTokens.Spacing.md)
@@ -142,7 +142,7 @@ struct BisectView: View {
             Image(systemName: "magnifyingglass.circle")
                 // TODO: Replace with appropriate Typography token when available for large icons
                 .font(.system(size: DesignTokens.Size.iconXL * 2))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             VStack(spacing: DesignTokens.Spacing.sm) {
                 Text("Find bugs with binary search")
@@ -150,7 +150,7 @@ struct BisectView: View {
 
                 Text("Git bisect helps you find which commit introduced a bug by performing a binary search through your history.")
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, DesignTokens.Spacing.lg + 4)
             }
@@ -193,12 +193,12 @@ struct BisectView: View {
                     VStack(alignment: .trailing, spacing: DesignTokens.Spacing.xs) {
                         Text("~\(steps) steps remaining")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Text("Testing: \(String(current.prefix(7)))")
                             .font(DesignTokens.Typography.caption)
                             .fontDesign(.monospaced)
                             .fontWeight(.bold)
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                     }
                 }
             }
@@ -211,7 +211,7 @@ struct BisectView: View {
                     Text("Current Commit")
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                         Text(commit.message)
@@ -225,12 +225,12 @@ struct BisectView: View {
                             Text(commit.formattedDate)
                                 .font(DesignTokens.Typography.caption)
                         }
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     }
                     .padding(DesignTokens.Spacing.md)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(AppTheme.textMuted.opacity(0.1))
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                 }
                 .padding(DesignTokens.Spacing.md)
             }
@@ -243,7 +243,7 @@ struct BisectView: View {
                     Text("Bisect History")
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .padding(.horizontal, DesignTokens.Spacing.md)
 
                     ScrollView {
@@ -292,7 +292,7 @@ struct BisectView: View {
                     Task { await viewModel.abort(at: appState.currentRepository?.path) }
                 }
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.error)
+                .foregroundStyle(AppTheme.error)
             }
             .padding(DesignTokens.Spacing.md)
             .background(AppTheme.textMuted.opacity(0.05))
@@ -308,7 +308,7 @@ struct BisectView: View {
             Image(systemName: "checkmark.seal.fill")
                 // TODO: Replace with appropriate Typography token when available for large icons
                 .font(.system(size: DesignTokens.Size.iconXL * 2))
-                .foregroundColor(AppTheme.success)
+                .foregroundStyle(AppTheme.success)
 
             Text("Bug Found!")
                 .font(DesignTokens.Typography.title3)
@@ -317,7 +317,7 @@ struct BisectView: View {
                 VStack(spacing: DesignTokens.Spacing.sm) {
                     Text(commit.shortSHA)
                         .font(.system(size: 16, weight: .bold, design: .monospaced))
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
 
                     Text(commit.message)
                         .font(DesignTokens.Typography.body)
@@ -330,11 +330,11 @@ struct BisectView: View {
                         Text(commit.formattedDate)
                     }
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 }
                 .padding()
                 .background(AppTheme.textMuted.opacity(0.1))
-                .cornerRadius(DesignTokens.CornerRadius.lg)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
             }
 
             HStack(spacing: DesignTokens.Spacing.md) {
@@ -363,7 +363,7 @@ struct BisectHistoryRow: View {
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: commit.status.icon)
-                .foregroundColor(commit.status.color)
+                .foregroundStyle(commit.status.color)
                 .font(DesignTokens.Typography.callout)
 
             Text(commit.shortSHA)
@@ -373,7 +373,7 @@ struct BisectHistoryRow: View {
             Text(commit.message)
                 .font(DesignTokens.Typography.caption)
                 .lineLimit(1)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Spacer()
         }
@@ -403,7 +403,7 @@ struct BisectStartSheet: View {
                     Text("Bad commit (has the bug)")
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     HStack {
                         DSTextField(placeholder: "HEAD, commit SHA, or tag", text: $badRef)
                         Button("HEAD") { badRef = "HEAD" }
@@ -416,15 +416,15 @@ struct BisectStartSheet: View {
                     Text("Good commit (before the bug)")
                         .font(DesignTokens.Typography.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     DSTextField(placeholder: "Commit SHA, tag, or branch", text: $goodRef)
 
                     if !recentCommits.isEmpty {
                         Text("Recent commits:")
                             .font(DesignTokens.Typography.caption2)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
 
-                        ScrollView(.horizontal, showsIndicators: false) {
+                        ScrollView(.horizontal) {
                             HStack(spacing: DesignTokens.Spacing.sm) {
                                 ForEach(recentCommits.prefix(10)) { commit in
                                     Button {
@@ -440,13 +440,14 @@ struct BisectStartSheet: View {
                                         }
                                         .padding(DesignTokens.Spacing.md - 6)
                                         .background(goodRef == commit.sha ? AppTheme.info : AppTheme.textMuted.opacity(0.2))
-                                        .foregroundColor(goodRef == commit.sha ? .white : .primary)
-                                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                                        .foregroundStyle(goodRef == commit.sha ? .white : .primary)
+                                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                                     }
                                     .buttonStyle(.plain)
                                 }
                             }
                         }
+                        .scrollIndicators(.hidden)
                     }
                 }
             }
@@ -477,7 +478,7 @@ struct BisectStartSheet: View {
     private func loadRecentCommits() async {
         guard let path = appState.currentRepository?.path else { return }
 
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let result = await shell.execute(
             "git",
             arguments: ["log", "--oneline", "-30", "--format=%H|%s|%an|%at"],
@@ -511,7 +512,7 @@ class BisectViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
 
-    private let shell = ShellExecutor()
+    private let shell = ShellExecutor.shared
 
     func checkStatus(at path: String?) async {
         guard let path = path else {

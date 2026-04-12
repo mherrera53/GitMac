@@ -43,7 +43,7 @@ struct ListRow: View {
         // Leading icon
         if let icon = icon {
             Image(systemName: icon)
-                .foregroundColor(iconColor)
+                .foregroundStyle(iconColor)
                 .frame(width: 20)
         }
 
@@ -56,18 +56,18 @@ struct ListRow: View {
                 if let badge = badge {
                     Text(badge)
                         .font(.caption.bold())
-                        .foregroundColor(badgeColor)
+                        .foregroundStyle(badgeColor)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(badgeColor.opacity(0.2))
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                 }
             }
 
             if let subtitle = subtitle {
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
             }
         }
@@ -86,25 +86,25 @@ struct ListRow: View {
         case .text(let text):
             Text(text)
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
         case .icon(let systemName, let color):
             Image(systemName: systemName)
-                .foregroundColor(color)
+                .foregroundStyle(color)
 
         case .badge(let text, let color):
             Text(text)
                 .font(.caption.bold())
-                .foregroundColor(color)
+                .foregroundStyle(color)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(color.opacity(0.2))
-                .cornerRadius(4)
+                .clipShape(.rect(cornerRadius: 4))
 
         case .chevron:
             Image(systemName: "chevron.right")
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
         case .custom(let view):
             view

@@ -113,9 +113,9 @@ struct StagingAreaView: View {
                     Spacer()
                     Image(systemName: "doc.text.magnifyingglass")
                         .font(DesignTokens.Typography.iconXXXXL)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Text("Select a file to view changes")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
@@ -242,7 +242,7 @@ struct StagingAreaView: View {
                     Button(action: { viewMode = .flat }) {
                         Image(systemName: "list.bullet")
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(viewMode == .flat ? AppTheme.accent : AppTheme.textSecondary)
+                            .foregroundStyle(viewMode == .flat ? AppTheme.accent : AppTheme.textSecondary)
                             .frame(width: 35, height: 22)
                             .background(viewMode == .flat ? AppTheme.accent.opacity(0.15) : Color.clear)
                     }
@@ -252,7 +252,7 @@ struct StagingAreaView: View {
                     Button(action: { viewMode = .tree }) {
                         Image(systemName: "folder.fill")
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(viewMode == .tree ? AppTheme.accent : AppTheme.textSecondary)
+                            .foregroundStyle(viewMode == .tree ? AppTheme.accent : AppTheme.textSecondary)
                             .frame(width: 35, height: 22)
                             .background(viewMode == .tree ? AppTheme.accent.opacity(0.15) : Color.clear)
                     }
@@ -260,7 +260,7 @@ struct StagingAreaView: View {
                     .help("Tree view")
                 }
                 .background(AppTheme.backgroundTertiary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 .overlay(
                     RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                         .stroke(AppTheme.border, lineWidth: 0.5)
@@ -270,7 +270,7 @@ struct StagingAreaView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
 
                     TextField("Search files...", text: $searchText)
                         .textFieldStyle(.plain)
@@ -282,7 +282,7 @@ struct StagingAreaView: View {
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 10))
-                                .foregroundColor(AppTheme.textMuted)
+                                .foregroundStyle(AppTheme.textMuted)
                         }
                         .buttonStyle(.plain)
                     }
@@ -290,7 +290,7 @@ struct StagingAreaView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(AppTheme.backgroundTertiary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 .frame(maxWidth: 200)
 
                 // Extension filter
@@ -324,16 +324,16 @@ struct StagingAreaView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 10))
-                            .foregroundColor(AppTheme.warning)
+                            .foregroundStyle(AppTheme.warning)
                         Text("\(viewModel.totalFileCount) files (showing \(maxVisibleFiles))")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.warning)
+                            .foregroundStyle(AppTheme.warning)
                     }
                     .help("Use search or filter to narrow down the file list")
                 } else {
                     Text("\(viewModel.totalFileCount) files")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
             .padding(.horizontal, DesignTokens.Spacing.md)
@@ -359,7 +359,7 @@ struct StagingAreaView: View {
                         searchText = ""
                     }
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, DesignTokens.Spacing.md)
@@ -616,7 +616,7 @@ struct StagingAreaView: View {
     private func emptyStateView(_ text: String) -> some View {
 
         Text(text)
-            .foregroundColor(AppTheme.textSecondary)
+            .foregroundStyle(AppTheme.textSecondary)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding()
     }
@@ -698,17 +698,17 @@ private struct MoreFilesIndicator: View {
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: "ellipsis.circle")
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("+\(count) more files not shown")
                     .font(DesignTokens.Typography.caption)
                     .fontWeight(.medium)
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
 
                 Text(message)
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
 
             Spacer()
@@ -716,7 +716,7 @@ private struct MoreFilesIndicator: View {
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.sm)
         .background(AppTheme.warning.opacity(0.1))
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         .padding(.horizontal, DesignTokens.Spacing.sm)
         .padding(.vertical, DesignTokens.Spacing.xs)
     }
@@ -732,19 +732,19 @@ private struct ActiveFilterTag: View {
         HStack(spacing: 4) {
             Text(label)
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
 
             Button(action: onRemove) {
                 Image(systemName: "xmark")
                     .font(.system(size: 8, weight: .bold))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
             }
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
         .background(AppTheme.accent.opacity(0.15))
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
     }
 }
 
@@ -1058,12 +1058,12 @@ struct ConflictedFileRow: View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             // Conflict indicator
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(AppTheme.error)
+                .foregroundStyle(AppTheme.error)
                 .frame(width: DesignTokens.Size.iconMD)
 
             // File icon
             Image(systemName: "doc.fill") // FileTypeIcon.systemIcon(for: file.filename))
-                .foregroundColor(AppTheme.accent) // FileTypeIcon.color(for: file.filename))
+                .foregroundStyle(AppTheme.accent) // FileTypeIcon.color(for: file.filename))
                 .frame(width: DesignTokens.Size.iconMD)
 
             // File path
@@ -1074,7 +1074,7 @@ struct ConflictedFileRow: View {
                 if !file.directory.isEmpty && file.directory != "." {
                     Text(file.directory)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .lineLimit(1)
                 }
             }
@@ -1311,7 +1311,7 @@ struct UntrackedFileRow: View {
             StatusIcon(status: .untracked)
 
             Image(systemName: "doc.fill")
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
                 .frame(width: DesignTokens.Size.iconMD)
 
             VStack(alignment: .leading, spacing: 0) {
@@ -1321,7 +1321,7 @@ struct UntrackedFileRow: View {
                 if !directory.isEmpty && directory != "." {
                     Text(directory)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .lineLimit(1)
                 }
             }
@@ -1403,16 +1403,16 @@ struct FileStatusSeparator: View {
             Rectangle()
                 .fill(color)
                 .frame(width: 3, height: DesignTokens.Size.iconSM)
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
             Text(title)
                 .font(DesignTokens.Typography.caption)
                 .fontWeight(.semibold)
-                .foregroundColor(color)
+                .foregroundStyle(color)
 
             Text("(\(count))")
                 .font(DesignTokens.Typography.caption2)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             Rectangle()
                 .fill(color.opacity(0.3))
@@ -1444,7 +1444,7 @@ struct DiffPreviewView: View {
             // Header
             HStack {
                 Image(systemName: "doc.fill") // FileTypeIcon.systemIcon(for: path))
-                    .foregroundColor(AppTheme.accent) // FileTypeIcon.color(for: path))
+                    .foregroundStyle(AppTheme.accent) // FileTypeIcon.color(for: path))
                 Text(path)
                     .fontWeight(.medium)
                 Spacer()
@@ -1455,8 +1455,8 @@ struct DiffPreviewView: View {
                         .padding(.horizontal, DesignTokens.Spacing.sm)
                         .padding(.vertical, DesignTokens.Spacing.xxs)
                         .background(AppTheme.success.opacity(0.2))
-                        .foregroundColor(AppTheme.success)
-                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                        .foregroundStyle(AppTheme.success)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
             }
             .padding()
@@ -1470,11 +1470,11 @@ struct DiffPreviewView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error = errorMessage {
                 Text(error)
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if hunks.isEmpty {
                 Text("No changes to display")
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 // Interactive hunk view
@@ -1599,18 +1599,18 @@ struct AICommitMessageSheet: View {
                 VStack {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: DesignTokens.Size.iconXL))
-                        .foregroundColor(AppTheme.warning)
+                        .foregroundStyle(AppTheme.warning)
                     Text(error)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .frame(maxHeight: .infinity)
             } else {
                 VStack {
                     Image(systemName: "sparkles")
                         .font(.system(size: DesignTokens.Size.iconXL))
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                     Text("Click Generate to create a commit message")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .frame(maxHeight: .infinity)
             }
@@ -1851,11 +1851,11 @@ struct FlatTreeRowView: View {
             Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                 .font(DesignTokens.Typography.callout)
                 .fontWeight(.bold)
-                .foregroundColor(AppTheme.textSecondary.opacity(0.6))
+                .foregroundStyle(AppTheme.textSecondary.opacity(0.6))
                 .frame(width: DesignTokens.Size.iconLG)
 
             Image(systemName: isExpanded ? "folder.fill" : "folder")
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
                 .frame(width: DesignTokens.Size.iconMD)
 
             Text(item.name)
@@ -1863,7 +1863,7 @@ struct FlatTreeRowView: View {
 
             Text("(\(item.fileCount))")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             Spacer()
         }
@@ -1883,7 +1883,7 @@ struct FlatTreeRowView: View {
 
         // File icon
         Image(systemName: "doc.fill")
-            .foregroundColor(AppTheme.accent)
+            .foregroundStyle(AppTheme.accent)
             .frame(width: DesignTokens.Size.iconMD)
 
         // Filename
@@ -2113,7 +2113,7 @@ struct FilePreviewView: View {
 
                 Text(previewDirectory)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(theme.textSecondary)
+                    .foregroundStyle(theme.textSecondary)
                     .lineLimit(1)
             }
 
@@ -2127,7 +2127,7 @@ struct FilePreviewView: View {
                         .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                         .padding(.vertical, DesignTokens.Spacing.xxs)
                         .background(AppTheme.textSecondary.opacity(0.1))
-                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
 
                 Text(previewFileExtension.uppercased())
@@ -2136,8 +2136,8 @@ struct FilePreviewView: View {
                     .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                     .padding(.vertical, DesignTokens.Spacing.xxs)
                     .background(languageColor.opacity(0.2))
-                    .foregroundColor(languageColor)
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .foregroundStyle(languageColor)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
 
             // Actions
@@ -2191,7 +2191,7 @@ struct FilePreviewView: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "doc.fill")
                 .font(.system(size: DesignTokens.Size.iconXL))
-                .foregroundColor(theme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
 
             Text("Binary File")
                 .font(DesignTokens.Typography.headline)
@@ -2199,7 +2199,7 @@ struct FilePreviewView: View {
 
             Text("This file cannot be previewed as text")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(theme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
 
             Button {
                 NSWorkspace.shared.open(URL(fileURLWithPath: fullPath))
@@ -2215,7 +2215,7 @@ struct FilePreviewView: View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: DesignTokens.Size.iconXL))
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
 
             Text("Unable to load file")
                 .font(DesignTokens.Typography.subheadline)
@@ -2223,7 +2223,7 @@ struct FilePreviewView: View {
 
             Text(message)
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -2345,7 +2345,7 @@ struct PreviewFileTypeIcon: View {
 
     var body: some View {
         Image(systemName: iconName)
-            .foregroundColor(iconColor)
+            .foregroundStyle(iconColor)
     }
 
     private var previewFileExtension: String {
@@ -2410,7 +2410,7 @@ struct CreatePRSheetFromCommit: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = PRListViewModel()
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     @State private var title = ""
     @State private var prBody = ""
@@ -2441,7 +2441,7 @@ struct CreatePRSheetFromCommit: View {
                     if !commitSHA.isEmpty {
                         Text("Commit: \(commitSHA)")
                             .font(.caption)
-                            .foregroundColor(theme.textSecondary)
+                            .foregroundStyle(theme.textSecondary)
                     }
                 }
 
@@ -2458,7 +2458,7 @@ struct CreatePRSheetFromCommit: View {
                             Text("Generating...")
                         } else {
                             Image(systemName: "sparkles")
-                                .foregroundColor(theme.accent)
+                                .foregroundStyle(theme.accent)
                             Text("Generate with AI")
                         }
                     }
@@ -2473,40 +2473,40 @@ struct CreatePRSheetFromCommit: View {
                     // Branch info (read-only)
                     HStack {
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                            Text("From").font(.caption).foregroundColor(theme.textSecondary)
+                            Text("From").font(.caption).foregroundStyle(theme.textSecondary)
                             Text(headBranch)
                                 .padding(.horizontal, DesignTokens.Spacing.sm)
                                 .padding(.vertical, DesignTokens.Spacing.xs)
                                 .background(AppTheme.accent.opacity(0.15))
-                                .cornerRadius(DesignTokens.CornerRadius.sm)
+                                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                         }
 
                         Image(systemName: "arrow.right")
-                            .foregroundColor(theme.textSecondary)
+                            .foregroundStyle(theme.textSecondary)
                             .padding(.horizontal, DesignTokens.Spacing.sm)
 
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                            Text("To").font(.caption).foregroundColor(theme.textSecondary)
+                            Text("To").font(.caption).foregroundStyle(theme.textSecondary)
                             Text(baseBranch.isEmpty ? "Loading..." : baseBranch)
                                 .padding(.horizontal, DesignTokens.Spacing.sm)
                                 .padding(.vertical, DesignTokens.Spacing.xs)
                                 .background(theme.success.opacity(0.15))
-                                .cornerRadius(DesignTokens.CornerRadius.sm)
+                                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                         }
                     }
                     .padding()
                     .background(Color(nsColor: .controlBackgroundColor))
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 
                     // Title
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                        Text("Title").font(.caption).foregroundColor(theme.textSecondary)
+                        Text("Title").font(.caption).foregroundStyle(theme.textSecondary)
                         DSTextField(placeholder: "Enter PR title", text: $title)
                     }
 
                     // Description
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                        Text("Description").font(.caption).foregroundColor(theme.textSecondary)
+                        Text("Description").font(.caption).foregroundStyle(theme.textSecondary)
                         DSTextEditor(
                             placeholder: "Enter PR description...",
                             text: $prBody,
@@ -2517,7 +2517,7 @@ struct CreatePRSheetFromCommit: View {
                     // Reviewers
                     if !availableReviewers.isEmpty {
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                            Text("Reviewers (optional)").font(.caption).foregroundColor(theme.textSecondary)
+                            Text("Reviewers (optional)").font(.caption).foregroundStyle(theme.textSecondary)
                             FlowLayout(spacing: DesignTokens.Spacing.sm - 2) {
                                 ForEach(availableReviewers.prefix(10), id: \.id) { user in
                                     Button {
@@ -2528,7 +2528,7 @@ struct CreatePRSheetFromCommit: View {
                                                 image.resizable()
                                             } placeholder: {
                                                 Image(systemName: "person.circle.fill")
-                                                    .foregroundColor(theme.textSecondary)
+                                                    .foregroundStyle(theme.textSecondary)
                                             }
                                             .frame(width: DesignTokens.Size.avatarXS, height: DesignTokens.Size.avatarXS)
                                             .clipShape(Circle())
@@ -2539,8 +2539,8 @@ struct CreatePRSheetFromCommit: View {
                                         .padding(.horizontal, DesignTokens.Spacing.sm)
                                         .padding(.vertical, DesignTokens.Spacing.xs)
                                         .background(selectedReviewers.contains(user.login) ? AppTheme.accent : theme.textMuted.opacity(0.2))
-                                        .foregroundColor(selectedReviewers.contains(user.login) ? .white : .primary)
-                                        .cornerRadius(DesignTokens.CornerRadius.xl)
+                                        .foregroundStyle(selectedReviewers.contains(user.login) ? .white : .primary)
+                                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
                                     }
                                     .buttonStyle(.plain)
                                 }
@@ -2551,7 +2551,7 @@ struct CreatePRSheetFromCommit: View {
                     // Labels
                     if !availableLabels.isEmpty {
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                            Text("Labels (optional)").font(.caption).foregroundColor(theme.textSecondary)
+                            Text("Labels (optional)").font(.caption).foregroundStyle(theme.textSecondary)
                             FlowLayout(spacing: DesignTokens.Spacing.sm - 2) {
                                 ForEach(availableLabels.prefix(15), id: \.id) { label in
                                     Button {
@@ -2562,8 +2562,8 @@ struct CreatePRSheetFromCommit: View {
                                             .padding(.horizontal, DesignTokens.Spacing.sm)
                                             .padding(.vertical, DesignTokens.Spacing.xs)
                                             .background(selectedLabels.contains(label.name) ? theme.info : theme.textMuted.opacity(0.2))
-                                            .foregroundColor(selectedLabels.contains(label.name) ? .white : .primary)
-                                            .cornerRadius(DesignTokens.CornerRadius.xl)
+                                            .foregroundStyle(selectedLabels.contains(label.name) ? .white : .primary)
+                                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
                                     }
                                     .buttonStyle(.plain)
                                 }
@@ -2636,7 +2636,7 @@ struct CreatePRSheetFromCommit: View {
             title = try await generatedTitle
             prBody = try await generatedDescription
         } catch {
-            print("Failed to generate PR content: \(error)")
+            Logger.debug("Failed to generate PR content: \(error)")
             NotificationManager.shared.error("AI Generation Failed", detail: error.localizedDescription)
         }
         isGenerating = false
@@ -2682,7 +2682,7 @@ struct CreatePRSheetFromCommit: View {
                 repo: ownerRepo.repo
             )
         } catch {
-            print("Failed to load collaborators: \(error)")
+            Logger.debug("Failed to load collaborators: \(error)")
         }
 
         // Load labels
@@ -2693,7 +2693,7 @@ struct CreatePRSheetFromCommit: View {
                 repo: ownerRepo.repo
             )
         } catch {
-            print("Failed to load labels: \(error)")
+            Logger.debug("Failed to load labels: \(error)")
         }
     }
 

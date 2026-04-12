@@ -134,14 +134,14 @@ class RemoteListViewModel: ObservableObject {
     }
 
     func addRemote(name: String, url: String) async {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         isLoading = true
         _ = await shell.execute("git", arguments: ["remote", "add", name, url])
         isLoading = false
     }
 
     func removeRemote(_ remote: Remote) async {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         isLoading = true
         _ = await shell.execute("git", arguments: ["remote", "remove", remote.name])
         remotes.removeAll { $0.id == remote.id }
@@ -149,7 +149,7 @@ class RemoteListViewModel: ObservableObject {
     }
 
     func renameRemote(_ remote: Remote, to newName: String) async {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         isLoading = true
         _ = await shell.execute("git", arguments: ["remote", "rename", remote.name, newName])
         isLoading = false
@@ -186,14 +186,14 @@ struct RemoteRow: View {
                                 .padding(.horizontal, DesignTokens.Spacing.xs)
                                 .padding(.vertical, 1)
                                 .background(AppTheme.info.opacity(0.2))
-                                .foregroundColor(AppTheme.info)
-                                .cornerRadius(DesignTokens.CornerRadius.sm)
+                                .foregroundStyle(AppTheme.info)
+                                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                         }
                     }
 
                     Text(remote.fetchURL)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
                 }
 
@@ -219,7 +219,7 @@ struct RemoteRow: View {
                     withAnimation { isExpanded.toggle() }
                 } label: {
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 .buttonStyle(.borderless)
             }
@@ -255,7 +255,7 @@ struct RemoteRow: View {
                         ForEach(remote.branches.prefix(5)) { branch in
                             HStack {
                                 Image(systemName: "arrow.triangle.branch")
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
                                     .font(DesignTokens.Typography.caption)
                                 Text(branch.displayName)
                                     .font(DesignTokens.Typography.caption)
@@ -265,7 +265,7 @@ struct RemoteRow: View {
                         if remote.branches.count > 5 {
                             Text("+ \(remote.branches.count - 5) more")
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                         }
                     }
                 }
@@ -319,7 +319,7 @@ struct RemoteProviderIcon: View {
 
             Image(systemName: iconName)
                 .font(DesignTokens.Typography.headline)
-                .foregroundColor(iconColor)
+                .foregroundStyle(iconColor)
         }
     }
 
@@ -359,13 +359,13 @@ struct EmptyRemoteView: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "network.slash")
                 .font(DesignTokens.Typography.iconXXXXL)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("No remotes configured")
                 .font(DesignTokens.Typography.headline)
 
             Text("Add a remote to push and pull changes")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -391,7 +391,7 @@ struct AddRemoteSheet: View {
 
                 Text("Example: https://github.com/user/repo.git")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
 
             // URL suggestions

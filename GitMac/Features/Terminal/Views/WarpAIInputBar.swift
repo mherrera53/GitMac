@@ -20,7 +20,7 @@ struct WarpAIInputBar: View {
                     
                     Image(systemName: "brain.head.profile")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                 }
                 
                 // Input field
@@ -48,7 +48,7 @@ struct WarpAIInputBar: View {
                         }) {
                             Image(systemName: "arrow.up.circle.fill")
                                 .font(.system(size: 20))
-                                .foregroundColor(inputText.isEmpty ? AppTheme.textMuted : AppTheme.accent)
+                                .foregroundStyle(inputText.isEmpty ? AppTheme.textMuted : AppTheme.accent)
                         }
                         .disabled(inputText.isEmpty)
                         .buttonStyle(PlainButtonStyle())
@@ -97,11 +97,11 @@ struct WarpAIResultCard: View {
                 // Category badge
                 Text(result.category.rawValue)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(AppTheme.accent.opacity(0.1))
-                    .cornerRadius(6)
+                    .clipShape(.rect(cornerRadius: 6))
                 
                 Spacer()
                 
@@ -110,7 +110,7 @@ struct WarpAIResultCard: View {
                     ForEach(0..<5) { i in
                         Image(systemName: i < Int(result.confidence * 5) ? "star.fill" : "star")
                             .font(.system(size: 8))
-                            .foregroundColor(i < Int(result.confidence * 5) ? AppTheme.accent : AppTheme.border)
+                            .foregroundStyle(i < Int(result.confidence * 5) ? AppTheme.accent : AppTheme.border)
                     }
                 }
             }
@@ -140,7 +140,7 @@ struct WarpAIResultCard: View {
                             endPoint: .trailing
                         )
                     )
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                     .shadow(color: AppTheme.accent.opacity(0.3), radius: 4, x: 0, y: 2)
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -152,10 +152,10 @@ struct WarpAIResultCard: View {
                 }) {
                     Image(systemName: "doc.on.doc")
                         .font(.system(size: 14))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .frame(width: 32, height: 32)
                         .background(AppTheme.backgroundTertiary)
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
                 .buttonStyle(PlainButtonStyle())
             }
@@ -163,7 +163,7 @@ struct WarpAIResultCard: View {
             // Explanation
             Text(result.explanation)
                 .font(.system(size: 13))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             
             // Alternatives
@@ -171,7 +171,7 @@ struct WarpAIResultCard: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Alternatives")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 6) {
                         ForEach(result.alternatives, id: \.self) { alt in
@@ -181,11 +181,11 @@ struct WarpAIResultCard: View {
                             }) {
                                 Text(alt)
                                     .font(.system(.caption, design: .monospaced))
-                                    .foregroundColor(AppTheme.textSecondary)
+                                    .foregroundStyle(AppTheme.textSecondary)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
                                     .background(AppTheme.backgroundTertiary)
-                                    .cornerRadius(4)
+                                    .clipShape(.rect(cornerRadius: 4))
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
@@ -198,21 +198,21 @@ struct WarpAIResultCard: View {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 12))
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                     
                     Text(result.warnings.joined(separator: ", "))
                         .font(.system(size: 12))
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(.orange.opacity(0.1))
-                .cornerRadius(6)
+                .clipShape(.rect(cornerRadius: 6))
             }
         }
         .padding(16)
         .background(AppTheme.background)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -229,6 +229,6 @@ struct WarpAIInputStyle: TextFieldStyle {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(Color.clear)
-            .foregroundColor(Color(nsColor: .labelColor))
+            .foregroundStyle(Color(nsColor: .labelColor))
     }
 }

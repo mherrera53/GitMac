@@ -3,7 +3,7 @@ import Foundation
 /// Service for managing Git submodules
 @MainActor
 class GitSubmoduleService {
-    private let shell = ShellExecutor()
+    private let shell = ShellExecutor.shared
     
     /// Get all submodules in the repository
     func getSubmodules(at repoPath: String) async throws -> [GitSubmodule] {

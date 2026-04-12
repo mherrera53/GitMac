@@ -24,7 +24,7 @@ class FileWatcher: ObservableObject {
 
         fileDescriptor = open(path, O_EVTONLY)
         guard fileDescriptor >= 0 else {
-            print("FileWatcher: Failed to open \(path)")
+            Logger.debug("FileWatcher: Failed to open \(path)")
             return
         }
 

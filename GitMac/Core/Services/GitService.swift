@@ -168,6 +168,8 @@ class GitService: ObservableObject {
             try await engine.checkout(ref, at: path)
             try await refresh()
         }
+
+        NotificationCenter.default.post(name: .branchDidCheckout, object: ref)
     }
 
     func checkoutForce(_ ref: String) async throws {
@@ -182,6 +184,8 @@ class GitService: ObservableObject {
             try await engine.checkoutForce(ref, at: path)
             try await refresh()
         }
+
+        NotificationCenter.default.post(name: .branchDidCheckout, object: ref)
     }
 
     /// Checkout with automatic stash/pop for uncommitted changes
@@ -210,6 +214,8 @@ class GitService: ObservableObject {
 
             try await refresh()
         }
+
+        NotificationCenter.default.post(name: .branchDidCheckout, object: ref)
     }
 
     /// Checkout a branch (handles both local and remote branches)
@@ -222,12 +228,13 @@ class GitService: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
+        var checkedOutName = branch.name
         try await withSuspendedWatcher {
             if branch.isRemote {
                 // Remote branch: create local tracking branch
                 // origin/feature/foo -> feature/foo
                 let localName = branch.displayName
-                let shell = ShellExecutor()
+                let shell = ShellExecutor.shared
                 let result = await shell.execute(
                     "git",
                     arguments: ["checkout", "-b", localName, "--track", branch.name],
@@ -236,11 +243,16 @@ class GitService: ObservableObject {
                 if result.exitCode != 0 {
                     throw GitServiceError.checkoutFailed(result.stderr)
                 }
+                checkedOutName = localName
             } else {
                 try await engine.checkout(branch.name, at: path)
+                checkedOutName = branch.name
             }
             try await refresh()
         }
+
+        // Notify graph and other views to do a full reload
+        NotificationCenter.default.post(name: .branchDidCheckout, object: checkedOutName)
     }
 
     /// Checkout a branch with auto-stash (handles both local and remote)
@@ -267,7 +279,7 @@ class GitService: ObservableObject {
             // Perform checkout
             if branch.isRemote {
                 let localName = branch.displayName
-                let shell = ShellExecutor()
+                let shell = ShellExecutor.shared
                 let result = await shell.execute(
                     "git",
                     arguments: ["checkout", "-b", localName, "--track", branch.name],
@@ -291,6 +303,10 @@ class GitService: ObservableObject {
 
             try await refresh()
         }
+
+        // Notify graph and other views to do a full reload
+        let checkedOutName = branch.isRemote ? branch.displayName : branch.name
+        NotificationCenter.default.post(name: .branchDidCheckout, object: checkedOutName)
     }
 
     // MARK: - Staging Operations
@@ -404,6 +420,12 @@ class GitService: ObservableObject {
         var options = PullOptions()
         options.rebase = rebase
 
+        // If branch has no tracking, specify the branch name explicitly
+        let trackingBranch = currentRepository?.currentBranch?.trackingBranch
+        if trackingBranch == nil || trackingBranch?.isEmpty == true {
+            options.branch = currentRepository?.currentBranch?.name
+        }
+
         try await engine.pull(options: options, at: path)
         try await refresh()
     }
@@ -442,6 +464,12 @@ class GitService: ObservableObject {
         // Perform pull
         var pullOptions = PullOptions()
         pullOptions.rebase = rebase
+
+        // If branch has no tracking, specify the branch name explicitly
+        let trackingBranch = currentRepository?.currentBranch?.trackingBranch
+        if trackingBranch == nil || trackingBranch?.isEmpty == true {
+            pullOptions.branch = currentRepository?.currentBranch?.name
+        }
 
         do {
             try await engine.pull(options: pullOptions, at: path)
@@ -655,7 +683,7 @@ class GitService: ObservableObject {
         case .hard: "--hard"
         }
 
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let result = await shell.execute(
             "git",
             arguments: ["reset", modeFlag, commitSHA],
@@ -686,7 +714,7 @@ class GitService: ObservableObject {
         
         args.append(contentsOf: commitSHAs)
 
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let result = await shell.execute(
             "git",
             arguments: args,

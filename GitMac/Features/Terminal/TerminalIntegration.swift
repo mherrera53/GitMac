@@ -42,10 +42,10 @@ struct TerminalView: View {
             // Working directory
             HStack(spacing: 4) {
                 Image(systemName: "folder")
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 Text(viewModel.workingDirectory)
                     .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
             }
             
             Spacer()
@@ -54,10 +54,10 @@ struct TerminalView: View {
             if let branch = appState.currentRepository?.currentBranch?.name {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.branch")
-                        .foregroundColor(AppTheme.accentCyan)
+                        .foregroundStyle(AppTheme.accentCyan)
                     Text(branch)
                         .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(AppTheme.accentCyan)
+                        .foregroundStyle(AppTheme.accentCyan)
                 }
             }
             
@@ -84,7 +84,7 @@ struct TerminalView: View {
                 Image(systemName: "terminal")
             }
             .menuStyle(.borderlessButton)
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
             
             // History
             Button {
@@ -93,7 +93,7 @@ struct TerminalView: View {
                 Image(systemName: "clock.arrow.circlepath")
             }
             .buttonStyle(.borderless)
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
             .popover(isPresented: $showHistory) {
                 CommandHistoryView(
                     history: viewModel.commandHistory,
@@ -139,12 +139,12 @@ struct TerminalView: View {
             // Prompt
             Text(viewModel.prompt)
                 .font(.system(.body, design: .monospaced))
-                .foregroundColor(AppTheme.success)
+                .foregroundStyle(AppTheme.success)
             
             // Input field
             TextField("", text: $commandInput)
                 .font(.system(.body, design: .monospaced))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .focused($isInputFocused)
                 .onSubmit {
                     executeCommand(commandInput)
@@ -180,7 +180,7 @@ struct TerminalLineView: View {
         HStack(alignment: .top, spacing: 0) {
             Text(line.text)
                 .font(.system(.body, design: .monospaced))
-                .foregroundColor(lineColor)
+                .foregroundStyle(lineColor)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -216,7 +216,7 @@ struct CommandHistoryView: View {
             
             if history.isEmpty {
                 Text("No command history")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .padding()
             } else {
                 ScrollView {
@@ -388,7 +388,7 @@ struct AdvancedTerminalView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Tab bar
-            ScrollView(.horizontal, showsIndicators: false) {
+            ScrollView(.horizontal) {
                 HStack(spacing: 0) {
                     ForEach(Array(manager.terminals.enumerated()), id: \.offset) { index, terminal in
                         IntegrationTerminalTab(
@@ -403,7 +403,7 @@ struct AdvancedTerminalView: View {
                             }
                         )
                     }
-                    
+
                     // New tab button
                     Button {
                         manager.createTerminal()
@@ -411,12 +411,13 @@ struct AdvancedTerminalView: View {
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 12))
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .frame(width: 30, height: 30)
                     }
                     .buttonStyle(.plain)
                 }
             }
+            .scrollIndicators(.hidden)
             .frame(height: 32)
             .background(AppTheme.background.opacity(0.9))
             
@@ -436,10 +437,10 @@ struct AdvancedTerminalView: View {
         VStack {
             Image(systemName: "terminal")
                 .font(.system(size: 48))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             Text("No terminal sessions")
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
             
             Button("New Terminal") {
                 manager.createTerminal()
@@ -465,7 +466,7 @@ struct IntegrationTerminalTab: View {
         HStack(spacing: 8) {
             Text(title)
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(isSelected ? .white : AppTheme.textSecondary)
+                .foregroundStyle(isSelected ? .white : AppTheme.textSecondary)
 
             if isHovered {
                 Button {
@@ -473,7 +474,7 @@ struct IntegrationTerminalTab: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 8))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -489,6 +490,7 @@ struct IntegrationTerminalTab: View {
 
 // MARK: - Terminal Manager
 
+@MainActor
 class TerminalManager: ObservableObject {
     static let shared = TerminalManager()
     

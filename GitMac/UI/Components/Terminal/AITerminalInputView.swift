@@ -29,19 +29,19 @@ struct AITerminalInputView: View {
 
                                     Image(systemName: suggestion.category == "Git" ? "git.branch" : "terminal")
                                         .font(.system(size: 10))
-                                        .foregroundColor(index == enhancedViewModel.selectedSuggestionIndex ? AppTheme.accent : AppTheme.textSecondary)
+                                        .foregroundStyle(index == enhancedViewModel.selectedSuggestionIndex ? AppTheme.accent : AppTheme.textSecondary)
                                 }
 
                                 // Text
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(suggestion.command)
                                         .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                        .foregroundColor(index == enhancedViewModel.selectedSuggestionIndex ? .white : AppTheme.textPrimary)
+                                        .foregroundStyle(index == enhancedViewModel.selectedSuggestionIndex ? .white : AppTheme.textPrimary)
 
                                     if !suggestion.description.isEmpty {
                                         Text(suggestion.description)
                                             .font(.system(size: 11))
-                                            .foregroundColor(index == enhancedViewModel.selectedSuggestionIndex ? .white.opacity(0.8) : AppTheme.textSecondary)
+                                            .foregroundStyle(index == enhancedViewModel.selectedSuggestionIndex ? .white.opacity(0.8) : AppTheme.textSecondary)
                                     }
                                 }
 
@@ -51,7 +51,7 @@ struct AITerminalInputView: View {
                                 if index == enhancedViewModel.selectedSuggestionIndex {
                                     Text("↵")
                                         .font(.system(size: 12, weight: .bold))
-                                        .foregroundColor(index == enhancedViewModel.selectedSuggestionIndex ? .white.opacity(0.6) : AppTheme.textMuted)
+                                        .foregroundStyle(index == enhancedViewModel.selectedSuggestionIndex ? .white.opacity(0.6) : AppTheme.textMuted)
                                 }
                             }
                             .padding(.horizontal, 12)
@@ -62,7 +62,7 @@ struct AITerminalInputView: View {
                     }
                 }
                 .background(AppTheme.backgroundSecondary.opacity(0.98))
-                .cornerRadius(12)
+                .clipShape(.rect(cornerRadius: 12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(AppTheme.border, lineWidth: 1)
@@ -87,12 +87,12 @@ struct AITerminalInputView: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(AppTheme.backgroundTertiary)
-                    .foregroundColor(AppTheme.info)
+                    .foregroundStyle(AppTheme.info)
 
                     // Arrow separator
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .background(enhancedViewModel.currentRepoPath != nil ? AppTheme.backgroundTertiary : AppTheme.backgroundSecondary)
 
                     // Git Branch Pill (if applicable)
@@ -106,12 +106,12 @@ struct AITerminalInputView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(AppTheme.backgroundTertiary)
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
 
                         // Ending arrow
                         Image(systemName: "chevron.right")
                              .font(.system(size: 10, weight: .bold))
-                             .foregroundColor(AppTheme.textMuted)
+                             .foregroundStyle(AppTheme.textMuted)
                              .background(AppTheme.backgroundSecondary)
                     }
                 }
@@ -123,7 +123,7 @@ struct AITerminalInputView: View {
                 TextField("I want to...", text: $enhancedViewModel.currentInput)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13, design: .monospaced))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .padding(.horizontal, 12)
                     .frame(height: 44)
                     .focused($isFocused)
@@ -140,7 +140,7 @@ struct AITerminalInputView: View {
                 }) {
                     Image(systemName: "sparkles")
                         .font(.system(size: 14))
-                        .foregroundColor(AppTheme.accentPurple)
+                        .foregroundStyle(AppTheme.accentPurple)
                         .padding(8)
                         .background(AppTheme.hover)
                         .clipShape(Circle())
@@ -149,7 +149,7 @@ struct AITerminalInputView: View {
                 .padding(.trailing, 8)
             }
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(isFocused ? AppTheme.accent.opacity(0.5) : AppTheme.border, lineWidth: 1)

@@ -51,7 +51,7 @@ struct DSGroupedList<
 
                                     Image(systemName: isCollapsed(section.id) ? "chevron.right" : "chevron.down")
                                         .font(.system(size: DesignTokens.Size.iconXS))
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                             .buttonStyle(.plain)
@@ -151,7 +151,7 @@ struct DSListSection<SectionID: Hashable, Item: Identifiable>: Identifiable {
                         HStack {
                             Image(systemName: section.id == "local" ? "laptopcomputer" : "arrow.triangle.branch")
                                 .font(.system(size: DesignTokens.Size.iconSM))
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
 
                             Text(section.title ?? "Unknown")
                                 .font(DesignTokens.Typography.callout)
@@ -159,7 +159,7 @@ struct DSListSection<SectionID: Hashable, Item: Identifiable>: Identifiable {
 
                             Text("(\(section.count))")
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         .padding(.vertical, DesignTokens.Spacing.sm)
                         .padding(.horizontal, DesignTokens.Spacing.sm)
@@ -170,7 +170,7 @@ struct DSListSection<SectionID: Hashable, Item: Identifiable>: Identifiable {
                         HStack {
                             Image(systemName: "arrow.branch")
                                 .font(.system(size: DesignTokens.Size.iconSM))
-                                .foregroundColor(.blue)
+                                .foregroundStyle(.blue)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(branch.name)
@@ -178,7 +178,7 @@ struct DSListSection<SectionID: Hashable, Item: Identifiable>: Identifiable {
 
                                 Text(branch.lastCommit)
                                     .font(DesignTokens.Typography.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
 
                             Spacer()
@@ -186,7 +186,7 @@ struct DSListSection<SectionID: Hashable, Item: Identifiable>: Identifiable {
                         .padding(.vertical, DesignTokens.Spacing.sm)
                         .padding(.horizontal, DesignTokens.Spacing.md)
                         .background(Color(.controlBackgroundColor))
-                        .cornerRadius(DesignTokens.CornerRadius.md)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                     }
                 )
                 .collapsible(true)
@@ -243,7 +243,7 @@ struct DSListSection<SectionID: Hashable, Item: Identifiable>: Identifiable {
                     Text(section.title ?? "")
                         .font(DesignTokens.Typography.callout)
                         .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .padding(.vertical, DesignTokens.Spacing.xs)
                 },
                 content: { commit in
@@ -255,14 +255,14 @@ struct DSListSection<SectionID: Hashable, Item: Identifiable>: Identifiable {
                             HStack {
                                 Text(commit.hash)
                                     .font(DesignTokens.Typography.commitHash)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
 
                                 Text("•")
                                     .foregroundStyle(.tertiary)
 
                                 Text(commit.author)
                                     .font(DesignTokens.Typography.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                         }
 
@@ -270,7 +270,7 @@ struct DSListSection<SectionID: Hashable, Item: Identifiable>: Identifiable {
                     }
                     .padding(DesignTokens.Spacing.sm)
                     .background(Color(.controlBackgroundColor))
-                    .cornerRadius(DesignTokens.CornerRadius.md)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 }
             )
             .frame(width: 400, height: 500)

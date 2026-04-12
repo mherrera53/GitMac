@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct GeneralSettingsView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @AppStorage("showInMenuBar") private var showInMenuBar = false
     @AppStorage("openAtLogin") private var openAtLogin = false
     @AppStorage("defaultClonePath") private var defaultClonePath = "~/Developer"
@@ -33,11 +33,11 @@ struct GeneralSettingsView: View {
                     HStack {
                         Image(systemName: "paintbrush.fill")
                         Text("Customize Colors...")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Spacer()
                         if themeManager.currentTheme == .custom {
                             Image(systemName: "checkmark")
-                                .foregroundColor(AppTheme.success)
+                                .foregroundStyle(AppTheme.success)
                         }
                     }
                 }

@@ -32,7 +32,7 @@ struct TerminalWorkflowsView: View {
             HStack {
                 Text("Workflows")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -41,20 +41,20 @@ struct TerminalWorkflowsView: View {
                         .font(.system(size: 13, weight: .medium))
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
             }
             .padding(16)
 
             // Search
             HStack {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                 TextField("Search workflows...", text: $searchText)
                     .textFieldStyle(.plain)
             }
             .padding(10)
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .padding(.horizontal, 16)
             .padding(.bottom, 12)
 
@@ -73,17 +73,17 @@ struct TerminalWorkflowsView: View {
                         VStack(spacing: 12) {
                             Image(systemName: "square.stack.3d.up.slash")
                                 .font(.system(size: 48))
-                                .foregroundColor(AppTheme.textMuted)
+                                .foregroundStyle(AppTheme.textMuted)
 
                             Text(searchText.isEmpty ? "No workflows yet" : "No workflows found")
                                 .font(.system(size: 14))
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
 
                             if searchText.isEmpty {
                                 Button("Create Your First Workflow") {
                                     showCreateWorkflow = true
                                 }
-                                .foregroundColor(AppTheme.accent)
+                                .foregroundStyle(AppTheme.accent)
                             }
                         }
                         .frame(maxWidth: .infinity)
@@ -123,17 +123,17 @@ struct WorkflowCard: View {
 
                     Image(systemName: categoryIcon)
                         .font(.system(size: 18))
-                        .foregroundColor(categoryColor)
+                        .foregroundStyle(categoryColor)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(workflow.name)
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Text(workflow.description)
                         .font(.system(size: 12))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .lineLimit(2)
                 }
 
@@ -143,7 +143,7 @@ struct WorkflowCard: View {
                     Button(action: onExecute) {
                         Image(systemName: "play.circle.fill")
                             .font(.system(size: 24))
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                     }
                     .buttonStyle(.plain)
                 }
@@ -155,11 +155,11 @@ struct WorkflowCard: View {
                     ForEach(workflow.tags, id: \.self) { tag in
                         Text(tag)
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(AppTheme.backgroundTertiary)
-                            .cornerRadius(4)
+                            .clipShape(.rect(cornerRadius: 4))
                     }
                 }
             }
@@ -167,16 +167,16 @@ struct WorkflowCard: View {
             // Command preview
             Text(workflow.command)
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
                 .lineLimit(1)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(AppTheme.backgroundTertiary)
-                .cornerRadius(6)
+                .clipShape(.rect(cornerRadius: 6))
         }
         .padding(16)
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(isHovered ? AppTheme.accent.opacity(0.3) : Color.clear, lineWidth: 1)
@@ -238,13 +238,13 @@ struct CreateWorkflowSheet: View {
                 Button("Cancel") {
                     dismiss()
                 }
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
                 Button("Create") {
                     createWorkflow()
                 }
                 .disabled(name.isEmpty || command.isEmpty)
-                .foregroundColor(name.isEmpty || command.isEmpty ? AppTheme.textMuted : AppTheme.accent)
+                .foregroundStyle(name.isEmpty || command.isEmpty ? AppTheme.textMuted : AppTheme.accent)
                 .fontWeight(.semibold)
             }
             .padding()
@@ -258,33 +258,33 @@ struct CreateWorkflowSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Name")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
 
                         TextField("Deploy to Staging", text: $name)
                             .textFieldStyle(.plain)
                             .padding(10)
                             .background(AppTheme.backgroundSecondary)
-                            .cornerRadius(8)
+                            .clipShape(.rect(cornerRadius: 8))
                     }
 
                     // Description
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Description")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
 
                         TextField("Deploy the current branch to staging environment", text: $description)
                             .textFieldStyle(.plain)
                             .padding(10)
                             .background(AppTheme.backgroundSecondary)
-                            .cornerRadius(8)
+                            .clipShape(.rect(cornerRadius: 8))
                     }
 
                     // Category
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Category")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
 
                         Picker("", selection: $category) {
                             ForEach(categories, id: \.self) { cat in
@@ -298,32 +298,32 @@ struct CreateWorkflowSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Command Template")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
 
                         Text("Use {{param}} for parameters")
                             .font(.system(size: 11))
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
 
                         TextEditor(text: $command)
                             .font(.system(size: 12, design: .monospaced))
                             .frame(height: 120)
                             .padding(8)
                             .background(AppTheme.backgroundSecondary)
-                            .cornerRadius(8)
+                            .clipShape(.rect(cornerRadius: 8))
                     }
 
                     // Tags
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Tags")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
 
                         HStack {
                             TextField("Add tag...", text: $newTag)
                                 .textFieldStyle(.plain)
                                 .padding(8)
                                 .background(AppTheme.backgroundSecondary)
-                                .cornerRadius(6)
+                                .clipShape(.rect(cornerRadius: 6))
                                 .onSubmit {
                                     if !newTag.isEmpty {
                                         tags.append(newTag)
@@ -357,7 +357,7 @@ struct CreateWorkflowSheet: View {
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
                                     .background(AppTheme.backgroundTertiary)
-                                    .cornerRadius(4)
+                                    .clipShape(.rect(cornerRadius: 4))
                                 }
                             }
                         }
@@ -402,7 +402,7 @@ struct ExecuteWorkflowSheet: View {
                         .font(.system(size: 18, weight: .semibold))
                     Text(workflow.description)
                         .font(.system(size: 13))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
 
                 Spacer()
@@ -410,12 +410,12 @@ struct ExecuteWorkflowSheet: View {
                 Button("Cancel") {
                     dismiss()
                 }
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
                 Button("Execute") {
                     executeWorkflow()
                 }
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
                 .fontWeight(.semibold)
             }
             .padding()
@@ -433,20 +433,20 @@ struct ExecuteWorkflowSheet: View {
                                         .font(.system(size: 13, weight: .medium))
                                     if param.required {
                                         Text("*")
-                                            .foregroundColor(AppTheme.error)
+                                            .foregroundStyle(AppTheme.error)
                                     }
                                 }
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
 
                                 Text(param.description)
                                     .font(.system(size: 11))
-                                    .foregroundColor(AppTheme.textMuted)
+                                    .foregroundStyle(AppTheme.textMuted)
 
                                 TextField(param.placeholder, text: bindingFor(param.name))
                                     .textFieldStyle(.plain)
                                     .padding(10)
                                     .background(AppTheme.backgroundSecondary)
-                                    .cornerRadius(8)
+                                    .clipShape(.rect(cornerRadius: 8))
                             }
                         }
                     }
@@ -455,7 +455,7 @@ struct ExecuteWorkflowSheet: View {
             } else {
                 Text("No parameters required")
                     .font(.system(size: 13))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .frame(maxHeight: .infinity)
             }
 
@@ -465,15 +465,15 @@ struct ExecuteWorkflowSheet: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Command Preview")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
 
                 Text(resolvedCommand)
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(AppTheme.backgroundTertiary)
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
             }
             .padding()
         }

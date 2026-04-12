@@ -8,14 +8,20 @@
 import SwiftUI
 
 struct ContributionGraphView: View {
+    nonisolated(unsafe) private static let monthFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM"
+        return f
+    }()
+
     let contributionDays: [ContributionDay]
     let weeks: Int
-    
+
     init(contributionDays: [ContributionDay], weeks: Int = 52) {
         self.contributionDays = contributionDays
         self.weeks = weeks
     }
-    
+
     private let cellSize: CGFloat = 10
     private let cellSpacing: CGFloat = 2
     private let daysInWeek = 7
@@ -47,7 +53,7 @@ struct ContributionGraphView: View {
             ForEach(uniqueMonths, id: \.self) { month in
                 Text(monthName(month))
                     .font(.system(size: 9))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .frame(width: calculateMonthWidth(month), alignment: .leading)
             }
         }
@@ -59,7 +65,7 @@ struct ContributionGraphView: View {
                 if day % 2 == 1 {
                     Text(dayName(day))
                         .font(.system(size: 9))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .frame(width: 20, height: cellSize, alignment: .trailing)
                 } else {
                     Spacer()
@@ -93,7 +99,7 @@ struct ContributionGraphView: View {
             
             Text("Less")
                 .font(.system(size: 9))
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
             
             ForEach([0.0, 0.25, 0.5, 0.75, 1.0], id: \.self) { intensity in
                 RoundedRectangle(cornerRadius: 2)
@@ -103,7 +109,7 @@ struct ContributionGraphView: View {
             
             Text("More")
                 .font(.system(size: 9))
-                .foregroundColor(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textMuted)
         }
     }
     
@@ -168,9 +174,7 @@ struct ContributionGraphView: View {
     // MARK: - Helpers
     
     private func monthName(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM"
-        return formatter.string(from: date)
+        Self.monthFormatter.string(from: date)
     }
     
     private func dayName(_ day: Int) -> String {
@@ -194,10 +198,16 @@ struct ContributionGraphView: View {
 // MARK: - Contribution Cell
 
 struct ContributionCell: View {
+    nonisolated(unsafe) private static let tooltipDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        return f
+    }()
+
     let intensity: Double
     let commitCount: Int
     let date: Date?
-    
+
     @State private var isHovered = false
     
     var body: some View {
@@ -225,15 +235,14 @@ struct ContributionCell: View {
     private var tooltipText: String {
         guard let date = date else { return "No data" }
         
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        
+        let dateStr = Self.tooltipDateFormatter.string(from: date)
+
         if commitCount == 0 {
-            return "No commits on \(formatter.string(from: date))"
+            return "No commits on \(dateStr)"
         } else if commitCount == 1 {
-            return "1 commit on \(formatter.string(from: date))"
+            return "1 commit on \(dateStr)"
         } else {
-            return "\(commitCount) commits on \(formatter.string(from: date))"
+            return "\(commitCount) commits on \(dateStr)"
         }
     }
 }

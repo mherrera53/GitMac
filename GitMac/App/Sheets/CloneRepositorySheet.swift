@@ -18,28 +18,28 @@ struct CloneRepositorySheet: View {
         VStack(spacing: 20) {
             Text("Clone Repository")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Repository URL")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     DSTextField(placeholder: "https://github.com/user/repo.git", text: $repoURL)
                         .padding(10)
                         .background(AppTheme.backgroundTertiary)
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Destination")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     HStack {
                         DSTextField(placeholder: "Select destination folder", text: $destinationPath)
                             .padding(10)
                             .background(AppTheme.backgroundTertiary)
-                            .cornerRadius(6)
+                            .clipShape(.rect(cornerRadius: 6))
 
                         Button("Browse") {
                             let panel = NSOpenPanel()

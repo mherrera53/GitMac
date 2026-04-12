@@ -90,7 +90,7 @@ class GitHubSyncManager: ObservableObject {
     private func checkBranchProtection() async {
         guard let repoPath = await AppState.shared.currentRepository?.path else { return }
 
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
 
         // Get the remote owner/repo slug from git remote
         let remoteResult = await shell.execute(

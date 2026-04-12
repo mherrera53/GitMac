@@ -34,7 +34,7 @@ struct GenericFileTreeView<T, NodeView: View>: View {
             // Hidden trigger - forces view to render so .task fires
             Text("\(paths.count)")
                 .font(.system(size: 0.1))
-                .foregroundColor(.clear)
+                .foregroundStyle(.clear)
                 .frame(height: 0.1)
 
             LazyVStack(spacing: 0, pinnedViews: []) {

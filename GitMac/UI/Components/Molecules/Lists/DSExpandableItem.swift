@@ -56,13 +56,13 @@ struct DSExpandableItem<Content: View>: View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                     Text(title)
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .fontWeight(.medium)
 
                     if let subtitle = subtitle {
                         Text(subtitle)
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                 }
 
@@ -72,16 +72,16 @@ struct DSExpandableItem<Content: View>: View {
                 if let badge = badge {
                     Text(badge)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .padding(.horizontal, DesignTokens.Spacing.xs)
                         .padding(.vertical, DesignTokens.Spacing.xxs)
                         .background(AppTheme.backgroundSecondary)
-                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
             }
             .padding(DesignTokens.Spacing.md)
             .background(isHovered ? AppTheme.backgroundSecondary : Color.clear)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .onHover { hovering in
                 withAnimation(DesignTokens.Animation.fastEasing) {
                     isHovered = hovering
@@ -197,7 +197,7 @@ struct DSExpandableItem<Content: View>: View {
                 } trailing: {
                     Text("a3f5b2c")
                         .font(DesignTokens.Typography.commitHash)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
 
                 DSListItem(
@@ -208,7 +208,7 @@ struct DSExpandableItem<Content: View>: View {
                 } trailing: {
                     Text("d8e91fc")
                         .font(DesignTokens.Typography.commitHash)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
             }
             .padding(.top, DesignTokens.Spacing.sm)
@@ -229,7 +229,7 @@ struct DSExpandableItem<Content: View>: View {
                 } trailing: {
                     Text("c2d4a1b")
                         .font(DesignTokens.Typography.commitHash)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
             }
             .padding(.top, DesignTokens.Spacing.sm)

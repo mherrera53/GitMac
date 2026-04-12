@@ -8,7 +8,7 @@ import Splash
 /// Automatically switches between rich and fast rendering based on file size
 /// Supports Mermaid diagrams (flowchart, sequence, class, state, ER, pie, gantt)
 struct MarkdownView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @Environment(\.colorScheme) private var colorScheme
     
     let content: String
@@ -62,7 +62,7 @@ struct MarkdownView: View {
     private func fileHeader(name: String) -> some View {
         HStack {
             Image(systemName: "doc.text")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Text(name)
                 .font(.system(.body, design: .monospaced))
                 .fontWeight(.medium)
@@ -71,18 +71,18 @@ struct MarkdownView: View {
             if hasMermaid {
                 Label("Mermaid", systemImage: "chart.bar.doc.horizontal")
                     .font(.caption)
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
             }
 
             if lineCount > Self.fastRenderThreshold {
                 Label("Fast mode", systemImage: "bolt.fill")
                     .font(.caption)
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
             }
 
             Text("\(lineCount) lines")
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .padding(.horizontal, DesignTokens.Spacing.lg)
         .padding(.vertical, DesignTokens.Spacing.sm + 2) // 10 = 8 + 2
@@ -94,7 +94,7 @@ struct MarkdownView: View {
 
 /// Mixed renderer that handles both markdown text and Mermaid diagrams
 struct MermaidMarkdownView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     let content: String
     let isDarkMode: Bool
 
@@ -173,10 +173,10 @@ private struct MermaidSegmentView: View {
             HStack(spacing: DesignTokens.Spacing.md - 6) { // 6px custom
                 Image(systemName: "chart.bar.doc.horizontal")
                     .font(.caption)
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 Text(diagramType)
                     .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
 
                 // Copy button
@@ -185,13 +185,13 @@ private struct MermaidSegmentView: View {
                         .font(.caption)
                 }
                 .buttonStyle(.plain)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .help("Copy Mermaid code")
             }
             .padding(.horizontal, DesignTokens.Spacing.md)
             .padding(.vertical, DesignTokens.Spacing.md - 6) // 6px custom
             .background(isDarkMode ? AppTheme.textPrimary.opacity(0.05) : AppTheme.background.opacity(0.03))
-            .cornerRadius(DesignTokens.CornerRadius.md, corners: [.topLeft, .topRight])
+            .clipShape(UnevenRoundedRectangle(topLeadingRadius: DesignTokens.CornerRadius.md, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: DesignTokens.CornerRadius.md))
 
             // Diagram view
             MermaidDiagramView(
@@ -201,7 +201,7 @@ private struct MermaidSegmentView: View {
             )
             .frame(minHeight: 200, idealHeight: diagramHeight, maxHeight: 600)
             .background(isDarkMode ? AppTheme.background.opacity(0.2) : AppTheme.textPrimary)
-            .cornerRadius(DesignTokens.CornerRadius.md, corners: [.bottomLeft, .bottomRight])
+            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: DesignTokens.CornerRadius.md, bottomTrailingRadius: DesignTokens.CornerRadius.md, topTrailingRadius: 0))
         }
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
@@ -659,7 +659,7 @@ struct PreviewSheet: View {
             // Header
             HStack {
                 Image(systemName: isImage ? "photo" : (isMarkdown ? "doc.richtext" : "doc.text"))
-                    .foregroundColor(.accentColor)
+                    .foregroundStyle(Color.accentColor)
                 Text("Preview: \(fileName)")
                     .font(.headline)
 
@@ -669,7 +669,7 @@ struct PreviewSheet: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(Color.accentColor.opacity(0.2))
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                 }
 
                 Spacer()
@@ -679,7 +679,7 @@ struct PreviewSheet: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -749,14 +749,14 @@ struct PlainTextPreviewView: View {
             if let name = fileName {
                 HStack {
                     Image(systemName: "doc.text")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Text(name)
                         .font(.system(.body, design: .monospaced))
                         .fontWeight(.medium)
                     Spacer()
                     Text("\(lineCount) lines")
                         .font(.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .padding(.horizontal, DesignTokens.Spacing.lg)
                 .padding(.vertical, DesignTokens.Spacing.sm + 2)
@@ -768,7 +768,7 @@ struct PlainTextPreviewView: View {
             ScrollView {
                 Text(content)
                     .font(.system(size: 13, design: .monospaced))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(DesignTokens.Spacing.lg)

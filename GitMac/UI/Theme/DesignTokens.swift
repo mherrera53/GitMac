@@ -463,6 +463,16 @@ enum DesignTokens {
 
         /// Estado del efecto visual
         static let state: NSVisualEffectView.State = .active
+
+        // MARK: - Liquid Glass (macOS 26+)
+
+        /// Whether the current OS supports Liquid Glass effects
+        static var supportsLiquidGlass: Bool {
+            if #available(macOS 26, *) {
+                return true
+            }
+            return false
+        }
     }
 }
 

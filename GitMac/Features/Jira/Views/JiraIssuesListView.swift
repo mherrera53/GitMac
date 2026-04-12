@@ -34,7 +34,7 @@ struct JiraIssueRow: View {
                 if let issueType = issue.fields.issuetype {
                     Image(systemName: issueTypeIcon(issueType.name))
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(issueTypeColor(issueType.name))
+                        .foregroundStyle(issueTypeColor(issueType.name))
                 }
             },
             statusBadge: {
@@ -46,7 +46,7 @@ struct JiraIssueRow: View {
                 if let priority = issue.fields.priority {
                     Text(priority.name)
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(priorityColor(priority.name))
+                        .foregroundStyle(priorityColor(priority.name))
                 }
             },
             onInsert: {

@@ -35,7 +35,7 @@ struct DSHoverEffect: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(isHovered && backgroundColor != nil ? backgroundColor : Color.clear)
-            .cornerRadius(cornerRadius)
+            .clipShape(.rect(cornerRadius: cornerRadius))
             .overlay(
                 borderColor != nil ?
                 RoundedRectangle(cornerRadius: cornerRadius)
@@ -90,12 +90,12 @@ struct DSLoadingOverlay: ViewModifier {
                     if let text = text {
                         Text(text)
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                 }
                 .padding(DesignTokens.Spacing.xl)
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(DesignTokens.CornerRadius.lg)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                 .shadow(color: AppTheme.shadow, radius: 8, x: 0, y: 4)
             }
         }
@@ -134,7 +134,7 @@ struct DSCardStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(AppTheme.backgroundTertiary)
-            .cornerRadius(DesignTokens.CornerRadius.lg)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
             .shadow(
                 color: AppTheme.shadow.opacity(isHovered ? elevation.shadowOpacity * 1.5 : elevation.shadowOpacity),
                 radius: isHovered ? elevation.shadowRadius * 1.5 : elevation.shadowRadius,
@@ -205,7 +205,7 @@ struct DSSelectionHighlight: ViewModifier {
         case .background:
             content
                 .background(isSelected ? color.opacity(0.15) : Color.clear)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
 
         case .border:
             content
@@ -221,7 +221,7 @@ struct DSSelectionHighlight: ViewModifier {
                     Rectangle()
                         .fill(color)
                         .frame(width: 3)
-                        .cornerRadius(1.5, corners: [.topRight, .bottomRight])
+                        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 0, bottomTrailingRadius: 1.5, topTrailingRadius: 1.5))
                     : nil,
                     alignment: .leading
                 )
@@ -268,7 +268,7 @@ struct InstantTooltip: ViewModifier {
                 if showTooltip {
                     Text(text)
                         .font(.system(size: 11))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(
@@ -506,7 +506,7 @@ private struct LoadingOverlayPreview: View {
             Text("Content Area")
                 .frame(width: 300, height: 200)
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(DesignTokens.CornerRadius.lg)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                 .loadingOverlay(isLoading: isLoading, text: "Loading data...")
 
             DSButton(variant: .primary) {
@@ -525,19 +525,19 @@ private struct LoadingOverlayPreview: View {
         Rectangle()
             .fill(AppTheme.backgroundSecondary)
             .frame(height: 60)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .shimmer()
 
         Rectangle()
             .fill(AppTheme.backgroundSecondary)
             .frame(height: 40)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .shimmer()
 
         Rectangle()
             .fill(AppTheme.backgroundSecondary)
             .frame(height: 80)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .shimmer()
     }
     .padding()

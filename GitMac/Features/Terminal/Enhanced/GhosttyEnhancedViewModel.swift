@@ -224,14 +224,14 @@ class GhosttyEnhancedViewModel: ObservableObject {
         currentInput = input
         currentRepoPath = repoPath
 
-        print("🔍 Enhanced: updateInput called with: '\(input)' (length: \(input.count))")
+        Logger.debug("🔍 Enhanced: updateInput called with: '\(input)' (length: \(input.count))")
 
         // Cancel previous task
         aiSuggestionTask?.cancel()
 
         // Clear suggestions if input is too short
         guard input.count >= 2 else {
-            print("⚠️ Enhanced: Input too short, clearing suggestions")
+            Logger.debug("⚠️ Enhanced: Input too short, clearing suggestions")
             aiSuggestions.removeAll()
             return
         }
@@ -361,7 +361,7 @@ class GhosttyEnhancedViewModel: ObservableObject {
                     trackedCommands[index].aiSuggestion = suggestion
                 }
             } catch {
-                print("❌ Error getting AI fix suggestion: \(error)")
+                Logger.debug("❌ Error getting AI fix suggestion: \(error)")
             }
         }
     }

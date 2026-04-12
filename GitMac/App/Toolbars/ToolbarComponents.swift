@@ -40,10 +40,10 @@ struct ToolbarActionButton: View {
                     }
                 }
             }
-            .foregroundColor(isEnabled ? color : AppTheme.textMuted.opacity(0.5))
+            .foregroundStyle(isEnabled ? color : AppTheme.textMuted.opacity(0.5))
             .frame(width: storedMode == .iconOnly ? 36 : 50, height: storedMode == .iconOnly ? 32 : 40)
             .background(isHovering && isEnabled ? AppTheme.backgroundTertiary : Color.clear)
-            .cornerRadius(6)
+            .clipShape(.rect(cornerRadius: 6))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

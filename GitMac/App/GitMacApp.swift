@@ -47,7 +47,7 @@ class OllamaProcessManager: ObservableObject {
             
             try await Task.sleep(nanoseconds: 2_000_000_000)
         } catch {
-            print("Failed to start Ollama: \(error)")
+            Logger.debug("Failed to start Ollama: \(error)")
         }
     }
     
@@ -351,7 +351,7 @@ class AppState: ObservableObject {
                     activeTabId = newTab.id
                 }
             } catch {
-                print("Failed to restore repository at \(path): \(error)")
+                Logger.debug("Failed to restore repository at \(path): \(error)")
             }
         }
 
@@ -360,12 +360,12 @@ class AppState: ObservableObject {
             activeTabId = openTabs.first?.id
         }
         
-        print("🔧 Configuring \(openTabs.count) tabs...")
+        Logger.debug("🔧 Configuring \(openTabs.count) tabs...")
         // Configure branch manager for each tab
         for tab in openTabs {
             await tab.configureBranchManager()
         }
-        print("✅ All tabs configured")
+        Logger.debug("✅ All tabs configured")
         
         // Force AppState update
         objectWillChange.send()
@@ -469,7 +469,7 @@ class AppState: ObservableObject {
     }
 
     func selectTab(_ tabId: UUID, fromNavigation: Bool = false) {
-        print("👆 selectTab() called - tabId: \(tabId)")
+        Logger.debug("👆 selectTab() called - tabId: \(tabId)")
         
         if !fromNavigation, let current = activeTabId, current != tabId {
             backStack.append(current)
@@ -480,8 +480,8 @@ class AppState: ObservableObject {
         activeTabId = tabId
         saveSession()
         
-        print("✅ selectTab() done - activeTab: \(activeTab?.repository.name ?? "nil")")
-        print("📊 branchManager.currentBranch: \(branchManager?.currentBranch?.name ?? "nil")")
+        Logger.debug("✅ selectTab() done - activeTab: \(activeTab?.repository.name ?? "nil")")
+        Logger.debug("📊 branchManager.currentBranch: \(branchManager?.currentBranch?.name ?? "nil")")
         
         // Force UI update
         objectWillChange.send()

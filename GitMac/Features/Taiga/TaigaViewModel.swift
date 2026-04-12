@@ -56,7 +56,7 @@ class TaigaTicketsViewModel: ObservableObject, IntegrationViewModel {
                 if let userId = try? await KeychainManager.shared.getTaigaUserId(),
                    let userIdInt = Int(userId) {
                     await service.setUserId(userIdInt)
-                    print("🔐 Taiga: Restored userId \(userId)")
+                    Logger.debug("🔐 Taiga: Restored userId \(userId)")
                 }
                 
                 // Restore server URL
@@ -153,7 +153,7 @@ class TaigaTicketsViewModel: ObservableObject, IntegrationViewModel {
 
     func loadProjectData(projectId: Int) async {
         isLoading = true
-        print("📂 Taiga: Loading data for project \(projectId)")
+        Logger.debug("📂 Taiga: Loading data for project \(projectId)")
 
         do {
             async let storiesTask = service.listUserStories(projectId: projectId)
@@ -168,9 +168,9 @@ class TaigaTicketsViewModel: ObservableObject, IntegrationViewModel {
             epics = try await epicsTask
             statuses = try await statusesTask
 
-            print("📂 Taiga: Loaded \(userStories.count) stories, \(tasks.count) tasks, \(issues.count) issues, \(epics.count) epics")
+            Logger.debug("📂 Taiga: Loaded \(userStories.count) stories, \(tasks.count) tasks, \(issues.count) issues, \(epics.count) epics")
         } catch {
-            print("❌ Taiga Error: \(error)")
+            Logger.debug("❌ Taiga Error: \(error)")
             self.error = error.localizedDescription
         }
 

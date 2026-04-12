@@ -33,6 +33,8 @@ struct TeamActivityPanel: View {
 
 /// Team activity view to prevent merge conflicts
 struct TeamActivityView: View {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = TeamActivityViewModel()
     @State private var selectedMember: TeamMember?
@@ -83,11 +85,11 @@ struct TeamActivityView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Team Activity")
                     .font(.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Text("\(viewModel.teamMembers.count) active members")
                     .font(.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
 
             Spacer()
@@ -98,7 +100,7 @@ struct TeamActivityView: View {
             } label: {
                 Image(systemName: viewModel.isLoading ? "arrow.clockwise" : "arrow.clockwise")
                     .rotationEffect(.degrees(viewModel.isLoading ? 360 : 0))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .buttonStyle(.borderless)
             .disabled(viewModel.isLoading)
@@ -112,7 +114,7 @@ struct TeamActivityView: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                         Text("\(viewModel.conflictCount)")
                     }
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
                 }
                 .buttonStyle(.plain)
             }
@@ -150,7 +152,7 @@ struct TeamActivityView: View {
                     } placeholder: {
                         Image(systemName: "person.circle.fill")
                             .resizable()
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .frame(width: 48, height: 48)
                     .clipShape(Circle())
@@ -163,11 +165,11 @@ struct TeamActivityView: View {
                         HStack(spacing: 12) {
                             Label("\(member.activePRs.count) PRs", systemImage: "arrow.triangle.pull")
                                 .font(.caption)
-                                .foregroundColor(AppTheme.accent)
+                                .foregroundStyle(AppTheme.accent)
 
                             Label("\(member.filesBeingModified.count) files", systemImage: "doc.text")
                                 .font(.caption)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                     }
 
@@ -177,16 +179,16 @@ struct TeamActivityView: View {
                         VStack(alignment: .trailing, spacing: 2) {
                             Text("Last active")
                                 .font(.caption2)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                             Text(formatDate(lastActive))
                                 .font(.caption)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                     }
                 }
                 .padding()
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
 
                 // Active PRs
                 if !member.activePRs.isEmpty {
@@ -215,7 +217,7 @@ struct TeamActivityView: View {
             ForEach(member.activePRs, id: \.number) { pr in
                 HStack(spacing: 8) {
                     Image(systemName: "arrow.triangle.pull")
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("#\(pr.number) \(pr.title)")
@@ -229,20 +231,20 @@ struct TeamActivityView: View {
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .background(AppTheme.accent.opacity(0.2))
-                                .foregroundColor(AppTheme.accent)
-                                .cornerRadius(4)
+                                .foregroundStyle(AppTheme.accent)
+                                .clipShape(.rect(cornerRadius: 4))
 
                             Image(systemName: "arrow.right")
                                 .font(.caption)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
 
                             Text(pr.base.ref)
                                 .font(.caption)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .background(AppTheme.success.opacity(0.2))
-                                .foregroundColor(AppTheme.success)
-                                .cornerRadius(4)
+                                .foregroundStyle(AppTheme.success)
+                                .clipShape(.rect(cornerRadius: 4))
                         }
                     }
 
@@ -259,7 +261,7 @@ struct TeamActivityView: View {
                 }
                 .padding()
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
             }
         }
     }
@@ -268,7 +270,7 @@ struct TeamActivityView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Files Being Modified")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             ForEach(member.filesBeingModified) { file in
                 HStack(spacing: 8) {
@@ -278,12 +280,12 @@ struct TeamActivityView: View {
                         Text(file.filename)
                             .font(.caption)
                             .fontWeight(.medium)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
 
                         if let source = file.source {
                             Text("in \(source)")
                                 .font(.caption2)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                     }
 
@@ -296,25 +298,25 @@ struct TeamActivityView: View {
                             Text("Conflict")
                         }
                         .font(.caption2)
-                        .foregroundColor(AppTheme.warning)
+                        .foregroundStyle(AppTheme.warning)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Color.orange.opacity(0.2))
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                     }
 
                     HStack(spacing: 4) {
                         Text("+\(file.additions)")
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                         Text("-\(file.deletions)")
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                     }
                     .font(.caption2.monospacedDigit())
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(file.hasConflict ? Color.orange.opacity(0.05) : AppTheme.backgroundSecondary)
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
             }
         }
     }
@@ -323,30 +325,30 @@ struct TeamActivityView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Recent Commits")
                 .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             ForEach(member.recentCommits) { commit in
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: "circle.fill")
                         .font(.system(size: 8))
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                         .padding(.top, 6)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(commit.commit.message.components(separatedBy: "\n").first ?? commit.commit.message)
                             .font(.caption)
                             .lineLimit(2)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
 
                         HStack(spacing: 8) {
                             Text(commit.sha.prefix(7))
                                 .font(.caption2)
                                 .fontWeight(.medium)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
 
                             Text(formatDate(commit.commit.author.date))
                                 .font(.caption2)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                     }
 
@@ -355,7 +357,7 @@ struct TeamActivityView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
             }
         }
     }
@@ -366,16 +368,16 @@ struct TeamActivityView: View {
         VStack(spacing: 16) {
             Image(systemName: "person.3.fill")
                 .font(.system(size: 64))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             Text("No Team Member Selected")
                 .font(.title2)
                 .fontWeight(.semibold)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Select a team member to view their activity")
                 .font(.callout)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -393,8 +395,7 @@ struct TeamActivityView: View {
     }
 
     private func formatDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return dateString }
+        guard let date = Self.isoFormatter.date(from: dateString) else { return dateString }
 
         let relative = RelativeDateTimeFormatter()
         relative.unitsStyle = .abbreviated

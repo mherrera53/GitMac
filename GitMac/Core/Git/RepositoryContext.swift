@@ -122,11 +122,11 @@ actor RepositoryContext {
         watcher?.startAll()
 
         // Connect watcher signals to changesContinuation and handle cache invalidation
-        watcherTask = Task { [weak self, weak watcher] in
-            guard let watcher = watcher, let self = self else { return }
-
-            for await signal in watcher.signalStream {
-                await self.handleSignal(signal)
+        if let stream = watcher?.signalStream {
+            watcherTask = Task { [weak self] in
+                for await signal in stream {
+                    await self?.handleSignal(signal)
+                }
             }
         }
     }

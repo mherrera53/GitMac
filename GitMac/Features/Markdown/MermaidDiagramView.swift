@@ -325,19 +325,19 @@ struct InlineMermaidView: View {
             Button(action: { withAnimation { isExpanded.toggle() } }) {
                 HStack {
                     Image(systemName: "chart.bar.doc.horizontal")
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                     Text("Mermaid Diagram")
                         .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Spacer()
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .font(.caption)
                 }
                 .padding(.horizontal, DesignTokens.Spacing.md)
                 .padding(.vertical, DesignTokens.Spacing.sm)
                 .background(colorScheme == .dark ? AppTheme.textPrimary.opacity(0.05) : AppTheme.background.opacity(0.03))
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             }
             .buttonStyle(.plain)
 
@@ -348,7 +348,7 @@ struct InlineMermaidView: View {
                     maxHeight: 400
                 )
                 .frame(minHeight: 200, maxHeight: 500)
-                .cornerRadius(DesignTokens.CornerRadius.lg)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                 .overlay(
                     RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                         .stroke(AppTheme.textMuted.opacity(0.2), lineWidth: 1)

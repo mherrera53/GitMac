@@ -39,7 +39,7 @@ struct DSIcon: View {
     var body: some View {
         Image(systemName: name)
             .font(.system(size: size.dimension))
-            .foregroundColor(color ?? AppTheme.textPrimary)
+            .foregroundStyle(color ?? AppTheme.textPrimary)
     }
 }
 

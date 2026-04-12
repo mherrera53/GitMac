@@ -78,26 +78,26 @@ struct AdvancedSplitDiffView: View {
         HStack(spacing: 12) {
             HStack(spacing: 4) {
                 Image(systemName: "plus.circle.fill")
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 Text("\(totalAdditions)")
                     .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
             }
             
             HStack(spacing: 4) {
                 Image(systemName: "minus.circle.fill")
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                 Text("\(totalDeletions)")
                     .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
             
             Text("•")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Text("\(hunks.count) hunks")
                 .font(.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
     }
     
@@ -220,11 +220,11 @@ struct UnifiedDiffLine: View {
             HStack(spacing: 4) {
                 Text(line.oldLineNumber.map { "\($0)" } ?? " ")
                     .frame(width: 50, alignment: .trailing)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 Text(line.newLineNumber.map { "\($0)" } ?? " ")
                     .frame(width: 50, alignment: .trailing)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
             .padding(.horizontal, 8)
             .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
@@ -323,7 +323,7 @@ struct SplitDiffLine: View {
             // Line number
             Text(lineNumber)
                 .frame(width: 60, alignment: .trailing)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .padding(.horizontal, 8)
                 .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
             
@@ -385,7 +385,7 @@ struct DiffPaneHeader: View {
             Text(title)
                 .font(.caption)
                 .fontWeight(.semibold)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             
             Spacer()
         }
@@ -403,7 +403,7 @@ struct AdvancedHunkHeaderView: View {
         HStack {
             Text(hunk.header)
                 .font(.system(.caption, design: .monospaced))
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
             
             Spacer()
             
@@ -412,14 +412,14 @@ struct AdvancedHunkHeaderView: View {
                 if hunk.additions > 0 {
                     HStack(spacing: 2) {
                         Text("+\(hunk.additions)")
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                     }
                 }
                 
                 if hunk.deletions > 0 {
                     HStack(spacing: 2) {
                         Text("-\(hunk.deletions)")
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                     }
                 }
             }
@@ -475,6 +475,7 @@ struct InlineChangeHighlighter {
 // MARK: - Performance Optimizations
 
 /// Virtual scrolling for large diffs (render only visible lines)
+@MainActor
 class DiffVirtualScroller: ObservableObject {
     @Published var visibleRange: Range<Int> = 0..<100
     

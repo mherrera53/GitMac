@@ -33,7 +33,7 @@ struct WorktreeSidebarSection: View {
                 if manager.worktrees.isEmpty {
                     Text("No worktrees")
                         .font(.system(size: 10))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 4)
                 }
@@ -48,7 +48,7 @@ struct WorktreeSidebarSection: View {
                         Text("Add Worktree")
                             .font(.system(size: 10))
                     }
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
                 }
@@ -77,17 +77,17 @@ struct WorktreeSidebarRow: View {
         HStack(spacing: 8) {
             Image(systemName: worktree.isMain ? "house.fill" : "folder.fill")
                 .font(.system(size: 11))
-                .foregroundColor(worktree.isMain ? AppTheme.accent : AppTheme.accent)
+                .foregroundStyle(worktree.isMain ? AppTheme.accent : AppTheme.accent)
 
             Text(worktree.name)
                 .font(.system(size: 11))
-                .foregroundColor(worktree.isMain ? AppTheme.textPrimary : AppTheme.textSecondary)
+                .foregroundStyle(worktree.isMain ? AppTheme.textPrimary : AppTheme.textSecondary)
                 .lineLimit(1)
 
             if worktree.isLocked {
                 Image(systemName: "lock.fill")
                     .font(.system(size: 9))
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
             }
 
             Spacer()

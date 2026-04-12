@@ -26,7 +26,7 @@ private extension Set where Element == String {
 struct RecentRepositoriesList: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var recentReposManager: RecentRepositoriesManager
-    @ObservedObject private var groupsService = RepoGroupsService.shared
+    @StateObject private var groupsService = RepoGroupsService.shared
 
     @State private var expandedGroups: Set<String> = ["favorites", "recent"]
     @State private var showCloneSheet = false
@@ -129,10 +129,10 @@ struct RecentRepositoriesList: View {
                 VStack(spacing: 8) {
                     Image(systemName: "folder.badge.questionmark")
                         .font(.system(size: 24))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     Text("No repositories yet")
                         .font(.system(size: 10))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)
@@ -208,14 +208,14 @@ struct MiniSidebarSection<Content: View>: View {
                 HStack(spacing: 4) {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .frame(width: 10)
                     Image(systemName: icon)
                         .font(.system(size: 9))
-                        .foregroundColor(iconColor)
+                        .foregroundStyle(iconColor)
                     Text(title)
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     Spacer()
                 }
                 .padding(.horizontal, 8)
@@ -246,11 +246,11 @@ struct RepoActionButton: View {
                     .font(.system(size: 10))
                 Spacer()
             }
-            .foregroundColor(isHovered ? AppTheme.textPrimary : AppTheme.textMuted)
+            .foregroundStyle(isHovered ? AppTheme.textPrimary : AppTheme.textMuted)
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
             .background(isHovered ? AppTheme.hover : Color.clear)
-            .cornerRadius(DesignTokens.CornerRadius.sm)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }

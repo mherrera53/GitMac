@@ -37,11 +37,11 @@ struct DSEmptyState: View {
             VStack(spacing: DesignTokens.Spacing.sm) {
                 Text(title)
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Text(description)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .multilineTextAlignment(.center)
             }
 
@@ -76,7 +76,7 @@ struct DSEmptyState: View {
         title: "No Commits",
         description: "You haven't made any commits yet. Create your first commit to get started.",
         actionTitle: "Create Commit",
-        action: { print("Create commit tapped") }
+        action: { Logger.debug("Create commit tapped") }
     )
     .frame(width: 400, height: 300)
     .background(AppTheme.background)
@@ -88,7 +88,7 @@ struct DSEmptyState: View {
         title: "No Repository Selected",
         description: "Select or create a repository to start working with Git.",
         actionTitle: "Open Repository",
-        action: { print("Open repository tapped") }
+        action: { Logger.debug("Open repository tapped") }
     )
     .frame(width: 400, height: 300)
     .background(AppTheme.background)

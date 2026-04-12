@@ -60,3 +60,5 @@ INSTRUCCIONES_PARA_COMPLETAR.md
 
 # UI Tests
 GitMacUITests/
+build_output/
+build_output/

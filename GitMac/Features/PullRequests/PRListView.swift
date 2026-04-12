@@ -4,7 +4,7 @@ import SwiftUI
 struct PRListView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = PRListViewModel()
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @State private var selectedPR: GitHubPullRequest?
     @State private var showCreatePRSheet = false
     @State private var filterState: PRState = .open
@@ -31,7 +31,7 @@ struct PRListView: View {
                         showCreatePRSheet = true
                     } label: {
                         Image(systemName: "plus")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                     .buttonStyle(.borderless)
                     .help("Create Pull Request")
@@ -78,9 +78,9 @@ struct PRListView: View {
                     Spacer()
                     Image(systemName: "arrow.triangle.pull")
                         .font(DesignTokens.Typography.iconXXXXL)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Text("Select a pull request")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
@@ -315,11 +315,13 @@ class PRListViewModel: ObservableObject {
 // MARK: - Subviews
 
 struct PRRow: View {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     let pr: GitHubPullRequest
     let isSelected: Bool
     var onMerge: ((MergeMethod) -> Void)?
     var onClose: (() -> Void)?
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -329,11 +331,11 @@ struct PRRow: View {
                 // PR number and status
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     Image(systemName: pr.draft ? "doc.text" : (pr.state == "open" ? "arrow.triangle.pull" : "checkmark.circle"))
-                        .foregroundColor(statusColor)
+                        .foregroundStyle(statusColor)
 
                     Text("#\(pr.number)")
                         .font(.caption.monospacedDigit())
-                        .foregroundColor(theme.text)
+                        .foregroundStyle(theme.text)
                 }
 
                 Text(pr.title)
@@ -349,21 +351,21 @@ struct PRRow: View {
                     image.resizable()
                 } placeholder: {
                     Image(systemName: "person.circle.fill")
-                        .foregroundColor(theme.textSecondary)
+                        .foregroundStyle(theme.textSecondary)
                 }
                 .frame(width: DesignTokens.Size.avatarXS, height: DesignTokens.Size.avatarXS)
                 .clipShape(Circle())
 
                 Text(pr.user.login)
                     .font(.caption)
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
 
                 Text("•")
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
 
                 Text(formatDate(pr.updatedAt))
                     .font(.caption)
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
 
                 Spacer()
 
@@ -371,9 +373,9 @@ struct PRRow: View {
                 if let additions = pr.additions, let deletions = pr.deletions {
                     HStack(spacing: DesignTokens.Spacing.xs) {
                         Text("+\(additions)")
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                         Text("-\(deletions)")
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                     }
                     .font(.caption.monospacedDigit())
                 }
@@ -386,26 +388,26 @@ struct PRRow: View {
                     .padding(.horizontal, DesignTokens.Spacing.sm - 2)
                     .padding(.vertical, DesignTokens.Spacing.xxs)
                     .background(theme.info.opacity(0.2))
-                    .foregroundColor(AppTheme.accent)
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .foregroundStyle(AppTheme.accent)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
                 Image(systemName: "arrow.right")
                     .font(.caption)
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
 
                 Text(pr.base.ref)
                     .font(.caption)
                     .padding(.horizontal, DesignTokens.Spacing.sm - 2)
                     .padding(.vertical, DesignTokens.Spacing.xxs)
                     .background(theme.success.opacity(0.2))
-                    .foregroundColor(AppTheme.success)
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .foregroundStyle(AppTheme.success)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
         }
         .padding(.vertical, DesignTokens.Spacing.sm)
         .padding(.horizontal, DesignTokens.Spacing.xs)
         .background(isSelected ? AppTheme.accent.opacity(0.1) : Color.clear)
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         .contextMenu {
             if pr.state == "open" && !pr.draft {
                 Menu {
@@ -463,8 +465,7 @@ struct PRRow: View {
     }
 
     func formatDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return dateString }
+        guard let date = Self.isoFormatter.date(from: dateString) else { return dateString }
 
         let relative = RelativeDateTimeFormatter()
         relative.unitsStyle = .abbreviated
@@ -473,9 +474,11 @@ struct PRRow: View {
 }
 
 struct PRDetailView: View {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     let pr: GitHubPullRequest
     @ObservedObject var viewModel: PRListViewModel
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @State private var files: [GitHubPRFile] = []
     @State private var checks: [GitHubCheckRun] = []
     @State private var comments: [GitHubComment] = []
@@ -497,7 +500,7 @@ struct PRDetailView: View {
 
                         Text("#\(pr.number)")
                             .font(.title3)
-                            .foregroundColor(theme.text)
+                            .foregroundStyle(theme.text)
 
                         Spacer()
 
@@ -505,15 +508,15 @@ struct PRDetailView: View {
                         if !checks.isEmpty {
                             HStack(spacing: DesignTokens.Spacing.xs) {
                                 Image(systemName: checksIcon)
-                                    .foregroundColor(checksColor)
+                                    .foregroundStyle(checksColor)
                                 Text(checksStatus)
                                     .font(.caption)
-                                    .foregroundColor(checksColor)
+                                    .foregroundStyle(checksColor)
                             }
                             .padding(.horizontal, DesignTokens.Spacing.sm)
                             .padding(.vertical, DesignTokens.Spacing.xs)
                             .background(checksColor.opacity(0.1))
-                            .cornerRadius(DesignTokens.CornerRadius.xl)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
                         }
 
                         Button {
@@ -539,7 +542,7 @@ struct PRDetailView: View {
                 }
                 .padding()
                 .background(Color(nsColor: .controlBackgroundColor))
-                .cornerRadius(DesignTokens.CornerRadius.lg)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 
                 // Body
                 if let body = pr.body, !body.isEmpty {
@@ -553,7 +556,7 @@ struct PRDetailView: View {
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(nsColor: .controlBackgroundColor))
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                 }
 
                 // Stats
@@ -564,7 +567,7 @@ struct PRDetailView: View {
                 }
                 .padding()
                 .background(Color(nsColor: .controlBackgroundColor))
-                .cornerRadius(DesignTokens.CornerRadius.lg)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 
                 // CI/CD Checks
                 if !checks.isEmpty {
@@ -575,7 +578,7 @@ struct PRDetailView: View {
                         ForEach(checks) { check in
                             HStack(spacing: DesignTokens.Spacing.sm) {
                                 Image(systemName: checkIcon(for: check))
-                                    .foregroundColor(checkColor(for: check))
+                                    .foregroundStyle(checkColor(for: check))
                                     .frame(width: DesignTokens.Size.iconLG)
 
                                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
@@ -585,7 +588,7 @@ struct PRDetailView: View {
 
                                     Text(check.status.capitalized)
                                         .font(.caption)
-                                        .foregroundColor(theme.text)
+                                        .foregroundStyle(theme.text)
                                 }
 
                                 Spacer()
@@ -596,8 +599,8 @@ struct PRDetailView: View {
                                         .padding(.horizontal, DesignTokens.Spacing.sm - 2)
                                         .padding(.vertical, DesignTokens.Spacing.xxs)
                                         .background(checkColor(for: check).opacity(0.2))
-                                        .foregroundColor(checkColor(for: check))
-                                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                                        .foregroundStyle(checkColor(for: check))
+                                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                                 }
                             }
                             .padding(.vertical, DesignTokens.Spacing.sm)
@@ -606,7 +609,7 @@ struct PRDetailView: View {
                     }
                     .padding()
                     .background(Color(nsColor: .controlBackgroundColor))
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                 }
 
                 // Comments
@@ -617,7 +620,7 @@ struct PRDetailView: View {
 
                         Text("(\(comments.count))")
                             .font(.caption)
-                            .foregroundColor(theme.text)
+                            .foregroundStyle(theme.text)
 
                         Spacer()
 
@@ -628,7 +631,7 @@ struct PRDetailView: View {
                         } label: {
                             Image(systemName: showComments ? "chevron.up" : "chevron.down")
                                 .font(.caption)
-                                .foregroundColor(theme.textSecondary)
+                                .foregroundStyle(theme.textSecondary)
                         }
                         .buttonStyle(.plain)
                     }
@@ -642,7 +645,7 @@ struct PRDetailView: View {
                                 } placeholder: {
                                     Image(systemName: "person.circle.fill")
                                         .resizable()
-                                        .foregroundColor(theme.text)
+                                        .foregroundStyle(theme.text)
                                 }
                                 .frame(width: DesignTokens.Size.avatarLG, height: DesignTokens.Size.avatarLG)
                                 .clipShape(Circle())
@@ -655,7 +658,7 @@ struct PRDetailView: View {
 
                                         Text(formatCommentDate(comment.createdAt))
                                             .font(.caption)
-                                            .foregroundColor(theme.text)
+                                            .foregroundStyle(theme.text)
                                     }
 
                                     Text(comment.body)
@@ -671,7 +674,7 @@ struct PRDetailView: View {
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                             Text("Add comment")
                                 .font(.caption)
-                                .foregroundColor(theme.text)
+                                .foregroundStyle(theme.text)
 
                             TextEditor(text: $newCommentText)
                                 .font(.body)
@@ -695,7 +698,7 @@ struct PRDetailView: View {
                 }
                 .padding()
                 .background(Color(nsColor: .controlBackgroundColor))
-                .cornerRadius(DesignTokens.CornerRadius.lg)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 
                 // Files changed
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
@@ -708,7 +711,7 @@ struct PRDetailView: View {
                 }
                 .padding()
                 .background(Color(nsColor: .controlBackgroundColor))
-                .cornerRadius(DesignTokens.CornerRadius.lg)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 
                 // Actions
                 if pr.state == "open" {
@@ -731,7 +734,7 @@ struct PRDetailView: View {
                     }
                     .padding()
                     .background(Color(nsColor: .controlBackgroundColor))
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                 }
             }
             .padding()
@@ -785,7 +788,7 @@ struct PRDetailView: View {
             )
             return checkRuns.checkRuns
         } catch {
-            print("Failed to load checks: \(error)")
+            Logger.debug("Failed to load checks: \(error)")
             return []
         }
     }
@@ -873,8 +876,7 @@ struct PRDetailView: View {
     }
 
     private func formatCommentDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return dateString }
+        guard let date = Self.isoFormatter.date(from: dateString) else { return dateString }
 
         let relative = RelativeDateTimeFormatter()
         relative.unitsStyle = .abbreviated
@@ -885,22 +887,22 @@ struct PRDetailView: View {
 struct PRStatusBadge: View {
     let state: String
     let draft: Bool
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
 
         return HStack(spacing: DesignTokens.Spacing.xs) {
             Image(systemName: icon)
-                .foregroundColor(theme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
             Text(text)
         }
         .font(.caption.weight(.semibold))
         .padding(.horizontal, DesignTokens.Spacing.sm)
         .padding(.vertical, DesignTokens.Spacing.xs)
         .background(color.opacity(0.2))
-        .foregroundColor(color)
-        .cornerRadius(DesignTokens.CornerRadius.xl)
+        .foregroundStyle(color)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
     }
 
     var icon: String {
@@ -932,7 +934,7 @@ struct StatItem: View {
     let label: String
     let value: String
     var color: Color = .primary
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -944,17 +946,17 @@ struct StatItem: View {
                     .fontWeight(.semibold)
             }
             .font(.title3)
-            .foregroundColor(color)
+            .foregroundStyle(color)
 
             Text(label)
                 .font(.caption)
-                .foregroundColor(theme.text)
+                .foregroundStyle(theme.text)
         }
     }
 }
 
 struct PRFileRow: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     let file: GitHubPRFile
 
     var body: some View {
@@ -962,7 +964,7 @@ struct PRFileRow: View {
             StatusIcon(status: statusType)
 
             Image(systemName: "doc.fill")
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
 
             Text(file.filename)
                 .lineLimit(1)
@@ -971,9 +973,9 @@ struct PRFileRow: View {
 
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Text("+\(file.additions)")
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 Text("-\(file.deletions)")
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
             .font(.caption.monospacedDigit())
         }
@@ -993,7 +995,7 @@ struct PRFileRow: View {
 
 struct EmptyPRView: View {
     let state: PRState
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -1001,13 +1003,13 @@ struct EmptyPRView: View {
         return VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "arrow.triangle.pull")
                 .font(.system(size: DesignTokens.Size.iconXL))
-                .foregroundColor(theme.text)
+                .foregroundStyle(theme.text)
 
             Text("No \(state == .all ? "" : state.rawValue) pull requests")
                 .font(.headline)
 
             Text("Pull requests will appear here when they are created")
-                .foregroundColor(theme.text)
+                .foregroundStyle(theme.text)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1020,7 +1022,7 @@ struct CreatePRSheet: View {
     @ObservedObject var viewModel: PRListViewModel
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     @State private var title = ""
     @State private var prBody = ""
@@ -1062,7 +1064,7 @@ struct CreatePRSheet: View {
                             Text("Generating...")
                         } else {
                             Image(systemName: "sparkles")
-                                .foregroundColor(theme.accent)
+                                .foregroundStyle(theme.accent)
                             Text("Generate with AI")
                         }
                     }
@@ -1077,7 +1079,7 @@ struct CreatePRSheet: View {
                     // Branches - only show local branches for PR head
                     HStack {
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                            Text("From").font(.caption).foregroundColor(theme.text)
+                            Text("From").font(.caption).foregroundStyle(theme.text)
                             Picker("", selection: $headBranch) {
                                 ForEach(localBranches, id: \.id) { branch in
                                     Text(branch.name).tag(branch.name)
@@ -1087,11 +1089,11 @@ struct CreatePRSheet: View {
                         }
 
                         Image(systemName: "arrow.right")
-                            .foregroundColor(theme.text)
+                            .foregroundStyle(theme.text)
                             .padding(.horizontal, DesignTokens.Spacing.sm)
 
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                            Text("To").font(.caption).foregroundColor(theme.text)
+                            Text("To").font(.caption).foregroundStyle(theme.text)
                             Picker("", selection: $baseBranch) {
                                 Text("main").tag("main")
                                 Text("master").tag("master")
@@ -1102,17 +1104,17 @@ struct CreatePRSheet: View {
                     }
                     .padding()
                     .background(Color(nsColor: .controlBackgroundColor))
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 
                     // Title
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                        Text("Title").font(.caption).foregroundColor(theme.text)
+                        Text("Title").font(.caption).foregroundStyle(theme.text)
                         DSTextField(placeholder: "Enter PR title", text: $title)
                     }
 
                     // Description
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                        Text("Description").font(.caption).foregroundColor(theme.text)
+                        Text("Description").font(.caption).foregroundStyle(theme.text)
                         DSTextEditor(
                             placeholder: "Enter PR description...",
                             text: $prBody,
@@ -1122,14 +1124,14 @@ struct CreatePRSheet: View {
                         if prTemplate != nil {
                             Text("Using template")
                                 .font(.caption2)
-                                .foregroundColor(AppTheme.accent)
+                                .foregroundStyle(AppTheme.accent)
                         }
                     }
 
                     // Reviewers
                     if !availableReviewers.isEmpty {
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                            Text("Reviewers (optional)").font(.caption).foregroundColor(theme.text)
+                            Text("Reviewers (optional)").font(.caption).foregroundStyle(theme.text)
                             FlowLayout(spacing: DesignTokens.Spacing.sm - 2) {
                                 ForEach(availableReviewers.prefix(10), id: \.id) { user in
                                     Button {
@@ -1140,7 +1142,7 @@ struct CreatePRSheet: View {
                                                 image.resizable()
                                             } placeholder: {
                                                 Image(systemName: "person.circle.fill")
-                                                    .foregroundColor(theme.textSecondary)
+                                                    .foregroundStyle(theme.textSecondary)
                                             }
                                             .frame(width: DesignTokens.Size.avatarXS, height: DesignTokens.Size.avatarXS)
                                             .clipShape(Circle())
@@ -1151,8 +1153,8 @@ struct CreatePRSheet: View {
                                         .padding(.horizontal, DesignTokens.Spacing.sm)
                                         .padding(.vertical, DesignTokens.Spacing.xs)
                                         .background(selectedReviewers.contains(user.login) ? AppTheme.accent : theme.textMuted.opacity(0.2))
-                                        .foregroundColor(selectedReviewers.contains(user.login) ? .white : .primary)
-                                        .cornerRadius(DesignTokens.CornerRadius.xl)
+                                        .foregroundStyle(selectedReviewers.contains(user.login) ? .white : .primary)
+                                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
                                     }
                                     .buttonStyle(.plain)
                                 }
@@ -1163,7 +1165,7 @@ struct CreatePRSheet: View {
                     // Labels
                     if !availableLabels.isEmpty {
                         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                            Text("Labels (optional)").font(.caption).foregroundColor(theme.text)
+                            Text("Labels (optional)").font(.caption).foregroundStyle(theme.text)
                             FlowLayout(spacing: DesignTokens.Spacing.sm - 2) {
                                 ForEach(availableLabels.prefix(15), id: \.id) { label in
                                     Button {
@@ -1174,8 +1176,8 @@ struct CreatePRSheet: View {
                                             .padding(.horizontal, DesignTokens.Spacing.sm)
                                             .padding(.vertical, DesignTokens.Spacing.xs)
                                             .background(selectedLabels.contains(label.name) ? theme.info : theme.textMuted.opacity(0.2))
-                                            .foregroundColor(selectedLabels.contains(label.name) ? .white : .primary)
-                                            .cornerRadius(DesignTokens.CornerRadius.xl)
+                                            .foregroundStyle(selectedLabels.contains(label.name) ? .white : .primary)
+                                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
                                     }
                                     .buttonStyle(.plain)
                                 }
@@ -1238,7 +1240,7 @@ struct CreatePRSheet: View {
             title = try await generatedTitle
             prBody = try await generatedDescription
         } catch {
-            print("Failed to generate PR content: \(error)")
+            Logger.debug("Failed to generate PR content: \(error)")
             NotificationManager.shared.error("AI Generation Failed", detail: error.localizedDescription)
         }
         isGenerating = false
@@ -1279,7 +1281,7 @@ struct CreatePRSheet: View {
                 repo: ownerRepo.repo
             )
         } catch {
-            print("Failed to load collaborators: \(error)")
+            Logger.debug("Failed to load collaborators: \(error)")
         }
 
         // Load labels
@@ -1290,7 +1292,7 @@ struct CreatePRSheet: View {
                 repo: ownerRepo.repo
             )
         } catch {
-            print("Failed to load labels: \(error)")
+            Logger.debug("Failed to load labels: \(error)")
         }
     }
 
@@ -1331,7 +1333,7 @@ struct PRReviewView: View {
     let repo: String
 
     @StateObject private var viewModel = PRReviewViewModel()
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @State private var selectedFile: GitHubPRFile?
     @State private var showAIPanel = false
     @State private var selectedLines: Set<Int> = []
@@ -1384,7 +1386,7 @@ struct PRReviewView: View {
 
                 Text("\(viewModel.files.count) files")
                     .font(.caption)
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
             }
 
             Spacer()
@@ -1411,14 +1413,14 @@ struct PRReviewView: View {
             } label: {
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     Image(systemName: reviewEventIcon)
-                        .foregroundColor(reviewEventColor)
+                        .foregroundStyle(reviewEventColor)
                     Text(reviewEventText)
                         .font(.caption)
                 }
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.vertical, DesignTokens.Spacing.xs)
                 .background(reviewEventColor.opacity(0.2))
-                .cornerRadius(DesignTokens.CornerRadius.xl)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
             }
             .menuStyle(.borderlessButton)
         }
@@ -1477,7 +1479,7 @@ struct PRReviewView: View {
             // File header
             HStack {
                 Image(systemName: fileIcon(for: file))
-                    .foregroundColor(fileColor(for: file))
+                    .foregroundStyle(fileColor(for: file))
 
                 Text(file.filename)
                     .font(.headline)
@@ -1488,9 +1490,9 @@ struct PRReviewView: View {
                 HStack(spacing: DesignTokens.Spacing.md) {
                     HStack(spacing: DesignTokens.Spacing.xs) {
                         Text("+\(file.additions)")
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                         Text("-\(file.deletions)")
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                     }
                     .font(.caption.monospacedDigit())
 
@@ -1504,7 +1506,7 @@ struct PRReviewView: View {
                                     .scaleEffect(0.6)
                             } else {
                                 Image(systemName: "sparkles")
-                                    .foregroundColor(theme.accent)
+                                    .foregroundStyle(theme.accent)
                             }
                             Text("AI Suggestions")
                                 .font(.caption)
@@ -1542,9 +1544,9 @@ struct PRReviewView: View {
                     VStack(spacing: DesignTokens.Spacing.lg) {
                         Image(systemName: "doc.text")
                             .font(DesignTokens.Typography.iconXXXXL)
-                            .foregroundColor(theme.text)
+                            .foregroundStyle(theme.text)
                         Text("No diff available for this file")
-                            .foregroundColor(theme.text)
+                            .foregroundStyle(theme.text)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding()
@@ -1588,7 +1590,7 @@ struct PRReviewView: View {
         return VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: DesignTokens.Size.iconXL * 2.66))
-                .foregroundColor(theme.text)
+                .foregroundStyle(theme.text)
 
             Text("Select a file to review")
                 .font(.title2)
@@ -1596,7 +1598,7 @@ struct PRReviewView: View {
 
             Text("Choose a file from the list to view changes and add review comments")
                 .font(.callout)
-                .foregroundColor(theme.text)
+                .foregroundStyle(theme.text)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1663,7 +1665,7 @@ class PRReviewViewModel: ObservableObject {
             files = try await filesTask
             reviewComments = try await commentsTask
         } catch {
-            print("Failed to load review data: \(error)")
+            Logger.debug("Failed to load review data: \(error)")
         }
 
         isLoading = false
@@ -1703,7 +1705,7 @@ class PRReviewViewModel: ObservableObject {
             aiSuggestions = suggestions
             showAISuggestions = true
         } catch {
-            print("Failed to generate AI suggestions: \(error)")
+            Logger.debug("Failed to generate AI suggestions: \(error)")
         }
 
         isGeneratingAI = false
@@ -1757,14 +1759,14 @@ struct ReviewFileRow: View {
     let isSelected: Bool
     let commentCount: Int
     let onSelect: () -> Void
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
 
         return HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: statusIcon)
-                .foregroundColor(statusColor)
+                .foregroundStyle(statusColor)
                 .frame(width: DesignTokens.Size.iconLG)
 
             Text(file.filename)
@@ -1779,22 +1781,22 @@ struct ReviewFileRow: View {
                     .padding(.horizontal, DesignTokens.Spacing.sm - 2)
                     .padding(.vertical, DesignTokens.Spacing.xxs)
                     .background(theme.info.opacity(0.2))
-                    .foregroundColor(AppTheme.accent)
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
+                    .foregroundStyle(AppTheme.accent)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
             }
 
             HStack(spacing: DesignTokens.Spacing.xs) {
                 Text("+\(file.additions)")
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 Text("-\(file.deletions)")
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
             .font(.caption2.monospacedDigit())
         }
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.sm)
         .background(isSelected ? AppTheme.accent.opacity(0.2) : Color.clear)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         .onTapGesture { onSelect() }
     }
 
@@ -1825,7 +1827,7 @@ struct DiffCodeView: View {
     @Binding var selectedLines: Set<Int>
     let onAddComment: (Int) -> Void
     let onDeletePendingComment: (UUID) -> Void
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     @State private var hoveredLine: Int?
 
@@ -1839,11 +1841,11 @@ struct DiffCodeView: View {
                     HStack(spacing: 4) {
                         Text(diffLine.oldLineNumber.map { "\($0)" } ?? "")
                             .frame(width: 40, alignment: .trailing)
-                            .foregroundColor(theme.text)
+                            .foregroundStyle(theme.text)
 
                         Text(diffLine.newLineNumber.map { "\($0)" } ?? "")
                             .frame(width: 40, alignment: .trailing)
-                            .foregroundColor(theme.text)
+                            .foregroundStyle(theme.text)
                     }
                     .font(.system(.caption, design: .monospaced))
                     .padding(.horizontal, 8)
@@ -1857,7 +1859,7 @@ struct DiffCodeView: View {
                             }
                         } label: {
                             Image(systemName: "plus.circle.fill")
-                                .foregroundColor(AppTheme.accent)
+                                .foregroundStyle(AppTheme.accent)
                         }
                         .buttonStyle(.plain)
                         .padding(.horizontal, DesignTokens.Spacing.xs)
@@ -1910,8 +1912,10 @@ struct DiffCodeView: View {
 }
 
 struct ReviewCommentRow: View {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     let comment: GitHubReviewComment
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -1922,7 +1926,7 @@ struct ReviewCommentRow: View {
             } placeholder: {
                 Image(systemName: "person.circle.fill")
                     .resizable()
-                    .foregroundColor(theme.text)
+                    .foregroundStyle(theme.text)
             }
             .frame(width: DesignTokens.Size.avatarMD, height: DesignTokens.Size.avatarMD)
             .clipShape(Circle())
@@ -1935,7 +1939,7 @@ struct ReviewCommentRow: View {
 
                     Text(formatDate(comment.createdAt))
                         .font(.caption2)
-                        .foregroundColor(theme.text)
+                        .foregroundStyle(theme.text)
                 }
 
                 Text(comment.body)
@@ -1944,15 +1948,14 @@ struct ReviewCommentRow: View {
         }
         .padding()
         .background(theme.info.opacity(0.05))
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
         .padding(.leading, 100)
         .padding(.trailing, DesignTokens.Spacing.lg)
         .padding(.vertical, DesignTokens.Spacing.xs)
     }
 
     private func formatDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return dateString }
+        guard let date = Self.isoFormatter.date(from: dateString) else { return dateString }
 
         let relative = RelativeDateTimeFormatter()
         relative.unitsStyle = .abbreviated
@@ -1963,7 +1966,7 @@ struct ReviewCommentRow: View {
 struct PendingReviewCommentRow: View {
     let comment: PendingReviewComment
     let onDelete: () -> Void
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -1971,7 +1974,7 @@ struct PendingReviewCommentRow: View {
         return HStack(alignment: .top, spacing: DesignTokens.Spacing.md) {
             Image(systemName: "person.circle.fill")
                 .resizable()
-                .foregroundColor(theme.text)
+                .foregroundStyle(theme.text)
                 .frame(width: DesignTokens.Size.avatarMD, height: DesignTokens.Size.avatarMD)
 
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
@@ -1985,8 +1988,8 @@ struct PendingReviewCommentRow: View {
                         .padding(.horizontal, DesignTokens.Spacing.sm - 2)
                         .padding(.vertical, DesignTokens.Spacing.xxs)
                         .background(theme.warning.opacity(0.2))
-                        .foregroundColor(AppTheme.warning)
-                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                        .foregroundStyle(AppTheme.warning)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
                     Spacer()
 
@@ -1997,7 +2000,7 @@ struct PendingReviewCommentRow: View {
                             .font(.caption)
                     }
                     .buttonStyle(.plain)
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                 }
 
                 Text(comment.body)
@@ -2006,7 +2009,7 @@ struct PendingReviewCommentRow: View {
         }
         .padding()
         .background(theme.warning.opacity(0.05))
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
         .padding(.leading, 100)
         .padding(.trailing, DesignTokens.Spacing.lg)
         .padding(.vertical, DesignTokens.Spacing.xs)
@@ -2019,7 +2022,7 @@ struct AddReviewCommentSheet: View {
     @State private var commentText = ""
     let onAdd: (String) -> Void
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -2037,15 +2040,15 @@ struct AddReviewCommentSheet: View {
                 HStack {
                     Text(filename)
                         .font(.caption)
-                        .foregroundColor(theme.text)
+                        .foregroundStyle(theme.text)
 
                     Text("Line \(line)")
                         .font(.caption)
                         .padding(.horizontal, DesignTokens.Spacing.sm - 2)
                         .padding(.vertical, DesignTokens.Spacing.xxs)
                         .background(theme.info.opacity(0.2))
-                        .foregroundColor(AppTheme.accent)
-                        .cornerRadius(DesignTokens.CornerRadius.sm)
+                        .foregroundStyle(AppTheme.accent)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
 
                 TextEditor(text: $commentText)
@@ -2083,7 +2086,7 @@ struct AISuggestionsSheet: View {
     let suggestions: [AISuggestion]
     let onAccept: (AISuggestion) -> Void
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -2092,7 +2095,7 @@ struct AISuggestionsSheet: View {
             HStack {
                 Image(systemName: "sparkles")
                     .font(.title)
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
 
                 Text("AI Code Suggestions")
                     .font(.title2)
@@ -2111,16 +2114,16 @@ struct AISuggestionsSheet: View {
                                     .padding(.horizontal, DesignTokens.Spacing.sm - 2)
                                     .padding(.vertical, DesignTokens.Spacing.xxs)
                                     .background(theme.info.opacity(0.2))
-                                    .foregroundColor(AppTheme.accent)
-                                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                                    .foregroundStyle(AppTheme.accent)
+                                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
                                 Text(suggestion.category)
                                     .font(.caption)
                                     .padding(.horizontal, DesignTokens.Spacing.sm - 2)
                                     .padding(.vertical, DesignTokens.Spacing.xxs)
                                     .background(categoryColor(suggestion.category).opacity(0.2))
-                                    .foregroundColor(categoryColor(suggestion.category))
-                                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                                    .foregroundStyle(categoryColor(suggestion.category))
+                                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
                                 Spacer()
 
@@ -2137,7 +2140,7 @@ struct AISuggestionsSheet: View {
                         }
                         .padding()
                         .background(Color(nsColor: .controlBackgroundColor))
-                        .cornerRadius(DesignTokens.CornerRadius.lg)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                     }
                 }
             }

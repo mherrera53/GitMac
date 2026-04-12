@@ -67,6 +67,12 @@ struct SessionExport: Codable {
 class TerminalSessionSharingService: ObservableObject {
     static let shared = TerminalSessionSharingService()
 
+    nonisolated(unsafe) private static let filenameDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd-HHmmss"
+        return f
+    }()
+
     @Published var currentSession: TerminalSession?
     @Published var savedSessions: [TerminalSession] = []
     @Published var sharedSessions: [TerminalSession] = []
@@ -119,9 +125,7 @@ class TerminalSessionSharingService: ObservableObject {
         let data = try exportSession(session)
 
         // Create filename
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd-HHmmss"
-        let timestamp = formatter.string(from: Date())
+        let timestamp = Self.filenameDateFormatter.string(from: Date())
         let filename = "terminal-session-\(session.name.replacingOccurrences(of: " ", with: "-"))-\(timestamp).json"
 
         // Save to Downloads folder
@@ -295,12 +299,12 @@ struct SessionSharingSheet: View {
                     .font(.system(size: 16, weight: .medium))
                 Text("\(session.commands.count) commands")
                     .font(.system(size: 13))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
 
             // Export Options
             VStack(spacing: 12) {
@@ -314,7 +318,7 @@ struct SessionSharingSheet: View {
                     }
                     .padding()
                     .background(AppTheme.backgroundSecondary)
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
 
@@ -327,12 +331,12 @@ struct SessionSharingSheet: View {
                         Spacer()
                         if showCopied {
                             Image(systemName: "checkmark")
-                                .foregroundColor(AppTheme.success)
+                                .foregroundStyle(AppTheme.success)
                         }
                     }
                     .padding()
                     .background(AppTheme.backgroundSecondary)
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
             }
@@ -342,7 +346,7 @@ struct SessionSharingSheet: View {
             Button("Done") {
                 dismiss()
             }
-            .foregroundColor(AppTheme.accent)
+            .foregroundStyle(AppTheme.accent)
         }
         .padding()
         .frame(width: 400, height: 300)
@@ -354,7 +358,7 @@ struct SessionSharingSheet: View {
             let url = try TerminalSessionSharingService.shared.exportSessionToFile(session)
             NSWorkspace.shared.activateFileViewerSelecting([url])
         } catch {
-            print("Export failed: \(error)")
+            Logger.debug("Export failed: \(error)")
         }
     }
 
@@ -371,7 +375,7 @@ struct SessionSharingSheet: View {
                 }
             }
         } catch {
-            print("Copy failed: \(error)")
+            Logger.debug("Copy failed: \(error)")
         }
     }
 }

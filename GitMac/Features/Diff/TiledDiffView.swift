@@ -76,7 +76,7 @@ struct TiledDiffView: NSViewRepresentable {
 
 /// NSView that draws diff lines directly with CoreText
 class TiledDiffContentView: NSView {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var fileDiff: FileDiff? {
         didSet {
@@ -371,7 +371,7 @@ struct AdaptiveTiledDiffView: View {
             } else {
                 // Use regular SwiftUI-based diff view for smaller files
                 Text("Use OptimizedSplitDiffView or OptimizedInlineDiffView here")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
     }
@@ -381,25 +381,25 @@ struct AdaptiveTiledDiffView: View {
         
         return HStack(spacing: DesignTokens.Spacing.xs) {
             Image(systemName: "bolt.fill")
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
 
             Text("High-Performance Mode")
                 .font(DesignTokens.Typography.caption)
                 .fontWeight(.semibold)
 
             Text("•")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("\(totalLines) lines")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("•")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Tiled rendering (O(1) scroll)")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Spacer()
         }

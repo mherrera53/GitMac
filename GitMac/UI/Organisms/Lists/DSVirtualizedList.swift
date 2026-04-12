@@ -243,7 +243,7 @@ extension DSVirtualizedListAdvanced {
 
                     Text("\(commits.count.formatted()) commits")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .padding(DesignTokens.Spacing.md)
                 .background(Color(.controlBackgroundColor))
@@ -255,7 +255,7 @@ extension DSVirtualizedListAdvanced {
                     HStack {
                         Text(commit.hash)
                             .font(DesignTokens.Typography.commitHash)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .frame(width: 60, alignment: .leading)
 
                         Text(commit.message)
@@ -267,7 +267,7 @@ extension DSVirtualizedListAdvanced {
                     .padding(.vertical, DesignTokens.Spacing.sm)
                     .padding(.horizontal, DesignTokens.Spacing.md)
                     .background(Color(.controlBackgroundColor))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
                 .estimatedItemHeight(36)
             }
@@ -302,7 +302,7 @@ extension DSVirtualizedListAdvanced {
 
                 Text("\(items.count.formatted()) items - Smooth scrolling guaranteed")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .padding(.horizontal, DesignTokens.Spacing.md)
                     .padding(.bottom, DesignTokens.Spacing.sm)
 
@@ -313,7 +313,7 @@ extension DSVirtualizedListAdvanced {
                     HStack {
                         Text("\(item.id)")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .frame(width: 60, alignment: .trailing)
 
                         Text(item.title)
@@ -324,7 +324,7 @@ extension DSVirtualizedListAdvanced {
                         if item.id % 100 == 0 {
                             Image(systemName: "star.fill")
                                 .font(.system(size: DesignTokens.Size.iconXS))
-                                .foregroundColor(.yellow)
+                                .foregroundStyle(.yellow)
                         }
                     }
                     .padding(.horizontal, DesignTokens.Spacing.md)
@@ -354,7 +354,7 @@ extension DSVirtualizedListAdvanced {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(DesignTokens.Spacing.sm)
             .background(Color.blue.opacity(0.05))
-            .cornerRadius(DesignTokens.CornerRadius.sm)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
     }
     .frame(width: 300, height: 400)
     .background(Color(.windowBackgroundColor))

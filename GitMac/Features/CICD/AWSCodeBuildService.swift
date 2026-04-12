@@ -91,7 +91,7 @@ struct CodeBuild: Identifiable, Codable {
 // MARK: - AWS CodeBuild View
 
 struct AWSCodeBuildView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = AWSCodeBuildViewModel()
@@ -115,31 +115,31 @@ struct AWSCodeBuildView: View {
             // Header
             HStack {
                 Image(systemName: "cloud.fill")
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
                 Text("AWS CODEBUILD")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
                 if let project = assignedProject {
                     Text(project)
                         .font(.system(size: 10))
-                        .foregroundColor(AppTheme.background)
+                        .foregroundStyle(AppTheme.background)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(AppTheme.success)
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                 }
 
                 if viewModel.isConfigured {
                     Text(viewModel.region)
                         .font(.system(size: 10))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(AppTheme.warning.opacity(0.2))
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                 }
 
                 if viewModel.isPolling {
@@ -148,7 +148,7 @@ struct AWSCodeBuildView: View {
                             .scaleEffect(0.5)
                         Text("Live")
                             .font(.system(size: 9))
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                     }
                 }
 
@@ -157,7 +157,7 @@ struct AWSCodeBuildView: View {
                 } label: {
                     Image(systemName: viewModel.isLoading ? "arrow.clockwise" : "arrow.clockwise")
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .rotationEffect(.degrees(viewModel.isLoading ? 360 : 0))
                         .animation(viewModel.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: viewModel.isLoading)
                 }
@@ -207,7 +207,7 @@ struct AWSCodeBuildView: View {
                     HStack {
                         Text("Showing builds for assigned project")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         Spacer()
                         HStack(spacing: 4) {
                             ForEach(AWSBuildFilter.allCases, id: \.self) { filter in
@@ -252,14 +252,14 @@ struct AWSCodeBuildView: View {
 
                     Text("\(viewModel.builds.count) builds")
                         .font(.system(size: 10))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Spacer()
 
                     if let lastUpdate = viewModel.lastUpdate {
                         Text("Updated \(lastUpdate, style: .relative) ago")
                             .font(.system(size: 9))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
 
                     Button("Start Build") {
@@ -325,15 +325,15 @@ struct AWSCodeBuildView: View {
         VStack(spacing: 12) {
             Image(systemName: "key.fill")
                 .font(.system(size: 32))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             Text("AWS not configured")
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Add AWS credentials in ~/.aws/credentials\nor set AWS_ACCESS_KEY_ID environment variable")
                 .font(.system(size: 11))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
 
             Link("AWS CLI Configuration Guide", destination: URL(string: "https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html")!)
@@ -348,15 +348,15 @@ struct AWSCodeBuildView: View {
         VStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 32))
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
 
             Text("Failed to load builds")
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text(viewModel.error ?? "")
                 .font(.system(size: 11))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
 
             Button("Retry") {
@@ -373,10 +373,10 @@ struct AWSCodeBuildView: View {
         VStack(spacing: 8) {
             Image(systemName: "tray")
                 .font(.system(size: 24))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
             Text("No builds found")
                 .font(.system(size: 11))
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(AppTheme.background)
@@ -409,7 +409,7 @@ enum AWSBuildFilter: CaseIterable {
 }
 
 struct FilterChip: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     let title: String
     let isSelected: Bool
     let color: Color
@@ -422,8 +422,8 @@ struct FilterChip: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(isSelected ? color : AppTheme.backgroundSecondary)
-                .foregroundColor(isSelected ? AppTheme.background : AppTheme.textPrimary)
-                .cornerRadius(4)
+                .foregroundStyle(isSelected ? AppTheme.background : AppTheme.textPrimary)
+                .clipShape(.rect(cornerRadius: 4))
         }
         .buttonStyle(.plain)
     }
@@ -432,7 +432,23 @@ struct FilterChip: View {
 // MARK: - Build Row
 
 struct AWSBuildRow: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    nonisolated(unsafe) private static let todayTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        return f
+    }()
+    nonisolated(unsafe) private static let yesterdayTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "'Yesterday' h:mm a"
+        return f
+    }()
+    nonisolated(unsafe) private static let dateTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d, h:mm a"
+        return f
+    }()
+
+    @EnvironmentObject private var themeManager: ThemeManager
     let build: CodeBuild
     @State private var isHovered = false
 
@@ -441,7 +457,7 @@ struct AWSBuildRow: View {
             // Status
             Image(systemName: build.statusIcon)
                 .font(.system(size: 16))
-                .foregroundColor(build.statusColor)
+                .foregroundStyle(build.statusColor)
                 .frame(width: 24)
 
             // Info
@@ -453,7 +469,7 @@ struct AWSBuildRow: View {
                     if let num = build.buildNumber {
                         Text("#\(num)")
                             .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
 
                     if build.buildStatus == "IN_PROGRESS" {
@@ -467,19 +483,19 @@ struct AWSBuildRow: View {
                     if let phase = build.currentPhase {
                         Text(phase)
                             .font(.system(size: 10))
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
 
                     if let source = build.sourceVersion {
                         Text(String(source.prefix(7)))
                             .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
 
                     if let initiator = build.initiator {
                         Text("by \(initiator)")
                             .font(.system(size: 10))
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
             }
@@ -492,8 +508,8 @@ struct AWSBuildRow: View {
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(build.statusColor.opacity(0.15))
-                .foregroundColor(build.statusColor)
-                .cornerRadius(4)
+                .foregroundStyle(build.statusColor)
+                .clipShape(.rect(cornerRadius: 4))
 
             // Time and Duration
             VStack(alignment: .trailing, spacing: 2) {
@@ -501,25 +517,25 @@ struct AWSBuildRow: View {
                 if let startTime = build.startTime {
                     Text(formatStartTime(startTime))
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 
                 // Relative time and duration
                 HStack(spacing: 4) {
                     Text(build.timeAgo)
                         .font(.system(size: 9))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     if let duration = build.duration {
                         Text("•")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         HStack(spacing: 2) {
                             Image(systemName: "clock")
                                 .font(.system(size: 8))
                             Text(duration)
                                 .font(.system(size: 9))
                         }
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     }
                 }
             }
@@ -531,7 +547,7 @@ struct AWSBuildRow: View {
                 } label: {
                     Image(systemName: "arrow.up.right.square")
                         .font(.system(size: 12))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 .buttonStyle(.borderless)
                 .help("View in AWS Console")
@@ -567,17 +583,14 @@ struct AWSBuildRow: View {
     }
     
     private func formatStartTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        // Show date if not today, otherwise just time
         let calendar = Calendar.current
         if calendar.isDateInToday(date) {
-            formatter.dateFormat = "h:mm a"
+            return Self.todayTimeFormatter.string(from: date)
         } else if calendar.isDateInYesterday(date) {
-            formatter.dateFormat = "'Yesterday' h:mm a"
+            return Self.yesterdayTimeFormatter.string(from: date)
         } else {
-            formatter.dateFormat = "MMM d, h:mm a"
+            return Self.dateTimeFormatter.string(from: date)
         }
-        return formatter.string(from: date)
     }
     
     private func openInAWSConsole() {
@@ -595,6 +608,18 @@ struct AWSBuildRow: View {
 
 @MainActor
 class AWSCodeBuildViewModel: ObservableObject {
+    nonisolated(unsafe) private static let awsDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+    nonisolated(unsafe) private static let awsISOFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
     @Published var projects: [CodeBuildProject] = []
     @Published var builds: [CodeBuild] = []
     @Published var isLoading = false
@@ -769,26 +794,16 @@ class AWSCodeBuildViewModel: ObservableObject {
                         var startTime: Date?
                         var endTime: Date?
 
-                        // AWS returns ISO8601 date strings with timezone offset
-                        let dateFormatter = DateFormatter()
-                        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
-                        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-
                         if let startTimeStr = buildDict["startTime"] as? String {
-                            startTime = dateFormatter.date(from: startTimeStr)
+                            startTime = Self.awsDateFormatter.date(from: startTimeStr)
                             if startTime == nil {
-                                // Try ISO8601 as fallback
-                                let iso = ISO8601DateFormatter()
-                                iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                                startTime = iso.date(from: startTimeStr)
+                                startTime = Self.awsISOFormatter.date(from: startTimeStr)
                             }
                         }
                         if let endTimeStr = buildDict["endTime"] as? String {
-                            endTime = dateFormatter.date(from: endTimeStr)
+                            endTime = Self.awsDateFormatter.date(from: endTimeStr)
                             if endTime == nil {
-                                let iso = ISO8601DateFormatter()
-                                iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                                endTime = iso.date(from: endTimeStr)
+                                endTime = Self.awsISOFormatter.date(from: endTimeStr)
                             }
                         }
 
@@ -928,7 +943,7 @@ class AWSCodeBuildViewModel: ObservableObject {
 // MARK: - AWS Panel for sidebar
 
 struct AWSCodeBuildPanel: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -937,7 +952,7 @@ struct AWSCodeBuildPanel: View {
             HStack {
                 Text("AWS CodeBuild")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Button("Done") {
                     dismiss()

@@ -35,16 +35,16 @@ struct DSIconButton: View {
 
     var body: some View {
         Button {
-            print("🔵 DSIconButton CLICKED: icon=\(iconName) isLoading=\(isLoading) isDisabled=\(isDisabled)")
+            Logger.debug("🔵 DSIconButton CLICKED: icon=\(iconName) isLoading=\(isLoading) isDisabled=\(isDisabled)")
             guard !isLoading && !isDisabled else {
-                print("⛔ DSIconButton BLOCKED: isLoading=\(isLoading) isDisabled=\(isDisabled)")
+                Logger.debug("⛔ DSIconButton BLOCKED: isLoading=\(isLoading) isDisabled=\(isDisabled)")
                 return
             }
             isLoading = true  // Set immediately to prevent double-clicks
-            print("▶️ DSIconButton STARTING action...")
+            Logger.debug("▶️ DSIconButton STARTING action...")
             Task {
                 await action()
-                print("✅ DSIconButton action COMPLETED")
+                Logger.debug("✅ DSIconButton action COMPLETED")
                 isLoading = false
             }
         } label: {
@@ -58,7 +58,7 @@ struct DSIconButton: View {
                 }
             }
             .frame(width: buttonSizeForSize, height: buttonSizeForSize)
-            .foregroundColor(foregroundColor)
+            .foregroundStyle(foregroundColor)
             .background(backgroundColor)
             .clipShape(Circle())
             .overlay(
@@ -168,23 +168,23 @@ extension DSIconButton {
 #Preview("Icon Button Variants") {
     HStack(spacing: DesignTokens.Spacing.md) {
         DSIconButton(iconName: "star.fill", variant: .primary) {
-            print("Primary clicked")
+            Logger.debug("Primary clicked")
         }
 
         DSIconButton(iconName: "heart.fill", variant: .secondary) {
-            print("Secondary clicked")
+            Logger.debug("Secondary clicked")
         }
 
         DSIconButton(iconName: "trash", variant: .danger) {
-            print("Danger clicked")
+            Logger.debug("Danger clicked")
         }
 
         DSIconButton(iconName: "gear", variant: .ghost) {
-            print("Ghost clicked")
+            Logger.debug("Ghost clicked")
         }
 
         DSIconButton(iconName: "plus", variant: .outline) {
-            print("Outline clicked")
+            Logger.debug("Outline clicked")
         }
     }
     .padding()
@@ -193,15 +193,15 @@ extension DSIconButton {
 #Preview("Icon Button Sizes") {
     HStack(spacing: DesignTokens.Spacing.md) {
         DSIconButton(iconName: "star.fill", size: .sm) {
-            print("Small clicked")
+            Logger.debug("Small clicked")
         }
 
         DSIconButton(iconName: "star.fill", size: .md) {
-            print("Medium clicked")
+            Logger.debug("Medium clicked")
         }
 
         DSIconButton(iconName: "star.fill", size: .lg) {
-            print("Large clicked")
+            Logger.debug("Large clicked")
         }
     }
     .padding()
@@ -210,11 +210,11 @@ extension DSIconButton {
 #Preview("Icon Button States") {
     HStack(spacing: DesignTokens.Spacing.md) {
         DSIconButton(iconName: "star.fill") {
-            print("Normal clicked")
+            Logger.debug("Normal clicked")
         }
 
         DSIconButton(iconName: "star.fill", isDisabled: true) {
-            print("Disabled clicked")
+            Logger.debug("Disabled clicked")
         }
     }
     .padding()

@@ -26,13 +26,13 @@ struct BranchBadge: View {
         HStack(spacing: DesignTokens.Spacing.xxs) {
             Image(systemName: iconName)
                 .font(.system(size: 9, weight: .medium))
-                .foregroundColor(color)
+                .foregroundStyle(color)
 
             Text(name)
                 .font(DesignTokens.Typography.caption2)
                 .fontWeight(isHead ? .semibold : .regular)
                 .lineLimit(1)
-                .foregroundColor(textColor)
+                .foregroundStyle(textColor)
 
             // Worktree indicator
             if hasWorktree {
@@ -45,7 +45,7 @@ struct BranchBadge: View {
         .padding(.horizontal, DesignTokens.Spacing.xs + 2)
         .padding(.vertical, DesignTokens.Spacing.xxs + 1)
         .background(isDragTargeted ? AppTheme.accent.opacity(0.3) : color.opacity(colorScheme == .dark ? 0.2 : 0.12))
-        .cornerRadius(4)
+        .clipShape(.rect(cornerRadius: 4))
         .overlay(
             RoundedRectangle(cornerRadius: 4)
                 .strokeBorder(isDragTargeted ? AppTheme.accent : color.opacity(0.4), lineWidth: isDragTargeted ? 2 : 0.5)

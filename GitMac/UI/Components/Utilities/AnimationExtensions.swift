@@ -120,50 +120,40 @@ extension AnyTransition {
 // MARK: - View Animation Extensions
 
 extension View {
-    /// Fade in with default animation
+    /// Fade in with default animation (use inside withAnimation block)
     func fadeIn(duration: Double = DesignTokens.Animation.normal) -> some View {
         self
-            .opacity(1)
             .transition(.fadeIn)
-            .animation(.easeInOut(duration: duration), value: UUID())
     }
 
-    /// Slide in from edge
+    /// Slide in from edge (use inside withAnimation block)
     func slideIn(
         from edge: Edge = .bottom,
         duration: Double = DesignTokens.Animation.normal
     ) -> some View {
         self
             .transition(.slideIn(from: edge))
-            .animation(.easeInOut(duration: duration), value: UUID())
     }
 
-    /// Scale in with fade
+    /// Scale in with fade (use inside withAnimation block)
     func scaleIn(duration: Double = DesignTokens.Animation.normal) -> some View {
         self
             .transition(.scaleIn)
-            .animation(.spring(response: duration, dampingFraction: 0.7), value: UUID())
     }
 
-    /// Pop in animation
+    /// Pop in animation (use inside withAnimation block)
     func popIn(duration: Double = DesignTokens.Animation.fast) -> some View {
         self
             .transition(.pop)
-            .animation(.spring(response: duration, dampingFraction: 0.6), value: UUID())
     }
 
-    /// Animated appearance
+    /// Animated appearance (use inside withAnimation block)
     func animatedAppearance(
         delay: Double = 0,
         duration: Double = DesignTokens.Animation.normal
     ) -> some View {
         self
-            .opacity(1)
             .transition(.opacity.combined(with: .scale(scale: 0.95)))
-            .animation(
-                .easeInOut(duration: duration).delay(delay),
-                value: UUID()
-            )
     }
 
     /// Shake animation for errors
@@ -302,12 +292,7 @@ extension View {
     ) -> some View {
         let calculatedDelay = Double(index) * delay
         return self
-            .opacity(1)
             .transition(.opacity.combined(with: .move(edge: .top)))
-            .animation(
-                .easeInOut(duration: duration).delay(calculatedDelay),
-                value: UUID()
-            )
     }
 }
 
@@ -364,11 +349,11 @@ private struct AnimationBox: View {
     var body: some View {
         Text(title)
             .font(DesignTokens.Typography.caption)
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
             .padding()
             .frame(width: 80, height: 80)
             .background(AppTheme.accent.opacity(0.2))
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .transition(transition)
     }
 }
@@ -388,7 +373,7 @@ private struct ShakeEffectPreview: View {
                 .overlay(
                     Text("Error!")
                         .font(DesignTokens.Typography.headline)
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                 )
                 .shake(offset: shouldShake ? 10 : 0)
 
@@ -417,7 +402,7 @@ private struct PulseEffectPreview: View {
 
             Text("Pulsing Animation")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
         .background(AppTheme.background)
@@ -436,7 +421,7 @@ private struct WiggleEffectPreview: View {
 
             Text("Wiggling Notification")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
         .background(AppTheme.background)
@@ -457,7 +442,7 @@ private struct BounceEffectPreview: View {
 
             Text("Bouncing Box")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
         .frame(height: 300)
@@ -477,7 +462,7 @@ private struct RotateEffectPreview: View {
 
             Text("Rotating Icon")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
         .background(AppTheme.background)
@@ -507,7 +492,7 @@ private struct StaggeredAnimationPreview: View {
                         HStack {
                             Text("Item \(index + 1)")
                                 .font(DesignTokens.Typography.body)
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
 
                             Spacer()
 
@@ -515,7 +500,7 @@ private struct StaggeredAnimationPreview: View {
                         }
                         .padding()
                         .background(AppTheme.backgroundSecondary)
-                        .cornerRadius(DesignTokens.CornerRadius.md)
+                        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                         .staggeredAnimation(index: index, total: 5)
                     }
                 }

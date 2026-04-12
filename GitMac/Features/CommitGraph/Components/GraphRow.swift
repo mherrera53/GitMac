@@ -111,7 +111,7 @@ struct GraphRow: View {
                 HStack(spacing: 4) {
                     Text(node.commit.summary)
                         .font(settings.compactMode ? DesignTokens.Typography.caption : DesignTokens.Typography.callout)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
 
                     if node.commit.isVerified {
@@ -124,7 +124,7 @@ struct GraphRow: View {
                 if !settings.compactMode && !settings.showAuthorColumn {
                     Text(node.commit.author)
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -151,7 +151,7 @@ struct GraphRow: View {
                     }
                     Text(node.commit.author)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
                 }
                 .frame(width: settings.authorColumnWidth, alignment: .leading)
@@ -161,7 +161,7 @@ struct GraphRow: View {
             if settings.shouldShowDateColumn {
                 Text(node.commit.relativeDate)
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .frame(width: settings.dateColumnWidth, alignment: .trailing)
             }
 
@@ -169,7 +169,7 @@ struct GraphRow: View {
             if settings.shouldShowSHAColumn {
                 Text(node.commit.shortSha)
                     .font(DesignTokens.Typography.caption2.monospaced())
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .frame(width: settings.shaColumnWidth, alignment: .trailing)
                     .padding(.trailing, DesignTokens.Spacing.sm)
             }

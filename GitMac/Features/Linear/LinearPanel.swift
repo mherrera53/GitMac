@@ -139,15 +139,15 @@ struct LinearLoginPrompt: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "lineweight")
                 .font(DesignTokens.Typography.iconXXXL)
-                .foregroundColor(SwiftUI.Color(hex: "5E6AD2"))
+                .foregroundStyle(SwiftUI.Color(hex: "5E6AD2"))
 
             Text("Connect to Linear")
                 .font(DesignTokens.Typography.headline) // Was: .system(size: 15, weight: .semibold)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("Enter your Linear API key to view and manage issues")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
 
             DSSecureField(placeholder: "API Key", text: $apiKey)
@@ -156,7 +156,7 @@ struct LinearLoginPrompt: View {
             if let error = error {
                 Text(error)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
 
             Button {
@@ -221,12 +221,12 @@ struct LinearSettingsSheet: View {
             HStack {
                 Text("Linear Settings")
                     .font(DesignTokens.Typography.headline) // Was: .system(size: 15, weight: .semibold)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(DesignTokens.Typography.callout) // Was: .system(size: 12, weight: .medium)
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 .buttonStyle(.plain)
             }
@@ -239,21 +239,21 @@ struct LinearSettingsSheet: View {
                 if viewModel.isAuthenticated {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                         Text("Connected to Linear")
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
 
                     Button("Disconnect") {
                         viewModel.logout()
                         dismiss()
                     }
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                 } else {
                     Text("Not connected to Linear")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
             .padding(DesignTokens.Spacing.lg)
@@ -357,12 +357,12 @@ struct SimpleLinearIssueRow: View {
             // Issue identifier
             Text(issue.identifier)
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
 
             // Issue title
             Text(issue.title)
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .lineLimit(2)
 
             Spacer()
@@ -371,11 +371,11 @@ struct SimpleLinearIssueRow: View {
             if let state = issue.state {
                 Text(state.name)
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(SwiftUI.Color(hex: state.color))
+                    .foregroundStyle(SwiftUI.Color(hex: state.color))
                     .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                     .padding(.vertical, DesignTokens.Spacing.xxs)
                     .background(SwiftUI.Color(hex: state.color).opacity(0.2))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
             }
 
             // Insert button (shown on hover)
@@ -396,7 +396,7 @@ struct SimpleLinearIssueRow: View {
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, DesignTokens.Spacing.sm)
         .background(isHovered ? AppTheme.backgroundSecondary : Color.clear)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         .onHover { hovering in
             withAnimation(DesignTokens.Animation.fastEasing) {
                 isHovered = hovering

@@ -113,7 +113,7 @@ struct SectionedSeparator: View {
                 Separator(style: style)
                 Text(text)
                     .font(.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Separator(style: style)
             }
         } else {

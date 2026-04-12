@@ -11,6 +11,8 @@ import SwiftUI
 
 @MainActor
 class TeamActivityViewModel: ObservableObject {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+
     @Published var teamMembers: [TeamMember] = []
     @Published var isLoading = false
     @Published var hasConflicts = false
@@ -70,16 +72,16 @@ class TeamActivityViewModel: ObservableObject {
                     member.recentCommits.append(contentsOf: recentCommits)
 
                     // Update last active date
-                    if let prUpdated = ISO8601DateFormatter().date(from: pr.updatedAt),
+                    if let prUpdated = Self.isoFormatter.date(from: pr.updatedAt),
                        let currentLast = member.lastActiveDate {
                         member.lastActiveDate = max(currentLast, prUpdated)
-                    } else if let prUpdated = ISO8601DateFormatter().date(from: pr.updatedAt) {
+                    } else if let prUpdated = Self.isoFormatter.date(from: pr.updatedAt) {
                         member.lastActiveDate = prUpdated
                     }
 
                     memberDict[userId] = member
                 } else {
-                    let lastActiveDate = ISO8601DateFormatter().date(from: pr.updatedAt)
+                    let lastActiveDate = Self.isoFormatter.date(from: pr.updatedAt)
                     memberDict[userId] = TeamMember(
                         user: pr.user,
                         activePRs: [pr],
@@ -109,7 +111,7 @@ class TeamActivityViewModel: ObservableObject {
                 """
             }
         } catch {
-            print("Failed to load team activity: \(error)")
+            Logger.debug("Failed to load team activity: \(error)")
         }
 
         isLoading = false

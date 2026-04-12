@@ -400,7 +400,7 @@ struct AtomsView: View {
                             .frame(width: 300)
                             .padding(DesignTokens.Spacing.sm)
                             .background(AppTheme.backgroundSecondary)
-                            .cornerRadius(DesignTokens.CornerRadius.md)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                         }
                     }
                 }
@@ -869,7 +869,7 @@ struct OrganismsView: View {
                                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
                                     Text("Settings content goes here")
                                         .font(DesignTokens.Typography.body)
-                                        .foregroundColor(AppTheme.textPrimary)
+                                        .foregroundStyle(AppTheme.textPrimary)
                                 }
                             }
                         }
@@ -1130,11 +1130,11 @@ struct CatalogSection<Content: View>: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                 Text(title)
                     .font(DesignTokens.Typography.title2)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Text(description)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             content()
@@ -1154,14 +1154,14 @@ struct ComponentShowcase<Content: View>: View {
                 HStack {
                     Text(name)
                         .font(DesignTokens.Typography.headline)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     DSBadge("Component", variant: .neutral)
                 }
 
                 Text(description)
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             VStack(alignment: .center, spacing: DesignTokens.Spacing.md) {
@@ -1170,7 +1170,7 @@ struct ComponentShowcase<Content: View>: View {
             .frame(maxWidth: .infinity)
             .padding(DesignTokens.Spacing.lg)
             .background(AppTheme.backgroundSecondary.opacity(0.5))
-            .cornerRadius(DesignTokens.CornerRadius.lg)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
                     .stroke(AppTheme.border.opacity(0.5), lineWidth: 1)
@@ -1189,10 +1189,10 @@ struct TokenRow<Content: View>: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                 Text(name)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Text(value)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             .frame(width: 150, alignment: .leading)
 
@@ -1202,7 +1202,7 @@ struct TokenRow<Content: View>: View {
         }
         .padding(DesignTokens.Spacing.sm)
         .background(AppTheme.backgroundSecondary.opacity(0.3))
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
     }
 }
 
@@ -1216,10 +1216,10 @@ struct SpacingRow: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                 Text(name)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Text(value)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             .frame(width: 150, alignment: .leading)
 
@@ -1231,12 +1231,12 @@ struct SpacingRow: View {
 
             Text("\(Int(spacing))px")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .frame(width: 60, alignment: .trailing)
         }
         .padding(DesignTokens.Spacing.sm)
         .background(AppTheme.backgroundSecondary.opacity(0.3))
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
     }
 }
 
@@ -1250,10 +1250,10 @@ struct CornerRadiusRow: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
                 Text(name)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Text(value)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             .frame(width: 150, alignment: .leading)
 
@@ -1269,7 +1269,7 @@ struct CornerRadiusRow: View {
         }
         .padding(DesignTokens.Spacing.sm)
         .background(AppTheme.backgroundSecondary.opacity(0.3))
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
     }
 }
 
@@ -1289,7 +1289,7 @@ struct CatalogColorSwatch: View {
 
             Text(name)
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
     }
 }
@@ -1325,13 +1325,13 @@ private struct ResizablePanelWrapper: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
                 Text("Drag the top edge to resize")
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Text("Height: \(Int(panelHeight))px")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                 Text("Min: 150px, Max: 400px")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             .padding()
         }
@@ -1361,7 +1361,7 @@ private struct DSPickerExample: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                 Text("Branch")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                 DSPicker(items: branches, selection: $selectedBranch) { branch in
                     Text(branch.title)
                 }
@@ -1370,7 +1370,7 @@ private struct DSPickerExample: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                 Text("Theme")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                 DSPicker(items: themes, selection: $selectedTheme) { theme in
                     Text(theme.title)
                 }
@@ -1394,10 +1394,10 @@ private struct DSTabPanelExample: View {
             VStack(spacing: DesignTokens.Spacing.md) {
                 Text("\(tabId.capitalized) Content")
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Text("This is the content for the \(tabId) tab")
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .padding()
             .frame(maxWidth: .infinity)
@@ -1428,15 +1428,15 @@ private struct DSDraggableListExample: View {
         DSDraggableList(items: $items) { item in
             HStack {
                 Image(systemName: "line.3.horizontal")
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                 Text(item.title)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
             }
             .padding(DesignTokens.Spacing.md)
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
         .frame(width: 350, height: 200)
     }
@@ -1465,15 +1465,15 @@ private struct DSInfiniteListExample: View {
             HStack {
                 Text(item.title)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Text("#\(item.id)")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             .padding(DesignTokens.Spacing.md)
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
         .frame(width: 350, height: 250)
     }
@@ -1509,15 +1509,15 @@ private struct DSVirtualizedListExample: View {
             HStack {
                 Text(item.title)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 Spacer()
                 Text("#\(item.id)")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
             .padding(DesignTokens.Spacing.md)
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         }
         .estimatedItemHeight(44)
         .frame(width: 350, height: 300)
@@ -1581,20 +1581,20 @@ private struct DSGroupedListExample: View {
             header: { section in
                 Text(section.title ?? "")
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             },
             content: { item in
                 HStack {
                     Image(systemName: "doc")
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     Text(item.title)
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Spacer()
                 }
                 .padding(DesignTokens.Spacing.md)
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             }
         )
         .frame(width: 350, height: 300)

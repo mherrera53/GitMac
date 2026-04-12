@@ -16,7 +16,7 @@ struct TaigaUserStoriesView: View {
         if stories.isEmpty {
             TaigaEmptyView(type: "user stories")
         } else {
-            ScrollView(.horizontal, showsIndicators: false) {
+            ScrollView(.horizontal) {
                 HStack(alignment: .top, spacing: DesignTokens.Spacing.md) {
                     ForEach(groupedStories.keys.sorted(), id: \.self) { statusId in
                         TaigaKanbanColumn(
@@ -27,6 +27,7 @@ struct TaigaUserStoriesView: View {
                 }
                 .padding(DesignTokens.Spacing.md)
             }
+            .scrollIndicators(.hidden)
         }
     }
 
@@ -50,31 +51,32 @@ struct TaigaKanbanColumn: View {
                 Text(status?.name ?? "Unknown")
                     .font(DesignTokens.Typography.caption)
                     .fontWeight(.semibold)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Text("\(items.count)")
                     .font(DesignTokens.Typography.caption2)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .padding(.horizontal, DesignTokens.Spacing.xs)
                     .padding(.vertical, 2)
                     .background(AppTheme.backgroundTertiary)
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
                 Spacer()
             }
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .padding(.vertical, DesignTokens.Spacing.xs)
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
 
             // Cards
-            ScrollView(.vertical, showsIndicators: false) {
+            ScrollView(.vertical) {
                 VStack(spacing: DesignTokens.Spacing.xs) {
                     ForEach(items) { story in
                         TaigaStoryCard(story: story)
                     }
                 }
             }
+            .scrollIndicators(.hidden)
         }
         .frame(width: 280)
     }
@@ -101,7 +103,7 @@ struct TaigaStoryCard: View {
                         .font(DesignTokens.Typography.caption2)
                         .fontWeight(.bold)
                         .fontDesign(.monospaced)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .padding(.horizontal, DesignTokens.Spacing.xs)
                         .padding(.vertical, 2)
                         .background(
@@ -114,7 +116,7 @@ struct TaigaStoryCard: View {
 
                 Text(story.subject)
                     .font(DesignTokens.Typography.callout)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(2)
             }
 
@@ -131,8 +133,8 @@ struct TaigaStoryCard: View {
                                 .padding(.horizontal, DesignTokens.Spacing.xs)
                                 .padding(.vertical, 2)
                                 .background(SwiftUI.Color(hex: tagColor).opacity(0.3))
-                                .foregroundColor(SwiftUI.Color(hex: tagColor))
-                                .cornerRadius(DesignTokens.CornerRadius.sm)
+                                .foregroundStyle(SwiftUI.Color(hex: tagColor))
+                                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                         }
                     }
                 }
@@ -147,7 +149,7 @@ struct TaigaStoryCard: View {
                         Text("\(Int(points))")
                             .font(DesignTokens.Typography.caption2)
                     }
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                 }
 
                 Spacer()
@@ -162,7 +164,7 @@ struct TaigaStoryCard: View {
                 } label: {
                     Image(systemName: "arrow.right.doc.on.clipboard")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.accent)
+                        .foregroundStyle(AppTheme.accent)
                 }
                 .buttonStyle(.plain)
                 .help("Insert \(taigaRef) into commit message")
@@ -170,7 +172,7 @@ struct TaigaStoryCard: View {
                 if let assignee = story.assignedToExtraInfo {
                     Text(assignee.fullName.split(separator: " ").first.map(String.init) ?? assignee.username)
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
             }
         }
@@ -180,11 +182,11 @@ struct TaigaStoryCard: View {
                 Text("Copied!")
                     .font(DesignTokens.Typography.caption2)
                     .fontWeight(.medium)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .padding(.horizontal, DesignTokens.Spacing.xs)
                     .padding(.vertical, 2)
                     .background(AppTheme.success)
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                     .offset(x: -DesignTokens.Spacing.xs, y: DesignTokens.Spacing.xs)
                     .transition(.opacity)
             }

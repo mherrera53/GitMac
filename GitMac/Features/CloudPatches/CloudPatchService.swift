@@ -7,10 +7,11 @@ import CryptoKit
 /// Advanced feature's Cloud Patches feature
 actor CloudPatchService {
     static let shared = CloudPatchService()
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
 
     private let baseURL = "https://api.github.com/gists" // Using GitHub Gists as backend
     private var token: String?
-    private let shell = ShellExecutor()
+    private let shell = ShellExecutor.shared
     
     // MARK: - Models
     
@@ -68,8 +69,8 @@ actor CloudPatchService {
             "title": request.title,
             "description": request.description ?? "",
             "files": request.files,
-            "createdAt": ISO8601DateFormatter().string(from: Date()),
-            "expiresAt": request.expiresIn.map { ISO8601DateFormatter().string(from: Date().addingTimeInterval($0)) } as Any
+            "createdAt": Self.isoFormatter.string(from: Date()),
+            "expiresAt": request.expiresIn.map { Self.isoFormatter.string(from: Date().addingTimeInterval($0)) } as Any
         ]
         
         if let metadataJSON = try? JSONSerialization.data(withJSONObject: metadata),
@@ -148,7 +149,7 @@ actor CloudPatchService {
               let ownerLogin = owner["login"] as? String,
               let files = json["files"] as? [String: [String: Any]],
               let createdAtStr = json["created_at"] as? String,
-              let createdAt = ISO8601DateFormatter().date(from: createdAtStr) else {
+              let createdAt = Self.isoFormatter.date(from: createdAtStr) else {
             throw CloudPatchError.invalidResponse
         }
         
@@ -237,7 +238,7 @@ actor CloudPatchService {
                   let owner = gist["owner"] as? [String: Any],
                   let ownerLogin = owner["login"] as? String,
                   let createdAtStr = gist["created_at"] as? String,
-                  let createdAt = ISO8601DateFormatter().date(from: createdAtStr) else {
+                  let createdAt = Self.isoFormatter.date(from: createdAtStr) else {
                 return nil
             }
             

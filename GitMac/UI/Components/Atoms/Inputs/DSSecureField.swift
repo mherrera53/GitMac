@@ -36,7 +36,7 @@ struct DSSecureField: View {
                     if text.isEmpty {
                         Text(placeholder)
                             .font(DesignTokens.Typography.body)
-                            .foregroundColor(placeholderColor)
+                            .foregroundStyle(placeholderColor)
                     }
                     Group {
                         if isPasswordVisible {
@@ -47,7 +47,7 @@ struct DSSecureField: View {
                     }
                     .textFieldStyle(.plain)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(foregroundColor)
+                    .foregroundStyle(foregroundColor)
                     .disabled(state == .disabled)
                     .focused($isFocused)
                 }
@@ -57,7 +57,7 @@ struct DSSecureField: View {
                 }) {
                     Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
                         .font(.system(size: DesignTokens.Sizing.Icon.md))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                         .frame(width: 32, height: 32)
                         .contentShape(Rectangle())
                 }
@@ -67,7 +67,7 @@ struct DSSecureField: View {
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .padding(.vertical, DesignTokens.Spacing.sm)
             .background(backgroundColor)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                     .stroke(borderColor, lineWidth: 1)
@@ -76,7 +76,7 @@ struct DSSecureField: View {
             if let error = errorMessage, state == .error {
                 Text(error)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
             }
         }
     }

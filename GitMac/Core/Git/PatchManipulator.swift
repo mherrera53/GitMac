@@ -4,7 +4,7 @@ import Foundation
 /// Advanced feature, allows staging or discarding individual lines from a diff
 actor PatchManipulator {
 
-    private let shellExecutor = ShellExecutor()
+    private let shellExecutor = ShellExecutor.shared
 
     // MARK: - Public API
 

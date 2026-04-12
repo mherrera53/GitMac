@@ -50,12 +50,12 @@ struct DSDraggableItem<Content: View>: View {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                 Text(title)
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 if let subtitle = subtitle {
                     Text(subtitle)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
 
                 content()
@@ -184,7 +184,7 @@ private struct DragDropDelegate: DropDelegate {
                 DSStatusBadge("pick", variant: .success, size: .sm)
                 Text("+12 -5")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
         }
 
@@ -197,7 +197,7 @@ private struct DragDropDelegate: DropDelegate {
                 DSStatusBadge("squash", variant: .primary, size: .sm)
                 Text("+2 -1")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
         }
 
@@ -210,7 +210,7 @@ private struct DragDropDelegate: DropDelegate {
                 DSStatusBadge("reword", variant: .info, size: .sm)
                 Text("+45 -3")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
             }
         }
     }
@@ -230,7 +230,7 @@ private struct DragDropDelegate: DropDelegate {
                 DSIcon("flame.fill", size: .sm, color: AppTheme.error)
             }
         } onMove: { id in
-            print("Moved: \(id)")
+            Logger.debug("Moved: \(id)")
         }
 
         DSDraggableItem(
@@ -240,7 +240,7 @@ private struct DragDropDelegate: DropDelegate {
         ) {
             DSStatusBadge("Todo", variant: .neutral, size: .sm)
         } onMove: { id in
-            print("Moved: \(id)")
+            Logger.debug("Moved: \(id)")
         }
 
         DSDraggableItem(
@@ -250,7 +250,7 @@ private struct DragDropDelegate: DropDelegate {
         ) {
             DSStatusBadge("Todo", variant: .neutral, size: .sm)
         } onMove: { id in
-            print("Moved: \(id)")
+            Logger.debug("Moved: \(id)")
         }
     }
     .padding()
@@ -270,10 +270,10 @@ private struct DragDropDelegate: DropDelegate {
                         DSIcon("doc.text.fill", size: .sm, color: AppTheme.fileSwift)
                         Text("+\(i * 3) -\(i)")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                 } onMove: { id in
-                    print("Reordered: \(id)")
+                    Logger.debug("Reordered: \(id)")
                 }
             }
         }

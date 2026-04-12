@@ -14,7 +14,7 @@ class GitProfilesService: ObservableObject {
     private let userDefaults = UserDefaults.standard
     private let profilesKey = "git_profiles"
     private let mappingsKey = "git_profile_mappings"
-    private nonisolated let shell = ShellExecutor()
+    private nonisolated let shell = ShellExecutor.shared
     
     private init() {
         loadProfiles()

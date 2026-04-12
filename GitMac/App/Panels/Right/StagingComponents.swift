@@ -227,10 +227,10 @@ struct StagingRowContent: View {
         HStack(spacing: 5) {
             Image(systemName: "folder.fill")
                 .font(.system(size: 12))
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
             Text(fileName)
                 .font(.system(size: 11))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: 2)
@@ -268,7 +268,7 @@ struct StagingRowContent: View {
                 FileTypeIcon(fileName: fileName, size: .small)
                 Text(fileName)
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer(minLength: 2)
@@ -282,7 +282,7 @@ struct StagingRowContent: View {
                     Button { onStage(f) } label: {
                         Image(systemName: isStaged ? "minus.circle.fill" : "plus.circle.fill")
                             .font(.system(size: 13))
-                            .foregroundColor(isStaged ? AppTheme.error : AppTheme.success)
+                            .foregroundStyle(isStaged ? AppTheme.error : AppTheme.success)
                     }
                     .buttonStyle(.plain)
                 }
@@ -440,7 +440,7 @@ class LegacyStagingViewModel: ObservableObject {
                            status.untracked.map { StagingFile(path: $0, status: .untracked, isStaged: false) }
             stagedFiles = status.staged.map { StagingFile(from: $0, staged: true) }
         } catch {
-            print("Error loading status: \(error)")
+            Logger.debug("Error loading status: \(error)")
         }
     }
 
@@ -451,7 +451,7 @@ class LegacyStagingViewModel: ObservableObject {
                 try await engine.stage(files: [file.path], at: path)
                 await loadStatus(at: path)
             } catch {
-                print("Error staging: \(error)")
+                Logger.debug("Error staging: \(error)")
             }
         }
     }
@@ -463,7 +463,7 @@ class LegacyStagingViewModel: ObservableObject {
                 try await engine.unstage(files: [file.path], at: path)
                 await loadStatus(at: path)
             } catch {
-                print("Error unstaging: \(error)")
+                Logger.debug("Error unstaging: \(error)")
             }
         }
     }
@@ -475,7 +475,7 @@ class LegacyStagingViewModel: ObservableObject {
                 try await engine.stageAll(at: path)
                 await loadStatus(at: path)
             } catch {
-                print("Error staging all: \(error)")
+                Logger.debug("Error staging all: \(error)")
             }
         }
     }
@@ -488,7 +488,7 @@ class LegacyStagingViewModel: ObservableObject {
                 try await engine.unstage(files: files, at: path)
                 await loadStatus(at: path)
             } catch {
-                print("Error unstaging all: \(error)")
+                Logger.debug("Error unstaging all: \(error)")
             }
         }
     }
@@ -505,7 +505,7 @@ class LegacyStagingViewModel: ObservableObject {
                     await loadStatus(at: path)
                 }
             } catch {
-                print("Error staging folder: \(error)")
+                Logger.debug("Error staging folder: \(error)")
             }
         }
     }
@@ -522,7 +522,7 @@ class LegacyStagingViewModel: ObservableObject {
                     await loadStatus(at: path)
                 }
             } catch {
-                print("Error unstaging folder: \(error)")
+                Logger.debug("Error unstaging folder: \(error)")
             }
         }
     }
@@ -534,7 +534,7 @@ class LegacyStagingViewModel: ObservableObject {
                 try await engine.discardChanges(files: [file.path], at: path)
                 await loadStatus(at: path)
             } catch {
-                print("Error discarding changes: \(error)")
+                Logger.debug("Error discarding changes: \(error)")
             }
         }
     }
@@ -547,7 +547,7 @@ class LegacyStagingViewModel: ObservableObject {
                 try FileManager.default.removeItem(atPath: absolutePath)
                 await loadStatus(at: repoPath)
             } catch {
-                print("Error deleting file: \(error)")
+                Logger.debug("Error deleting file: \(error)")
             }
         }
     }
@@ -616,7 +616,7 @@ class LegacyStagingViewModel: ObservableObject {
             let diffs = await DiffParser.parseAsync(diffString)
             return diffs.first
         } catch {
-            print("Error getting diff: \(error)")
+            Logger.debug("Error getting diff: \(error)")
             return nil
         }
     }
@@ -712,18 +712,18 @@ struct StagingSection<Content: View>: View {
             HStack {
                 Text(title)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                 Spacer()
                 Text("\(count)")
                     .font(.system(size: 11))
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(AppTheme.backgroundTertiary)
-                    .cornerRadius(4)
+                    .clipShape(.rect(cornerRadius: 4))
                 Button(action: onAction) {
                     Image(systemName: actionIcon)
-                        .foregroundColor(actionColor)
+                        .foregroundStyle(actionColor)
                 }
                 .buttonStyle(.plain)
                 .disabled(count == 0)

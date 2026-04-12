@@ -52,9 +52,9 @@ struct DSToolbarButton: View {
                 }
             }
             .frame(width: DesignTokens.Size.buttonHeightMD, height: DesignTokens.Size.buttonHeightMD)
-            .foregroundColor(foregroundColor)
+            .foregroundStyle(foregroundColor)
             .background(backgroundColor)
-            .cornerRadius(DesignTokens.CornerRadius.md)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             .overlay(
                 RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                     .stroke(borderColor, lineWidth: isActive ? 1.5 : 0)
@@ -104,19 +104,19 @@ struct DSToolbarButton: View {
 #Preview("Toolbar Buttons") {
     HStack(spacing: DesignTokens.Spacing.sm) {
         DSToolbarButton(iconName: "sidebar.left", tooltip: "Toggle Sidebar") {
-            print("Sidebar clicked")
+            Logger.debug("Sidebar clicked")
         }
 
         DSToolbarButton(iconName: "list.bullet", tooltip: "List View", isActive: true) {
-            print("List clicked")
+            Logger.debug("List clicked")
         }
 
         DSToolbarButton(iconName: "square.grid.2x2", tooltip: "Grid View") {
-            print("Grid clicked")
+            Logger.debug("Grid clicked")
         }
 
         DSToolbarButton(iconName: "gearshape", tooltip: "Settings", isDisabled: true) {
-            print("Settings clicked")
+            Logger.debug("Settings clicked")
         }
     }
     .padding()
@@ -128,7 +128,7 @@ struct DSToolbarButton: View {
             Text("Normal:")
                 .font(DesignTokens.Typography.body)
             DSToolbarButton(iconName: "star") {
-                print("Normal clicked")
+                Logger.debug("Normal clicked")
             }
         }
 
@@ -136,7 +136,7 @@ struct DSToolbarButton: View {
             Text("Active:")
                 .font(DesignTokens.Typography.body)
             DSToolbarButton(iconName: "star", isActive: true) {
-                print("Active clicked")
+                Logger.debug("Active clicked")
             }
         }
 
@@ -144,7 +144,7 @@ struct DSToolbarButton: View {
             Text("Disabled:")
                 .font(DesignTokens.Typography.body)
             DSToolbarButton(iconName: "star", isDisabled: true) {
-                print("Disabled clicked")
+                Logger.debug("Disabled clicked")
             }
         }
     }
@@ -154,11 +154,11 @@ struct DSToolbarButton: View {
 #Preview("Toolbar Group") {
     HStack(spacing: DesignTokens.Spacing.xs) {
         DSToolbarButton(iconName: "arrow.left", tooltip: "Back") {
-            print("Back")
+            Logger.debug("Back")
         }
 
         DSToolbarButton(iconName: "arrow.right", tooltip: "Forward") {
-            print("Forward")
+            Logger.debug("Forward")
         }
 
         Rectangle()
@@ -166,7 +166,7 @@ struct DSToolbarButton: View {
             .frame(width: 1, height: DesignTokens.Size.buttonHeightMD)
 
         DSToolbarButton(iconName: "arrow.clockwise", tooltip: "Refresh") {
-            print("Refresh")
+            Logger.debug("Refresh")
         }
 
         Rectangle()
@@ -174,7 +174,7 @@ struct DSToolbarButton: View {
             .frame(width: 1, height: DesignTokens.Size.buttonHeightMD)
 
         DSToolbarButton(iconName: "magnifyingglass", tooltip: "Search") {
-            print("Search")
+            Logger.debug("Search")
         }
     }
     .padding()

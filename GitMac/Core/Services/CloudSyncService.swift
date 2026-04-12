@@ -398,16 +398,16 @@ struct CloudSyncSettingsView: View {
             HStack {
                 Image(systemName: syncService.syncStatus.icon)
                     .font(.title2)
-                    .foregroundColor(syncService.syncStatus.color)
+                    .foregroundStyle(syncService.syncStatus.color)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("iCloud Sync")
                         .font(.headline)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     
                     Text(syncService.syncStatus.displayName)
                         .font(.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 }
                 
                 Spacer()
@@ -424,11 +424,11 @@ struct CloudSyncSettingsView: View {
                     HStack {
                         Text("Last synced:")
                             .font(.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         
                         Text(lastSync, style: .relative)
                             .font(.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         
                         Spacer()
                         
@@ -448,7 +448,7 @@ struct CloudSyncSettingsView: View {
                 Text("Sync Items")
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 ForEach(SyncItemType.allCases, id: \.self) { itemType in
                     Toggle(itemType.displayName, isOn: Binding(
@@ -462,13 +462,13 @@ struct CloudSyncSettingsView: View {
                         }
                     ))
                     .toggleStyle(.checkbox)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 }
             }
         }
         .padding()
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     }
 }
 

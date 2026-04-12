@@ -31,7 +31,7 @@ struct DSCloseButton: View {
             Image(systemName: "xmark")
                 .font(.system(size: iconSizeForSize, weight: .medium))
                 .frame(width: buttonSizeForSize, height: buttonSizeForSize)
-                .foregroundColor(foregroundColor)
+                .foregroundStyle(foregroundColor)
                 .background(backgroundColor)
                 .clipShape(Circle())
         }
@@ -85,7 +85,7 @@ struct DSCloseButton: View {
     HStack(spacing: DesignTokens.Spacing.lg) {
         VStack {
             DSCloseButton(size: .sm) {
-                print("Small close")
+                Logger.debug("Small close")
             }
             Text("Small")
                 .font(DesignTokens.Typography.caption)
@@ -93,7 +93,7 @@ struct DSCloseButton: View {
 
         VStack {
             DSCloseButton(size: .md) {
-                print("Medium close")
+                Logger.debug("Medium close")
             }
             Text("Medium")
                 .font(DesignTokens.Typography.caption)
@@ -101,7 +101,7 @@ struct DSCloseButton: View {
 
         VStack {
             DSCloseButton(size: .lg) {
-                print("Large close")
+                Logger.debug("Large close")
             }
             Text("Large")
                 .font(DesignTokens.Typography.caption)
@@ -114,7 +114,7 @@ struct DSCloseButton: View {
     HStack(spacing: DesignTokens.Spacing.lg) {
         VStack {
             DSCloseButton {
-                print("Normal close")
+                Logger.debug("Normal close")
             }
             Text("Normal")
                 .font(DesignTokens.Typography.caption)
@@ -122,7 +122,7 @@ struct DSCloseButton: View {
 
         VStack {
             DSCloseButton(isDisabled: true) {
-                print("Disabled close")
+                Logger.debug("Disabled close")
             }
             Text("Disabled")
                 .font(DesignTokens.Typography.caption)
@@ -137,12 +137,12 @@ struct DSCloseButton: View {
         HStack {
             Text("Modal Title")
                 .font(DesignTokens.Typography.headline)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Spacer()
 
             DSCloseButton {
-                print("Close modal")
+                Logger.debug("Close modal")
             }
         }
         .padding(DesignTokens.Spacing.md)
@@ -154,26 +154,26 @@ struct DSCloseButton: View {
             .frame(height: 200)
     }
     .frame(width: 300)
-    .cornerRadius(DesignTokens.CornerRadius.lg)
+    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 }
 
 #Preview("Close Button on Tab") {
     HStack(spacing: DesignTokens.Spacing.xs) {
         Image(systemName: "doc.text")
             .font(.system(size: DesignTokens.Size.iconSM))
-            .foregroundColor(AppTheme.textSecondary)
+            .foregroundStyle(AppTheme.textSecondary)
 
         Text("Document.swift")
             .font(DesignTokens.Typography.body)
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
 
         DSCloseButton(size: .sm) {
-            print("Close tab")
+            Logger.debug("Close tab")
         }
     }
     .padding(.horizontal, DesignTokens.Spacing.sm)
     .padding(.vertical, DesignTokens.Spacing.xs)
     .background(AppTheme.backgroundSecondary)
-    .cornerRadius(DesignTokens.CornerRadius.md)
+    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     .padding()
 }

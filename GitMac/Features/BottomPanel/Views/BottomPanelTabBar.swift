@@ -20,7 +20,7 @@ struct BottomPanelTabBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            ScrollView(.horizontal, showsIndicators: false) {
+            ScrollView(.horizontal) {
                 HStack(spacing: DesignTokens.BottomBar.tabSpacing) {
                     ForEach(tabs) { tab in
                         XcodeBottomBarTab(
@@ -39,6 +39,7 @@ struct BottomPanelTabBar: View {
                 }
                 .padding(.horizontal, DesignTokens.Spacing.sm)
             }
+            .scrollIndicators(.hidden)
 
             Spacer()
 
@@ -46,7 +47,7 @@ struct BottomPanelTabBar: View {
             Button(action: { showAddMenu.toggle() }) {
                 Image(systemName: "plus")
                     .font(.system(size: DesignTokens.BottomBar.controlIconSize))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .frame(
                         width: DesignTokens.BottomBar.controlButtonSize,
                         height: DesignTokens.BottomBar.controlButtonSize
@@ -69,7 +70,7 @@ struct BottomPanelTabBar: View {
             Button(action: onTogglePanel) {
                 Image(systemName: "chevron.down")
                     .font(.system(size: DesignTokens.BottomBar.controlIconSize))
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .frame(
                         width: DesignTokens.BottomBar.controlButtonSize,
                         height: DesignTokens.BottomBar.controlButtonSize
@@ -100,7 +101,7 @@ struct PanelTypeMenu: View {
                     HStack(spacing: DesignTokens.Spacing.sm) {
                         Image(systemName: type.icon)
                             .font(DesignTokens.Typography.callout)
-                            .foregroundColor(type.accentColor)
+                            .foregroundStyle(type.accentColor)
                             .frame(width: DesignTokens.Size.iconLG)
 
                         Text(type.displayName)
@@ -111,7 +112,7 @@ struct PanelTypeMenu: View {
                         if isOpen {
                             Image(systemName: "checkmark")
                                 .font(DesignTokens.Typography.caption2)
-                                .foregroundColor(AppTheme.textSecondary)
+                                .foregroundStyle(AppTheme.textSecondary)
                         }
                     }
                     .padding(.horizontal, DesignTokens.Spacing.md)

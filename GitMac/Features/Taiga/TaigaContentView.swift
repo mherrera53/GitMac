@@ -49,13 +49,13 @@ struct TaigaContentView: View {
                 VStack(spacing: DesignTokens.Spacing.sm) {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 24))
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                     Text("Connection Error")
                         .font(.headline)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Text(error)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                     Button("Retry") {

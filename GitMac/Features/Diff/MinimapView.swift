@@ -166,7 +166,7 @@ struct DiffViewWithMinimap: View {
                         showMinimap.toggle()
                     } label: {
                         Image(systemName: showMinimap ? "sidebar.right" : "sidebar.right.slash")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .help(showMinimap ? "Hide Minimap" : "Show Minimap")
                 }
@@ -493,7 +493,7 @@ struct DiffViewerWithFullFeatures: View {
                 }
             } label: {
                 Image(systemName: minimapSettings.enabled ? "sidebar.right" : "sidebar.right.slash")
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
             .buttonStyle(.borderless)
             .help("Toggle Minimap")
@@ -551,7 +551,7 @@ struct HunkView: View {
             // Hunk header
             Text(hunk.header)
                 .font(.system(.caption, design: .monospaced))
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity, alignment: .leading)

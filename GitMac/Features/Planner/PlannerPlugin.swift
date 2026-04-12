@@ -35,7 +35,7 @@ struct PlannerContentView: View {
                 HStack(spacing: DesignTokens.Spacing.sm) {
                     Text("Plan:")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
 
                     Picker("", selection: $viewModel.selectedPlanId) {
                         Text("Select plan...").tag(nil as String?)

@@ -23,7 +23,7 @@ struct GitHooksSidebarSection: View {
                         .scaleEffect(0.7)
                     Text("Loading...")
                         .font(.system(size: 10))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     Spacer()
                 }
                 .padding(.horizontal, 12)
@@ -33,14 +33,14 @@ struct GitHooksSidebarSection: View {
                     HStack {
                         Image(systemName: "chevron.left.forwardslash.chevron.right")
                             .font(.system(size: 11))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         Text("\(viewModel.enabledCount) of \(viewModel.hooks.count) enabled")
                             .font(.system(size: 10))
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(.system(size: 9))
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                     }
                     .padding(.horizontal, DesignTokens.Spacing.md)
                     .padding(.vertical, DesignTokens.Spacing.xs)

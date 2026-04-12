@@ -97,8 +97,14 @@ class GitOperationHandler: ObservableObject {
     }
 
     func handlePush(force: Bool = false, forceWithLease: Bool = false) async {
-        guard let repo = appState?.currentRepository else { return }
+        Logger.debug("Push: handlePush called, appState=\(appState != nil), repo=\(appState?.currentRepository?.path ?? "nil")")
+        guard let repo = appState?.currentRepository else {
+            Logger.debug("Push: No current repository in appState")
+            NotificationManager.shared.error("Push failed", detail: "No repository selected")
+            return
+        }
         let branchName = repo.currentBranch?.name ?? "unknown"
+        Logger.debug("Push: branch=\(branchName), tracking=\(repo.currentBranch?.trackingBranch ?? "none")")
 
         // Check branch protection
         let protection = BranchProtectionService.shared
@@ -108,8 +114,10 @@ class GitOperationHandler: ObservableObject {
             isForceWithLease: forceWithLease
         )
 
+        Logger.debug("Push: protection result=\(result)")
         switch result {
         case .blocked(let reason, _):
+            Logger.debug("Push: BLOCKED by protection: \(reason)")
             NotificationManager.shared.error("Push Blocked", detail: reason)
             return
 
@@ -277,7 +285,7 @@ class GitOperationHandler: ObservableObject {
     }
 
     private func performAssumeUnchanged(filePath: String, repoPath: String) async throws {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let relativePath = filePath.replacingOccurrences(of: repoPath + "/", with: "")
         let result = await shell.execute(
             "git",
@@ -291,7 +299,7 @@ class GitOperationHandler: ObservableObject {
     }
 
     private func performStopTrackingFile(filePath: String, repoPath: String) async throws {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let relativePath = filePath.replacingOccurrences(of: repoPath + "/", with: "")
         let result = await shell.execute(
             "git",

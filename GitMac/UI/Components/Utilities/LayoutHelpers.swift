@@ -76,9 +76,10 @@ struct DSScrollView<Content: View>: View {
     }
 
     var body: some View {
-        ScrollView(axes, showsIndicators: showsIndicators) {
+        ScrollView(axes) {
             content()
         }
+        .scrollIndicators(showsIndicators ? .automatic : .hidden)
         .scrollBounceBehavior(bounce ? .automatic : .basedOnSize)
     }
 }
@@ -214,19 +215,19 @@ struct DSSection<Content: View>: View {
             if let title = title {
                 Text(title)
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .padding(.horizontal, padding)
             }
 
             content()
                 .padding(padding)
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(DesignTokens.CornerRadius.lg)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 
             if let footer = footer {
                 Text(footer)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textMuted)
+                    .foregroundStyle(AppTheme.textMuted)
                     .padding(.horizontal, padding)
             }
         }
@@ -319,7 +320,7 @@ extension View {
         }
         .padding()
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
 
         DSHStack(spacing: DesignTokens.Spacing.md) {
             Text("HStack")
@@ -328,7 +329,7 @@ extension View {
         }
         .padding()
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
     }
     .padding()
     .background(AppTheme.background)
@@ -344,7 +345,7 @@ extension View {
                     .overlay(
                         Text("\(index + 1)")
                             .font(DesignTokens.Typography.headline)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     )
             }
         }
@@ -364,15 +365,15 @@ extension View {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
                     Text("Name: John Doe")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Text("Email: john@example.com")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Text("Role: Developer")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
             }
 
@@ -382,14 +383,14 @@ extension View {
                         Text("Email Notifications")
                         Spacer()
                         Text("Enabled")
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                     }
 
                     HStack {
                         Text("Push Notifications")
                         Spacer()
                         Text("Disabled")
-                            .foregroundColor(AppTheme.textMuted)
+                            .foregroundStyle(AppTheme.textMuted)
                     }
                 }
             }
@@ -397,7 +398,7 @@ extension View {
             DSSection {
                 Text("Section without title or footer")
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
             }
         }
         .padding()
@@ -411,15 +412,15 @@ extension View {
         VStack(spacing: DesignTokens.Spacing.md) {
             Text("Centered Container")
                 .font(DesignTokens.Typography.title2)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("This container has a max width of 600 and will center itself")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
                 .multilineTextAlignment(.center)
 
             DSButton(variant: .primary) {
-                print("Button clicked")
+                Logger.debug("Button clicked")
             } label: {
                 Text("Action Button")
             }
@@ -436,7 +437,7 @@ extension View {
                 HStack {
                     Text("Item \(index)")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Spacer()
 
@@ -444,7 +445,7 @@ extension View {
                 }
                 .padding(DesignTokens.Spacing.md)
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
             }
         }
         .padding()

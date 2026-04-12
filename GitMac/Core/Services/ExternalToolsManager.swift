@@ -323,7 +323,7 @@ struct ExternalToolsSettingsView: View {
                         manager.refreshTools()
                     } label: {
                         Image(systemName: "arrow.clockwise")
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                     }
                     .buttonStyle(.borderless)
                     .help("Refresh")
@@ -331,7 +331,7 @@ struct ExternalToolsSettingsView: View {
                 
                 if manager.availableTools.isEmpty {
                     Text("No external tools detected")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .padding()
                 } else {
                     ScrollView {
@@ -383,7 +383,7 @@ struct ToolRow: View {
     var body: some View {
         HStack {
             Image(systemName: tool.icon)
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(tool.name)
@@ -393,13 +393,13 @@ struct ToolRow: View {
                     if tool.supportsDiff {
                         Label("Diff", systemImage: "checkmark.circle.fill")
                             .font(.caption)
-                            .foregroundColor(AppTheme.success)
+                            .foregroundStyle(AppTheme.success)
                     }
                     
                     if tool.supportsMerge {
                         Label("Merge", systemImage: "checkmark.circle.fill")
                             .font(.caption)
-                            .foregroundColor(AppTheme.accent)
+                            .foregroundStyle(AppTheme.accent)
                     }
                 }
             }
@@ -407,12 +407,12 @@ struct ToolRow: View {
             Spacer()
             
             Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(AppTheme.success)
+                .foregroundStyle(AppTheme.success)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(AppTheme.textSecondary.opacity(0.05))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
     }
 }
 
@@ -427,7 +427,7 @@ struct InstructionItem: View {
             
             Text(instruction)
                 .font(.system(size: 10, design: .monospaced))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .textSelection(.enabled)
         }
     }

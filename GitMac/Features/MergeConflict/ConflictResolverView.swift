@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Three-way merge conflict resolver
 struct ConflictResolverView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = ConflictResolverViewModel()
@@ -94,7 +94,7 @@ class ConflictResolverViewModel: ObservableObject {
     }
 
     func loadConflictContent(for path: String) async -> (ours: String, theirs: String, base: String?) {
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
 
         // Get our version
         let oursResult = await shell.execute(
@@ -361,7 +361,7 @@ struct ConflictHeader: View {
     var body: some View {
         HStack {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(AppTheme.warning)
+                .foregroundStyle(AppTheme.warning)
 
             Text("Merge Conflicts")
                 .font(.headline)
@@ -371,15 +371,15 @@ struct ConflictHeader: View {
                 .padding(.horizontal, DesignTokens.Spacing.sm)
                 .padding(.vertical, DesignTokens.Spacing.xxs)
                 .background(resolvedCount == conflictCount ? AppTheme.success.opacity(0.2) : AppTheme.warning.opacity(0.2))
-                .foregroundColor(resolvedCount == conflictCount ? AppTheme.success : AppTheme.warning)
-                .cornerRadius(DesignTokens.CornerRadius.lg)
+                .foregroundStyle(resolvedCount == conflictCount ? AppTheme.success : AppTheme.warning)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
 
             Spacer()
 
             Button("Abort Merge") {
                 onAbort()
             }
-            .foregroundColor(AppTheme.error)
+            .foregroundStyle(AppTheme.error)
 
             Button("Continue") {
                 onContinue()
@@ -424,10 +424,10 @@ struct ConflictFileRow: View {
     var body: some View {
         HStack(spacing: DesignTokens.Spacing.sm) {
             Image(systemName: file.isResolved ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                .foregroundColor(file.isResolved ? AppTheme.success : AppTheme.error)
+                .foregroundStyle(file.isResolved ? AppTheme.success : AppTheme.error)
 
             Image(systemName: "doc.fill")
-                .foregroundColor(AppTheme.accent)
+                .foregroundStyle(AppTheme.accent)
 
             VStack(alignment: .leading) {
                 Text(file.filename)
@@ -437,7 +437,7 @@ struct ConflictFileRow: View {
                 if !dir.isEmpty && dir != "." {
                     Text(dir)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
                 }
             }
@@ -447,7 +447,7 @@ struct ConflictFileRow: View {
             if file.isResolved {
                 Text("Resolved")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
             }
         }
         .padding(.vertical, DesignTokens.Spacing.xs)
@@ -515,7 +515,7 @@ struct ThreeWayMergeView: View {
             if let resolution = aiResolution {
                 HStack {
                     Image(systemName: "sparkles")
-                        .foregroundColor(AppTheme.accentPurple)
+                        .foregroundStyle(AppTheme.accentPurple)
 
                     Text("AI Suggestion")
                         .fontWeight(.medium)
@@ -526,7 +526,7 @@ struct ThreeWayMergeView: View {
 
                     Text(resolution.explanation)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
                 }
                 .padding(DesignTokens.Spacing.sm)
@@ -622,7 +622,7 @@ struct MergePanel: View {
                         HStack(spacing: 0) {
                             Text("\(index + 1)")
                                 .font(DesignTokens.Typography.caption.monospaced())
-                                .foregroundColor(AppTheme.textPrimary)
+                                .foregroundStyle(AppTheme.textPrimary)
                                 .frame(width: 30, alignment: .trailing)
                                 .padding(.trailing, 8)
 
@@ -656,7 +656,7 @@ struct OutputPanel: View {
             // Header
             HStack {
                 Image(systemName: "doc.text")
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                 Text("Output")
                     .font(.caption.weight(.semibold))
                 Spacer()
@@ -665,7 +665,7 @@ struct OutputPanel: View {
                     content = ""
                 } label: {
                     Image(systemName: "trash")
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                 }
                 .buttonStyle(.borderless)
             }
@@ -688,8 +688,8 @@ struct ConfidenceBadge: View {
             .padding(.horizontal, DesignTokens.Spacing.xs + 2)
             .padding(.vertical, DesignTokens.Spacing.xxs)
             .background(color.opacity(0.2))
-            .foregroundColor(color)
-            .cornerRadius(DesignTokens.CornerRadius.sm)
+            .foregroundStyle(color)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
     }
 
     var color: Color {
@@ -706,13 +706,13 @@ struct EmptyConflictView: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "checkmark.circle")
                 .font(DesignTokens.Typography.iconXXXXL)
-                .foregroundColor(AppTheme.success)
+                .foregroundStyle(AppTheme.success)
 
             Text("No conflicts to resolve")
                 .font(.headline)
 
             Text("Select a conflicted file from the list")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -736,7 +736,7 @@ struct InlineConflictResolver: View {
             // Header
             HStack {
                 Image(systemName: "doc.text")
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                 
                 Text(URL(fileURLWithPath: filePath).lastPathComponent)
                     .font(.headline)
@@ -749,8 +749,8 @@ struct InlineConflictResolver: View {
                     .padding(.horizontal, DesignTokens.Spacing.sm)
                     .padding(.vertical, DesignTokens.Spacing.xs)
                     .background(resolvedCount == chunks.count ? AppTheme.success.opacity(0.2) : AppTheme.warning.opacity(0.2))
-                    .foregroundColor(resolvedCount == chunks.count ? AppTheme.success : AppTheme.warning)
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
+                    .foregroundStyle(resolvedCount == chunks.count ? AppTheme.success : AppTheme.warning)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
                     .animation(.spring(), value: resolvedCount)
 
                 if chunks.allSatisfy(\.isResolved) {
@@ -773,9 +773,9 @@ struct InlineConflictResolver: View {
                 VStack {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.largeTitle)
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                     Text(error)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -871,7 +871,7 @@ struct NormalLineView: View {
         HStack(spacing: 0) {
             Text("\(lineNumber)")
                 .font(DesignTokens.Typography.caption.monospaced())
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .frame(width: 40, alignment: .trailing)
                 .padding(.trailing, 8)
 
@@ -896,10 +896,10 @@ struct ConflictChunkView: View {
                 // Resolved state
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
                     Text("Resolved")
                         .fontWeight(.medium)
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
                     
                     Spacer()
                     
@@ -929,7 +929,7 @@ struct ConflictChunkView: View {
             }
         }
         .background(AppTheme.warning.opacity(chunk.isResolved ? 0 : 0.05))
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.sm)
                 .stroke(chunk.isResolved ? AppTheme.success : AppTheme.warning, lineWidth: 1)
@@ -950,23 +950,23 @@ struct ConflictActionBar: View {
                 Text("Accept Current Change").font(DesignTokens.Typography.caption)
             }
             .buttonStyle(.borderless)
-            .foregroundColor(AppTheme.accent)
+            .foregroundStyle(AppTheme.accent)
 
-            Text("|").foregroundColor(AppTheme.textPrimary)
+            Text("|").foregroundStyle(AppTheme.textPrimary)
 
             Button { onResolve(.theirs) } label: {
                 Text("Accept Incoming Change").font(DesignTokens.Typography.caption)
             }
             .buttonStyle(.borderless)
-            .foregroundColor(AppTheme.success)
+            .foregroundStyle(AppTheme.success)
 
-            Text("|").foregroundColor(AppTheme.textPrimary)
+            Text("|").foregroundStyle(AppTheme.textPrimary)
 
             Button { onResolve(.both) } label: {
                 Text("Accept Both Changes").font(DesignTokens.Typography.caption)
             }
             .buttonStyle(.borderless)
-            .foregroundColor(AppTheme.accentPurple)
+            .foregroundStyle(AppTheme.accentPurple)
 
             Spacer()
 
@@ -976,7 +976,7 @@ struct ConflictActionBar: View {
                     Text("Resolved")
                 }
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.success)
+                .foregroundStyle(AppTheme.success)
             }
         }
         .padding(.horizontal, DesignTokens.Spacing.sm)
@@ -997,7 +997,7 @@ struct OursSection: View {
             HStack {
                 Text("<<<<<<< Current Change (yours)")
                     .font(DesignTokens.Typography.caption.monospaced())
-                    .foregroundColor(AppTheme.accent)
+                    .foregroundStyle(AppTheme.accent)
                 Spacer()
             }
             .padding(.horizontal, DesignTokens.Spacing.sm)
@@ -1025,7 +1025,7 @@ struct SeparatorSection: View {
         HStack {
             Text("=======")
                 .font(DesignTokens.Typography.caption.monospaced())
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .padding(.horizontal, DesignTokens.Spacing.sm)
         .padding(.vertical, DesignTokens.Spacing.xxs)
@@ -1054,7 +1054,7 @@ struct TheirsSection: View {
             HStack {
                 Text(">>>>>>> Incoming Change (theirs)")
                     .font(DesignTokens.Typography.caption.monospaced())
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 Spacer()
             }
             .padding(.horizontal, DesignTokens.Spacing.sm)

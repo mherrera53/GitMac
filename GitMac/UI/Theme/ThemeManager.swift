@@ -633,7 +633,7 @@ struct CodableColor: Codable, Equatable {
 // MARK: - Theme Settings View
 
 struct ThemeSettingsView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -658,7 +658,7 @@ struct ThemeSettingsView: View {
                 } label: {
                     HStack {
                         Image(systemName: "paintbrush.fill")
-                            .foregroundColor(AppTheme.accentPurple)
+                            .foregroundStyle(AppTheme.accentPurple)
 
                         Text("Customize Colors...")
 
@@ -666,7 +666,7 @@ struct ThemeSettingsView: View {
 
                         if themeManager.currentTheme == .custom {
                             Image(systemName: "checkmark")
-                                .foregroundColor(AppTheme.success)
+                                .foregroundStyle(AppTheme.success)
                         }
                     }
                     .padding()
@@ -697,7 +697,7 @@ struct ThemeOptionButton: View {
             HStack {
                 Image(systemName: theme.icon)
                     .font(.system(size: 24))
-                    .foregroundColor(iconColor)
+                    .foregroundStyle(iconColor)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(theme.displayName)
@@ -705,14 +705,14 @@ struct ThemeOptionButton: View {
                     
                     Text(theme.description)
                         .font(.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 
                 Spacer()
                 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
                 }
             }
             .padding()
@@ -735,7 +735,7 @@ struct ThemeOptionButton: View {
 }
 
 struct ThemePreview: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -758,7 +758,7 @@ struct ThemePreview: View {
                     ColorSwatch(color: themeManager.colors.gitConflict.color, label: "Conf")
                 }
             }
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(AppTheme.textSecondary.opacity(0.3), lineWidth: 1)
@@ -779,7 +779,7 @@ struct ColorSwatch: View {
             
             Text(label)
                 .font(.system(size: 9))
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -1090,7 +1090,7 @@ struct ThemePalette: Identifiable {
 }
 
 struct CustomThemeEditor: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @State private var customColors: CustomColorScheme
     @State private var selectedPalette: UUID?
 
@@ -1107,7 +1107,7 @@ struct CustomThemeEditor: View {
                 VStack(spacing: 0) {
                     Text("Presets")
                         .font(DesignTokens.Typography.headline)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .padding(.vertical, DesignTokens.Spacing.md)
 
                     Divider()
@@ -1141,7 +1141,7 @@ struct CustomThemeEditor: View {
                         Text("Customize Theme")
                             .font(DesignTokens.Typography.title3)
                             .fontWeight(.semibold)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Spacer()
                         Button("Reset to Default") {
                             customColors = .default
@@ -1245,7 +1245,7 @@ struct PaletteCard: View {
                 // Title
                 Text(palette.name)
                     .font(DesignTokens.Typography.headline)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -1263,12 +1263,12 @@ struct PaletteCard: View {
                         .fill(palette.colors.gitDeleted.color)
                 }
                 .frame(height: DesignTokens.Size.buttonHeightSM)
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
                 // Description
                 Text(palette.description)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1298,14 +1298,14 @@ struct ColorSection<Content: View>: View {
             Text(title)
                 .font(DesignTokens.Typography.subheadline)
                 .fontWeight(.semibold)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             VStack(spacing: DesignTokens.Spacing.xs) {
                 content()
             }
             .padding(DesignTokens.Spacing.md)
             .background(AppTheme.backgroundSecondary)
-            .cornerRadius(DesignTokens.CornerRadius.lg)
+            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
         }
     }
 }
@@ -1321,7 +1321,7 @@ struct CompactColorPicker: View {
             // Label
             Text(label)
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             // Color preview button
@@ -1367,7 +1367,7 @@ struct CompactColorPicker: View {
             // Hex value (read-only display)
             Text(color.hexString)
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding(.vertical, DesignTokens.Spacing.xs)
     }

@@ -253,7 +253,7 @@ struct LicenseActivationView: View {
 
             if let error = validator.errorMessage {
                 Text(error)
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                     .font(.caption)
             }
 
@@ -277,7 +277,7 @@ struct LicenseActivationView: View {
             if validator.isLicenseValid {
                 VStack {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(AppTheme.success)
+                        .foregroundStyle(AppTheme.success)
                         .font(.system(size: 48))
 
                     Text("License Activated!")
@@ -290,7 +290,7 @@ struct LicenseActivationView: View {
                         if info.is_lifetime {
                             Text("Lifetime License")
                                 .font(.caption2)
-                                .foregroundColor(AppTheme.success)
+                                .foregroundStyle(AppTheme.success)
                         } else if let expiresAt = info.expires_at {
                             Text("Expires: \(expiresAt)")
                                 .font(.caption2)

@@ -61,21 +61,21 @@ struct DSSearchBar: View {
     VStack(spacing: DesignTokens.Spacing.lg) {
         Text("Empty State")
             .font(DesignTokens.Typography.caption)
-            .foregroundColor(AppTheme.textMuted)
+            .foregroundStyle(AppTheme.textMuted)
         DSSearchBar(
             searchText: .constant("")
         )
 
         Text("With Text")
             .font(DesignTokens.Typography.caption)
-            .foregroundColor(AppTheme.textMuted)
+            .foregroundStyle(AppTheme.textMuted)
         DSSearchBar(
             searchText: .constant("git commit")
         )
 
         Text("Custom Placeholder")
             .font(DesignTokens.Typography.caption)
-            .foregroundColor(AppTheme.textMuted)
+            .foregroundStyle(AppTheme.textMuted)
         DSSearchBar(
             searchText: .constant(""),
             placeholder: "Search files..."
@@ -91,7 +91,7 @@ struct DSSearchBar: View {
             searchText: .constant(""),
             showFilterButton: true,
             onFilterTap: {
-                print("Filter tapped")
+                Logger.debug("Filter tapped")
             }
         )
 
@@ -100,7 +100,7 @@ struct DSSearchBar: View {
             placeholder: "Search branches...",
             showFilterButton: true,
             onFilterTap: {
-                print("Filter tapped")
+                Logger.debug("Filter tapped")
             }
         )
 
@@ -109,7 +109,7 @@ struct DSSearchBar: View {
             placeholder: "Search commits...",
             showFilterButton: true,
             onFilterTap: {
-                print("Filter tapped")
+                Logger.debug("Filter tapped")
             }
         )
     }
@@ -122,7 +122,7 @@ struct DSSearchBar: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Branch Search")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             DSSearchBar(
                 searchText: .constant(""),
                 placeholder: "Search branches...",
@@ -133,7 +133,7 @@ struct DSSearchBar: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("Commit History")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             DSSearchBar(
                 searchText: .constant(""),
                 placeholder: "Search commits...",
@@ -144,7 +144,7 @@ struct DSSearchBar: View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
             Text("File Search")
                 .font(DesignTokens.Typography.callout)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             DSSearchBar(
                 searchText: .constant(""),
                 placeholder: "Search files...",

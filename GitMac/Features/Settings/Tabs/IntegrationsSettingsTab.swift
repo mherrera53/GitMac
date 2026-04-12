@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct IntegrationsSettingsView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @StateObject private var workspaceManager = WorkspaceSettingsManager.shared
     @StateObject private var recentReposManager = RecentRepositoriesManager.shared
 
@@ -62,12 +62,12 @@ struct IntegrationsSettingsView: View {
             SettingsSection(title: "Repository") {
                 if recentReposManager.recentRepos.isEmpty {
                     Text("Open a repository to configure integrations")
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                 } else {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                         Text("Configure for")
                             .font(DesignTokens.Typography.callout)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
 
                         DSPicker(
                             items: recentReposManager.recentRepos,
@@ -212,19 +212,19 @@ struct IntegrationsSettingsView: View {
                 ForEach(IntegrationType.allCases.filter { !$0.isAvailable }) { integration in
                     HStack {
                         Image(systemName: integration.icon)
-                            .foregroundColor(SwiftUI.Color(hex: integration.color))
+                            .foregroundStyle(SwiftUI.Color(hex: integration.color))
                             .frame(width: 24)
                         Text(integration.rawValue)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                         Spacer()
                         Text("Coming Soon")
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textSecondary)
+                            .foregroundStyle(AppTheme.textSecondary)
                             .padding(.horizontal, DesignTokens.Spacing.sm)
                             .padding(.vertical, DesignTokens.Spacing.xxs)
                             .background(AppTheme.textSecondary.opacity(0.2))
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                     }
                 }
             }

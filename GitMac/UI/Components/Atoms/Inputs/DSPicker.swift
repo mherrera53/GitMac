@@ -48,7 +48,7 @@ struct DSPicker<Item: Hashable & Identifiable, Label: View>: View {
                 }) {
                     label(item)
                         .font(DesignTokens.Typography.callout)
-                        .foregroundColor(isSelected(item) ? AppTheme.buttonTextOnColor : AppTheme.textPrimary)
+                        .foregroundStyle(isSelected(item) ? AppTheme.buttonTextOnColor : AppTheme.textPrimary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, DesignTokens.Spacing.sm)
                         .background(isSelected(item) ? AppTheme.accent : Color.clear)
@@ -58,7 +58,7 @@ struct DSPicker<Item: Hashable & Identifiable, Label: View>: View {
             }
         }
         .background(AppTheme.backgroundSecondary)
-        .cornerRadius(DesignTokens.CornerRadius.md)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                 .stroke(AppTheme.backgroundTertiary, lineWidth: 1)
@@ -78,7 +78,7 @@ struct DSPicker<Item: Hashable & Identifiable, Label: View>: View {
                         Spacer()
                         if isSelected(item) {
                             Image(systemName: "checkmark")
-                                .foregroundColor(AppTheme.accent)
+                                .foregroundStyle(AppTheme.accent)
                         }
                     }
                 }
@@ -100,15 +100,15 @@ struct DSPicker<Item: Hashable & Identifiable, Label: View>: View {
                 .font(DesignTokens.Typography.body)
                 .padding(DesignTokens.Spacing.sm)
                 .background(AppTheme.backgroundSecondary)
-                .cornerRadius(DesignTokens.CornerRadius.md)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
                 .overlay(
                     RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
                         .stroke(AppTheme.backgroundTertiary, lineWidth: 1)
                 )
             }
-            .foregroundColor(AppTheme.textPrimary)
+            .foregroundStyle(AppTheme.textPrimary)
         }
-        .foregroundColor(AppTheme.textPrimary)
+        .foregroundStyle(AppTheme.textPrimary)
         .accentColor(AppTheme.textPrimary)
         .tint(AppTheme.textPrimary)
         .menuStyle(.borderlessButton)

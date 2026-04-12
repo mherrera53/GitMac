@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Stash list and management view
 struct StashListView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
 
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = StashListViewModel()
@@ -21,7 +21,7 @@ struct StashListView: View {
                         .font(.headline)
 
                     Text("(\(viewModel.stashes.count))")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Spacer()
 
@@ -38,10 +38,10 @@ struct StashListView: View {
                 if let error = viewModel.error {
                     HStack {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                         Text(error)
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.error)
+                            .foregroundStyle(AppTheme.error)
                         Spacer()
                         DSIconButton(iconName: "xmark.circle.fill", variant: .ghost, size: .sm) {
                             viewModel.error = nil
@@ -49,7 +49,7 @@ struct StashListView: View {
                     }
                     .padding(DesignTokens.Spacing.sm)
                     .background(AppTheme.error.opacity(0.1))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                     .padding(.horizontal)
                     .padding(.bottom, DesignTokens.Spacing.sm)
                 }
@@ -90,9 +90,9 @@ struct StashListView: View {
                     Spacer()
                     Image(systemName: "archivebox")
                         .font(DesignTokens.Typography.iconXXXXL)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Text("Select a stash to view details")
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
@@ -257,7 +257,7 @@ class StashListViewModel: ObservableObject {
 
     func getStashDiff(_ stash: Stash) async -> String {
         // Get stash diff using git stash show -p
-        let shell = ShellExecutor()
+        let shell = ShellExecutor.shared
         let result = await shell.execute(
             "git",
             arguments: ["stash", "show", "-p", stash.reference]
@@ -277,7 +277,7 @@ class StashListViewModel: ObservableObject {
         do {
             // Use git checkout to restore a single file from stash
             // git checkout stash@{N} -- path/to/file
-            let shell = ShellExecutor()
+            let shell = ShellExecutor.shared
             let result = await shell.execute(
                 "git",
                 arguments: ["checkout", stash.reference, "--", file.path],
@@ -303,7 +303,7 @@ class StashListViewModel: ObservableObject {
         }
         isLoading = true
         do {
-            let shell = ShellExecutor()
+            let shell = ShellExecutor.shared
             let result = await shell.execute(
                 "git",
                 arguments: ["stash", "branch", branchName, stash.reference],
@@ -331,7 +331,7 @@ class StashListViewModel: ObservableObject {
 // MARK: - Subviews
 
 struct StashRow: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     let stash: Stash
     let isSelected: Bool
     let files: [StashFile]
@@ -360,17 +360,17 @@ struct StashRow: View {
                 } label: {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .frame(width: 12)
                 }
                 .buttonStyle(.plain)
 
                 Image(systemName: "archivebox.fill")
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
 
                 Text(stash.reference)
                     .font(DesignTokens.Typography.caption.monospacedDigit())
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
 
@@ -382,11 +382,11 @@ struct StashRow: View {
                         Text("\(files.count)")
                             .font(DesignTokens.Typography.caption2)
                     }
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .padding(.horizontal, DesignTokens.Spacing.xs)
                     .padding(.vertical, DesignTokens.Spacing.xxs)
                     .background(AppTheme.textSecondary.opacity(0.15))
-                    .cornerRadius(DesignTokens.CornerRadius.sm)
+                    .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                 }
 
                 // Stats badges
@@ -395,7 +395,7 @@ struct StashRow: View {
                         Text("+\(stats.additions)")
                     }
                     .font(DesignTokens.Typography.caption2.weight(.medium).monospacedDigit())
-                    .foregroundColor(AppTheme.success)
+                    .foregroundStyle(AppTheme.success)
                 }
 
                 if stats.deletions > 0 {
@@ -403,7 +403,7 @@ struct StashRow: View {
                         Text("-\(stats.deletions)")
                     }
                     .font(DesignTokens.Typography.caption2.weight(.medium).monospacedDigit())
-                    .foregroundColor(AppTheme.error)
+                    .foregroundStyle(AppTheme.error)
                 }
 
                 if isHovered {
@@ -436,14 +436,14 @@ struct StashRow: View {
                     if let branch = stash.branchName {
                         Text("on \(branch)")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                     }
 
                     Spacer()
 
                     Text(stash.relativeDate)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
                 .padding(.leading, 18)
             }
@@ -493,7 +493,7 @@ struct StashRow: View {
         .padding(.vertical, DesignTokens.Spacing.sm)
         .padding(.horizontal, DesignTokens.Spacing.xs)
         .background(isSelected ? AppTheme.accent.opacity(0.1) : (isHovered ? AppTheme.textSecondary.opacity(0.05) : Color.clear))
-        .cornerRadius(DesignTokens.CornerRadius.sm)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
         .sheet(isPresented: $showBranchNameSheet) {
@@ -528,7 +528,7 @@ struct StashRow: View {
 }
 
 struct StashFileRow: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     let file: StashFile
 
     var directory: String {
@@ -542,14 +542,14 @@ struct StashFileRow: View {
             // Status indicator
             Text(file.statusLetter)
                 .font(DesignTokens.Typography.caption2.weight(.bold).monospacedDigit())
-                .foregroundColor(file.statusColor)
+                .foregroundStyle(file.statusColor)
                 .frame(width: 16, height: 16)
                 .background(file.statusColor.opacity(0.2))
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
             // File icon
             Image(systemName: "doc.fill")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .frame(width: 16)
 
             // File path
@@ -560,7 +560,7 @@ struct StashFileRow: View {
                 if !directory.isEmpty {
                     Text(directory)
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .lineLimit(1)
                 }
             }
@@ -575,7 +575,7 @@ struct StashFileRow: View {
 // MARK: - Stash File Tree
 
 struct StashFileTreeView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     let files: [StashFile]
     var onApplyFile: (StashFile) -> Void = { _ in }
 
@@ -625,8 +625,9 @@ struct StashFileTreeView: View {
     }
 }
 
+@MainActor
 class StashTreeNode: Identifiable, ObservableObject {
-    var id: String { path.isEmpty ? UUID().uuidString : path }
+    nonisolated var id: String { path.isEmpty ? name : path }
     let name: String
     let path: String
     let isFolder: Bool
@@ -649,7 +650,7 @@ class StashTreeNode: Identifiable, ObservableObject {
 }
 
 struct StashTreeNodeView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @ObservedObject var node: StashTreeNode
     var onApplyFile: (StashFile) -> Void = { _ in }
     @State private var isExpanded = true
@@ -672,13 +673,13 @@ struct StashTreeNodeView: View {
                 } label: {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(DesignTokens.Typography.caption2)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                         .frame(width: 12)
                 }
                 .buttonStyle(.plain)
 
                 Image(systemName: isExpanded ? "folder.fill" : "folder")
-                    .foregroundColor(AppTheme.warning)
+                    .foregroundStyle(AppTheme.warning)
                     .frame(width: 16)
 
                 Text(node.name)
@@ -686,7 +687,7 @@ struct StashTreeNodeView: View {
 
                 Text("(\(node.fileCount))")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
 
                 Spacer()
             }
@@ -725,13 +726,13 @@ struct StashTreeNodeView: View {
 
             Text(file.statusLetter)
                 .font(DesignTokens.Typography.caption2.weight(.bold).monospacedDigit())
-                .foregroundColor(file.statusColor)
+                .foregroundStyle(file.statusColor)
                 .frame(width: 16, height: 16)
                 .background(file.statusColor.opacity(0.2))
-                .cornerRadius(DesignTokens.CornerRadius.sm)
+                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
 
             Image(systemName: "doc.fill")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .frame(width: 16)
 
             Text(file.filename)
@@ -783,7 +784,7 @@ struct StashTreeNodeView: View {
 }
 
 struct StashDetailView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     let stash: Stash
     @ObservedObject var viewModel: StashListViewModel
     @State private var diff = ""
@@ -814,16 +815,16 @@ struct StashDetailView: View {
                                 Text("\(files.count)")
                                     .font(DesignTokens.Typography.caption)
                             }
-                            .foregroundColor(AppTheme.textPrimary)
+                            .foregroundStyle(AppTheme.textPrimary)
                             .padding(.horizontal, DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs)
                             .padding(.vertical, DesignTokens.Spacing.xxs)
                             .background(AppTheme.textSecondary.opacity(0.15))
-                            .cornerRadius(DesignTokens.CornerRadius.sm)
+                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
                         }
                     }
 
                     Text(stash.message)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
                 }
 
                 Spacer()
@@ -834,12 +835,12 @@ struct StashDetailView: View {
                         if stats.additions > 0 {
                             Text("+\(stats.additions)")
                                 .font(DesignTokens.Typography.callout.weight(.medium).monospacedDigit())
-                                .foregroundColor(AppTheme.success)
+                                .foregroundStyle(AppTheme.success)
                         }
                         if stats.deletions > 0 {
                             Text("-\(stats.deletions)")
                                 .font(DesignTokens.Typography.callout.weight(.medium).monospacedDigit())
-                                .foregroundColor(AppTheme.error)
+                                .foregroundStyle(AppTheme.error)
                         }
                     }
                     .padding(.horizontal, DesignTokens.Spacing.sm)
@@ -877,16 +878,16 @@ struct StashDetailView: View {
                             HStack {
                                 Image(systemName: showDiff ? "chevron.down" : "chevron.right")
                                     .font(DesignTokens.Typography.caption)
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
 
                                 Image(systemName: "doc.on.doc.fill")
-                                    .foregroundColor(AppTheme.warning)
+                                    .foregroundStyle(AppTheme.warning)
 
                                 Text("Changed Files")
                                     .fontWeight(.medium)
 
                                 Text("(\(files.count))")
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
 
                                 Spacer()
                             }
@@ -938,30 +939,30 @@ struct StashDetailView: View {
 }
 
 struct EmptyStashView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     var body: some View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "archivebox")
                 .font(DesignTokens.Typography.iconXXXXL)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
 
             Text("No stashes")
                 .font(.headline)
 
             Text("Stash your changes to save them temporarily")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.center)
 
             Text("Use ⌥⌘S to stash changes")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
 struct CreateStashSheet: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
+    @EnvironmentObject private var themeManager: ThemeManager
     @ObservedObject var viewModel: StashListViewModel
     @Environment(\.dismiss) private var dismiss
 

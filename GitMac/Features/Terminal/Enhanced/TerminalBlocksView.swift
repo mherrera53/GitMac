@@ -103,13 +103,13 @@ struct TerminalBlockRow: View {
                 // Status indicator
                 Image(systemName: block.command.statusIcon)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(statusColor)
+                    .foregroundStyle(statusColor)
                     .frame(width: 16, height: 16)
 
                 // Command
                 Text(block.command.command)
                     .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .foregroundColor(AppTheme.textPrimary)
+                    .foregroundStyle(AppTheme.textPrimary)
                     .lineLimit(1)
 
                 Spacer()
@@ -124,18 +124,18 @@ struct TerminalBlockRow: View {
                             Text(branch)
                                 .font(.system(size: 11))
                         }
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                     }
 
                     // Duration
                     Text(block.command.durationFormatted)
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
 
                     // Timestamp
                     Text(timeAgo(from: block.command.timestamp))
                         .font(.system(size: 11))
-                        .foregroundColor(AppTheme.textMuted)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
 
                 // Actions (visible on hover)
@@ -162,7 +162,7 @@ struct TerminalBlockRow: View {
                         .buttonStyle(.plain)
                         .help("Share Block")
                     }
-                    .foregroundColor(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.textSecondary)
                 }
             }
             .padding(.horizontal, 16)
@@ -175,7 +175,7 @@ struct TerminalBlockRow: View {
                     // Redacted output
                     Text(redactedOutput)
                         .font(.system(size: 12, design: .monospaced))
-                        .foregroundColor(AppTheme.textSecondary)
+                        .foregroundStyle(AppTheme.textSecondary)
                         .textSelection(.enabled)
                         .padding(16)
                 }
@@ -188,11 +188,11 @@ struct TerminalBlockRow: View {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 12))
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
 
                     Text("Command failed with exit code \(code)")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(AppTheme.error)
+                        .foregroundStyle(AppTheme.error)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
@@ -201,7 +201,7 @@ struct TerminalBlockRow: View {
             }
         }
         .background(blockBackground)
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
                 .stroke(borderColor, lineWidth: isSelected ? 2 : 1)

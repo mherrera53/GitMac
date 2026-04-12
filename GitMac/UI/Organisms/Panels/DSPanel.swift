@@ -35,7 +35,7 @@ struct DSPanel<Content: View>: View {
                 HStack {
                     Text(title)
                         .font(DesignTokens.Typography.headline)
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundStyle(AppTheme.textPrimary)
 
                     Spacer()
                 }
@@ -51,7 +51,7 @@ struct DSPanel<Content: View>: View {
             content()
         }
         .background(backgroundColor ?? AppTheme.background)
-        .cornerRadius(DesignTokens.CornerRadius.lg)
+        .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
     }
 }
 
@@ -61,9 +61,9 @@ struct DSPanel<Content: View>: View {
     DSPanel(title: "Settings") {
         VStack(spacing: DesignTokens.Spacing.md) {
             Text("Panel content goes here")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Text("More content")
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
     }
@@ -76,9 +76,9 @@ struct DSPanel<Content: View>: View {
     DSPanel {
         VStack(spacing: DesignTokens.Spacing.md) {
             Text("Panel without title")
-                .foregroundColor(AppTheme.textPrimary)
+                .foregroundStyle(AppTheme.textPrimary)
             Text("Clean and minimal")
-                .foregroundColor(AppTheme.textSecondary)
+                .foregroundStyle(AppTheme.textSecondary)
         }
         .padding()
     }
@@ -100,7 +100,7 @@ struct DSPanel<Content: View>: View {
                                 DSIcon("checkmark.circle.fill", size: .sm, color: AppTheme.success)
                                 Text("Item \(index + 1)")
                                     .font(DesignTokens.Typography.body)
-                                    .foregroundColor(AppTheme.textPrimary)
+                                    .foregroundStyle(AppTheme.textPrimary)
                             }
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
