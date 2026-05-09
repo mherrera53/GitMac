@@ -174,8 +174,6 @@ actor GitEngine {
             throw GitError.commandFailed("git for-each-ref", result.stderr)
         }
 
-        _ = try? await getHeadSHA(at: path)
-
         let branches = result.stdout
             .components(separatedBy: .newlines)
             .filter { !$0.isEmpty }

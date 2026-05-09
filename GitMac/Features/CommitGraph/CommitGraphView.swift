@@ -268,7 +268,7 @@ struct CommitGraphView: View {
         if result.exitCode == 0 {
             NotificationManager.shared.success("Checked out \(branch.name)")
             // Refresh the graph
-            await vm.load(at: repoPath)
+            vm.load(at: repoPath)
             // Notify app state to update current branch
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: repoPath)
         } else {
@@ -936,10 +936,16 @@ private struct GraphDataModifiers: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .task(id: appState.currentRepository?.path) {
+            .task {
                 if let p = appState.currentRepository?.path {
                     settings.setRepository(p)
-                    await vm.load(at: p)
+                    vm.load(at: p)
+                }
+            }
+            .onChange(of: appState.currentRepository?.path) { _, p in
+                if let p {
+                    settings.setRepository(p)
+                    vm.load(at: p)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { notification in
@@ -950,17 +956,17 @@ private struct GraphDataModifiers: ViewModifier {
             }
             .onReceive(NotificationCenter.default.publisher(for: .remoteOperationCompleted)) { _ in
                 if let path = appState.currentRepository?.path {
-                    Task { await vm.load(at: path) }
+                    vm.load(at: path)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .gitHubOperationCompleted)) { _ in
                 if let path = appState.currentRepository?.path {
-                    Task { await vm.load(at: path) }
+                    vm.load(at: path)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .branchDidCheckout)) { _ in
                 if let path = appState.currentRepository?.path {
-                    Task { await vm.load(at: path) }
+                    vm.load(at: path)
                 }
             }
             .onChange(of: lastSelectedId) { _, _ in

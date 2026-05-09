@@ -32,75 +32,70 @@ class GraphViewModel {
     private var branchHeads: [String: String] = [:]
     private var currentLoadTask: Task<Void, Never>?
 
-    func load(at p: String) async {
+    func load(at p: String) {
         currentLoadTask?.cancel()
-        isLoading = true
-        path = p
-        page = 0
+        currentLoadTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            isLoading = true
+            path = p
+            page = 0
 
-        do {
-            // Sequential but fast (~50ms total for all git ops)
-            let loadedBranches = try await engine.getBranches(at: p)
-            let loadedCommits = try await engine.getCommitsV2(at: p, limit: 100)
+            do {
+                let loadedBranches = try await engine.getBranches(at: p)
+                guard !Task.isCancelled else { isLoading = false; return }
 
-            guard !Task.isCancelled else { return }
+                let loadedCommits = try await engine.getCommitsV2(at: p, limit: 100)
+                guard !Task.isCancelled else { isLoading = false; return }
 
-            // Prepare branch heads map
-            var newBranchHeads: [String: String] = [:]
-            for branch in loadedBranches {
-                if newBranchHeads[branch.targetSHA] == nil {
-                    newBranchHeads[branch.targetSHA] = branch.name
+                var newBranchHeads: [String: String] = [:]
+                for branch in loadedBranches {
+                    if newBranchHeads[branch.targetSHA] == nil {
+                        newBranchHeads[branch.targetSHA] = branch.name
+                    }
                 }
+
+                commits = loadedCommits
+                branchHeads = newBranchHeads
+                let newNodes = await buildNodes()
+                guard !Task.isCancelled else { isLoading = false; return }
+
+                let newMaxLane = newNodes.reduce(0) { maxVal, node in
+                    let nodeLanes = [node.lane] + Array(node.passThroughLanes) + node.curvesToBottom
+                    return max(maxVal, nodeLanes.max() ?? 0)
+                }
+
+                branches = loadedBranches
+                hasMore = loadedCommits.count == 100
+                nodes = newNodes
+                maxLane = newMaxLane
+                buildTimeline()
+                isLoading = false
+
+                Task {
+                    let status = try? await engine.getStatus(at: p)
+                    if let status, !Task.isCancelled {
+                        stagedCount = status.staged.count
+                        unstagedCount = status.unstaged.count + status.untracked.count
+                        hasUncommittedChanges = stagedCount > 0 || unstagedCount > 0
+                        buildTimeline()
+                    }
+                    let stashes = try? await engine.getStashes(at: p)
+                    if let stashes, !Task.isCancelled {
+                        stashNodes = stashes.map { StashNode(id: "stash-\($0.index)", stash: $0) }
+                        buildTimeline()
+                    }
+                    let emailResult = await ShellExecutor.shared.execute(
+                        "git", arguments: ["config", "user.email"], workingDirectory: p
+                    )
+                    if emailResult.exitCode == 0 {
+                        currentUserEmail = emailResult.output.trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                }
+                Task.detached(priority: .utility) { await self.loadMinimapData(at: p) }
+                Task.detached(priority: .utility) { await self.loadAvatarsFromGitHub(at: p) }
+            } catch {
+                if !Task.isCancelled { isLoading = false }
             }
-
-            // Build graph off main thread (CPU-bound)
-            commits = loadedCommits
-            branchHeads = newBranchHeads
-            let newNodes = await buildNodes()
-
-            guard !Task.isCancelled else { return }
-
-            let newMaxLane = newNodes.reduce(0) { maxVal, node in
-                let nodeLanes = [node.lane] + Array(node.passThroughLanes) + node.curvesToBottom
-                return max(maxVal, nodeLanes.max() ?? 0)
-            }
-
-            // Update UI -- show graph immediately
-            branches = loadedBranches
-            hasMore = loadedCommits.count == 100
-            nodes = newNodes
-            maxLane = newMaxLane
-            buildTimeline()
-            isLoading = false
-
-            // Load secondary data after graph is visible (non-blocking)
-            Task {
-                let status = try? await engine.getStatus(at: p)
-                if let status {
-                    stagedCount = status.staged.count
-                    unstagedCount = status.unstaged.count + status.untracked.count
-                    hasUncommittedChanges = stagedCount > 0 || unstagedCount > 0
-                    buildTimeline()
-                }
-
-                let stashes = try? await engine.getStashes(at: p)
-                if let stashes {
-                    stashNodes = stashes.map { StashNode(id: "stash-\($0.index)", stash: $0) }
-                    buildTimeline()
-                }
-
-                let emailResult = await ShellExecutor.shared.execute(
-                    "git", arguments: ["config", "user.email"], workingDirectory: p
-                )
-                if emailResult.exitCode == 0 {
-                    currentUserEmail = emailResult.output.trimmingCharacters(in: .whitespacesAndNewlines)
-                }
-            }
-
-            Task.detached(priority: .utility) { await self.loadMinimapData(at: p) }
-            Task.detached(priority: .utility) { await self.loadAvatarsFromGitHub(at: p) }
-        } catch {
-            isLoading = false
         }
     }
 

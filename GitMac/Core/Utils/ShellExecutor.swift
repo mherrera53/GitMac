@@ -233,28 +233,30 @@ actor ShellExecutor {
                 execute: timeoutWorkItem
             )
 
-            do {
-                try process.run()
-                process.waitUntilExit()
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    try process.run()
+                    process.waitUntilExit()
 
-                timeoutWorkItem.cancel()
-                group.wait() // Wait for IO to finish
+                    timeoutWorkItem.cancel()
+                    group.wait()
 
-                let stdout = String(data: stdoutDataBox.value, encoding: .utf8) ?? ""
-                let stderr = String(data: stderrDataBox.value, encoding: .utf8) ?? ""
+                    let stdout = String(data: stdoutDataBox.value, encoding: .utf8) ?? ""
+                    let stderr = String(data: stderrDataBox.value, encoding: .utf8) ?? ""
 
-                continuation.resume(returning: ShellResult(
-                    stdout: stdout,
-                    stderr: stderr,
-                    exitCode: process.terminationStatus
-                ))
-            } catch {
-                timeoutWorkItem.cancel()
-                continuation.resume(returning: ShellResult(
-                    stdout: "",
-                    stderr: error.localizedDescription,
-                    exitCode: -1
-                ))
+                    continuation.resume(returning: ShellResult(
+                        stdout: stdout,
+                        stderr: stderr,
+                        exitCode: process.terminationStatus
+                    ))
+                } catch {
+                    timeoutWorkItem.cancel()
+                    continuation.resume(returning: ShellResult(
+                        stdout: "",
+                        stderr: error.localizedDescription,
+                        exitCode: -1
+                    ))
+                }
             }
         }
     }
