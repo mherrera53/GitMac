@@ -1391,6 +1391,7 @@ class ThemeEditorWindowController {
 
         // Crear nueva ventana independiente
         let contentView = CustomThemeEditor()
+            .environment(ThemeManager.shared)
         let hostingController = NSHostingController(rootView: contentView)
 
         let window = NSWindow(
