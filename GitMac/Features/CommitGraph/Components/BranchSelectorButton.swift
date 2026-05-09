@@ -107,4 +107,6 @@ struct BranchSelectorButton: View {
 
 extension Notification.Name {
     static let showCreateBranchSheet = Notification.Name("showCreateBranchSheet")
+    static let showSyncWizard = Notification.Name("showSyncWizard")
+    static let showRepoStandards = Notification.Name("showRepoStandards")
 }

@@ -450,24 +450,7 @@ class BranchListViewModel: ObservableObject {
     // MARK: - Checkout Operations
 
     func checkout(_ branch: Branch) async {
-        // Check for uncommitted changes first
-        let changes = await checkUncommittedChanges()
-
-        if !changes.isEmpty {
-            pendingCheckoutBranch = branch
-            uncommittedFiles = changes
-            showUncommittedWarning = true
-
-            let fileList = changes.prefix(5).joined(separator: "\n")
-            let moreFiles = changes.count > 5 ? "\n... and \(changes.count - 5) more" : ""
-
-            NotificationManager.shared.warning(
-                "Uncommitted changes in \(changes.count) file(s)",
-                detail: "Files:\n\(fileList)\(moreFiles)\n\nStash changes to proceed with checkout?"
-            )
-        } else {
-            await performCheckout(branch)
-        }
+        await performCheckout(branch)
     }
 
     func forceCheckout() async {
@@ -493,10 +476,9 @@ class BranchListViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        // Delegate to branchManager if available
         if let manager = branchManager {
             do {
-                try await manager.checkoutBranch(branch)
+                try await manager.checkoutBranchWithAutoStash(branch)
                 syncFromManager(manager)
                 NotificationManager.shared.success("Switched to '\(branch.name)'", detail: nil)
             } catch let gitError as GitError {
@@ -507,24 +489,7 @@ class BranchListViewModel: ObservableObject {
                 NotificationManager.shared.error("Checkout failed", detail: error.localizedDescription)
             }
         } else {
-            // Fallback to direct engine call
-            guard let path = currentRepoPath else {
-                self.error = "No repository path available"
-                return
-            }
-            do {
-                try await engine.checkout(branch.name, at: path)
-                NotificationCenter.default.post(name: .branchDidCheckout, object: branch.name)
-                NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
-                NotificationManager.shared.success("Switched to '\(branch.name)'", detail: nil)
-                await BranchPRTracker.shared.refresh()
-            } catch let gitError as GitError {
-                self.error = gitError.localizedDescription
-                handleCheckoutError(gitError)
-            } catch {
-                self.error = error.localizedDescription
-                NotificationManager.shared.error("Checkout failed", detail: error.localizedDescription)
-            }
+            await performCheckoutWithAutoStash(branch.name)
         }
     }
 

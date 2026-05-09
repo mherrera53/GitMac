@@ -11,6 +11,8 @@ struct ContentView: View {
     @State private var showOpenPanel = false
     @State private var showNewBranchSheet = false
     @State private var showMergeSheet = false
+    @State private var showSyncWizard = false
+    @State private var showRepoStandards = false
     @State private var leftPanelWidth: CGFloat = 260
     @State private var rightPanelWidth: CGFloat = 380
     @State private var showRevertSheet = false
@@ -66,6 +68,14 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showMergeSheet) {
                 MergeBranchSheet(isPresented: $showMergeSheet)
+                    .environment(appState)
+            }
+            .sheet(isPresented: $showSyncWizard) {
+                SyncWizardSheet()
+                    .environment(appState)
+            }
+            .sheet(isPresented: $showRepoStandards) {
+                RepoStandardsSheet()
                     .environment(appState)
             }
             .overlay {
@@ -157,6 +167,8 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .openRepository)) { _ in showOpenPanel = true }
             .onReceive(NotificationCenter.default.publisher(for: .cloneRepository)) { _ in showCloneSheet = true }
             .onReceive(NotificationCenter.default.publisher(for: .newBranch)) { _ in showNewBranchSheet = true }
+            .onReceive(NotificationCenter.default.publisher(for: .showSyncWizard)) { _ in showSyncWizard = true }
+            .onReceive(NotificationCenter.default.publisher(for: .showRepoStandards)) { _ in showRepoStandards = true }
             .modifier(GitOperationListeners())
             .modifier(NavigationListeners(columnVisibility: $columnVisibility))
     }

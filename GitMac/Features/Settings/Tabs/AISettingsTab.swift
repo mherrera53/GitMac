@@ -17,7 +17,7 @@ struct AISettingsView: View {
     @State private var mlxLoadProgress: Double = 0
     @State private var mlxStatusMessage: String?
 
-    private let aiService = AIService()
+    private let aiService = AIService.shared
 
     var body: some View {
         ScrollView {
@@ -261,34 +261,20 @@ struct AISettingsView: View {
 
             SettingsSection(title: "System Prompts") {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
-                    PromptEditor(
-                        title: "Commit Message (Conventional Commits)",
-                        key: "ai.prompt.commit_message",
-                        placeholders: "{{diff}}, {{style}}, {{maxLength}}",
-                        defaultPrompt: """
-                        You are an expert at writing git commit messages following the Conventional Commits specification (conventionalcommits.org).
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                        Text("Commit Message")
+                            .font(DesignTokens.Typography.headline)
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text("Each provider can have its own optimized prompt template")
+                            .font(DesignTokens.Typography.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
 
-                        RULES:
-                        1. Format: <type>(<optional scope>): <description>
-                        2. Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
-                        3. Subject line: max {{maxLength}} chars, imperative mood, lowercase, no period
-                        4. If the diff has multiple logical changes, use the MOST IMPORTANT one for the subject
-                        5. Add a body (after blank line) ONLY if the change is complex -- explain WHY, not WHAT
-                        6. Breaking changes: add ! after type/scope, e.g. feat!: or feat(api)!:
-
-                        EXAMPLES:
-                        - feat(auth): add OAuth2 login flow
-                        - fix(parser): handle null values in JSON response
-                        - refactor: extract validation logic into separate module
-
-                        DIFF:
-                        {{diff}}
-
-                        STYLE: {{style}}
-
-                        Reply with ONLY the commit message (subject + optional body). No explanations, no markdown, no quotes.
-                        """
-                    )
+                        ProviderPromptTabs(
+                            action: "commit_message",
+                            placeholders: "{{diff}}, {{style}}, {{maxLength}}",
+                            configuredProviders: configuredProviders
+                        )
+                    }
 
                     Divider()
 
@@ -521,6 +507,57 @@ struct PromptEditor: View {
                 prompt = stored
             } else {
                 prompt = defaultPrompt
+            }
+        }
+    }
+}
+
+// MARK: - Provider Prompt Tabs
+
+struct ProviderPromptTabs: View {
+    let action: String
+    let placeholders: String
+    let configuredProviders: Set<AIService.AIProvider>
+
+    @State private var selectedTab: AIService.AIProvider = .anthropic
+
+    private var availableProviders: [AIService.AIProvider] {
+        let all = AIService.AIProvider.allCases
+        if configuredProviders.isEmpty { return all }
+        return all.filter { configuredProviders.contains($0) }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+            HStack(spacing: DesignTokens.Spacing.xs) {
+                ForEach(availableProviders) { provider in
+                    Button {
+                        selectedTab = provider
+                    } label: {
+                        Text(provider.displayName)
+                            .font(DesignTokens.Typography.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(selectedTab == provider ? AppTheme.accent : AppTheme.backgroundSecondary)
+                            .foregroundStyle(selectedTab == provider ? .white : AppTheme.textPrimary)
+                            .clipShape(.rect(cornerRadius: 6))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            PromptEditor(
+                title: "\(selectedTab.displayName) Template",
+                key: PromptTemplateManager.promptKeyForProvider(action, provider: selectedTab.rawValue),
+                placeholders: placeholders,
+                defaultPrompt: PromptTemplateManager.getDefaultPromptForProvider(action, provider: selectedTab.rawValue)
+            )
+            .id(selectedTab)
+        }
+        .onAppear {
+            if let current = UserDefaults.standard.string(forKey: "ai.preferredProvider"),
+               let provider = AIService.AIProvider(rawValue: current) {
+                selectedTab = provider
             }
         }
     }

@@ -10,8 +10,11 @@ struct CommitMessageArea: View {
     let canCommit: Bool
     var validationError: CommitValidationError? = nil
     var hasConflicts: Bool = false
+    var isOnMainBranch: Bool = false
+    var directCommitBlocked: Bool = false
     let onCommit: () -> Void
-    var onCommitPushPR: (() -> Void)? = nil  // Optional: Commit + Push + Create PR
+    var onCommitPushPR: (() -> Void)? = nil
+    var onSmartCommit: (() -> Void)? = nil
     let onGenerateAI: () -> Void
     var style: MessageAreaStyle = .default
 
@@ -109,28 +112,52 @@ struct CommitMessageArea: View {
 
                 Spacer()
 
-                // Two commit buttons
                 HStack(spacing: 8) {
-                    Button("Commit") {
-                        onCommit()
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(!canCommit)
-                    .keyboardShortcut(.return, modifiers: .command)
-
-                    if let onCommitPushPR = onCommitPushPR {
+                    if isOnMainBranch, let onSmartCommit {
                         Button {
-                            onCommitPushPR()
+                            onSmartCommit()
                         } label: {
                             HStack(spacing: 4) {
-                                Text("Commit & PR")
-                                Image(systemName: "arrow.up.circle.fill")
+                                Image(systemName: "arrow.triangle.branch")
                                     .font(.caption)
+                                Text("Smart Commit")
                             }
                         }
                         .buttonStyle(.borderedProminent)
+                        .tint(.blue)
                         .disabled(!canCommit || isAmending)
-                        .help("Commit, Push, and Create Pull Request")
+                        .help("Create branch from main, commit, push, and open PR")
+                        .keyboardShortcut(.return, modifiers: .command)
+
+                        if !directCommitBlocked {
+                            Button("Commit") {
+                                onCommit()
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(!canCommit)
+                        }
+                    } else {
+                        Button("Commit") {
+                            onCommit()
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(!canCommit)
+                        .keyboardShortcut(.return, modifiers: .command)
+
+                        if let onCommitPushPR = onCommitPushPR {
+                            Button {
+                                onCommitPushPR()
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text("Commit & PR")
+                                    Image(systemName: "arrow.up.circle.fill")
+                                        .font(.caption)
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(!canCommit || isAmending)
+                            .help("Commit, Push, and Create Pull Request")
+                        }
                     }
                 }
             }

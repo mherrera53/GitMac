@@ -83,6 +83,9 @@ struct GitMacApp: App {
         // Initialize auto-fetch background service
         _ = AutoFetchService.shared
 
+        // Initialize repo health service (gc, rerere, conflict prevention)
+        _ = RepoHealthService.shared
+
         // Register all integration plugins
         registerPlugins()
     }

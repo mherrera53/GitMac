@@ -24,6 +24,28 @@ struct BranchPanelView: View {
                 Spacer()
 
                 Button(action: {
+                    NotificationCenter.default.post(name: .showRepoStandards, object: nil)
+                }) {
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppTheme.accent)
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .buttonStyle(.plain)
+                .help("Repo Standards")
+
+                Button(action: {
+                    NotificationCenter.default.post(name: .showSyncWizard, object: nil)
+                }) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppTheme.accent)
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .buttonStyle(.plain)
+                .help("Sync Wizard")
+
+                Button(action: {
                     NotificationCenter.default.post(name: .showCreateBranchSheet, object: nil)
                 }) {
                     Image(systemName: "plus.app.fill")
@@ -106,22 +128,31 @@ struct BranchPanelView: View {
         branches.filter { $0.isRemote }
     }
 
-    private var filteredLocalBranches: [Branch] {
-        if searchText.isEmpty {
-            return localBranches.sorted { $0.isCurrent && !$1.isCurrent }
-        }
-        return localBranches.filter {
-            $0.name.localizedCaseInsensitiveContains(searchText)
+    private func sortBranches(_ list: [Branch]) -> [Branch] {
+        list.sorted { a, b in
+            let mainNames = ["main", "master", "develop"]
+            let aIsMain = mainNames.contains(a.name)
+            let bIsMain = mainNames.contains(b.name)
+            if aIsMain != bIsMain { return aIsMain }
+            if a.isCurrent != b.isCurrent { return a.isCurrent }
+            let aDate = a.createdDate ?? .distantPast
+            let bDate = b.createdDate ?? .distantPast
+            return aDate > bDate
         }
     }
 
-    private var filteredRemoteBranches: [Branch] {
-        if searchText.isEmpty {
-            return remoteBranches
-        }
-        return remoteBranches.filter {
+    private var filteredLocalBranches: [Branch] {
+        let base = searchText.isEmpty ? localBranches : localBranches.filter {
             $0.name.localizedCaseInsensitiveContains(searchText)
         }
+        return sortBranches(base)
+    }
+
+    private var filteredRemoteBranches: [Branch] {
+        let base = searchText.isEmpty ? remoteBranches : remoteBranches.filter {
+            $0.name.localizedCaseInsensitiveContains(searchText)
+        }
+        return sortBranches(base)
     }
 
     private func toggleSection(_ section: String) {

@@ -14,7 +14,8 @@ struct StagingAreaView: View {
     @State private var showConflictResolver = false
     @State private var conflictFileToResolve: FileStatus?
     @State private var viewMode: FileViewMode = .tree
-    // extensionFilter and searchText moved to viewModel
+    @State private var isSmartCommitting = false
+    @AppStorage("smartCommitEnabled") private var smartCommitEnabled = true
     @Namespace private var animation
 
     // Section heights for resize functionality
@@ -28,6 +29,13 @@ struct StagingAreaView: View {
 
     private var repoPath: String {
         appState.currentRepository?.path ?? ""
+    }
+
+    private var isOnMainBranch: Bool {
+        guard smartCommitEnabled else { return false }
+        let current = appState.currentRepository?.currentBranch?.name ?? ""
+        let main = WorkspaceSettingsManager.shared.getMainBranch(for: repoPath)
+        return current == main
     }
 
     var body: some View {
@@ -73,6 +81,10 @@ struct StagingAreaView: View {
                     canCommit: viewModel.canCommit(message: commitMessage, amend: isAmending),
                     validationError: viewModel.commitError,
                     hasConflicts: !viewModel.conflictedFiles.isEmpty,
+                    isOnMainBranch: isOnMainBranch,
+                    directCommitBlocked: BranchProtectionService.shared.directCommitsBlocked(
+                        appState.currentRepository?.currentBranch?.name ?? ""
+                    ),
                     onCommit: {
                         Task {
                             let success = await viewModel.commit(message: commitMessage, amend: isAmending)
@@ -85,6 +97,11 @@ struct StagingAreaView: View {
                     onCommitPushPR: {
                         Task {
                             await commitPushAndOpenPR()
+                        }
+                    },
+                    onSmartCommit: {
+                        Task {
+                            await smartCommitFlow()
                         }
                     },
                     onGenerateAI: { showAICommitSheet = true }
@@ -246,6 +263,119 @@ struct StagingAreaView: View {
                 "Push failed",
                 detail: error.localizedDescription
             )
+        }
+    }
+
+    // MARK: - Smart Commit Flow
+
+    private func smartCommitFlow() async {
+        guard !repoPath.isEmpty else { return }
+        isSmartCommitting = true
+        defer { isSmartCommitting = false }
+
+        var didStash = false
+        let mainBranch = WorkspaceSettingsManager.shared.getMainBranch(for: repoPath)
+
+        do {
+            // 1. Fetch origin first (fail early if no network)
+            NotificationManager.shared.info("Smart Commit", detail: "Fetching origin...")
+            let fetchResult = await ShellExecutor.shared.execute(
+                "git", arguments: ["fetch", "origin", "--quiet"],
+                workingDirectory: repoPath
+            )
+            if !fetchResult.isSuccess {
+                throw NSError(domain: "SmartCommit", code: 1, userInfo: [NSLocalizedDescriptionKey: "Fetch failed: \(fetchResult.stderr). Check your network connection."])
+            }
+
+            // 2. Generate branch name from diff
+            let diff = viewModel.currentDiff
+            var suggestedName: String
+            if await AIService.shared.isAvailable() {
+                let raw = try await AIService.shared.generateText(
+                    prompt: "Short branch name for this diff (feat/fix/chore prefix, kebab-case, max 40 chars, no explanation): \(diff.prefix(1000))"
+                )
+                let cleaned = AIService.cleanAIResponse(raw)
+                    .lowercased()
+                    .replacingOccurrences(of: " ", with: "-")
+                    .filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "/" }
+                suggestedName = String(cleaned.prefix(40))
+            } else {
+                suggestedName = ""
+            }
+            if suggestedName.isEmpty || suggestedName.count < 3 {
+                let timestamp = Int(Date().timeIntervalSince1970) % 100000
+                suggestedName = "feat/changes-\(timestamp)"
+            }
+
+            // 3. Stash only staged changes
+            NotificationManager.shared.info("Smart Commit", detail: "Stashing staged changes...")
+            let stashResult = await ShellExecutor.shared.execute(
+                "git", arguments: ["stash", "push", "--staged"],
+                workingDirectory: repoPath
+            )
+            let noChanges = stashResult.stdout.contains("No local changes") || stashResult.stderr.contains("No local changes")
+            didStash = stashResult.isSuccess && !noChanges
+
+            // 4. Create and checkout new branch from origin/main
+            NotificationManager.shared.info("Smart Commit", detail: "Creating branch '\(suggestedName)'...")
+            guard let branchManager = appState.branchManager else {
+                throw GitServiceError.noRepository
+            }
+            try await branchManager.createBranch(name: suggestedName, from: "origin/\(mainBranch)", checkout: true)
+
+            // 4. Pop stash (restores only the staged files)
+            if didStash {
+                let popResult = await ShellExecutor.shared.execute(
+                    "git", arguments: ["stash", "pop"],
+                    workingDirectory: repoPath
+                )
+                if !popResult.isSuccess {
+                    NotificationManager.shared.error("Smart Commit", detail: "Stash pop failed: \(popResult.stderr)")
+                    return
+                }
+            }
+
+            // 5. Stage restored files + Commit
+            _ = await ShellExecutor.shared.execute(
+                "git", arguments: ["add", "-A"],
+                workingDirectory: repoPath
+            )
+            let commitSuccess = await viewModel.commit(message: commitMessage, amend: false)
+            guard commitSuccess else {
+                NotificationManager.shared.error("Smart Commit", detail: "Commit failed")
+                return
+            }
+            commitMessage = ""
+            isAmending = false
+
+            // 6. Push with upstream
+            let engine = GitEngine()
+            let pushOptions = PushOptions(setUpstream: true, branch: suggestedName)
+            try await engine.push(options: pushOptions, at: repoPath)
+
+            // 7. Open PR sheet
+            let sha = try await engine.getHeadSHA(at: repoPath)
+            commitSHAForPR = String(sha.prefix(7))
+            showCreatePRSheet = true
+
+            NotificationManager.shared.success(
+                "Smart Commit complete",
+                detail: "Branch '\(suggestedName)' created and pushed"
+            )
+        } catch {
+            // Rollback: if we stashed but failed before popping, restore the stash
+            if didStash {
+                _ = await ShellExecutor.shared.execute(
+                    "git", arguments: ["stash", "pop"],
+                    workingDirectory: repoPath
+                )
+            }
+            // Try to go back to main if we switched branches
+            _ = await ShellExecutor.shared.execute(
+                "git", arguments: ["checkout", mainBranch],
+                workingDirectory: repoPath
+            )
+            NotificationManager.shared.error("Smart Commit failed", detail: error.localizedDescription)
         }
     }
 
@@ -1661,32 +1791,14 @@ struct AICommitMessageSheet: View {
         }
     }
 
-    private static let promptKey = "ai.prompt.commit_message"
-    private static let defaultPromptTemplate = """
-    You are an expert at writing git commit messages following the Conventional Commits specification (conventionalcommits.org).
+    private var activePromptKey: String {
+        PromptTemplateManager.resolvePromptKey(for: "commit_message")
+    }
 
-    RULES:
-    1. Format: <type>(<optional scope>): <description>
-    2. Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
-    3. Subject line: max {{maxLength}} chars, imperative mood, lowercase, no period
-    4. If the diff has multiple logical changes, use the MOST IMPORTANT one for the subject
-    5. Add a body (after blank line) ONLY if the change is complex -- explain WHY, not WHAT
-    6. Breaking changes: add ! after type/scope, e.g. feat!: or feat(api)!:
-
-    EXAMPLES:
-    - feat(auth): add OAuth2 login flow
-    - fix(parser): handle null values in JSON response
-    - refactor: extract validation logic into separate module
-    - perf(db): add index on users.email for faster lookups
-    - feat!: drop support for Node 14
-
-    DIFF:
-    {{diff}}
-
-    STYLE: {{style}}
-
-    Reply with ONLY the commit message (subject + optional body). No explanations, no markdown, no quotes.
-    """
+    private var activeDefaultPrompt: String {
+        let provider = UserDefaults.standard.string(forKey: "ai.preferredProvider") ?? "anthropic"
+        return PromptTemplateManager.getDefaultPromptForProvider("commit_message", provider: provider)
+    }
 
     var body: some View {
         VStack(spacing: DesignTokens.Spacing.lg) {
@@ -1717,10 +1829,10 @@ struct AICommitMessageSheet: View {
                         Text("Prompt Template")
                             .font(DesignTokens.Typography.headline)
                         Spacer()
-                        if customPrompt != Self.defaultPromptTemplate {
+                        if customPrompt != activeDefaultPrompt {
                             Button("Reset") {
-                                customPrompt = Self.defaultPromptTemplate
-                                UserDefaults.standard.removeObject(forKey: Self.promptKey)
+                                customPrompt = activeDefaultPrompt
+                                UserDefaults.standard.removeObject(forKey: activePromptKey)
                             }
                             .font(DesignTokens.Typography.caption)
                         }
@@ -1737,7 +1849,7 @@ struct AICommitMessageSheet: View {
                         .clipShape(.rect(cornerRadius: 6))
                         .overlay(RoundedRectangle(cornerRadius: 6).stroke(AppTheme.border, lineWidth: 1))
                         .onChange(of: customPrompt) { _, newValue in
-                            UserDefaults.standard.set(newValue, forKey: Self.promptKey)
+                            UserDefaults.standard.set(newValue, forKey: activePromptKey)
                         }
                 }
             }
@@ -1807,10 +1919,11 @@ struct AICommitMessageSheet: View {
         .padding()
         .frame(width: 560, height: showPromptEditor ? 550 : 350)
         .onAppear {
-            if let stored = UserDefaults.standard.string(forKey: Self.promptKey), !stored.isEmpty {
+            let key = activePromptKey
+            if let stored = UserDefaults.standard.string(forKey: key), !stored.isEmpty {
                 customPrompt = stored
             } else {
-                customPrompt = Self.defaultPromptTemplate
+                customPrompt = activeDefaultPrompt
             }
         }
     }
@@ -1821,8 +1934,9 @@ struct AICommitMessageSheet: View {
 
         do {
             let style = selectedStyle ?? .conventional
-            let stored = UserDefaults.standard.string(forKey: Self.promptKey)
-            if let stored, !stored.isEmpty, stored != Self.defaultPromptTemplate {
+            let key = activePromptKey
+            let stored = UserDefaults.standard.string(forKey: key)
+            if let stored, !stored.isEmpty, stored != activeDefaultPrompt {
                 let prompt = stored
                     .replacingOccurrences(of: "{{diff}}", with: String(diff.prefix(3000)))
                     .replacingOccurrences(of: "{{style}}", with: style.description)

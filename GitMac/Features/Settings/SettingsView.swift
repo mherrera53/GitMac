@@ -43,6 +43,13 @@ struct SettingsView: View {
                 .tag("git")
                 .accessibilityIdentifier("settings-tab-git")
 
+            WorkflowSettingsView()
+                .tabItem {
+                    Label("Workflows", systemImage: "bolt.circle")
+                }
+                .tag("workflows")
+                .accessibilityIdentifier("settings-tab-workflows")
+
             WorkspaceConfigView()
                 .tabItem {
                     Label("Workspace", systemImage: "folder.badge.gearshape")
