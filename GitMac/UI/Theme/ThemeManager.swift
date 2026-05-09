@@ -18,7 +18,9 @@ class ThemeManager {
     
     private init() {
         loadSavedTheme()
-        applyTheme()
+        DispatchQueue.main.async { [weak self] in
+            self?.applyTheme()
+        }
     }
     
     // MARK: - Theme Application
@@ -42,9 +44,8 @@ class ThemeManager {
             appearance = nil
         }
 
-        guard let app = NSApplication.shared as NSApplication? else { return }
-        app.appearance = appearance
-        for window in app.windows {
+        NSApplication.shared.appearance = appearance
+        for window in NSApplication.shared.windows {
             window.appearance = appearance
         }
     }
