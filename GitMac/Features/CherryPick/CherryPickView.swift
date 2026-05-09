@@ -2,9 +2,9 @@ import SwiftUI
 
 /// Cherry-pick commits from one branch to another
 struct CherryPickView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = CherryPickViewModel()
     @Environment(\.dismiss) private var dismiss
 
@@ -117,6 +117,13 @@ struct CherryPickView: View {
                         .font(DesignTokens.Typography.caption)
                         .foregroundStyle(AppTheme.error)
                         .lineLimit(1)
+
+                    if error.contains("Conflict") {
+                        Button("Open Conflict Resolver") {
+                            NotificationCenter.default.post(name: .resolveConflict, object: nil)
+                        }
+                        .buttonStyle(.bordered)
+                    }
                 }
 
                 Button("Cherry-Pick") {
@@ -275,7 +282,7 @@ struct CherryPickCommitRow: View {
 
 /// Quick cherry-pick from context menu
 struct QuickCherryPickSheet: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Environment(\.dismiss) private var dismiss
 
     let commit: Commit
@@ -327,6 +334,13 @@ struct QuickCherryPickSheet: View {
                 Text(error)
                     .font(DesignTokens.Typography.caption)
                     .foregroundStyle(AppTheme.error)
+
+                if error.contains("Conflict") {
+                    Button("Open Conflict Resolver") {
+                        NotificationCenter.default.post(name: .resolveConflict, object: nil)
+                    }
+                    .buttonStyle(.bordered)
+                }
             }
 
             HStack {
@@ -409,7 +423,7 @@ struct CherryPickWizard: View {
         return f
     }()
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Environment(\.dismiss) private var dismiss
 
     @State private var step = 1
@@ -538,7 +552,7 @@ struct CherryPickWizard: View {
 
 struct SourceBranchStep: View {
     @Binding var sourceBranch: Branch?
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     var onNext: () -> Void
 
     var body: some View {

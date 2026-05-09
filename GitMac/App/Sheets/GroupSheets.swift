@@ -10,7 +10,7 @@ import SwiftUI
 // MARK: - Group Management Sheet
 
 struct GroupManagementSheet: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Environment(\.dismiss) private var dismiss
     @StateObject private var groupsService = RepoGroupsService.shared
     @State private var editingGroup: RepoGroupsService.RepoGroup?

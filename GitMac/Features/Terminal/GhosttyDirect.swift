@@ -17,7 +17,7 @@ import AppKit
 
 /// Native Ghostty terminal view using GhosttyKit framework
 struct GhosttyDirectView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = GhosttyDirectViewModel()
     @State private var aiEnabled = true
     @State private var showAIChat = false

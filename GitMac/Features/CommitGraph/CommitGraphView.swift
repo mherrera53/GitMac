@@ -11,11 +11,11 @@ import SwiftUI
 
 // MARK: - Commit Graph View
 struct CommitGraphView: View {
-    @EnvironmentObject var appState: AppState
-    @StateObject private var vm = GraphViewModel()
+    @Environment(AppState.self) var appState
+    @State private var vm = GraphViewModel()
     @StateObject private var detailVM = CommitDetailViewModel()
     @StateObject private var tracker = RemoteOperationTracker.shared
-    @StateObject private var settings = GraphSettings()
+    @State private var settings = GraphSettings()
     @State private var selectedIds: Set<String> = []
     @State private var lastSelectedId: String?
     @State private var hoveredId: String?
@@ -23,13 +23,13 @@ struct CommitGraphView: View {
     @State private var showSettings = false
     @State private var themeRefreshTrigger = UUID()
     @State private var showBranchPanel = false
-    @State private var showMinimap = false
+    @AppStorage("graphShowMinimap") private var showMinimap = false
     @State private var showDetailPanel = false
     @State private var selectedFileDiff: FileDiff? = nil
     @State private var dismissedOperationIds: Set<UUID> = []
 
     // Minimap visible range tracking
-    @State private var visibleMinIndex: Int = 0
+    @State private var visibleMinIndex: Int = Int.max
     @State private var visibleMaxIndex: Int = 0
     @State private var scrollToIndex: Int? = nil
 
@@ -56,215 +56,120 @@ struct CommitGraphView: View {
         }
     }
 
-    private var selectedCommit: Commit? {
-        guard let lastId = lastSelectedId else { return nil }
-        return vm.timelineItems.compactMap { item -> Commit? in
-            if case .commit(let node) = item {
-                return node.commit
+    @State private var selectedCommit: Commit?
+
+    @ViewBuilder
+    private func detailPanelView(commit: Commit) -> some View {
+        CommitDetailPanel(
+            commit: commit,
+            onClose: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showDetailPanel = false
+                }
+            },
+            onOpenDiff: { (c: Commit) in
+                appState.selectedCommit = c
             }
-            return nil
-        }.first(where: { $0.sha == lastId })
+        )
+        .environment(appState)
+        .transition(.move(edge: .trailing))
+    }
+
+    private func selectBranchInGraph(_ branch: Branch) {
+        if let commit = vm.commitsBySHA[branch.targetSHA] {
+            selectedIds = [commit.sha]
+            lastSelectedId = commit.sha
+        }
+    }
+
+    private func updateSelectedCommit() {
+        guard let lastId = lastSelectedId else {
+            selectedCommit = nil
+            return
+        }
+        selectedCommit = vm.commitsBySHA[lastId]
     }
 
     var body: some View {
+        mainGraphLayout
+            .background(AppTheme.background)
+            .modifier(GraphDataModifiers(appState: appState, vm: vm, settings: settings, lastSelectedId: $lastSelectedId, selectedCommit: $selectedCommit))
+            .modifier(GraphSheetModifiers(appState: appState, showPRSheet: $showPRSheet, prHeadBranch: prHeadBranch, prBaseBranch: prBaseBranch, showStaleBranchCleanup: $showStaleBranchCleanup, showWorktreeSheet: $showWorktreeSheet, worktreeCommitSHA: worktreeCommitSHA))
+            .modifier(GraphNotificationModifiers(appState: appState, vm: vm, showStaleBranchCleanup: $showStaleBranchCleanup, worktreeCommitSHA: $worktreeCommitSHA, showWorktreeSheet: $showWorktreeSheet))
+            .onAppear {
+                zoomBaseLevel = settings.zoomLevel
+            }
+    }
+
+    @ViewBuilder
+    private var mainGraphLayout: some View {
         VStack(spacing: 0) {
-            // Remote operation status bar (if exists and not dismissed)
             if let operation = lastOperationForCurrentBranch, !isDismissedOperation(operation) {
                 remoteStatusBar(operation: operation)
             }
 
-            // Search and filter toolbar
             graphToolbar
                 .id(themeRefreshTrigger)
 
-            // Main content with optional panels
             HStack(spacing: 0) {
-                // Branch Panel (left sidebar)
                 if showBranchPanel {
                     BranchPanelView(
                         branches: $vm.branches,
                         currentBranch: appState.currentRepository?.currentBranch,
-                        onSelectBranch: { branch in
-                            // Select branch in graph
-                            if let commit = vm.timelineItems.compactMap({ item -> Commit? in
-                                if case .commit(let node) = item {
-                                    return node.commit
-                                }
-                                return nil
-                            }).first(where: { $0.sha == branch.targetSHA }) {
-                                selectedIds = [commit.sha]
-                                lastSelectedId = commit.sha
-                            }
-                        },
-                        onCheckout: { branch in
-                            Task {
-                                await checkoutBranch(branch)
-                            }
-                        }
+                        onSelectBranch: { branch in selectBranchInGraph(branch) },
+                        onCheckout: { branch in Task { await checkoutBranch(branch) } }
                     )
                     .transition(.move(edge: .leading))
-
                     Divider()
                 }
 
-                // Main graph area with responsive width detection
                 GeometryReader { geometry in
                     VStack(spacing: 0) {
                         graphHeader
                         graphContent
                     }
-                    .onAppear {
-                        settings.availableWidth = geometry.size.width
-                    }
-                    .onChange(of: geometry.size.width) { _, newWidth in
-                        settings.availableWidth = newWidth
-                    }
+                    .onAppear { settings.availableWidth = geometry.size.width }
+                    .onChange(of: geometry.size.width) { _, newWidth in settings.availableWidth = newWidth }
                 }
 
-                // Minimap (right sidebar)
                 if showMinimap {
                     Divider()
-
-                    GraphMinimapView(
-                        minimapNodes: vm.minimapNodes,
-                        loadedCount: vm.timelineItems.count,
-                        visibleRange: visibleMinIndex...max(visibleMaxIndex, visibleMinIndex),
-                        onSeek: { index in
-                            // If clicking beyond loaded data, load more first
-                            if index >= vm.timelineItems.count {
-                                Task {
-                                    await vm.loadUpTo(index: index)
-                                    // After loading, scroll to target
-                                    if index < vm.timelineItems.count {
-                                        scrollToIndex = index
-                                    }
-                                }
-                            } else {
-                                scrollToIndex = index
-                                if case .commit(let node) = vm.timelineItems[index] {
-                                    selectedIds = [node.commit.sha]
-                                    lastSelectedId = node.commit.sha
-                                }
-                            }
-                        }
-                    )
-                    .transition(.move(edge: .trailing))
+                    minimapPanel
                 }
 
-                // Detail Panel (right sidebar)
                 if showDetailPanel, let commit = selectedCommit {
                     Divider()
-
-                    CommitDetailPanel(
-                        commit: commit,
-                        onClose: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                showDetailPanel = false
-                            }
-                        },
-                        onOpenDiff: { selectedCommit in
-                            // Set appState.selectedCommit to open diff in the right panel
-                            appState.selectedCommit = selectedCommit
-                        }
-                    )
-                    .environmentObject(appState)
-                    .transition(.move(edge: .trailing))
+                    detailPanelView(commit: commit)
                 }
             }
         }
-        .background(AppTheme.background)
-        .task {
-            if let p = appState.currentRepository?.path {
-                settings.setRepository(p)
-                await vm.load(at: p)
-            }
-        }
-        .onChange(of: appState.currentRepository?.path) { _, p in
-            if let p {
-                settings.setRepository(p)
-                Task { await vm.load(at: p) }
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { notification in
-            if let path = notification.object as? String,
-               path == appState.currentRepository?.path {
-                // Use silent refresh to avoid graph flickering
-                Task { await vm.refreshStatus() }
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .remoteOperationCompleted)) { _ in
-            // Full reload when remote operation completes (push/pull/fetch)
-            if let path = appState.currentRepository?.path {
-                Task { await vm.load(at: path) }
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .gitHubOperationCompleted)) { _ in
-            // Full reload when any GitHub operation completes
-            if let path = appState.currentRepository?.path {
-                Task { await vm.load(at: path) }
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .branchDidCheckout)) { _ in
-            // Full reload when branch changes
-            if let path = appState.currentRepository?.path {
-                Task { await vm.load(at: path) }
-            }
-        }
-        .onChange(of: vm.maxLane) { _, newMaxLane in
-            settings.maxLane = newMaxLane
-        }
-        .sheet(isPresented: $showPRSheet) {
-            if !prHeadBranch.isEmpty && !prBaseBranch.isEmpty {
-                // Find or create the head branch object
-                let headBranchObj = appState.currentRepository?.branches.first { $0.name == prHeadBranch }
-                    ?? Branch(name: prHeadBranch, fullName: "refs/heads/\(prHeadBranch)", isRemote: false, targetSHA: "")
+    }
 
-                CreatePullRequestSheet(
-                    branch: headBranchObj,
-                    defaultBaseBranch: prBaseBranch
-                )
-                .environmentObject(appState)
-            }
-        }
-        .sheet(isPresented: $showStaleBranchCleanup) {
-            StaleBranchCleanupView()
-                .environmentObject(appState)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .compareCommit)) { notification in
-            if let commits = notification.object as? [Commit], commits.count == 2 {
-                // Multi-select: compare two commits directly
-                appState.comparisonCommitA = commits[0]
-                appState.comparisonCommitB = commits[1]
-                appState.selectedCommit = nil
-            } else if let commit = notification.object as? Commit {
-                // Single-select: set as first commit to compare
-                if appState.comparisonCommitA == nil {
-                    appState.comparisonCommitA = commit
-                    NotificationManager.shared.info(
-                        "Select second commit",
-                        detail: "Right-click another commit and choose 'Compare with...' to complete the comparison"
-                    )
-                } else {
-                    appState.comparisonCommitB = commit
-                    appState.selectedCommit = nil
+    @ViewBuilder
+    private var minimapPanel: some View {
+        GraphMinimapView(
+            minimapNodes: vm.minimapNodes,
+            loadedCount: vm.timelineItems.count,
+            visibleRange: visibleMinIndex...max(visibleMaxIndex, visibleMinIndex),
+            onSeek: { index in handleMinimapSeek(index) }
+        )
+        .transition(.move(edge: .trailing))
+    }
+
+    private func handleMinimapSeek(_ index: Int) {
+        if index >= vm.timelineItems.count {
+            Task {
+                await vm.loadUpTo(index: index)
+                if index < vm.timelineItems.count {
+                    scrollToIndex = index
                 }
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .showStaleBranchCleanup)) { _ in
-            showStaleBranchCleanup = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .createWorktreeFromCommit)) { notification in
-            if let sha = notification.object as? String {
-                worktreeCommitSHA = sha
-                showWorktreeSheet = true
+        } else {
+            scrollToIndex = index
+            if case .commit(let node) = vm.timelineItems[index] {
+                selectedIds = [node.commit.sha]
+                lastSelectedId = node.commit.sha
             }
-        }
-        .sheet(isPresented: $showWorktreeSheet) {
-            CreateWorktreeFromCommitSheet(commitSHA: worktreeCommitSHA)
-                .environmentObject(appState)
-        }
-        .onAppear {
-            zoomBaseLevel = settings.zoomLevel
         }
     }
 
@@ -724,8 +629,7 @@ struct CommitGraphView: View {
                             .frame(minHeight: settings.rowHeight)
                             .id(item.id)
                             .onAppear {
-                                // Track visible range for minimap
-                                if index < visibleMinIndex || visibleMinIndex == 0 {
+                                if index < visibleMinIndex {
                                     visibleMinIndex = index
                                 }
                                 if index > visibleMaxIndex {
@@ -1018,6 +922,148 @@ struct ColumnResizer: View {
             return AppTheme.border.opacity(0.8)
         } else {
             return Color.clear
+        }
+    }
+}
+
+// MARK: - Modifier Groups (extracted for type-checker performance)
+
+private struct GraphDataModifiers: ViewModifier {
+    var appState: AppState
+    var vm: GraphViewModel
+    var settings: GraphSettings
+    @Binding var lastSelectedId: String?
+    @Binding var selectedCommit: Commit?
+
+    func body(content: Content) -> some View {
+        content
+            .task {
+                if let p = appState.currentRepository?.path {
+                    settings.setRepository(p)
+                    await vm.load(at: p)
+                }
+            }
+            .onChange(of: appState.currentRepository?.path) { _, p in
+                if let p {
+                    settings.setRepository(p)
+                    Task { await vm.load(at: p) }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { notification in
+                if let path = notification.object as? String,
+                   path == appState.currentRepository?.path {
+                    Task { await vm.refreshStatus() }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .remoteOperationCompleted)) { _ in
+                if let path = appState.currentRepository?.path {
+                    Task { await vm.load(at: path) }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .gitHubOperationCompleted)) { _ in
+                if let path = appState.currentRepository?.path {
+                    Task { await vm.load(at: path) }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .branchDidCheckout)) { _ in
+                if let path = appState.currentRepository?.path {
+                    Task { await vm.load(at: path) }
+                }
+            }
+            .onChange(of: lastSelectedId) { _, _ in
+                updateSelectedCommit()
+            }
+            .onChange(of: vm.timelineItems.count) { _, _ in
+                updateSelectedCommit()
+            }
+            .onChange(of: vm.maxLane) { _, newMaxLane in
+                settings.maxLane = newMaxLane
+            }
+    }
+
+    private func updateSelectedCommit() {
+        guard let lastId = lastSelectedId else {
+            selectedCommit = nil
+            return
+        }
+        selectedCommit = vm.commitsBySHA[lastId]
+    }
+}
+
+private struct GraphSheetModifiers: ViewModifier {
+    var appState: AppState
+    @Binding var showPRSheet: Bool
+    var prHeadBranch: String
+    var prBaseBranch: String
+    @Binding var showStaleBranchCleanup: Bool
+    @Binding var showWorktreeSheet: Bool
+    var worktreeCommitSHA: String
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $showPRSheet) {
+                prSheetContent
+            }
+            .sheet(isPresented: $showStaleBranchCleanup) {
+                StaleBranchCleanupView()
+                    .environment(appState)
+            }
+            .sheet(isPresented: $showWorktreeSheet) {
+                CreateWorktreeFromCommitSheet(commitSHA: worktreeCommitSHA)
+                    .environment(appState)
+            }
+    }
+
+    @ViewBuilder
+    private var prSheetContent: some View {
+        if !prHeadBranch.isEmpty && !prBaseBranch.isEmpty {
+            let fallback = Branch(name: prHeadBranch, fullName: "refs/heads/\(prHeadBranch)", isRemote: false, targetSHA: "")
+            let headBranchObj: Branch = appState.currentRepository?.branches.first { $0.name == prHeadBranch } ?? fallback
+            CreatePullRequestSheet(branch: headBranchObj, defaultBaseBranch: prBaseBranch)
+                .environment(appState)
+        }
+    }
+}
+
+private struct GraphNotificationModifiers: ViewModifier {
+    var appState: AppState
+    var vm: GraphViewModel
+    @Binding var showStaleBranchCleanup: Bool
+    @Binding var worktreeCommitSHA: String
+    @Binding var showWorktreeSheet: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: .compareCommit)) { notification in
+                handleCompareCommit(notification)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .showStaleBranchCleanup)) { _ in
+                showStaleBranchCleanup = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .createWorktreeFromCommit)) { notification in
+                if let sha = notification.object as? String {
+                    worktreeCommitSHA = sha
+                    showWorktreeSheet = true
+                }
+            }
+    }
+
+    private func handleCompareCommit(_ notification: Notification) {
+        if let commits = notification.object as? [Commit], commits.count == 2 {
+            appState.comparisonCommitA = commits[0]
+            appState.comparisonCommitB = commits[1]
+            appState.selectedCommit = nil
+        } else if let commit = notification.object as? Commit {
+            if appState.comparisonCommitA == nil {
+                appState.comparisonCommitA = commit
+                NotificationManager.shared.info(
+                    "Select second commit",
+                    detail: "Right-click another commit and choose 'Compare with...' to complete the comparison"
+                )
+            } else {
+                appState.comparisonCommitB = commit
+                appState.selectedCommit = nil
+            }
         }
     }
 }

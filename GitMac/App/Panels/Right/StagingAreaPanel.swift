@@ -7,8 +7,8 @@ struct StagingAreaPanel: View {
     @Binding var isLoadingDiff: Bool
     @Binding var commitMessage: String
     @Binding var selectedStagingFile: StagingFile?
-    @EnvironmentObject var appState: AppState
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(AppState.self) var appState
+    @Environment(ThemeManager.self) private var themeManager
     @State private var viewMode: StagingViewMode = .tree
     @State private var extensionFilter: String? = nil
     @State private var showCreatePRSheet = false
@@ -196,7 +196,7 @@ struct StagingAreaPanel: View {
                     repoPath: repoPath,
                     onDismiss: { showCreatePRSheet = false }
                 )
-                .environmentObject(appState)
+                .environment(appState)
             }
         }
     }

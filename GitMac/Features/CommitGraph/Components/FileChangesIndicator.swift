@@ -7,7 +7,7 @@ struct FileChangesIndicator: View {
     let filesChanged: Int
     let compact: Bool
 
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     init(additions: Int, deletions: Int, filesChanged: Int, compact: Bool = false) {
         self.additions = additions

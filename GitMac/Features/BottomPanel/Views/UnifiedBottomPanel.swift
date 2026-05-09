@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct UnifiedBottomPanel: View {
-    @ObservedObject var panelManager: BottomPanelManager
-    @EnvironmentObject var appState: AppState
+    @Bindable var panelManager: BottomPanelManager
+    @Environment(AppState.self) var appState
 
     var body: some View {
         VStack(spacing: 0) {
@@ -42,7 +42,7 @@ struct UnifiedBottomPanel: View {
             if panelManager.isPanelVisible {
                 if let activeTab = panelManager.openTabs.first(where: { $0.id == panelManager.activeTabId }) {
                     BottomPanelContent(tab: activeTab)
-                        .environmentObject(appState)
+                        .environment(appState)
                         .id(activeTab.id) // Force re-render when switching tabs
                 } else {
                     EmptyPanelView()

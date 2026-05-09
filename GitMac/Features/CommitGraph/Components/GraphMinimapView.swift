@@ -6,7 +6,7 @@ struct GraphMinimapView: View {
     let visibleRange: ClosedRange<Int>
     let onSeek: (Int) -> Void
 
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @State private var isDragging = false
 
     private let minimapWidth: CGFloat = 50

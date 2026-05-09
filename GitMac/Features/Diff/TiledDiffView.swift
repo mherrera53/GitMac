@@ -76,7 +76,7 @@ struct TiledDiffView: NSViewRepresentable {
 
 /// NSView that draws diff lines directly with CoreText
 class TiledDiffContentView: NSView {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var fileDiff: FileDiff? {
         didSet {

@@ -2,9 +2,9 @@ import SwiftUI
 
 /// Stash list and management view
 struct StashListView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = StashListViewModel()
     @State private var selectedStash: Stash?
     @State private var showStashSheet = false
@@ -331,7 +331,7 @@ class StashListViewModel: ObservableObject {
 // MARK: - Subviews
 
 struct StashRow: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let stash: Stash
     let isSelected: Bool
     let files: [StashFile]
@@ -528,7 +528,7 @@ struct StashRow: View {
 }
 
 struct StashFileRow: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let file: StashFile
 
     var directory: String {
@@ -575,7 +575,7 @@ struct StashFileRow: View {
 // MARK: - Stash File Tree
 
 struct StashFileTreeView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let files: [StashFile]
     var onApplyFile: (StashFile) -> Void = { _ in }
 
@@ -650,7 +650,7 @@ class StashTreeNode: Identifiable, ObservableObject {
 }
 
 struct StashTreeNodeView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @ObservedObject var node: StashTreeNode
     var onApplyFile: (StashFile) -> Void = { _ in }
     @State private var isExpanded = true
@@ -784,7 +784,7 @@ struct StashTreeNodeView: View {
 }
 
 struct StashDetailView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let stash: Stash
     @ObservedObject var viewModel: StashListViewModel
     @State private var diff = ""
@@ -939,7 +939,7 @@ struct StashDetailView: View {
 }
 
 struct EmptyStashView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     var body: some View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "archivebox")
@@ -962,7 +962,7 @@ struct EmptyStashView: View {
 }
 
 struct CreateStashSheet: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @ObservedObject var viewModel: StashListViewModel
     @Environment(\.dismiss) private var dismiss
 

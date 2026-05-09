@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AISettingsView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @StateObject private var ollamaManager = OllamaProcessManager.shared
     @State private var selectedProvider: AIService.AIProvider = .anthropic
     @State private var selectedModel = "claude-3-haiku-20240307"
@@ -12,6 +12,10 @@ struct AISettingsView: View {
     @State private var ollamaURL: String = AIService.ollamaBaseURL
     @State private var ollamaTestResult: (success: Bool, message: String)?
     @State private var isTestingConnection = false
+    @State private var ollamaModels: [AIService.AIModel] = []
+    @State private var mlxModelLoading = false
+    @State private var mlxLoadProgress: Double = 0
+    @State private var mlxStatusMessage: String?
 
     private let aiService = AIService()
 
@@ -36,8 +40,49 @@ struct AISettingsView: View {
                             }
                         }
 
+                        // MLX runs natively on Apple Silicon - no API key needed
+                        if provider == .mlx {
+                            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                                HStack {
+                                    if MLXProvider.isAvailable {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(AppTheme.success)
+                                            .font(.system(size: 8))
+                                        Text("Apple Silicon detected -- MLX ready")
+                                            .font(DesignTokens.Typography.caption)
+                                            .foregroundStyle(AppTheme.success)
+                                    } else {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundStyle(AppTheme.error)
+                                            .font(.system(size: 8))
+                                        Text("MLX requires Apple Silicon (M1 or later)")
+                                            .font(DesignTokens.Typography.caption)
+                                            .foregroundStyle(AppTheme.error)
+                                    }
+                                }
+
+                                if mlxModelLoading {
+                                    HStack {
+                                        ProgressView()
+                                            .controlSize(.small)
+                                        Text("Downloading model... \(Int(mlxLoadProgress * 100))%")
+                                            .font(DesignTokens.Typography.caption)
+                                            .foregroundStyle(AppTheme.textSecondary)
+                                    }
+                                }
+
+                                if let status = mlxStatusMessage {
+                                    Text(status)
+                                        .font(DesignTokens.Typography.caption)
+                                        .foregroundStyle(AppTheme.textSecondary)
+                                }
+
+                                Text("Models run directly on GPU. First use downloads the model (~300MB-2GB).")
+                                    .font(DesignTokens.Typography.caption)
+                                    .foregroundStyle(AppTheme.textSecondary)
+                            }
                         // Ollama doesn't need API key - just check if running
-                        if provider == .ollama {
+                        } else if provider == .ollama {
                             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                                 // URL Configuration
                                 HStack {
@@ -125,10 +170,19 @@ struct AISettingsView: View {
                         .foregroundStyle(AppTheme.textSecondary)
                 } else {
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
-                        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
+                        HStack {
                             Text("Provider")
                                 .font(DesignTokens.Typography.callout)
                                 .foregroundStyle(AppTheme.textSecondary)
+
+                            Spacer()
+
+                            DSButton("Refresh Providers", variant: .ghost, size: .sm) {
+                                await loadConfiguredProviders()
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
 
                             DSPicker(
                                 items: Array(configuredProviders),
@@ -147,10 +201,10 @@ struct AISettingsView: View {
                                 .foregroundStyle(AppTheme.textSecondary)
 
                             DSPicker(
-                                items: selectedProvider.models,
+                                items: activeModelsForSelectedProvider,
                                 selection: Binding(
                                     get: {
-                                        selectedProvider.models.first { $0.id == selectedModel }
+                                        activeModelsForSelectedProvider.first { $0.id == selectedModel }
                                     },
                                     set: { model in
                                         if let model = model {
@@ -279,9 +333,33 @@ struct AISettingsView: View {
         }
     }
 
+    /// Returns the real installed models for Ollama, or the static list for other providers
+    private var activeModelsForSelectedProvider: [AIService.AIModel] {
+        if selectedProvider == .ollama && !ollamaModels.isEmpty {
+            return ollamaModels
+        }
+        return selectedProvider.models
+    }
+
     private func loadConfiguredProviders() async {
         let providers = await aiService.getConfiguredProviders()
         configuredProviders = Set(providers)
+
+        // Fetch real Ollama models if Ollama is configured/running
+        if configuredProviders.contains(.ollama) {
+            let models = await aiService.fetchOllamaModels()
+            ollamaModels = models
+        }
+
+        // Update MLX status if model is loaded
+        if configuredProviders.contains(.mlx) {
+            let modelName = await MLXProvider.shared.currentModelName
+            let loaded = await MLXProvider.shared.isModelLoaded
+            if loaded, let name = modelName {
+                let shortName = name.components(separatedBy: "/").last ?? name
+                mlxStatusMessage = "Model loaded: \(shortName)"
+            }
+        }
 
         // Load saved default provider and model
         let savedProvider = await aiService.getCurrentProvider()
@@ -301,6 +379,7 @@ struct AISettingsView: View {
         case .openai: return "sparkles"
         case .anthropic: return "brain.head.profile"
         case .gemini: return "diamond"
+        case .mlx: return "apple.logo"
         case .ollama: return "cpu"
         }
     }
@@ -310,6 +389,7 @@ struct AISettingsView: View {
         case .openai: return .green
         case .anthropic: return .orange
         case .gemini: return .blue
+        case .mlx: return .pink
         case .ollama: return .purple
         }
     }
@@ -318,7 +398,7 @@ struct AISettingsView: View {
 // MARK: - Feature Row
 
 struct FeatureRow: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let icon: String
     let title: String
     let description: String

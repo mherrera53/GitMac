@@ -11,7 +11,7 @@ import Foundation
 
 // MARK: - Git Hooks Sidebar Section
 struct GitHooksSidebarSection: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = GitHooksViewModel()
     @State private var showHooksView = false
 
@@ -53,7 +53,7 @@ struct GitHooksSidebarSection: View {
         }
         .sheet(isPresented: $showHooksView) {
             GitHooksView()
-                .environmentObject(appState)
+                .environment(appState)
                 .frame(minWidth: DesignTokens.Layout.HooksPanel.minWidth, minHeight: DesignTokens.Layout.HooksPanel.minHeight)
         }
     }

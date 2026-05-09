@@ -140,7 +140,7 @@ struct UnifiedFileContextMenu: View {
             
         case .conflicted:
             Button {
-                // Open merge tool or conflict resolution
+                NotificationCenter.default.post(name: .resolveConflict, object: filePath)
             } label: {
                 Label("Resolve Conflict...", systemImage: "wand.and.stars")
             }

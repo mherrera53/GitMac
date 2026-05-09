@@ -7,7 +7,7 @@ struct StashDetailPanel: View {
     @ObservedObject var viewModel: StashDetailViewModel
     @Binding var selectedFileDiff: FileDiff?
     let onClose: () -> Void
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
 
     private var stashColor: Color { AppTheme.info }
 

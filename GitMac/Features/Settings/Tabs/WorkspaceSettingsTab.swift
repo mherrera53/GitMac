@@ -3,9 +3,9 @@ import SwiftUI
 // MARK: - Workspace Settings Tab
 
 struct WorkspaceConfigView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @StateObject private var workspaceManager = WorkspaceSettingsManager.shared
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
 
     // MARK: - State
     @State private var config = WorkspaceConfig()

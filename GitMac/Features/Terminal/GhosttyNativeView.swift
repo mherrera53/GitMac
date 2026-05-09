@@ -35,7 +35,7 @@ struct ghostty_config_options_t {
 
 /// Native Ghostty terminal integration
 struct GhosttyNativeView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = GhosttyViewModel()
 
     var body: some View {

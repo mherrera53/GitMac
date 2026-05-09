@@ -11,7 +11,7 @@ import Foundation
 
 // MARK: - Submodule Sidebar Section
 struct SubmoduleSidebarSection: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = SubmoduleViewViewModel()
     @State private var showSubmoduleView = false
 
@@ -74,7 +74,7 @@ struct SubmoduleSidebarSection: View {
         }
         .sheet(isPresented: $showSubmoduleView) {
             SubmoduleView()
-                .environmentObject(appState)
+                .environment(appState)
                 .frame(minWidth: DesignTokens.Layout.SubmodulePanel.minWidth, minHeight: DesignTokens.Layout.SubmodulePanel.minHeight)
         }
     }

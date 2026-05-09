@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - AWS Connected View
 
 struct AWSConnectedView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let region: String
     let projects: [String]
     let selectedRepoPath: String?
@@ -108,7 +108,7 @@ struct AWSConnectedView: View {
 // MARK: - AWS Login View
 
 struct AWSLoginView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @Binding var accessKeyId: String
     @Binding var secretAccessKey: String
     @Binding var sessionToken: String

@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Linear Connected View
 
 struct LinearConnectedView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let teams: [LinearTeam]
     let onDisconnect: () -> Void
 

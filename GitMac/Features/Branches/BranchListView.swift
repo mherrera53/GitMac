@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Branch list view with tree structure and context menus
 struct BranchListView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = BranchListViewModel()
     @StateObject private var prTracker = BranchPRTracker.shared
     @State private var searchText = ""
@@ -37,19 +37,19 @@ struct BranchListView: View {
         .sheet(isPresented: $showMergeSheet) {
             if let branch = selectedBranch {
                 MergeSheet(sourceBranch: branch, viewModel: viewModel)
-                    .environmentObject(appState)
+                    .environment(appState)
             }
         }
         .sheet(isPresented: $showRebaseSheet) {
             if let branch = selectedBranch {
                 RebaseSheet(ontoBranch: branch, viewModel: viewModel)
-                    .environmentObject(appState)
+                    .environment(appState)
             }
         }
         .sheet(isPresented: $showPRSheet) {
             if let branch = selectedBranch {
                 CreatePullRequestSheet(branch: branch, repoPath: viewModel.currentRepoPath)
-                    .environmentObject(appState)
+                    .environment(appState)
             }
         }
         .alert("Delete Branch", isPresented: $showDeleteAlert) {
@@ -113,7 +113,7 @@ struct BranchListView: View {
                     defaultBaseBranch: baseBranch.name,
                     repoPath: viewModel.currentRepoPath
                 )
-                .environmentObject(appState)
+                .environment(appState)
             }
         }
         .task {
@@ -898,7 +898,7 @@ struct RemoteBranchRow: View {
 
 struct NewBranchSheet: View {
     @ObservedObject var viewModel: BranchListViewModel
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Environment(\.dismiss) private var dismiss
 
     @State private var branchName = ""
@@ -1048,7 +1048,7 @@ struct NewBranchSheet: View {
 struct MergeSheet: View {
     let sourceBranch: Branch
     @ObservedObject var viewModel: BranchListViewModel
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Environment(\.dismiss) private var dismiss
 
     @State private var noFastForward = false
@@ -1097,7 +1097,7 @@ struct MergeSheet: View {
 struct RebaseSheet: View {
     let ontoBranch: Branch
     @ObservedObject var viewModel: BranchListViewModel
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -1157,7 +1157,7 @@ struct CreatePullRequestSheet: View {
     let branch: Branch
     var defaultBaseBranch: String? = nil  // Optional pre-set base branch (for drag-drop)
     var repoPath: String? = nil  // Optional: pass repo path directly from active tab
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Environment(\.dismiss) private var dismiss
 
     @State private var title = ""

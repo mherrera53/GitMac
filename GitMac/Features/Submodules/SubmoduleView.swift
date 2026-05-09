@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SubmoduleView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = SubmoduleViewViewModel()
     @StateObject private var modalCoordinator = ModalCoordinator<SubmoduleModal>()
     @State private var selectedSubmodule: GitSubmodule?

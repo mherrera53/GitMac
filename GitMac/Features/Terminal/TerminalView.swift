@@ -16,9 +16,9 @@ struct TerminalTab: Identifiable, Equatable {
 // MARK: - Multi-Tab Terminal View
 
 struct TerminalView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var tabManager = TerminalTabManager()
     @State private var aiEnabled = true
 
@@ -1389,7 +1389,7 @@ struct TerminalAIChatBubble: View {
 /// Native Ghostty terminal view with Warp-like AI overlay
 /// Note: Main GhosttyNativeView is in GhosttyNativeView.swift
 struct TerminalGhosttyView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = GhosttyViewModel()
     @StateObject private var enhancedViewModel = GhosttyEnhancedViewModel()
     @State private var aiEnabled = true

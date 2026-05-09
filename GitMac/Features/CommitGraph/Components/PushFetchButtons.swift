@@ -9,7 +9,7 @@ struct PushFetchButtons: View {
     let onFetch: () -> Void
     var repoPath: String? = nil
 
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @StateObject private var cicdStatus = CICDBadgeViewModel()
 
     var body: some View {

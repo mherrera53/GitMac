@@ -13,7 +13,6 @@ struct BranchRow: View {
     var showUpstream: Bool = true
     var showAheadBehind: Bool = true
     var showCurrentIndicator: Bool = true
-    var contextMenu: (() -> AnyView)? = nil
     var onSelect: (() -> Void)? = nil
 
     // Branch actions
@@ -46,11 +45,10 @@ struct BranchRow: View {
             isSelected: isSelected,
             style: style,
             actions: buildActions(),
-            contextMenu: { AnyView(branchContextMenu) },
-            onSelect: onSelect
-        ) {
-            branchContent
-        }
+            onSelect: onSelect,
+            content: { branchContent },
+            contextMenu: { branchContextMenu }
+        )
         .simultaneousGesture(
             TapGesture(count: 2).onEnded {
                 // Double-click to checkout (if not already current)

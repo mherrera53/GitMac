@@ -9,7 +9,7 @@ struct CommitComparisonPanel: View {
     @Binding var selectedFileDiff: FileDiff?
     let onClose: () -> Void
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = CommitComparisonViewModel()
 
     /// Ensures older commit is "from" and newer is "to"

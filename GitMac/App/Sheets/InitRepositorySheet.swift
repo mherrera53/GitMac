@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct InitRepositorySheet: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Environment(\.dismiss) private var dismiss
 
     @State private var localPath: String = NSHomeDirectory() + "/Documents"

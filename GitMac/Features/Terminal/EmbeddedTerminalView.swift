@@ -8,9 +8,9 @@ import SwiftTerm
 
 /// A real terminal emulator embedded in GitMac using SwiftTerm
 struct EmbeddedTerminalView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @State private var showAIChat = false
     @State private var terminalKey = UUID() // For forcing refresh
 

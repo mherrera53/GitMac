@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Jira Connected View
 
 struct JiraConnectedView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let projects: [JiraProject]
     let onDisconnect: () -> Void
 

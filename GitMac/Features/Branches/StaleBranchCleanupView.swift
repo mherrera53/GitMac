@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Stale Branch Cleanup View
 
 struct StaleBranchCleanupView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = StaleBranchCleanupViewModel()
     @State private var selectedBranches: Set<String> = []
     @State private var showDeleteConfirmation = false

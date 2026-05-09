@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct CreateBranchSheet: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Binding var isPresented: Bool
 
     @State private var branchName = ""

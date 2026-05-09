@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct GeneralSettingsView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @AppStorage("showInMenuBar") private var showInMenuBar = false
     @AppStorage("openAtLogin") private var openAtLogin = false
     @AppStorage("defaultClonePath") private var defaultClonePath = "~/Developer"

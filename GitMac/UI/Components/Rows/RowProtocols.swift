@@ -40,7 +40,7 @@ enum RowTrailingContent {
     case badge(String, Color)
     case stats(additions: Int, deletions: Int)
     case icon(String, Color)
-    case custom(AnyView)
+    case custom(any View)
 }
 
 // MARK: - Row Action

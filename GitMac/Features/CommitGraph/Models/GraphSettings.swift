@@ -2,36 +2,37 @@ import SwiftUI
 
 // MARK: - Graph Display Settings
 @MainActor
-class GraphSettings: ObservableObject {
+@Observable
+class GraphSettings {
     // Column visibility
-    @Published var showBranchColumn = true {
+    var showBranchColumn = true {
         didSet { saveSettings() }
     }
-    @Published var showAuthorColumn = false {
+    var showAuthorColumn = false {
         didSet { saveSettings() }
     }
-    @Published var showDateColumn = false {
+    var showDateColumn = false {
         didSet { saveSettings() }
     }
-    @Published var showSHAColumn = false {
+    var showSHAColumn = false {
         didSet { saveSettings() }
     }
 
     // Column widths
-    @Published var branchColumnWidth: CGFloat = 140 {
+    var branchColumnWidth: CGFloat = 140 {
         didSet { saveSettings() }
     }
 
     // Base graph column width (minimum) - actual width is calculated dynamically
-    @Published var baseGraphColumnWidth: CGFloat = 120 {
+    var baseGraphColumnWidth: CGFloat = 120 {
         didSet { saveSettings() }
     }
 
     // Maximum lane number in current graph (set by ViewModel)
-    @Published var maxLane: Int = 4
+    var maxLane: Int = 4
 
     // Available width for responsive layout (set by view)
-    @Published var availableWidth: CGFloat = 1200
+    var availableWidth: CGFloat = 1200
 
     // Lane spacing (pixels per lane)
     static let baseLaneWidth: CGFloat = 28
@@ -96,7 +97,7 @@ class GraphSettings: ObservableObject {
     }
 
     // Responsive changes indicator width
-    @Published var changesColumnWidth: CGFloat = 140 {
+    var changesColumnWidth: CGFloat = 140 {
         didSet { saveSettings() }
     }
 
@@ -106,27 +107,27 @@ class GraphSettings: ObservableObject {
         }
         return changesColumnWidth
     }
-    @Published var authorColumnWidth: CGFloat = 120 {
+    var authorColumnWidth: CGFloat = 120 {
         didSet { saveSettings() }
     }
-    @Published var dateColumnWidth: CGFloat = 100 {
+    var dateColumnWidth: CGFloat = 100 {
         didSet { saveSettings() }
     }
-    @Published var shaColumnWidth: CGFloat = 80 {
+    var shaColumnWidth: CGFloat = 80 {
         didSet { saveSettings() }
     }
 
     // Display preferences
-    @Published var showAvatars = true {
+    var showAvatars = true {
         didSet { saveSettings() }
     }
-    @Published var showInitials = false {
+    var showInitials = false {
         didSet { saveSettings() }
     }
-    @Published var compactMode = false {
+    var compactMode = false {
         didSet { saveSettings() }
     }
-    @Published var dimMergeCommits = false {
+    var dimMergeCommits = false {
         didSet { saveSettings() }
     }
 
@@ -135,7 +136,7 @@ class GraphSettings: ObservableObject {
     static let zoomMax: CGFloat = 2.0
     static let zoomStep: CGFloat = 0.1
 
-    @Published var zoomLevel: CGFloat = 1.0 {
+    var zoomLevel: CGFloat = 1.0 {
         didSet {
             // Clamp value without recursion
             let clamped = min(max(zoomLevel, Self.zoomMin), Self.zoomMax)
@@ -162,11 +163,11 @@ class GraphSettings: ObservableObject {
     }
 
     // Filtering
-    @Published var showTags = true
-    @Published var showBranches = true
-    @Published var showStashes = true
-    @Published var filterAuthor: String = ""
-    @Published var searchText: String = ""
+    var showTags = true
+    var showBranches = true
+    var showStashes = true
+    var filterAuthor: String = ""
+    var searchText: String = ""
 
     // Repository path for persistence
     private var repositoryPath: String = ""

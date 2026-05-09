@@ -10,7 +10,7 @@ import Foundation
 
 // MARK: - Left Sidebar Panel (Modern)
 struct LeftSidebarPanel: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @State private var selectedNavigator: SidebarNavigator = .branches
     @State private var branchSearchText = ""
 

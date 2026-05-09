@@ -2,7 +2,7 @@ import SwiftUI
 
 /// File history and blame view
 struct HistoryView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = HistoryViewModel()
     @State private var selectedFile: String?
     @State private var viewMode: HistoryViewMode = .history

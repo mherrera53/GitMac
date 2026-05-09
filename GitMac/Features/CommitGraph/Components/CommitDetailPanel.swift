@@ -12,8 +12,8 @@ struct CommitDetailPanel: View {
     let onClose: () -> Void
     var onOpenDiff: ((Commit) -> Void)? = nil
 
-    @EnvironmentObject private var themeManager: ThemeManager
-    @EnvironmentObject private var appState: AppState
+    @Environment(ThemeManager.self) private var themeManager
+    @Environment(AppState.self) private var appState
     @State private var selectedTab: DetailTab = .info
     @State private var commitFiles: [CommitFileInfo] = []
     @State private var isLoadingFiles = false
@@ -28,67 +28,60 @@ struct CommitDetailPanel: View {
         let theme = Color.Theme(themeManager.colors)
 
         if let commit = commit {
-            return AnyView(
-                VStack(spacing: 0) {
-                    // Header
-                    detailHeader(commit: commit, theme: theme)
+            VStack(spacing: 0) {
+                detailHeader(commit: commit, theme: theme)
 
-                    Divider()
+                Divider()
 
-                    // Tab bar
-                    HStack(spacing: 0) {
-                        ForEach(DetailTab.allCases, id: \.self) { tab in
-                            Button {
-                                selectedTab = tab
-                            } label: {
-                                Text(tab.rawValue)
-                                    .font(DesignTokens.Typography.callout)
-                                    .fontWeight(selectedTab == tab ? .semibold : .regular)
-                                    .foregroundStyle(
-                                        selectedTab == tab ? AppTheme.accent : theme.textSecondary
-                                    )
-                                    .padding(.horizontal, DesignTokens.Spacing.md)
-                                    .padding(.vertical, DesignTokens.Spacing.sm)
-                                    .background(
-                                        selectedTab == tab ? theme.backgroundSecondary : Color.clear
-                                    )
-                            }
-                            .buttonStyle(.plain)
+                HStack(spacing: 0) {
+                    ForEach(DetailTab.allCases, id: \.self) { tab in
+                        Button {
+                            selectedTab = tab
+                        } label: {
+                            Text(tab.rawValue)
+                                .font(DesignTokens.Typography.callout)
+                                .fontWeight(selectedTab == tab ? .semibold : .regular)
+                                .foregroundStyle(
+                                    selectedTab == tab ? AppTheme.accent : theme.textSecondary
+                                )
+                                .padding(.horizontal, DesignTokens.Spacing.md)
+                                .padding(.vertical, DesignTokens.Spacing.sm)
+                                .background(
+                                    selectedTab == tab ? theme.backgroundSecondary : Color.clear
+                                )
                         }
-
-                        Spacer()
+                        .buttonStyle(.plain)
                     }
-                    .background(theme.background)
 
-                    Divider()
+                    Spacer()
+                }
+                .background(theme.background)
 
-                    // Tab content
-                    Group {
-                        switch selectedTab {
-                        case .info:
-                            commitInfoView(commit: commit, theme: theme)
-                        case .files:
-                            commitFilesView(commit: commit, theme: theme)
-                        case .diff:
-                            commitDiffView(commit: commit, theme: theme)
-                        }
+                Divider()
+
+                Group {
+                    switch selectedTab {
+                    case .info:
+                        commitInfoView(commit: commit, theme: theme)
+                    case .files:
+                        commitFilesView(commit: commit, theme: theme)
+                    case .diff:
+                        commitDiffView(commit: commit, theme: theme)
                     }
                 }
-                .frame(width: 400)
-                .background(theme.background)
-            )
+            }
+            .frame(width: 400)
+            .background(theme.background)
         } else {
-            return AnyView(
-                VStack {
-                    Spacer()
-                    Text("No commit selected")
-                        .font(DesignTokens.Typography.body)
-                        .foregroundStyle(theme.textMuted)
-                    Spacer()
-                }
-                .frame(width: 400)
-                .background(theme.background)
-            )
+            VStack {
+                Spacer()
+                Text("No commit selected")
+                    .font(DesignTokens.Typography.body)
+                    .foregroundStyle(theme.textMuted)
+                Spacer()
+            }
+            .frame(width: 400)
+            .background(theme.background)
         }
     }
 

@@ -57,9 +57,9 @@ struct LFSStorageInfo {
 // MARK: - LFS View
 
 struct LFSManagerView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = LFSViewModel()
     @State private var selectedTab = 0
     @State private var showTrackSheet = false
@@ -382,7 +382,7 @@ struct LFSFileRow: View {
 
 struct TrackPatternSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @ObservedObject var viewModel: LFSViewModel
 
     @State private var pattern = ""

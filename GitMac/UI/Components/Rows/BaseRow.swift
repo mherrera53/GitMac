@@ -4,13 +4,13 @@ import SwiftUI
 
 /// Generic base row component that handles selection, hover, and actions
 /// Use this as a foundation for all list row types
-struct BaseRow<Content: View>: View {
+struct BaseRow<Content: View, MenuContent: View>: View {
     let isSelected: Bool
     var style: RowStyle = .default
     var actions: [RowAction] = []
-    var contextMenu: (() -> AnyView)? = nil
     var onSelect: (() -> Void)? = nil
     @ViewBuilder let content: () -> Content
+    @ViewBuilder let contextMenu: () -> MenuContent
 
     @State private var isHovered = false
     @State private var loadingActions: Set<UUID> = []
@@ -50,9 +50,7 @@ struct BaseRow<Content: View>: View {
             isHovered = hovering
         }
         .contextMenu {
-            if let menu = contextMenu {
-                menu()
-            }
+            contextMenu()
         }
     }
 
@@ -67,29 +65,47 @@ struct BaseRow<Content: View>: View {
     }
 }
 
+// MARK: - BaseRow convenience init (no context menu)
+
+extension BaseRow where MenuContent == EmptyView {
+    init(
+        isSelected: Bool,
+        style: RowStyle = .default,
+        actions: [RowAction] = [],
+        onSelect: (() -> Void)? = nil,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.isSelected = isSelected
+        self.style = style
+        self.actions = actions
+        self.onSelect = onSelect
+        self.content = content
+        self.contextMenu = { EmptyView() }
+    }
+}
+
 // MARK: - Base Row with Data
 
 /// Base row that takes RowData directly
-struct DataRow<Data: RowData>: View {
+struct DataRow<Data: RowData, MenuContent: View>: View {
     let data: Data
     let isSelected: Bool
     var style: RowStyle = .default
     var actions: [RowAction] = []
     var showLeadingIcon: Bool = true
     var showTrailingContent: Bool = true
-    var contextMenu: (() -> AnyView)? = nil
     var onSelect: (() -> Void)? = nil
+    @ViewBuilder let contextMenu: () -> MenuContent
 
     var body: some View {
         BaseRow(
             isSelected: isSelected,
             style: style,
             actions: actions,
-            contextMenu: contextMenu,
-            onSelect: onSelect
-        ) {
-            rowContent
-        }
+            onSelect: onSelect,
+            content: { rowContent },
+            contextMenu: contextMenu
+        )
     }
 
     @ViewBuilder
@@ -147,8 +163,31 @@ struct DataRow<Data: RowData>: View {
                 .foregroundStyle(color)
 
         case .custom(let view):
-            view
+            AnyView(view)
         }
+    }
+}
+
+// MARK: - DataRow convenience init (no context menu)
+
+extension DataRow where MenuContent == EmptyView {
+    init(
+        data: Data,
+        isSelected: Bool,
+        style: RowStyle = .default,
+        actions: [RowAction] = [],
+        showLeadingIcon: Bool = true,
+        showTrailingContent: Bool = true,
+        onSelect: (() -> Void)? = nil
+    ) {
+        self.data = data
+        self.isSelected = isSelected
+        self.style = style
+        self.actions = actions
+        self.showLeadingIcon = showLeadingIcon
+        self.showTrailingContent = showTrailingContent
+        self.onSelect = onSelect
+        self.contextMenu = { EmptyView() }
     }
 }
 
@@ -161,7 +200,7 @@ extension BaseRow {
         isSelected: Bool = false,
         style: RowStyle = .default,
         onSelect: (() -> Void)? = nil
-    ) -> BaseRow<Text> where Content == Text {
+    ) -> BaseRow<Text, EmptyView> where Content == Text, MenuContent == EmptyView {
         BaseRow(
             isSelected: isSelected,
             style: style,

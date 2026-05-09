@@ -13,15 +13,7 @@ struct UnifiedDiffScrollView<Content: View>: View {
 
     var body: some View {
         ScrollView(enableHorizontalScroll ? [.vertical, .horizontal] : [.vertical]) {
-            ZStack(alignment: .top) {
-                // Reliable Scroll Tracker
-                GeometryReader { geo in
-                    SwiftUI.Color.clear
-                        .preference(key: DiffScrollOffsetKey.self, value: -geo.frame(in: .named(id)).minY)
-                }
-                .frame(height: 1)
-
-                // Content - use fixedSize for horizontal sizing when horizontal scroll is enabled
+            Group {
                 if enableHorizontalScroll {
                     content()
                         .fixedSize(horizontal: true, vertical: false)
@@ -32,6 +24,7 @@ struct UnifiedDiffScrollView<Content: View>: View {
             .background(
                 GeometryReader { geo in
                     SwiftUI.Color.clear
+                        .preference(key: DiffScrollOffsetKey.self, value: -geo.frame(in: .named(id)).minY)
                         .onAppear { contentHeight?.wrappedValue = geo.size.height }
                         .onChange(of: geo.size.height) { _, new in contentHeight?.wrappedValue = new }
                 }

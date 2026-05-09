@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Revert commit view - create inverse commit
 struct RevertView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = RevertViewModel()
     @Environment(\.dismiss) private var dismiss
     

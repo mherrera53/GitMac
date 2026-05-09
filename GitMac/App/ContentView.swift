@@ -2,10 +2,10 @@ import SwiftUI
 import AppKit
 
 struct ContentView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @EnvironmentObject var recentReposManager: RecentRepositoriesManager
-    @EnvironmentObject var themeManager: ThemeManager
-    @ObservedObject var bottomPanelManager: BottomPanelManager
+    @Environment(ThemeManager.self) var themeManager
+    var bottomPanelManager: BottomPanelManager
     @StateObject private var gitOperationHandler = GitOperationHandler()
     @State private var showCloneSheet = false
     @State private var showOpenPanel = false
@@ -27,7 +27,7 @@ struct ContentView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     init() {
-        _bottomPanelManager = ObservedObject(wrappedValue: BottomPanelManager.shared)
+        bottomPanelManager = BottomPanelManager.shared
     }
 
     var body: some View {
@@ -58,15 +58,15 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showNewBranchSheet) {
                 CreateBranchSheet(isPresented: $showNewBranchSheet)
-                    .environmentObject(appState)
+                    .environment(appState)
             }
             .sheet(isPresented: $showRevertSheet) {
                 RevertView(targetCommits: revertCommits)
-                    .environmentObject(appState)
+                    .environment(appState)
             }
             .sheet(isPresented: $showMergeSheet) {
                 MergeBranchSheet(isPresented: $showMergeSheet)
-                    .environmentObject(appState)
+                    .environment(appState)
             }
             .overlay {
                 if gitOperationHandler.isOperationInProgress {
@@ -162,7 +162,7 @@ struct ContentView: View {
     }
 
     struct GitOperationListeners: ViewModifier {
-        @EnvironmentObject var appState: AppState
+        @Environment(AppState.self) var appState
         func body(content: Content) -> some View {
             content
                 .onReceive(NotificationCenter.default.publisher(for: .fetch)) { _ in Task { await GitOperationHandler(appState: appState).handleFetch() } }
@@ -270,11 +270,11 @@ struct ContentView: View {
 
 // MARK: - Modern 3-Panel Layout
 struct MainLayout: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Binding var leftPanelWidth: CGFloat
     @Binding var rightPanelWidth: CGFloat
     let themeRefreshTrigger: UUID
-    @ObservedObject var bottomPanelManager: BottomPanelManager
+    var bottomPanelManager: BottomPanelManager
     @State private var selectedFileDiff: FileDiff?
     @State private var isLoadingDiff = false
     @State private var searchText = ""
@@ -505,7 +505,7 @@ struct MainLayout: View {
 // MARK: - Collapsed Bottom Panel Bar
 /// Minimal bar shown when bottom panel is hidden - click to expand
 struct CollapsedBottomPanelBar: View {
-    @ObservedObject var panelManager: BottomPanelManager
+    var panelManager: BottomPanelManager
     @State private var isHovered = false
 
     var body: some View {

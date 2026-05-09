@@ -3,7 +3,7 @@ import SwiftUI
 /// Advanced Search View - Search commits, files, authors, and content
 /// Like GitHub/GitLab search but faster
 struct AdvancedSearchView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = SearchViewModel()
     
     @State private var searchText = ""

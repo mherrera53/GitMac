@@ -11,7 +11,7 @@ import SwiftTerm
 
 /// High-performance terminal view using SwiftTerm (Ghostty-like rendering)
 struct GhosttyTerminalView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = GhosttyTerminalViewModel()
     @State private var aiEnabled = true
     @State private var showAIChat = false

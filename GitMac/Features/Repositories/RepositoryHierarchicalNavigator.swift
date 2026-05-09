@@ -154,7 +154,7 @@ struct ActionBarButton: View {
 // MARK: - Hierarchical Navigator Container
 
 struct RepositoryHierarchicalNavigator: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @EnvironmentObject var recentReposManager: RecentRepositoriesManager
     @StateObject private var groupsService = RepoGroupsService.shared
 
@@ -191,15 +191,15 @@ struct RepositoryHierarchicalNavigator: View {
         }
         .sheet(isPresented: $showCloneSheet) {
             CloneRepositorySheet()
-                .environmentObject(appState)
+                .environment(appState)
         }
         .sheet(isPresented: $showInitSheet) {
             InitRepositorySheet()
-                .environmentObject(appState)
+                .environment(appState)
         }
         .sheet(isPresented: $showGroupManagement) {
             GroupManagementSheet()
-                .environmentObject(appState)
+                .environment(appState)
         }
     }
 

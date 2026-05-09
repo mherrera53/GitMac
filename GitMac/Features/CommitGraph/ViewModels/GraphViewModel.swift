@@ -2,30 +2,28 @@ import SwiftUI
 
 // MARK: - Graph View Model
 @MainActor
-class GraphViewModel: ObservableObject {
-    @Published var nodes: [GraphNode] = []
-    @Published var stashNodes: [StashNode] = []
-    @Published var timelineItems: [TimelineItem] = []
-    @Published var isLoading = false
-    @Published var hasMore = true
+@Observable
+class GraphViewModel {
+    var nodes: [GraphNode] = []
+    var stashNodes: [StashNode] = []
+    var timelineItems: [TimelineItem] = []
+    var isLoading = false
+    var hasMore = true
 
-    // Uncommitted changes state
-    @Published var hasUncommittedChanges = false
-    @Published var stagedCount = 0
-    @Published var unstagedCount = 0
+    var hasUncommittedChanges = false
+    var stagedCount = 0
+    var unstagedCount = 0
 
-    // Ghost Branches support
-    @Published var branches: [Branch] = []
+    var branches: [Branch] = []
 
-    // Current user email for @me filter
-    @Published var currentUserEmail: String?
+    var currentUserEmail: String?
 
-    // Maximum lane number for dynamic graph width calculation
-    @Published var maxLane: Int = 0
+    var maxLane: Int = 0
 
-    // Minimap: lightweight data for ALL commits in repo
-    @Published var minimapNodes: [MinimapCommitNode] = []
-    @Published var totalCommitCount: Int = 0
+    var minimapNodes: [MinimapCommitNode] = []
+    var totalCommitCount: Int = 0
+
+    private(set) var commitsBySHA: [String: Commit] = [:]
 
     private let engine = GitEngine()
     private var path: String?
@@ -229,15 +227,29 @@ class GraphViewModel: ObservableObject {
         }
     }
 
-    /// Load avatars by fetching commits from GitHub API using their SHA
+    /// Load avatars by fetching commits from GitHub API, skipping already-cached emails
     private func loadAvatarsBySHA(owner: String, repo: String, token: String) async {
+        let uniqueEmails = Set(commits.map { $0.authorEmail.lowercased() })
+        var emailsToFetch: [String: String] = [:]
+        for commit in commits {
+            let email = commit.authorEmail.lowercased()
+            guard emailsToFetch[email] == nil else { continue }
+            let cached = await AvatarService.shared.hasCachedAvatar(for: email)
+            if !cached {
+                emailsToFetch[email] = commit.sha
+            }
+        }
+
+        guard !emailsToFetch.isEmpty else { return }
+
         let batchSize = 20
-        for (index, commit) in commits.enumerated() {
+        let shaList = Array(emailsToFetch.values)
+        for (index, sha) in shaList.enumerated() {
             if index > 0 && index % batchSize == 0 {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
 
-            guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/commits/\(commit.sha)") else {
+            guard let url = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/commits/\(sha)") else {
                 continue
             }
 
@@ -253,10 +265,12 @@ class GraphViewModel: ObservableObject {
                    let author = json["author"] as? [String: Any],
                    let avatarUrl = author["avatar_url"] as? String,
                    let url = URL(string: avatarUrl) {
-                    await AvatarService.shared.cacheAvatar(url: url, for: commit.authorEmail.lowercased())
+                    let email = (json["commit"] as? [String: Any])?["author"] as? [String: Any]
+                    let authorEmail = (email?["email"] as? String)?.lowercased()
+                    await AvatarService.shared.cacheAvatar(url: url, for: authorEmail ?? "")
                 }
             } catch {
-                // Continue silently on error
+                // Continue silently
             }
         }
     }
@@ -375,5 +389,13 @@ class GraphViewModel: ObservableObject {
         items.sort { $0.date > $1.date }
 
         timelineItems = items
+
+        // Build O(1) SHA lookup dictionary
+        commitsBySHA = Dictionary(uniqueKeysWithValues:
+            items.compactMap { item -> (String, Commit)? in
+                if case .commit(let node) = item { return (node.commit.sha, node.commit) }
+                return nil
+            }
+        )
     }
 }

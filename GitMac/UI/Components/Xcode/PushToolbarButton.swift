@@ -2,7 +2,7 @@ import SwiftUI
 
 /// State-aware push button that shows ahead count and disables when nothing to push
 struct PushToolbarButton: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @State private var isHovered = false
     @State private var aheadCount: Int = 0
     @State private var currentBranchName: String?
@@ -101,7 +101,7 @@ struct PushToolbarButton: View {
 
 /// State-aware fetch button that shows behind count
 struct FetchToolbarButton: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @State private var isHovered = false
     @State private var behindCount: Int = 0
 
@@ -188,7 +188,7 @@ struct FetchToolbarButton: View {
 
 /// State-aware pull button that shows behind count and indicates if pull is available
 struct PullToolbarButton: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @State private var isHovered = false
     @State private var behindCount: Int = 0
 

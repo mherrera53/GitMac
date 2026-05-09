@@ -5,7 +5,7 @@ struct BranchSelectorButton: View {
     let currentBranch: Branch?
     let onCheckout: (Branch) -> Void
 
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @State private var searchText = ""
 
     var body: some View {

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Git Flow Manager - Initialize and manage Git Flow workflow
 struct GitFlowView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = GitFlowViewModel()
     @State private var showInitSheet = false
 

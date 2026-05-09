@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct WorktreeListView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var manager = WorktreeManager.shared
     @State private var showAddSheet = false
     @State private var selectedWorktree: Worktree?
@@ -219,7 +219,7 @@ struct WorktreeRow: View {
 // MARK: - Add Worktree Sheet
 struct AddWorktreeSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var manager = WorktreeManager.shared
 
     @State private var worktreePath = ""
@@ -324,7 +324,7 @@ struct AddWorktreeSheet: View {
 // MARK: - Create Worktree From Commit Sheet
 struct CreateWorktreeFromCommitSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var manager = WorktreeManager.shared
 
     let commitSHA: String
