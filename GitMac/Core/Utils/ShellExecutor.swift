@@ -101,7 +101,7 @@ actor ShellExecutor {
     /// Shared instance for convenience
     static let shared = ShellExecutor()
 
-    nonisolated(unsafe) private let defaultEnvironment: [String: String]
+    private let defaultEnvironment: [String: String]
 
     init() {
         // Get current environment
@@ -146,7 +146,7 @@ actor ShellExecutor {
     ///   - workingDirectory: Working directory for the command
     ///   - environment: Additional environment variables
     ///   - timeout: Timeout in seconds (defaults to auto-inferred for git commands)
-    nonisolated func execute(
+    func execute(
         _ command: String,
         arguments: [String] = [],
         workingDirectory: String? = nil,

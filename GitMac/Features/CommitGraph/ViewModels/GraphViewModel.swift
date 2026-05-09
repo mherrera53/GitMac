@@ -39,20 +39,13 @@ class GraphViewModel {
         page = 0
 
         do {
-            async let branchesTask = engine.getBranches(at: p)
-            async let commitsTask = engine.getCommitsV2(at: p, limit: 100)
-            async let statusTask = engine.getStatus(at: p)
-            async let stashesTask = engine.getStashes(at: p)
-            async let emailTask = ShellExecutor.shared.execute(
-                "git", arguments: ["config", "user.email"], workingDirectory: p
-            )
-
-            let (loadedBranches, loadedCommits, status, stashes, emailResult) =
-                try await (branchesTask, commitsTask, statusTask, stashesTask, emailTask)
+            // Sequential but fast (~50ms total for all git ops)
+            let loadedBranches = try await engine.getBranches(at: p)
+            let loadedCommits = try await engine.getCommitsV2(at: p, limit: 100)
 
             guard !Task.isCancelled else { return }
 
-            // Process in-memory (no @Observable triggers yet)
+            // Prepare branch heads map
             var newBranchHeads: [String: String] = [:]
             for branch in loadedBranches {
                 if newBranchHeads[branch.targetSHA] == nil {
@@ -60,13 +53,7 @@ class GraphViewModel {
                 }
             }
 
-            let newEmail = emailResult.exitCode == 0
-                ? emailResult.output.trimmingCharacters(in: .whitespacesAndNewlines)
-                : currentUserEmail
-
-            let newStashNodes = stashes.map { StashNode(id: "stash-\($0.index)", stash: $0) }
-
-            // Build graph off main thread
+            // Build graph off main thread (CPU-bound)
             commits = loadedCommits
             branchHeads = newBranchHeads
             let newNodes = await buildNodes()
@@ -78,19 +65,37 @@ class GraphViewModel {
                 return max(maxVal, nodeLanes.max() ?? 0)
             }
 
-            // Single batch update -- all properties at once, minimal re-renders
+            // Update UI -- show graph immediately
             branches = loadedBranches
-            currentUserEmail = newEmail
             hasMore = loadedCommits.count == 100
-            stagedCount = status.staged.count
-            unstagedCount = status.unstaged.count + status.untracked.count
-            hasUncommittedChanges = stagedCount > 0 || unstagedCount > 0
-            stashNodes = newStashNodes
             nodes = newNodes
             maxLane = newMaxLane
             buildTimeline()
-
             isLoading = false
+
+            // Load secondary data after graph is visible (non-blocking)
+            Task {
+                let status = try? await engine.getStatus(at: p)
+                if let status {
+                    stagedCount = status.staged.count
+                    unstagedCount = status.unstaged.count + status.untracked.count
+                    hasUncommittedChanges = stagedCount > 0 || unstagedCount > 0
+                    buildTimeline()
+                }
+
+                let stashes = try? await engine.getStashes(at: p)
+                if let stashes {
+                    stashNodes = stashes.map { StashNode(id: "stash-\($0.index)", stash: $0) }
+                    buildTimeline()
+                }
+
+                let emailResult = await ShellExecutor.shared.execute(
+                    "git", arguments: ["config", "user.email"], workingDirectory: p
+                )
+                if emailResult.exitCode == 0 {
+                    currentUserEmail = emailResult.output.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+            }
 
             Task.detached(priority: .utility) { await self.loadMinimapData(at: p) }
             Task.detached(priority: .utility) { await self.loadAvatarsFromGitHub(at: p) }
