@@ -262,6 +262,37 @@ struct AISettingsView: View {
             SettingsSection(title: "System Prompts") {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
                     PromptEditor(
+                        title: "Commit Message (Conventional Commits)",
+                        key: "ai.prompt.commit_message",
+                        placeholders: "{{diff}}, {{style}}, {{maxLength}}",
+                        defaultPrompt: """
+                        You are an expert at writing git commit messages following the Conventional Commits specification (conventionalcommits.org).
+
+                        RULES:
+                        1. Format: <type>(<optional scope>): <description>
+                        2. Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+                        3. Subject line: max {{maxLength}} chars, imperative mood, lowercase, no period
+                        4. If the diff has multiple logical changes, use the MOST IMPORTANT one for the subject
+                        5. Add a body (after blank line) ONLY if the change is complex -- explain WHY, not WHAT
+                        6. Breaking changes: add ! after type/scope, e.g. feat!: or feat(api)!:
+
+                        EXAMPLES:
+                        - feat(auth): add OAuth2 login flow
+                        - fix(parser): handle null values in JSON response
+                        - refactor: extract validation logic into separate module
+
+                        DIFF:
+                        {{diff}}
+
+                        STYLE: {{style}}
+
+                        Reply with ONLY the commit message (subject + optional body). No explanations, no markdown, no quotes.
+                        """
+                    )
+
+                    Divider()
+
+                    PromptEditor(
                         title: "Terminal Suggestions",
                         key: "ai.prompt.terminal_suggestions",
                         placeholders: "{{input}}, {{recent_context}}, {{repo_context}}",

@@ -46,11 +46,15 @@ struct FastDiffLine: View {
             if shouldHighlightWords, let p = paired {
                 highlightedText(old: side == .left ? line.content : p.content,
                                new: side == .right ? line.content : p.content)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                     .padding(.trailing, 8)
             } else {
                 Text(line.content)
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundStyle(textColor)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                     .padding(.trailing, 8)
             }
 
@@ -187,6 +191,8 @@ struct FastInlineLine: View {
             Text(line.content)
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(textColor)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .padding(.trailing, 8)
 
             Spacer(minLength: 0)
