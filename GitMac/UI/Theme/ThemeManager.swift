@@ -34,19 +34,17 @@ class ThemeManager {
         switch currentTheme {
         case .system:
             appearance = nil
-            NSApp.appearance = nil
         case .light:
             appearance = NSAppearance(named: .aqua)
-            NSApp.appearance = appearance
         case .dark:
             appearance = NSAppearance(named: .darkAqua)
-            NSApp.appearance = appearance
         case .custom:
             appearance = nil
-            NSApp.appearance = nil
         }
 
-        for window in NSApp.windows {
+        guard let app = NSApplication.shared as NSApplication? else { return }
+        app.appearance = appearance
+        for window in app.windows {
             window.appearance = appearance
         }
     }
