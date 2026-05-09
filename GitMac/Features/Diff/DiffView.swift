@@ -1316,16 +1316,17 @@ struct SynchronizedSplitDiffScrollView<LeftContent: View, RightContent: View>: N
               let rightScrollView = context.coordinator.rightScrollView,
               let divider = context.coordinator.divider else { return }
 
-        if context.coordinator.lastContentVersion != contentVersion {
-            context.coordinator.leftHostingView?.rootView = leftContent()
-            context.coordinator.rightHostingView?.rootView = rightContent()
-            context.coordinator.lastContentVersion = contentVersion
-        }
+        context.coordinator.leftHostingView?.rootView = leftContent()
+        context.coordinator.rightHostingView?.rootView = rightContent()
+        context.coordinator.lastContentVersion = contentVersion
 
         divider.layer?.backgroundColor = NSColor(Color.Theme(ThemeManager.shared.colors).border).cgColor
 
-        // Update layout
         let frame = nsView.bounds
+        guard frame.width > 10 && frame.height > 10 else {
+            DispatchQueue.main.async { nsView.needsLayout = true }
+            return
+        }
         let dividerWidth: CGFloat = 2
         let halfWidth = (frame.width - dividerWidth) / 2
 

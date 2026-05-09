@@ -68,7 +68,7 @@ struct CommitGraphView: View {
                 }
             },
             onOpenDiff: { (c: Commit) in
-                appState.selectedCommit = c
+                appState.selectCommit(c)
             }
         )
         .environment(appState)
@@ -822,16 +822,16 @@ struct CommitGraphView: View {
         if let targetId {
             if let commitItem = vm.timelineItems.first(where: { $0.id == targetId }),
                case .commit(let node) = commitItem {
-                appState.selectedCommit = node.commit
-                appState.selectedStash = nil
+                appState.selectCommit(node.commit)
+                appState.selectStash(nil)
             } else if let stashItem = vm.timelineItems.first(where: { $0.id == targetId }),
                       case .stash(let stashNode) = stashItem {
-                appState.selectedCommit = nil
-                appState.selectedStash = stashNode.stash
+                appState.selectCommit(nil)
+                appState.selectStash(stashNode.stash)
             } else if targetId == "uncommitted-changes" {
                 // WIP selected - clear commit/stash to show staging area
-                appState.selectedCommit = nil
-                appState.selectedStash = nil
+                appState.selectCommit(nil)
+                appState.selectStash(nil)
             }
         }
     }
@@ -1051,7 +1051,7 @@ private struct GraphNotificationModifiers: ViewModifier {
         if let commits = notification.object as? [Commit], commits.count == 2 {
             appState.comparisonCommitA = commits[0]
             appState.comparisonCommitB = commits[1]
-            appState.selectedCommit = nil
+            appState.selectCommit(nil)
         } else if let commit = notification.object as? Commit {
             if appState.comparisonCommitA == nil {
                 appState.comparisonCommitA = commit
@@ -1061,7 +1061,7 @@ private struct GraphNotificationModifiers: ViewModifier {
                 )
             } else {
                 appState.comparisonCommitB = commit
-                appState.selectedCommit = nil
+                appState.selectCommit(nil)
             }
         }
     }

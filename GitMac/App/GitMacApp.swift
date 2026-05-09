@@ -226,6 +226,9 @@ class AppState {
 
     private func _refreshActiveTab() {
         activeTab = openTabs.first { $0.id == activeTabId }
+        selectedCommit = activeTab?.selectedCommit
+        selectedBranch = activeTab?.selectedBranch
+        selectedStash = activeTab?.selectedStash
     }
 
     var activeTabIndex: Int? {
@@ -235,31 +238,23 @@ class AppState {
     var isLoading = false
     var errorMessage: String?
 
-    var selectedCommit: Commit? {
-        get { activeTab?.selectedCommit }
-        set {
-            if let index = activeTabIndex {
-                openTabs[index].selectedCommit = newValue
-            }
-        }
+    var selectedCommit: Commit?
+    var selectedBranch: Branch?
+    var selectedStash: Stash?
+
+    func selectCommit(_ commit: Commit?) {
+        selectedCommit = commit
+        if let index = activeTabIndex { openTabs[index].selectedCommit = commit }
     }
 
-    var selectedBranch: Branch? {
-        get { activeTab?.selectedBranch }
-        set {
-            if let index = activeTabIndex {
-                openTabs[index].selectedBranch = newValue
-            }
-        }
+    func selectBranch(_ branch: Branch?) {
+        selectedBranch = branch
+        if let index = activeTabIndex { openTabs[index].selectedBranch = branch }
     }
 
-    var selectedStash: Stash? {
-        get { activeTab?.selectedStash }
-        set {
-            if let index = activeTabIndex {
-                openTabs[index].selectedStash = newValue
-            }
-        }
+    func selectStash(_ stash: Stash?) {
+        selectedStash = stash
+        if let index = activeTabIndex { openTabs[index].selectedStash = stash }
     }
 
     var comparisonCommitA: Commit?

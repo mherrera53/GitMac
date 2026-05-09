@@ -15,6 +15,20 @@ struct CommitMessageArea: View {
     let onGenerateAI: () -> Void
     var style: MessageAreaStyle = .default
 
+    private var aiProviderLabel: String {
+        let provider = UserDefaults.standard.string(forKey: "ai.preferredProvider") ?? "none"
+        let model = UserDefaults.standard.string(forKey: "ai.preferredModel") ?? ""
+        let shortModel = model.components(separatedBy: "/").last?.components(separatedBy: ":").first ?? model
+        switch provider {
+        case "mlx": return "MLX \(shortModel)"
+        case "ollama": return "Ollama \(shortModel)"
+        case "anthropic": return "Claude"
+        case "openai": return "GPT"
+        case "gemini": return "Gemini"
+        default: return "AI"
+        }
+    }
+
     enum MessageAreaStyle {
         case `default`      // Standard layout
         case compact        // Reduced padding and spacing
@@ -23,9 +37,8 @@ struct CommitMessageArea: View {
 
     var body: some View {
         VStack(spacing: style.spacing) {
-            // Header
             HStack {
-                Text("Commit Message")
+                Text("Commit message.")
                     .font(style.headerFont)
 
                 Spacer()
@@ -33,10 +46,14 @@ struct CommitMessageArea: View {
                 Button {
                     onGenerateAI()
                 } label: {
-                    Label("Generate with AI", systemImage: "sparkles")
-                        .font(style.buttonFont)
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                        Text(aiProviderLabel)
+                    }
+                    .font(style.buttonFont)
                 }
                 .buttonStyle(.borderless)
+                .help("Generate commit message with \(aiProviderLabel)")
             }
 
             // Conflict warning

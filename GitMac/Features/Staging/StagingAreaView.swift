@@ -1644,18 +1644,86 @@ struct AICommitMessageSheet: View {
     @State private var isGenerating = false
     @State private var error: String?
     @State private var selectedStyle: CommitStyle? = .conventional
+    @State private var showPromptEditor = false
+    @State private var customPrompt: String = ""
+
+    private var currentProvider: String {
+        let p = UserDefaults.standard.string(forKey: "ai.preferredProvider") ?? "none"
+        let m = UserDefaults.standard.string(forKey: "ai.preferredModel") ?? ""
+        let short = m.components(separatedBy: "/").last ?? m
+        switch p {
+        case "mlx": return "MLX \(short)"
+        case "ollama": return "Ollama \(short)"
+        case "anthropic": return "Claude"
+        case "openai": return "GPT"
+        case "gemini": return "Gemini"
+        default: return "AI"
+        }
+    }
+
+    private static let promptKey = "ai.prompt.commit_message"
+    private static let defaultPromptTemplate = """
+    Git commit message for:
+    {{diff}}
+
+    Format: {{style}} | Max {{maxLength}} chars | Imperative mood
+    Types: feat/fix/docs/style/refactor/test/chore
+
+    Reply with ONLY the commit message:
+    """
 
     var body: some View {
         VStack(spacing: DesignTokens.Spacing.lg) {
-            Text("Generate Commit Message")
-                .font(DesignTokens.Typography.title2)
-                .fontWeight(.semibold)
+            HStack {
+                Text("Generate Commit Message")
+                    .font(DesignTokens.Typography.title2)
+                    .fontWeight(.semibold)
+                Spacer()
+                Text(currentProvider)
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(AppTheme.backgroundSecondary)
+                    .clipShape(.rect(cornerRadius: 4))
+            }
 
             DSPicker(
                 items: CommitStyle.allCases,
                 selection: $selectedStyle
             ) { style in
                 Text(style.description)
+            }
+
+            if showPromptEditor {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                    HStack {
+                        Text("Prompt Template")
+                            .font(DesignTokens.Typography.headline)
+                        Spacer()
+                        if customPrompt != Self.defaultPromptTemplate {
+                            Button("Reset") {
+                                customPrompt = Self.defaultPromptTemplate
+                                UserDefaults.standard.removeObject(forKey: Self.promptKey)
+                            }
+                            .font(DesignTokens.Typography.caption)
+                        }
+                    }
+                    Text("Variables: {{diff}}, {{style}}, {{maxLength}}")
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+
+                    TextEditor(text: $customPrompt)
+                        .font(.custom("Menlo", size: 11))
+                        .frame(height: 120)
+                        .padding(6)
+                        .background(AppTheme.backgroundSecondary)
+                        .clipShape(.rect(cornerRadius: 6))
+                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(AppTheme.border, lineWidth: 1))
+                        .onChange(of: customPrompt) { _, newValue in
+                            UserDefaults.standard.set(newValue, forKey: Self.promptKey)
+                        }
+                }
             }
 
             if isGenerating {
@@ -1694,6 +1762,11 @@ struct AICommitMessageSheet: View {
                 }
                 .keyboardShortcut(.cancelAction)
 
+                Button(showPromptEditor ? "Hide Prompt" : "Edit Prompt") {
+                    showPromptEditor.toggle()
+                }
+                .font(DesignTokens.Typography.caption)
+
                 Spacer()
 
                 if generatedMessage.isEmpty || isGenerating {
@@ -1716,7 +1789,14 @@ struct AICommitMessageSheet: View {
             }
         }
         .padding()
-        .frame(width: 500, height: 350)
+        .frame(width: 560, height: showPromptEditor ? 550 : 350)
+        .onAppear {
+            if let stored = UserDefaults.standard.string(forKey: Self.promptKey), !stored.isEmpty {
+                customPrompt = stored
+            } else {
+                customPrompt = Self.defaultPromptTemplate
+            }
+        }
     }
 
     private func generate() async {
@@ -1724,10 +1804,20 @@ struct AICommitMessageSheet: View {
         error = nil
 
         do {
-            generatedMessage = try await AIService.shared.generateCommitMessage(
-                diff: diff,
-                style: selectedStyle ?? .conventional
-            )
+            let style = selectedStyle ?? .conventional
+            let stored = UserDefaults.standard.string(forKey: Self.promptKey)
+            if let stored, !stored.isEmpty, stored != Self.defaultPromptTemplate {
+                let prompt = stored
+                    .replacingOccurrences(of: "{{diff}}", with: String(diff.prefix(3000)))
+                    .replacingOccurrences(of: "{{style}}", with: style.description)
+                    .replacingOccurrences(of: "{{maxLength}}", with: "72")
+                generatedMessage = try await AIService.shared.generateText(prompt: prompt)
+            } else {
+                generatedMessage = try await AIService.shared.generateCommitMessage(
+                    diff: diff,
+                    style: style
+                )
+            }
         } catch {
             self.error = error.localizedDescription
         }
