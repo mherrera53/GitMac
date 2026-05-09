@@ -18,7 +18,9 @@ class ThemeManager {
     
     private init() {
         loadSavedTheme()
-        applyTheme()
+        DispatchQueue.main.async { [weak self] in
+            self?.applyTheme()
+        }
     }
     
     // MARK: - Theme Application
@@ -34,19 +36,16 @@ class ThemeManager {
         switch currentTheme {
         case .system:
             appearance = nil
-            NSApp.appearance = nil
         case .light:
             appearance = NSAppearance(named: .aqua)
-            NSApp.appearance = appearance
         case .dark:
             appearance = NSAppearance(named: .darkAqua)
-            NSApp.appearance = appearance
         case .custom:
             appearance = nil
-            NSApp.appearance = nil
         }
 
-        for window in NSApp.windows {
+        NSApplication.shared.appearance = appearance
+        for window in NSApplication.shared.windows {
             window.appearance = appearance
         }
     }
@@ -1392,6 +1391,7 @@ class ThemeEditorWindowController {
 
         // Crear nueva ventana independiente
         let contentView = CustomThemeEditor()
+            .environment(ThemeManager.shared)
         let hostingController = NSHostingController(rootView: contentView)
 
         let window = NSWindow(

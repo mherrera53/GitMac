@@ -30,74 +30,96 @@ class GraphViewModel {
     private var page = 0
     private var commits: [Commit] = []
     private var branchHeads: [String: String] = [:]
+    private var currentLoadTask: Task<Void, Never>?
 
-    func load(at p: String) async {
-        isLoading = true
-        path = p
-        page = 0
-        commits = []
-
-        do {
-            // Load branches (use original method - V2 has same output)
-            let loadedBranches = try await engine.getBranches(at: p)
-            branches = loadedBranches  // Save for Ghost Branches
-            branchHeads = [:]
-            for branch in loadedBranches {
-                if branchHeads[branch.targetSHA] == nil {
-                    branchHeads[branch.targetSHA] = branch.name
-                }
+    private func debugLog(_ msg: String) {
+        let line = "[\(Date())] \(msg)\n"
+        if let data = line.data(using: .utf8) {
+            let url = URL(fileURLWithPath: "/tmp/gitmac-graph-debug.log")
+            if let fh = try? FileHandle(forWritingTo: url) {
+                fh.seekToEndOfFile()
+                fh.write(data)
+                fh.closeFile()
+            } else {
+                try? data.write(to: url)
             }
-
-            // Load current user email for @me filter
-            let result = await ShellExecutor.shared.execute(
-                "git",
-                arguments: ["config", "user.email"],
-                workingDirectory: p
-            )
-            if result.exitCode == 0 {
-                currentUserEmail = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-
-            // Load commits using V2 (NUL-separated, handles special chars in messages)
-            commits = try await engine.getCommitsV2(at: p, limit: 100)
-            hasMore = commits.count == 100
-
-            // Load status for uncommitted changes
-            let status = try await engine.getStatus(at: p)
-            stagedCount = status.staged.count
-            unstagedCount = status.unstaged.count + status.untracked.count
-            hasUncommittedChanges = stagedCount > 0 || unstagedCount > 0
-
-            // Load stashes
-            let stashes = try await engine.getStashes(at: p)
-            stashNodes = stashes.map { StashNode(id: "stash-\($0.index)", stash: $0) }
-
-            // Build nodes on background thread
-            let newNodes = await buildNodes()
-            nodes = newNodes
-
-            // Calculate max lane for dynamic graph width
-            maxLane = nodes.reduce(0) { maxVal, node in
-                let nodeLanes = [node.lane] + Array(node.passThroughLanes) + node.curvesToBottom
-                return max(maxVal, nodeLanes.max() ?? 0)
-            }
-
-            // Build merged timeline (commits + stashes sorted by date)
-            buildTimeline()
-
-            // Load lightweight minimap data for ALL commits in background
-            Task.detached(priority: .utility) {
-                await self.loadMinimapData(at: p)
-            }
-
-            // Load avatars from GitHub repository in background
-            Task.detached(priority: .utility) {
-                await self.loadAvatarsFromGitHub(at: p)
-            }
-        } catch {
-            // Loading failed silently
         }
-        isLoading = false
+    }
+
+    func load(at p: String) {
+        currentLoadTask?.cancel()
+        debugLog("load() called for: \(p)")
+        currentLoadTask = Task { @MainActor [weak self] in
+            guard let self else { self?.debugLog("weak self is nil"); return }
+            isLoading = true
+            path = p
+            page = 0
+            debugLog("starting getBranches...")
+
+            do {
+                let loadedBranches = try await engine.getBranches(at: p)
+                debugLog("getBranches done: \(loadedBranches.count) branches")
+                guard !Task.isCancelled else { debugLog("CANCELLED after branches"); isLoading = false; return }
+
+                debugLog("calling getCommitsV2...")
+                let loadedCommits = try await engine.getCommitsV2(at: p, limit: 100)
+                debugLog("getCommitsV2 done: \(loadedCommits.count) commits")
+                guard !Task.isCancelled else { debugLog("CANCELLED after commits"); isLoading = false; return }
+
+                var newBranchHeads: [String: String] = [:]
+                for branch in loadedBranches {
+                    if newBranchHeads[branch.targetSHA] == nil {
+                        newBranchHeads[branch.targetSHA] = branch.name
+                    }
+                }
+
+                commits = loadedCommits
+                branchHeads = newBranchHeads
+                debugLog("starting buildNodes...")
+                let newNodes = await buildNodes()
+                debugLog("buildNodes done: \(newNodes.count) nodes")
+                guard !Task.isCancelled else { debugLog("CANCELLED after buildNodes"); isLoading = false; return }
+
+                let newMaxLane = newNodes.reduce(0) { maxVal, node in
+                    let nodeLanes = [node.lane] + Array(node.passThroughLanes) + node.curvesToBottom
+                    return max(maxVal, nodeLanes.max() ?? 0)
+                }
+
+                branches = loadedBranches
+                hasMore = loadedCommits.count == 100
+                nodes = newNodes
+                maxLane = newMaxLane
+                buildTimeline()
+                isLoading = false
+                debugLog("DONE: \(timelineItems.count) items, isLoading=false")
+
+                Task {
+                    let status = try? await engine.getStatus(at: p)
+                    if let status, !Task.isCancelled {
+                        stagedCount = status.staged.count
+                        unstagedCount = status.unstaged.count + status.untracked.count
+                        hasUncommittedChanges = stagedCount > 0 || unstagedCount > 0
+                        buildTimeline()
+                    }
+                    let stashes = try? await engine.getStashes(at: p)
+                    if let stashes, !Task.isCancelled {
+                        stashNodes = stashes.map { StashNode(id: "stash-\($0.index)", stash: $0) }
+                        buildTimeline()
+                    }
+                    let emailResult = await ShellExecutor.shared.execute(
+                        "git", arguments: ["config", "user.email"], workingDirectory: p
+                    )
+                    if emailResult.exitCode == 0 {
+                        currentUserEmail = emailResult.output.trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                }
+                Task.detached(priority: .utility) { await self.loadMinimapData(at: p) }
+                Task.detached(priority: .utility) { await self.loadAvatarsFromGitHub(at: p) }
+            } catch {
+                debugLog("ERROR: \(error)")
+                if !Task.isCancelled { isLoading = false }
+            }
+        }
     }
 
     /// Load lightweight commit data for the minimap (SHA + parent count only)

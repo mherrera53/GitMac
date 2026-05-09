@@ -146,7 +146,7 @@ actor ShellExecutor {
     ///   - workingDirectory: Working directory for the command
     ///   - environment: Additional environment variables
     ///   - timeout: Timeout in seconds (defaults to auto-inferred for git commands)
-    func execute(
+    nonisolated func execute(
         _ command: String,
         arguments: [String] = [],
         workingDirectory: String? = nil,
@@ -171,90 +171,97 @@ actor ShellExecutor {
             os_signpost(.end, log: shellLog, name: "shell.execute", signpostID: signpostID)
         }
 
+        let env = defaultEnvironment
+        let cmdDesc = "\(command) \(arguments.prefix(3).joined(separator: " "))"
         return await withCheckedContinuation { continuation in
-            let process = Process()
-            let stdoutPipe = Pipe()
-            let stderrPipe = Pipe()
-
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-            process.arguments = [command] + arguments
-            process.standardOutput = stdoutPipe
-            process.standardError = stderrPipe
-
-            // Merge environments
-            var finalEnvironment = defaultEnvironment
-            if let environment = environment {
-                for (key, value) in environment {
-                    finalEnvironment[key] = value
-                }
+            let dbgFile = URL(fileURLWithPath: "/tmp/gitmac-graph-debug.log")
+            func dbgLog(_ msg: String) {
+                if let d = "[\(Date())] [Shell] \(msg)\n".data(using: .utf8),
+                   let fh = try? FileHandle(forWritingTo: dbgFile) { fh.seekToEndOfFile(); fh.write(d); fh.closeFile() }
             }
-            process.environment = finalEnvironment
+            dbgLog("ENTER execute: \(cmdDesc)")
+            DispatchQueue.global(qos: .userInitiated).async {
+                dbgLog("GCD dispatched: \(cmdDesc)")
+                let process = Process()
+                let stdoutPipe = Pipe()
+                let stderrPipe = Pipe()
 
-            if let workingDirectory = workingDirectory {
-                process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory)
-            }
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+                process.arguments = [command] + arguments
+                process.standardOutput = stdoutPipe
+                process.standardError = stderrPipe
 
-            // Data capture with actor isolation
-            let group = DispatchGroup()
-            let queue = DispatchQueue(label: "com.gitmac.shell-io", attributes: .concurrent)
-
-            let stdoutDataBox = Box<Data>(Data())
-            let stderrDataBox = Box<Data>(Data())
-
-            group.enter()
-            queue.async {
-                stdoutDataBox.value = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-                group.leave()
-            }
-
-            group.enter()
-            queue.async {
-                stderrDataBox.value = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                group.leave()
-            }
-
-            // Escalated timeout handling: SIGTERM first, then SIGKILL
-            let timeoutWorkItem = DispatchWorkItem {
-                guard process.isRunning else { return }
-
-                // First try graceful termination
-                process.terminate()
-
-                // Schedule forced kill if still running after 2 seconds
-                DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
-                    if process.isRunning {
-                        kill(process.processIdentifier, SIGKILL)
+                var finalEnvironment = env
+                if let environment = environment {
+                    for (key, value) in environment {
+                        finalEnvironment[key] = value
                     }
                 }
-            }
+                process.environment = finalEnvironment
 
-            DispatchQueue.global().asyncAfter(
-                deadline: .now() + effectiveTimeout,
-                execute: timeoutWorkItem
-            )
+                if let workingDirectory = workingDirectory {
+                    process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory)
+                }
 
-            do {
-                try process.run()
-                process.waitUntilExit()
+                let group = DispatchGroup()
+                let stdoutDataBox = Box<Data>(Data())
+                let stderrDataBox = Box<Data>(Data())
 
-                timeoutWorkItem.cancel()
-                group.wait() // Wait for IO to finish
+                group.enter()
+                DispatchQueue.global().async {
+                    stdoutDataBox.value = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+                    group.leave()
+                }
 
-                let stdout = String(data: stdoutDataBox.value, encoding: .utf8) ?? ""
-                let stderr = String(data: stderrDataBox.value, encoding: .utf8) ?? ""
+                group.enter()
+                DispatchQueue.global().async {
+                    stderrDataBox.value = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+                    group.leave()
+                }
 
-                continuation.resume(returning: ShellResult(
-                    stdout: stdout,
-                    stderr: stderr,
-                    exitCode: process.terminationStatus
-                ))
-            } catch {
-                timeoutWorkItem.cancel()
-                continuation.resume(returning: ShellResult(
-                    stdout: "",
-                    stderr: error.localizedDescription,
-                    exitCode: -1
-                ))
+                let timeoutWorkItem = DispatchWorkItem {
+                    guard process.isRunning else { return }
+                    process.terminate()
+                    DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
+                        if process.isRunning {
+                            kill(process.processIdentifier, SIGKILL)
+                        }
+                    }
+                }
+
+                DispatchQueue.global().asyncAfter(
+                    deadline: .now() + effectiveTimeout,
+                    execute: timeoutWorkItem
+                )
+
+                do {
+                    dbgLog("process.run(): \(cmdDesc)")
+                    try process.run()
+                    dbgLog("waitUntilExit: \(cmdDesc)")
+                    process.waitUntilExit()
+                    dbgLog("process done, exit=\(process.terminationStatus): \(cmdDesc)")
+                    timeoutWorkItem.cancel()
+                    group.wait()
+                    dbgLog("group.wait done: \(cmdDesc)")
+
+                    let stdout = String(data: stdoutDataBox.value, encoding: .utf8) ?? ""
+                    let stderr = String(data: stderrDataBox.value, encoding: .utf8) ?? ""
+
+                    continuation.resume(returning: ShellResult(
+                        stdout: stdout,
+                        stderr: stderr,
+                        exitCode: process.terminationStatus
+                    ))
+                    dbgLog("continuation resumed: \(cmdDesc)")
+                } catch {
+                    dbgLog("ERROR: \(error): \(cmdDesc)")
+                    timeoutWorkItem.cancel()
+                    continuation.resume(returning: ShellResult(
+                        stdout: "",
+                        stderr: error.localizedDescription,
+                        exitCode: -1
+                    ))
+                }
             }
         }
     }

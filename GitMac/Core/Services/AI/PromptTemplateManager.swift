@@ -303,8 +303,91 @@ class PromptTemplateManager: ObservableObject {
         ])
     }
     
+    // MARK: - Per-Provider Prompt Resolution
+
+    nonisolated static let providerDefaultPrompts: [String: [String: String]] = [
+        "mlx": [
+            "commit_message": """
+            /no_think
+            Conventional Commits message. Format: <type>(<scope>): <description>
+            Max {{maxLength}} chars. Imperative, lowercase, no period.
+            Types: feat/fix/docs/refactor/perf/test/chore
+            ONLY the message, nothing else.
+
+            {{diff}}
+            """,
+        ],
+        "ollama": [
+            "commit_message": """
+            [INST] Write a conventional commit message for this diff.
+            Format: <type>(<scope>): <description>
+            Reply with ONLY the commit message. [/INST]
+
+            {{diff}}
+            """,
+        ],
+        "anthropic": [
+            "commit_message": """
+            Generate a conventional commit message for the following diff.
+            Use format: <type>(<scope>): <description>
+            Add body only if complex. Be concise and specific.
+
+            {{diff}}
+            """,
+        ],
+        "openai": [
+            "commit_message": """
+            Generate a conventional commit message for the following diff.
+            Use format: <type>(<scope>): <description>
+            Add body only if complex. Be concise and specific.
+
+            {{diff}}
+            """,
+        ],
+        "gemini": [
+            "commit_message": """
+            Generate a conventional commit message for the following diff.
+            Use format: <type>(<scope>): <description>
+            Add body only if complex. Be concise and specific.
+
+            {{diff}}
+            """,
+        ],
+    ]
+
+    nonisolated static func resolvePromptKey(for action: String) -> String {
+        let provider = UserDefaults.standard.string(forKey: "ai.preferredProvider") ?? ""
+        let model = UserDefaults.standard.string(forKey: "ai.preferredModel") ?? ""
+        let modelShort = model.components(separatedBy: "/").last ?? model
+
+        let modelKey = "ai.prompt.\(action).\(provider).\(modelShort)"
+        if UserDefaults.standard.string(forKey: modelKey) != nil { return modelKey }
+
+        let providerKey = "ai.prompt.\(action).\(provider)"
+        if UserDefaults.standard.string(forKey: providerKey) != nil { return providerKey }
+
+        return "ai.prompt.\(action)"
+    }
+
+    nonisolated static func getProviderPrompt(for action: String) -> String? {
+        let key = resolvePromptKey(for: action)
+        if let stored = UserDefaults.standard.string(forKey: key), !stored.isEmpty {
+            return stored
+        }
+        let provider = UserDefaults.standard.string(forKey: "ai.preferredProvider") ?? ""
+        return providerDefaultPrompts[provider]?[action]
+    }
+
+    nonisolated static func getDefaultPromptForProvider(_ action: String, provider: String) -> String {
+        return providerDefaultPrompts[provider]?[action] ?? providerDefaultPrompts["anthropic"]?[action] ?? ""
+    }
+
+    nonisolated static func promptKeyForProvider(_ action: String, provider: String) -> String {
+        return "ai.prompt.\(action).\(provider)"
+    }
+
     // MARK: - Default Templates
-    
+
     static let defaultCommitTemplate = """
     Analyze this git diff and generate a semantic commit message.
     

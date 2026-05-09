@@ -8,10 +8,16 @@ class BranchProtectionService: ObservableObject {
 
     private let protectedPatternsKey = "protectedBranchPatterns"
     private let forcePushEnabledKey = "forcePushProtectionEnabled"
+    private let blockDirectCommitsKey = "blockDirectCommitsOnProtected"
 
     /// Whether force push protection is enabled globally
     @Published var isEnabled: Bool {
         didSet { UserDefaults.standard.set(isEnabled, forKey: forcePushEnabledKey) }
+    }
+
+    /// Whether direct commits to protected branches are blocked (must go through PR)
+    @Published var blockDirectCommits: Bool {
+        didSet { UserDefaults.standard.set(blockDirectCommits, forKey: blockDirectCommitsKey) }
     }
 
     /// Branch name patterns that are protected (supports wildcards)
@@ -21,6 +27,7 @@ class BranchProtectionService: ObservableObject {
 
     private init() {
         self.isEnabled = UserDefaults.standard.object(forKey: forcePushEnabledKey) as? Bool ?? true
+        self.blockDirectCommits = UserDefaults.standard.object(forKey: blockDirectCommitsKey) as? Bool ?? false
         self.protectedPatterns = UserDefaults.standard.stringArray(forKey: protectedPatternsKey)
             ?? ["main", "master", "develop", "release/*", "hotfix/*"]
     }
@@ -31,6 +38,11 @@ class BranchProtectionService: ObservableObject {
         return protectedPatterns.contains { pattern in
             matchesPattern(branchName, pattern: pattern)
         }
+    }
+
+    /// Check if direct commits are blocked on this branch (must use PR flow)
+    func directCommitsBlocked(_ branchName: String) -> Bool {
+        return blockDirectCommits && isProtected(branchName)
     }
 
     /// Evaluate push and return the protection level

@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3NYD0QV7DYRLNEZ8Q3W24KCP /* RepoStandardsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5MK8IA2TE65YB19FSY8MMW /* RepoStandardsSheet.swift */; };
+		7N4171EZWO5GFDRIOGNYVBEQ /* AIQuickReviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = HUR15KP0L1KL7RGIVQWVF4D2 /* AIQuickReviewSheet.swift */; };
+		8O17KF8BR3LS2QYY8TOG0W0I /* SyncWizardSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E49BS06AZ5GY0RVYD4RYG0I9 /* SyncWizardSheet.swift */; };
+		Z06NENHCTAKNMK07DYLRKMH6 /* RepoHealthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5PMTSFBRX7GC6JL6MR25PLMX /* RepoHealthService.swift */; };
+		FHM79FIQEPWBKQ0KLX06D3F2 /* WorkflowSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0O8F59NTAR32YPL6MWKXQ80 /* WorkflowSettingsTab.swift */; };
+		5EPN6386PEXTD8S5SXC26LV1 /* GitWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = ELRYBNBZRZNRFM0XOH0C296Y /* GitWorkflow.swift */; };
+		0XODWH6B4TIJVVPBT9GQBBSZ /* WorkflowEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = JX0DE3WCCJWIQ43OK5L4E95S /* WorkflowEngine.swift */; };
 		011EEBA959D2683E15C23AE0 /* DSCloseButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE61B5268D38F24336EF3822 /* DSCloseButton.swift */; };
 		0179E319032D3C6E6CA403D8 /* Stash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741B533442FCDD65DEE553DA /* Stash.swift */; };
 		01C51A3BA0BBD95C872BC730 /* PatchManipulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD96131AC7ED8E7F29D35CB6 /* PatchManipulator.swift */; };
@@ -450,6 +457,13 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		EC5MK8IA2TE65YB19FSY8MMW /* RepoStandardsSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RepoStandardsSheet.swift; path = GitMac/App/Sheets/RepoStandardsSheet.swift; sourceTree = SOURCE_ROOT; };
+		HUR15KP0L1KL7RGIVQWVF4D2 /* AIQuickReviewSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AIQuickReviewSheet.swift; path = GitMac/Features/PullRequests/AIQuickReviewSheet.swift; sourceTree = SOURCE_ROOT; };
+		E49BS06AZ5GY0RVYD4RYG0I9 /* SyncWizardSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SyncWizardSheet.swift; path = App/Sheets/SyncWizardSheet.swift; sourceTree = "<group>"; };
+		5PMTSFBRX7GC6JL6MR25PLMX /* RepoHealthService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RepoHealthService.swift; path = Core/Services/RepoHealthService.swift; sourceTree = "<group>"; };
+		E0O8F59NTAR32YPL6MWKXQ80 /* WorkflowSettingsTab.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkflowSettingsTab.swift; path = ../../Features/Settings/Tabs/WorkflowSettingsTab.swift; sourceTree = "<group>"; };
+		ELRYBNBZRZNRFM0XOH0C296Y /* GitWorkflow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GitWorkflow.swift; path = Core/Models/GitWorkflow.swift; sourceTree = "<group>"; };
+		JX0DE3WCCJWIQ43OK5L4E95S /* WorkflowEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkflowEngine.swift; path = Core/Services/WorkflowEngine.swift; sourceTree = "<group>"; };
 		002E3D8656362AB1260403C1 /* TaigaIssuesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TaigaIssuesView.swift; path = Features/Taiga/Views/TaigaIssuesView.swift; sourceTree = "<group>"; };
 		00928620E5BDBA2B55DDCA9E /* Worktree.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Worktree.swift; path = Core/Git/Worktree.swift; sourceTree = "<group>"; };
 		00B003B6D2E2E859899B257A /* SplitDiffView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Diff/SplitDiffView.swift; sourceTree = SOURCE_ROOT; };
@@ -939,6 +953,7 @@
 			children = (
 				F589958E042B6BD39D5C02C2 /* GitHook.swift */,
 				8AB1EA918F36B9CA215847E9 /* GitSubmodule.swift */,
+				ELRYBNBZRZNRFM0XOH0C296Y /* GitWorkflow.swift */,
 			);
 			name = Models;
 			sourceTree = "<group>";
@@ -1226,6 +1241,7 @@
 				4A9CA1C982F3BD6FBF50546C /* AISettingsTab.swift */,
 				1169A7CE797833DAB1113376 /* GeneralSettingsTab.swift */,
 				8091762F903234CDECBD980F /* GitSettingsTab.swift */,
+				E0O8F59NTAR32YPL6MWKXQ80 /* WorkflowSettingsTab.swift */,
 				C8B9CDBE3A7D0DA2C86612D0 /* IntegrationsSettingsTab.swift */,
 				FDB6FE5C91B2C9441FED36A8 /* SubscriptionSettingsTab.swift */,
 				C23DEFD3BDC948044E9F7E59 /* KeyboardShortcutsTab.swift */,
@@ -1416,6 +1432,7 @@
 				83E77F535DA31CCD185F87AF /* CloneRepositorySheet.swift */,
 				9BF55B48131B9F6858E03454 /* CreateBranchSheet.swift */,
 				8F715ACED106D700C4870CA9 /* MergeBranchSheet.swift */,
+				E49BS06AZ5GY0RVYD4RYG0I9 /* SyncWizardSheet.swift */,
 				59820498B20A741308942117 /* InitRepositorySheet.swift */,
 				10E8846BFD8F23014F452AD1 /* GroupSheets.swift */,
 			);
@@ -1861,6 +1878,8 @@
 				BRANCHPR0001FILE0000000001 /* BranchPRTracker.swift */,
 				GHSYNCMG0001FILE0000000001 /* GitHubSyncManager.swift */,
 				B04DFEA202E551F0C5CE9419 /* WorkspaceSettings.swift */,
+				JX0DE3WCCJWIQ43OK5L4E95S /* WorkflowEngine.swift */,
+				5PMTSFBRX7GC6JL6MR25PLMX /* RepoHealthService.swift */,
 				F7B82AC93A83839A10C7CDCC /* MicrosoftPlannerService.swift */,
 				68995E0B81A9B7E42741AE47 /* GitSubmoduleService.swift */,
 				44032DC8EA8BA76D80C1DA4D /* Specialized */,
@@ -2731,6 +2750,13 @@
 				E1424667B9BA6555CD40DEFA /* FileWatcher.swift in Sources */,
 				F2BC2A1403166453E40C25EE /* GitHook.swift in Sources */,
 				338609A9890C174FAC467CA4 /* GitSubmodule.swift in Sources */,
+				5EPN6386PEXTD8S5SXC26LV1 /* GitWorkflow.swift in Sources */,
+				FHM79FIQEPWBKQ0KLX06D3F2 /* WorkflowSettingsTab.swift in Sources */,
+				0XODWH6B4TIJVVPBT9GQBBSZ /* WorkflowEngine.swift in Sources */,
+				3NYD0QV7DYRLNEZ8Q3W24KCP /* RepoStandardsSheet.swift in Sources */,
+				7N4171EZWO5GFDRIOGNYVBEQ /* AIQuickReviewSheet.swift in Sources */,
+				8O17KF8BR3LS2QYY8TOG0W0I /* SyncWizardSheet.swift in Sources */,
+				Z06NENHCTAKNMK07DYLRKMH6 /* RepoHealthService.swift in Sources */,
 				16FE878B5150049FCF623EDD /* GitHooksService.swift in Sources */,
 				D37C7945444AF7F89EE1F35A /* GitService.swift in Sources */,
 				BRANCHPR0001BUILD000000001 /* BranchPRTracker.swift in Sources */,

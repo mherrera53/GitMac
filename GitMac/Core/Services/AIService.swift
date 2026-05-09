@@ -530,28 +530,33 @@ actor AIService {
         style: CommitStyle = .conventional,
         maxLength: Int = 72
     ) async throws -> String {
-        // Start loading preferences in parallel with diff processing
         async let prefsTask: Void = loadPreferencesIfNeeded()
-        
-        // Create highly optimized diff summary
         let optimizedDiff = createOptimizedDiff(diff)
-        
-        // Wait for preferences
         await prefsTask
-        
-        // Ultra-compact prompt for speed
-        let prompt = """
-        Git commit message for:
-        \(optimizedDiff)
-        
-        Format: \(style.description) | Max \(maxLength) chars | Imperative mood
-        Types: feat/fix/docs/style/refactor/test/chore
-        
-        Reply with ONLY the commit message:
-        """
-        
-        // Use quick message for faster response
-        return try await sendQuickMessage(prompt, maxTokens: 100)
+
+        let prompt: String
+        if let templatePrompt = PromptTemplateManager.getProviderPrompt(for: "commit_message") {
+            prompt = templatePrompt
+                .replacingOccurrences(of: "{{diff}}", with: optimizedDiff)
+                .replacingOccurrences(of: "{{style}}", with: style.description)
+                .replacingOccurrences(of: "{{maxLength}}", with: "\(maxLength)")
+        } else {
+            prompt = """
+            /no_think
+            Conventional Commits message for this diff. \
+            Format: <type>(<scope>): <description> | Max \(maxLength) chars | Imperative mood | Lowercase | No period. \
+            Types: feat/fix/docs/style/refactor/perf/test/build/ci/chore. \
+            Style: \(style.description). \
+            Add body after blank line ONLY if complex. \
+            Reply with ONLY the commit message. No thinking, no explanations, no markdown, no quotes.
+
+            \(optimizedDiff)
+            """
+        }
+
+        var result = try await sendQuickMessage(prompt, maxTokens: 150)
+        result = Self.cleanAIResponse(result)
+        return result
     }
 
     /// Generate a PR description
@@ -990,11 +995,31 @@ actor AIService {
         )
     }
 
+    // MARK: - Response Cleaning
+
+    static func cleanAIResponse(_ text: String) -> String {
+        var cleaned = text
+        if let thinkRange = cleaned.range(of: "<think>") {
+            if let endRange = cleaned.range(of: "</think>") {
+                cleaned.removeSubrange(thinkRange.lowerBound..<endRange.upperBound)
+            } else {
+                cleaned.removeSubrange(thinkRange.lowerBound...)
+            }
+        }
+        cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleaned.hasPrefix("```") {
+            cleaned = cleaned.replacingOccurrences(of: "```", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return cleaned
+    }
+
     // MARK: - Custom Instructions
 
-    /// Generate text from a prompt (used by BranchNamingSuggestionService)
     func generateText(prompt: String) async throws -> String {
-        return try await sendMessage(prompt)
+        var result = try await sendMessage(prompt)
+        result = Self.cleanAIResponse(result)
+        return result
     }
 
     /// Check if AI service is available

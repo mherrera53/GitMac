@@ -94,7 +94,7 @@ struct SidebarBranchRow: View {
         .accessibilityAddTraits(branch.isCurrent ? [.isSelected] : [])
         .onHover { isHovered = $0 }
         .onTapGesture {
-            appState.selectedBranch = branch
+            appState.selectBranch(branch)
         }
         .onDrag {
             return NSItemProvider(object: branch.name as NSString)
@@ -264,7 +264,7 @@ struct SidebarBranchRow: View {
             // Refresh appState to sync the updated repository to tabs
             await appState.refresh()
             // Update selected branch to the checked out branch
-            appState.selectedBranch = branch
+            appState.selectBranch(branch)
             let targetName = branch.isRemote ? branch.displayName : branch.name
             NotificationManager.shared.success("Checked out", detail: targetName)
         } catch {
@@ -278,7 +278,7 @@ struct SidebarBranchRow: View {
             // Refresh appState to sync the updated repository to tabs
             await appState.refresh()
             // Update selected branch to the checked out branch
-            appState.selectedBranch = branch
+            appState.selectBranch(branch)
             let targetName = branch.isRemote ? branch.displayName : branch.name
             NotificationManager.shared.success("Checked out", detail: targetName)
         } catch {

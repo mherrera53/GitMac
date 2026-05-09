@@ -10,6 +10,8 @@ struct GitConfigView: View {
     @AppStorage("pruneOnFetch") private var pruneOnFetch = true
     @AppStorage("fetchBeforeCommit") private var fetchBeforeCommit = true
     @AppStorage("warnRemoteAhead") private var warnRemoteAhead = true
+    @AppStorage("smartCommitEnabled") private var smartCommitEnabled = true
+    @AppStorage("blockDirectCommitsOnProtected") private var blockDirectCommits = false
     @State private var isLoading = true
     @State private var saveStatus: String?
     @State private var showAdvancedEditor = false
@@ -90,8 +92,13 @@ struct GitConfigView: View {
             SettingsSection(title: "Pre-Commit") {
                 DSToggle("Fetch from origin before commit", isOn: $fetchBeforeCommit)
                 DSToggle("Warn when remote branch is ahead", isOn: $warnRemoteAhead)
+                DSToggle("Smart Commit on main branch", isOn: $smartCommitEnabled)
+                DSToggle("Block direct commits on protected branches", isOn: $blockDirectCommits)
+                    .onChange(of: blockDirectCommits) { _, newValue in
+                        BranchProtectionService.shared.blockDirectCommits = newValue
+                    }
 
-                Text("When enabled, GitMac fetches the latest changes and warns you if the remote has new commits before committing")
+                Text("Smart Commit auto-creates a branch when on main/master. Block direct commits forces all changes on protected branches to go through a PR.")
                     .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.caption)
                     .foregroundStyle(AppTheme.textSecondary)

@@ -29,7 +29,7 @@ struct RightStagingPanel: View {
                     commit: selectedCommit,
                     viewModel: commitDetailVM,
                     selectedFileDiff: $selectedFileDiff,
-                    onClose: { appState.selectedCommit = nil }
+                    onClose: { appState.selectCommit(nil) }
                 )
             } else if let selectedStash = appState.selectedStash {
                 // Show stash details when a stash is selected
@@ -37,7 +37,7 @@ struct RightStagingPanel: View {
                     stash: selectedStash,
                     viewModel: stashDetailVM,
                     selectedFileDiff: $selectedFileDiff,
-                    onClose: { appState.selectedStash = nil }
+                    onClose: { appState.selectStash(nil) }
                 )
             } else {
                 // Show staging area when no commit/stash is selected (WIP mode)

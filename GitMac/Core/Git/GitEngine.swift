@@ -2,7 +2,7 @@ import Foundation
 
 /// Main wrapper for Git operations
 /// Uses git CLI commands as the primary backend for reliability
-actor GitEngine {
+final class GitEngine: @unchecked Sendable {
     nonisolated(unsafe) private static let isoDateFormatter: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withFullDate, .withTime, .withSpaceBetweenDateAndTime]
@@ -173,8 +173,6 @@ actor GitEngine {
         guard result.exitCode == 0 else {
             throw GitError.commandFailed("git for-each-ref", result.stderr)
         }
-
-        _ = try? await getHeadSHA(at: path)
 
         let branches = result.stdout
             .components(separatedBy: .newlines)
@@ -1672,7 +1670,7 @@ actor GitEngine {
         // Format: sha, parents, author name, author email, author date, committer name, committer email, committer date, subject
         var args = [
             "log",
-            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x00%G?%x01",
+            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x01",
             "-n", String(limit),
             "--skip", String(skip)
         ]
@@ -1681,7 +1679,13 @@ actor GitEngine {
             args.append(branch)
         }
 
+        let dbg = "[\(Date())] getCommitsV2 calling execute...\n"
+        if let d = dbg.data(using: .utf8), let fh = try? FileHandle(forWritingTo: URL(fileURLWithPath: "/tmp/gitmac-graph-debug.log")) { fh.seekToEndOfFile(); fh.write(d); fh.closeFile() }
+
         let result = await shellExecutor.execute("git", arguments: args, workingDirectory: path)
+
+        let dbg2 = "[\(Date())] getCommitsV2 execute returned exit=\(result.exitCode)\n"
+        if let d2 = dbg2.data(using: .utf8), let fh2 = try? FileHandle(forWritingTo: URL(fileURLWithPath: "/tmp/gitmac-graph-debug.log")) { fh2.seekToEndOfFile(); fh2.write(d2); fh2.closeFile() }
 
         guard result.exitCode == 0 else {
             throw GitError.commandFailed("git log", result.stderr)
@@ -1699,7 +1703,7 @@ actor GitEngine {
         let args = [
             "log",
             "--follow",
-            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x00%G?%x01",
+            "--format=%H%x00%P%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x01",
             "-n", String(limit),
             "--skip", String(skip),
             "--",

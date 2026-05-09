@@ -68,7 +68,7 @@ struct CommitGraphView: View {
                 }
             },
             onOpenDiff: { (c: Commit) in
-                appState.selectedCommit = c
+                appState.selectCommit(c)
             }
         )
         .environment(appState)
@@ -154,6 +154,28 @@ struct CommitGraphView: View {
             onSeek: { index in handleMinimapSeek(index) }
         )
         .transition(.move(edge: .trailing))
+    }
+
+    private var filteredTimelineItems: [TimelineItem] {
+        if settings.searchText.isEmpty && settings.filterAuthor.isEmpty && settings.showTags && settings.showBranches && settings.showStashes {
+            return vm.timelineItems
+        }
+        return vm.timelineItems.filter { item in
+            switch item {
+            case .uncommitted: return true
+            case .commit(let node): return matchesSearchAndFilter(node)
+            case .stash: return settings.showStashes
+            }
+        }
+    }
+
+    private func handleItemAppear(_ item: TimelineItem) {
+        guard let index = vm.timelineItems.firstIndex(where: { $0.id == item.id }) else { return }
+        if index < visibleMinIndex { visibleMinIndex = index }
+        if index > visibleMaxIndex { visibleMaxIndex = index }
+        if index >= vm.timelineItems.count - 10, vm.hasMore, !vm.isLoading {
+            Task { await vm.loadMore() }
+        }
     }
 
     private func handleMinimapSeek(_ index: Int) {
@@ -246,7 +268,7 @@ struct CommitGraphView: View {
         if result.exitCode == 0 {
             NotificationManager.shared.success("Checked out \(branch.name)")
             // Refresh the graph
-            await vm.load(at: repoPath)
+            vm.load(at: repoPath)
             // Notify app state to update current branch
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: repoPath)
         } else {
@@ -624,31 +646,12 @@ struct CommitGraphView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(Array(vm.timelineItems.enumerated()), id: \.element.id) { index, item in
+                    ForEach(filteredTimelineItems) { item in
                         itemView(for: item)
                             .frame(minHeight: settings.rowHeight)
                             .id(item.id)
                             .onAppear {
-                                if index < visibleMinIndex {
-                                    visibleMinIndex = index
-                                }
-                                if index > visibleMaxIndex {
-                                    visibleMaxIndex = index
-                                }
-                                // Trigger load more when near end
-                                if index >= vm.timelineItems.count - 10,
-                                   vm.hasMore, !vm.isLoading {
-                                    Task { await vm.loadMore() }
-                                }
-                            }
-                            .onDisappear {
-                                // Update visible range when items scroll out
-                                if index == visibleMinIndex {
-                                    visibleMinIndex = min(index + 1, vm.timelineItems.count - 1)
-                                }
-                                if index == visibleMaxIndex {
-                                    visibleMaxIndex = max(index - 1, 0)
-                                }
+                                handleItemAppear(item)
                             }
                     }
                 }
@@ -697,7 +700,6 @@ struct CommitGraphView: View {
                 }
             )
         case .commit(let node):
-            if matchesSearchAndFilter(node) {
                 GraphRow(
                     node: node,
                     isSelected: selectedIds.contains(node.commit.sha),
@@ -732,25 +734,22 @@ struct CommitGraphView: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Commit \(node.commit.shortSha) by \(node.commit.author): \(node.commit.summary)")
                 .accessibilityHint("Double tap to view details, drag branch to create PR, context click for more actions")
-            }
         case .stash(let stashNode):
-            if settings.showStashes {
-                GraphStashRow(
-                    stash: stashNode,
-                    isSelected: selectedIds.contains(stashNode.id),
-                    isHovered: hoveredId == stashNode.id,
-                    settings: settings
-                )
-                .onHover { h in hoveredId = h ? stashNode.id : nil }
-                .onTapGesture {
-                    handleSelection(item: item)
-                }
-                .simultaneousGesture(
-                    TapGesture(count: 2).onEnded {
-                        handleDoubleClick(item: item)
-                    }
-                )
+            GraphStashRow(
+                stash: stashNode,
+                isSelected: selectedIds.contains(stashNode.id),
+                isHovered: hoveredId == stashNode.id,
+                settings: settings
+            )
+            .onHover { h in hoveredId = h ? stashNode.id : nil }
+            .onTapGesture {
+                handleSelection(item: item)
             }
+            .simultaneousGesture(
+                TapGesture(count: 2).onEnded {
+                    handleDoubleClick(item: item)
+                }
+            )
         }
     }
 
@@ -823,16 +822,16 @@ struct CommitGraphView: View {
         if let targetId {
             if let commitItem = vm.timelineItems.first(where: { $0.id == targetId }),
                case .commit(let node) = commitItem {
-                appState.selectedCommit = node.commit
-                appState.selectedStash = nil
+                appState.selectCommit(node.commit)
+                appState.selectStash(nil)
             } else if let stashItem = vm.timelineItems.first(where: { $0.id == targetId }),
                       case .stash(let stashNode) = stashItem {
-                appState.selectedCommit = nil
-                appState.selectedStash = stashNode.stash
+                appState.selectCommit(nil)
+                appState.selectStash(stashNode.stash)
             } else if targetId == "uncommitted-changes" {
                 // WIP selected - clear commit/stash to show staging area
-                appState.selectedCommit = nil
-                appState.selectedStash = nil
+                appState.selectCommit(nil)
+                appState.selectStash(nil)
             }
         }
     }
@@ -940,13 +939,13 @@ private struct GraphDataModifiers: ViewModifier {
             .task {
                 if let p = appState.currentRepository?.path {
                     settings.setRepository(p)
-                    await vm.load(at: p)
+                    vm.load(at: p)
                 }
             }
             .onChange(of: appState.currentRepository?.path) { _, p in
                 if let p {
                     settings.setRepository(p)
-                    Task { await vm.load(at: p) }
+                    vm.load(at: p)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { notification in
@@ -957,17 +956,17 @@ private struct GraphDataModifiers: ViewModifier {
             }
             .onReceive(NotificationCenter.default.publisher(for: .remoteOperationCompleted)) { _ in
                 if let path = appState.currentRepository?.path {
-                    Task { await vm.load(at: path) }
+                    vm.load(at: path)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .gitHubOperationCompleted)) { _ in
                 if let path = appState.currentRepository?.path {
-                    Task { await vm.load(at: path) }
+                    vm.load(at: path)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .branchDidCheckout)) { _ in
                 if let path = appState.currentRepository?.path {
-                    Task { await vm.load(at: path) }
+                    vm.load(at: path)
                 }
             }
             .onChange(of: lastSelectedId) { _, _ in
@@ -1052,7 +1051,7 @@ private struct GraphNotificationModifiers: ViewModifier {
         if let commits = notification.object as? [Commit], commits.count == 2 {
             appState.comparisonCommitA = commits[0]
             appState.comparisonCommitB = commits[1]
-            appState.selectedCommit = nil
+            appState.selectCommit(nil)
         } else if let commit = notification.object as? Commit {
             if appState.comparisonCommitA == nil {
                 appState.comparisonCommitA = commit
@@ -1062,7 +1061,7 @@ private struct GraphNotificationModifiers: ViewModifier {
                 )
             } else {
                 appState.comparisonCommitB = commit
-                appState.selectedCommit = nil
+                appState.selectCommit(nil)
             }
         }
     }

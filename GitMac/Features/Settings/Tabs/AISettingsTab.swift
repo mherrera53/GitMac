@@ -17,7 +17,7 @@ struct AISettingsView: View {
     @State private var mlxLoadProgress: Double = 0
     @State private var mlxStatusMessage: String?
 
-    private let aiService = AIService()
+    private let aiService = AIService.shared
 
     var body: some View {
         ScrollView {
@@ -261,6 +261,23 @@ struct AISettingsView: View {
 
             SettingsSection(title: "System Prompts") {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                        Text("Commit Message")
+                            .font(DesignTokens.Typography.headline)
+                            .foregroundStyle(AppTheme.textPrimary)
+                        Text("Each provider can have its own optimized prompt template")
+                            .font(DesignTokens.Typography.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+
+                        ProviderPromptTabs(
+                            action: "commit_message",
+                            placeholders: "{{diff}}, {{style}}, {{maxLength}}",
+                            configuredProviders: configuredProviders
+                        )
+                    }
+
+                    Divider()
+
                     PromptEditor(
                         title: "Terminal Suggestions",
                         key: "ai.prompt.terminal_suggestions",
@@ -490,6 +507,57 @@ struct PromptEditor: View {
                 prompt = stored
             } else {
                 prompt = defaultPrompt
+            }
+        }
+    }
+}
+
+// MARK: - Provider Prompt Tabs
+
+struct ProviderPromptTabs: View {
+    let action: String
+    let placeholders: String
+    let configuredProviders: Set<AIService.AIProvider>
+
+    @State private var selectedTab: AIService.AIProvider = .anthropic
+
+    private var availableProviders: [AIService.AIProvider] {
+        let all = AIService.AIProvider.allCases
+        if configuredProviders.isEmpty { return all }
+        return all.filter { configuredProviders.contains($0) }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+            HStack(spacing: DesignTokens.Spacing.xs) {
+                ForEach(availableProviders) { provider in
+                    Button {
+                        selectedTab = provider
+                    } label: {
+                        Text(provider.displayName)
+                            .font(DesignTokens.Typography.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(selectedTab == provider ? AppTheme.accent : AppTheme.backgroundSecondary)
+                            .foregroundStyle(selectedTab == provider ? .white : AppTheme.textPrimary)
+                            .clipShape(.rect(cornerRadius: 6))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            PromptEditor(
+                title: "\(selectedTab.displayName) Template",
+                key: PromptTemplateManager.promptKeyForProvider(action, provider: selectedTab.rawValue),
+                placeholders: placeholders,
+                defaultPrompt: PromptTemplateManager.getDefaultPromptForProvider(action, provider: selectedTab.rawValue)
+            )
+            .id(selectedTab)
+        }
+        .onAppear {
+            if let current = UserDefaults.standard.string(forKey: "ai.preferredProvider"),
+               let provider = AIService.AIProvider(rawValue: current) {
+                selectedTab = provider
             }
         }
     }

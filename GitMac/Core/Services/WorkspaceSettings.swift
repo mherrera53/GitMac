@@ -68,9 +68,46 @@ class WorkspaceSettingsManager: ObservableObject {
     }
 
     func getMainBranch(for repoPath: String) -> String {
-        // Get configured main branch, fallback to "main"
-        getConfig(for: repoPath).mainBranchName ?? "main"
+        if let configured = getConfig(for: repoPath).mainBranchName {
+            return configured
+        }
+        return mainBranchCache[repoPath] ?? "main"
     }
+
+    func detectAndCacheMainBranch(for repoPath: String) async {
+        if getConfig(for: repoPath).mainBranchName != nil { return }
+        if mainBranchCache[repoPath] != nil { return }
+
+        let shell = ShellExecutor.shared
+
+        let result = await shell.execute(
+            "git", arguments: ["symbolic-ref", "refs/remotes/origin/HEAD", "--short"],
+            workingDirectory: repoPath
+        )
+        if result.isSuccess {
+            let ref = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+            let branch = ref.replacingOccurrences(of: "origin/", with: "")
+            if !branch.isEmpty {
+                mainBranchCache[repoPath] = branch
+                return
+            }
+        }
+
+        for candidate in ["main", "master", "develop"] {
+            let check = await shell.execute(
+                "git", arguments: ["rev-parse", "--verify", "refs/heads/\(candidate)"],
+                workingDirectory: repoPath
+            )
+            if check.isSuccess {
+                mainBranchCache[repoPath] = candidate
+                return
+            }
+        }
+
+        mainBranchCache[repoPath] = "main"
+    }
+
+    private var mainBranchCache: [String: String] = [:]
 }
 
 // MARK: - Workspace Configuration

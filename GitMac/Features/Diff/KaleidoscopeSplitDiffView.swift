@@ -599,10 +599,8 @@ private struct KaleidoscopeScrollContainer<Content: View>: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         guard let hostingView = context.coordinator.hostingView else { return }
 
-        if context.coordinator.lastContentVersion != contentVersion {
-            hostingView.rootView = content()
-            context.coordinator.lastContentVersion = contentVersion
-        }
+        hostingView.rootView = content()
+        context.coordinator.lastContentVersion = contentVersion
 
         let viewport = scrollView.contentView.bounds.height
         if viewport > 0, context.coordinator.lastViewportHeight != viewport {
@@ -1337,10 +1335,9 @@ struct FluidScrollViewWithOffset<Content: View>: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         guard let hostingView = context.coordinator.hostingView else { return }
         
+        hostingView.rootView = content()
         if context.coordinator.lastContentVersion != contentVersion {
-            hostingView.rootView = content()
             context.coordinator.lastContentVersion = contentVersion
-            
             DispatchQueue.main.async {
                 let fitting = hostingView.fittingSize
                 hostingView.frame = NSRect(x: 0, y: 0, width: scrollView.contentView.bounds.width, height: max(fitting.height, scrollView.contentView.bounds.height))

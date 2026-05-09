@@ -85,10 +85,11 @@ struct InlineDiffLineRow: View {
                 .foregroundStyle(indicatorColor)
                 .frame(width: 16)
 
-            // Content
             Text(line.content)
                 .font(DesignTokens.Typography.diffLine)
                 .foregroundStyle(textColor)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .textSelection(.enabled)
         }
         .padding(.vertical, 1)
@@ -160,6 +161,8 @@ struct HunkLineRow: View {
 
             Text(line.content)
                 .foregroundStyle(textColor)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .textSelection(.enabled)
         }
         .font(DesignTokens.Typography.diffLine)

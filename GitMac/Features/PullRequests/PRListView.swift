@@ -8,6 +8,7 @@ struct PRListView: View {
     @State private var selectedPR: GitHubPullRequest?
     @State private var showCreatePRSheet = false
     @State private var filterState: PRState = .open
+    @State private var showAIReviewSheet = false
 
     var body: some View {
         HSplitView {
@@ -61,6 +62,10 @@ struct PRListView: View {
                                 Task {
                                     await viewModel.closePR(pr)
                                 }
+                            },
+                            onAIReview: {
+                                selectedPR = pr
+                                showAIReviewSheet = true
                             }
                         )
                         .tag(pr)
@@ -88,6 +93,12 @@ struct PRListView: View {
         }
         .sheet(isPresented: $showCreatePRSheet) {
             CreatePRSheet(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showAIReviewSheet) {
+            if let pr = selectedPR {
+                AIQuickReviewSheet(pr: pr, viewModel: viewModel)
+                    .environment(appState)
+            }
         }
         .onChange(of: filterState) { _, newState in
             Task { await viewModel.loadPullRequests(state: newState) }
@@ -321,6 +332,7 @@ struct PRRow: View {
     let isSelected: Bool
     var onMerge: ((MergeMethod) -> Void)?
     var onClose: (() -> Void)?
+    var onAIReview: (() -> Void)?
     @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
@@ -433,6 +445,12 @@ struct PRRow: View {
                 }
 
                 Divider()
+            }
+
+            Button {
+                onAIReview?()
+            } label: {
+                Label("AI Review", systemImage: "sparkles")
             }
 
             Button {
