@@ -22,7 +22,7 @@ struct CommitMessageArea: View {
         switch provider {
         case "mlx": return "MLX \(shortModel)"
         case "ollama": return "Ollama \(shortModel)"
-        case "anthropic": return "Claude"
+        case "anthropic": return "Anthropic"
         case "openai": return "GPT"
         case "gemini": return "Gemini"
         default: return "AI"

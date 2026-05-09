@@ -1654,7 +1654,7 @@ struct AICommitMessageSheet: View {
         switch p {
         case "mlx": return "MLX \(short)"
         case "ollama": return "Ollama \(short)"
-        case "anthropic": return "Claude"
+        case "anthropic": return "Anthropic"
         case "openai": return "GPT"
         case "gemini": return "Gemini"
         default: return "AI"
