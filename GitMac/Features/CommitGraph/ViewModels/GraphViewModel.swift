@@ -32,20 +32,39 @@ class GraphViewModel {
     private var branchHeads: [String: String] = [:]
     private var currentLoadTask: Task<Void, Never>?
 
+    private func debugLog(_ msg: String) {
+        let line = "[\(Date())] \(msg)\n"
+        if let data = line.data(using: .utf8) {
+            let url = URL(fileURLWithPath: "/tmp/gitmac-graph-debug.log")
+            if let fh = try? FileHandle(forWritingTo: url) {
+                fh.seekToEndOfFile()
+                fh.write(data)
+                fh.closeFile()
+            } else {
+                try? data.write(to: url)
+            }
+        }
+    }
+
     func load(at p: String) {
         currentLoadTask?.cancel()
+        debugLog("load() called for: \(p)")
         currentLoadTask = Task { @MainActor [weak self] in
-            guard let self else { return }
+            guard let self else { self?.debugLog("weak self is nil"); return }
             isLoading = true
             path = p
             page = 0
+            debugLog("starting getBranches...")
 
             do {
                 let loadedBranches = try await engine.getBranches(at: p)
-                guard !Task.isCancelled else { isLoading = false; return }
+                debugLog("getBranches done: \(loadedBranches.count) branches")
+                guard !Task.isCancelled else { debugLog("CANCELLED after branches"); isLoading = false; return }
 
+                debugLog("calling getCommitsV2...")
                 let loadedCommits = try await engine.getCommitsV2(at: p, limit: 100)
-                guard !Task.isCancelled else { isLoading = false; return }
+                debugLog("getCommitsV2 done: \(loadedCommits.count) commits")
+                guard !Task.isCancelled else { debugLog("CANCELLED after commits"); isLoading = false; return }
 
                 var newBranchHeads: [String: String] = [:]
                 for branch in loadedBranches {
@@ -56,8 +75,10 @@ class GraphViewModel {
 
                 commits = loadedCommits
                 branchHeads = newBranchHeads
+                debugLog("starting buildNodes...")
                 let newNodes = await buildNodes()
-                guard !Task.isCancelled else { isLoading = false; return }
+                debugLog("buildNodes done: \(newNodes.count) nodes")
+                guard !Task.isCancelled else { debugLog("CANCELLED after buildNodes"); isLoading = false; return }
 
                 let newMaxLane = newNodes.reduce(0) { maxVal, node in
                     let nodeLanes = [node.lane] + Array(node.passThroughLanes) + node.curvesToBottom
@@ -70,6 +91,7 @@ class GraphViewModel {
                 maxLane = newMaxLane
                 buildTimeline()
                 isLoading = false
+                debugLog("DONE: \(timelineItems.count) items, isLoading=false")
 
                 Task {
                     let status = try? await engine.getStatus(at: p)
@@ -94,6 +116,7 @@ class GraphViewModel {
                 Task.detached(priority: .utility) { await self.loadMinimapData(at: p) }
                 Task.detached(priority: .utility) { await self.loadAvatarsFromGitHub(at: p) }
             } catch {
+                debugLog("ERROR: \(error)")
                 if !Task.isCancelled { isLoading = false }
             }
         }
