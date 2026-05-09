@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Branch Comparison View - Compare any two branches/commits
 struct BranchComparisonView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = BranchComparisonViewModel()
     
     @State private var baseBranch: String = ""
@@ -74,7 +74,7 @@ struct BranchComparisonView: View {
                         selectedBranch: $baseBranch,
                         isPresented: $showBasePicker
                     )
-                    .environmentObject(appState)
+                    .environment(appState)
                 }
             }
             
@@ -117,7 +117,7 @@ struct BranchComparisonView: View {
                         selectedBranch: $compareBranch,
                         isPresented: $showComparePicker
                     )
-                    .environmentObject(appState)
+                    .environment(appState)
                 }
             }
             
@@ -307,7 +307,7 @@ struct BranchComparisonView: View {
 // MARK: - Branch Picker Popover
 
 struct BranchPickerPopover: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Binding var selectedBranch: String
     @Binding var isPresented: Bool
     

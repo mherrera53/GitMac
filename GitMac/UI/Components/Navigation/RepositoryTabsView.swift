@@ -3,7 +3,7 @@ import UniformTypeIdentifiers
 
 // MARK: - Modern Grouped Repository Slider
 struct RepositoryTabsView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var groupsService = RepoGroupsService.shared
     @State private var cachedGroupedTabs: [TabGroup] = []
 
@@ -120,7 +120,7 @@ struct RepositoryTabsView: View {
 
 private struct GroupContainer: View {
     let group: RepositoryTabsView.TabGroup
-    @ObservedObject var appState: AppState
+    var appState: AppState
     
     var groupColor: Color {
         if let hex = group.color {

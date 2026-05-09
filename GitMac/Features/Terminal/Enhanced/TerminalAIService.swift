@@ -69,8 +69,19 @@ class TerminalAIService {
 
     // Configuration
     private let ollamaEndpoint = "http://localhost:11434"
-    private let defaultModel = "deepseek-coder:6.7b"
     private let timeout: TimeInterval = 10.0
+
+    /// Returns the user's configured model from AI Settings, falling back to a sensible default
+    private var defaultModel: String {
+        if let savedProvider = UserDefaults.standard.string(forKey: "ai.preferredProvider"),
+           savedProvider == "ollama",
+           let savedModel = UserDefaults.standard.string(forKey: "ai.preferredModel"),
+           !savedModel.isEmpty {
+            return savedModel
+        }
+        // Fallback for Ollama when no preference is saved
+        return "deepseek-coder:6.7b"
+    }
 
     // State
     private var isOllamaAvailable: Bool?

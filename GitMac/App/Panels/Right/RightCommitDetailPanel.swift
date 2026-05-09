@@ -7,7 +7,7 @@ struct RightCommitDetailPanel: View {
     @ObservedObject var viewModel: CommitDetailViewModel
     @Binding var selectedFileDiff: FileDiff?
     let onClose: () -> Void
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
 
     @State private var fileFilterText = ""
     @State private var filterByStatus: CommitFile.CommitFileStatus?

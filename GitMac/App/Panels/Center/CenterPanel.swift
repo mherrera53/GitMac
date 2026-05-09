@@ -9,7 +9,7 @@ import SwiftUI
 
 // MARK: - Center Panel (Graph or Diff)
 struct CenterPanel: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Binding var selectedFileDiff: FileDiff?
     @Binding var isLoadingDiff: Bool
     var onStageHunk: ((Int) async -> Bool)? = nil

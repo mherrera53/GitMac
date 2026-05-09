@@ -3,9 +3,9 @@ import AppKit
 
 // MARK: - Repository Tab Bar (Modern)
 struct RepositoryTabBar: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @EnvironmentObject var recentReposManager: RecentRepositoriesManager
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         HStack(spacing: 0) {
@@ -104,8 +104,8 @@ struct RepositoryTabBar: View {
 // MARK: - Single Repo Tab
 struct SingleRepoTab: View {
     let tab: RepositoryTab
-    @EnvironmentObject var appState: AppState
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(AppState.self) var appState
+    @Environment(ThemeManager.self) private var themeManager
     @StateObject private var groupsService = RepoGroupsService.shared
     @State private var isHovered = false
 

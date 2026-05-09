@@ -430,21 +430,3 @@ struct AdvancedHunkHeaderView: View {
         .background(isSelected ? AppTheme.accent.opacity(0.2) : AppTheme.accent.opacity(0.05))
     }
 }
-
-// MARK: - Performance Optimizations
-
-/// Virtual scrolling for large diffs (render only visible lines)
-@MainActor
-class DiffVirtualScroller: ObservableObject {
-    @Published var visibleRange: Range<Int> = 0..<100
-    
-    let lineHeight: CGFloat = 20
-    let bufferLines = 50 // Extra lines to render above/below viewport
-    
-    func updateVisibleRange(scrollOffset: CGFloat, viewportHeight: CGFloat, totalLines: Int) {
-        let startLine = max(0, Int(scrollOffset / lineHeight) - bufferLines)
-        let endLine = min(totalLines, Int((scrollOffset + viewportHeight) / lineHeight) + bufferLines)
-        
-        visibleRange = startLine..<endLine
-    }
-}

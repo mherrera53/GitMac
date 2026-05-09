@@ -11,7 +11,7 @@ import Charts
 // MARK: - Analytics Dashboard
 
 struct AnalyticsDashboard: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = AnalyticsViewModel()
     
     var body: some View {

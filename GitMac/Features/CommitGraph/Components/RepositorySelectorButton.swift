@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct RepositorySelectorButton: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @EnvironmentObject var recentReposManager: RecentRepositoriesManager
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @State private var showPicker = false
 
     var body: some View {

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Remote repositories management view
 struct RemoteListView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = RemoteListViewModel()
     @State private var showAddRemoteSheet = false
     @State private var showDeleteAlert = false

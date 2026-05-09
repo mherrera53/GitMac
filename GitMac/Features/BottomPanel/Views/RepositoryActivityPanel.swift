@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct RepositoryActivityPanel: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = RepositoryActivityViewModel()
     @State private var selectedContributor: Contributor?
     @State private var selectedTab: ActivityTab = .overview

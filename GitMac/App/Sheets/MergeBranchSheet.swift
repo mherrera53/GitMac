@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct MergeBranchSheet: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Binding var isPresented: Bool
 
     @State private var selectedBranch: String = ""

@@ -12,7 +12,7 @@ struct DiffBreadcrumb: View {
     @Binding var selectedVersionB: String?
     let versions: [FileVersion]
 
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     private var pathComponents: [String] {
         filePath.components(separatedBy: "/").filter { !$0.isEmpty }

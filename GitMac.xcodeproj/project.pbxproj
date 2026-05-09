@@ -23,6 +23,7 @@
 		0B0D71EAC506822FA1808B9F /* SettingsScreenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FCDCD0E4BDE56125AAFA125 /* SettingsScreenshots.swift */; };
 		0DB14192B98FCE46D804E26B /* TerminalNLTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B56BCC2A0CBE440FE161710C /* TerminalNLTranslationService.swift */; };
 		0DB645D5AAE7FFC0E503241D /* AIServiceExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38AF44C8ADA6FAF518572B88 /* AIServiceExtensions.swift */; };
+		ACMLX0032F09000000000003 /* MLXProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACMLX0042F09000000000004 /* MLXProvider.swift */; };
 		0E632C69DE3C7FEB51B55B7C /* FileRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12E643D92471924D88FBEFE /* FileRow.swift */; };
 		0ED6500CDF7088D37F13E92E /* StateManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 019084753E518DA25F69140E /* StateManagement.swift */; };
 		0F0392D16729D25A02FA61DF /* GitHooksComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 625A6458860C14BBBAFB1A1F /* GitHooksComponents.swift */; };
@@ -98,6 +99,7 @@
 		3EBD7C5A99902C8030988ECF /* ProAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4C9E21606FF5D46F642D311 /* ProAPIClient.swift */; };
 		3F3DE8BAE7DC7CDD55DA2C9F /* FileChangesIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99E7BE67D49ECABECC42D99C /* FileChangesIndicator.swift */; };
 		401C494F44685C32BE05E79B /* AutoFetchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01BFA62248CDF7C08E10FE6A /* AutoFetchService.swift */; };
+		PCG00001PRECOMMITGUARD01 /* PreCommitGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = PCG00002PRECOMMITGUARD02 /* PreCommitGuard.swift */; };
 		40EC734547676D19B4DB981C /* AvatarImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BF58EAFD7D4429CA2D86495 /* AvatarImageView.swift */; };
 		411EE8E24820B19E458C98EA /* DSActionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E99A07FBA1E2DA4CDF2D8F3 /* DSActionBar.swift */; };
 		42620233A90137B2BEDEF688 /* UnifiedBottomPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A28EB01A5FA82BA5F5A3728A /* UnifiedBottomPanel.swift */; };
@@ -275,6 +277,10 @@
 		AA78D21033726D44C941E64B /* WorkflowsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5F0E9289D4F18B6269F785F /* WorkflowsView.swift */; };
 		AC03C07BC65CA3253601A134 /* AISettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A9CA1C982F3BD6FBF50546C /* AISettingsTab.swift */; };
 		AC28C30B2F08591500A86A78 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = AC28C30A2F08591500A86A78 /* DifferenceKit */; };
+		ACMLX0012F09000000000001 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = DEP004 /* MLXLLM */; };
+		ACMLX0022F09000000000002 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = DEP005 /* MLXLMCommon */; };
+		ACMLX0052F09000000000005 /* MLXLMHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = DEP006 /* MLXLMHuggingFace */; };
+		ACMLX0062F09000000000006 /* MLXLMTransformers in Frameworks */ = {isa = PBXBuildFile; productRef = DEP007 /* MLXLMTransformers */; };
 		AC2BD1752F385FE100022DA8 /* CodeEditSourceEditor in Frameworks */ = {isa = PBXBuildFile; productRef = DEP003 /* CodeEditSourceEditor */; };
 		AC9431982EE97AF100A59026 /* IMPLEMENTATION_ROADMAP.md in Resources */ = {isa = PBXBuildFile; fileRef = AC9431972EE97AF100A59026 /* IMPLEMENTATION_ROADMAP.md */; };
 		AC9431A42EE97D6000A59026 /* BUILD_FIX.md in Resources */ = {isa = PBXBuildFile; fileRef = AC9431A32EE97D6000A59026 /* BUILD_FIX.md */; };
@@ -450,6 +456,7 @@
 		0154FE34793BBE67B322FBCD /* IntegrationHelpers.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Core/Utils/IntegrationHelpers.swift; sourceTree = SOURCE_ROOT; };
 		019084753E518DA25F69140E /* StateManagement.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StateManagement.swift; path = ../Components/Utilities/StateManagement.swift; sourceTree = "<group>"; };
 		01BFA62248CDF7C08E10FE6A /* AutoFetchService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Core/Services/AutoFetchService.swift; sourceTree = SOURCE_ROOT; };
+		PCG00002PRECOMMITGUARD02 /* PreCommitGuard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Core/Services/PreCommitGuard.swift; sourceTree = SOURCE_ROOT; };
 		03550275E10C261CACDABFA2 /* DSAvatar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Atoms/Display/DSAvatar.swift; sourceTree = SOURCE_ROOT; };
 		0590EB77B9C55A604A68F573 /* StatusIcon.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StatusIcon.swift; path = Components/Icons/StatusIcon.swift; sourceTree = "<group>"; };
 		05A44BE48A6BAAD7525A8D2A /* PresenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PresenceService.swift; path = GitMac/Core/Services/PresenceService.swift; sourceTree = SOURCE_ROOT; };
@@ -545,6 +552,7 @@
 		366910B3DFF367ACB578E2B7 /* BottomPanelTabBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BottomPanelTabBar.swift; path = Features/BottomPanel/Views/BottomPanelTabBar.swift; sourceTree = "<group>"; };
 		3856F1845C89352A8A46D281 /* SubmoduleComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SubmoduleComponents.swift; path = GitMac/App/Panels/Left/SubmoduleComponents.swift; sourceTree = SOURCE_ROOT; };
 		38AF44C8ADA6FAF518572B88 /* AIServiceExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AIServiceExtensions.swift; path = GitMac/Core/Services/AI/AIServiceExtensions.swift; sourceTree = SOURCE_ROOT; };
+		ACMLX0042F09000000000004 /* MLXProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MLXProvider.swift; path = GitMac/Core/Services/AI/MLXProvider.swift; sourceTree = SOURCE_ROOT; };
 		398BB78A6379748BC49FA09F /* JiraPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Jira/JiraPlugin.swift; sourceTree = SOURCE_ROOT; };
 		3A19738939A82E6D74E42666 /* GhostBranchesOverlay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GhostBranchesOverlay.swift; path = ../../Features/CommitGraph/Components/GhostBranchesOverlay.swift; sourceTree = "<group>"; };
 		3A3AAFD8CF5452E47AD098EB /* DSSpacer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Atoms/Display/DSSpacer.swift; sourceTree = SOURCE_ROOT; };
@@ -914,6 +922,10 @@
 			files = (
 				AC2BD1752F385FE100022DA8 /* CodeEditSourceEditor in Frameworks */,
 				AC28C30B2F08591500A86A78 /* DifferenceKit in Frameworks */,
+				ACMLX0012F09000000000001 /* MLXLLM in Frameworks */,
+				ACMLX0022F09000000000002 /* MLXLMCommon in Frameworks */,
+				ACMLX0052F09000000000005 /* MLXLMHuggingFace in Frameworks */,
+				ACMLX0062F09000000000006 /* MLXLMTransformers in Frameworks */,
 				PKG001 /* KeychainAccess in Frameworks */,
 				PKG002 /* Splash in Frameworks */,
 			);
@@ -1693,6 +1705,7 @@
 			isa = PBXGroup;
 			children = (
 				38AF44C8ADA6FAF518572B88 /* AIServiceExtensions.swift */,
+				ACMLX0042F09000000000004 /* MLXProvider.swift */,
 				F2E7451DB3B6F1CB079757B0 /* PromptTemplateManager.swift */,
 				81A89B3B13668597DA59F4FC /* BranchNamingSuggestionService.swift */,
 			);
@@ -1863,6 +1876,7 @@
 				1BE7FD2660507EDB36634450 /* RemoteOperationTracker.swift */,
 				A9429CC1284A41A1A5A7741F /* NotificationManager.swift */,
 				01BFA62248CDF7C08E10FE6A /* AutoFetchService.swift */,
+				PCG00002PRECOMMITGUARD02 /* PreCommitGuard.swift */,
 				8D71C0500C4C2DB19F46D8A4 /* CommitMessageHistory.swift */,
 				19F6D20DD97CD5B0028A4E1B /* KeyboardShortcutManager.swift */,
 				84CC1EF63080BB92CDB995DF /* AI */,
@@ -2473,6 +2487,10 @@
 				DEP002 /* Splash */,
 				AC28C30A2F08591500A86A78 /* DifferenceKit */,
 				DEP003 /* CodeEditSourceEditor */,
+				DEP004 /* MLXLLM */,
+				DEP005 /* MLXLMCommon */,
+				DEP006 /* MLXLMHuggingFace */,
+				DEP007 /* MLXLMTransformers */,
 			);
 			productName = GitMac;
 			productReference = PROD01 /* GitMac.app */;
@@ -2510,6 +2528,9 @@
 				PKR002 /* XCRemoteSwiftPackageReference "Splash" */,
 				AC28C3092F08591500A86A78 /* XCRemoteSwiftPackageReference "DifferenceKit" */,
 				PKR003 /* XCRemoteSwiftPackageReference "CodeEditSourceEditor" */,
+				PKR004 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
+				PKR005 /* XCRemoteSwiftPackageReference "swift-huggingface-mlx" */,
+				PKR006 /* XCRemoteSwiftPackageReference "swift-transformers-mlx" */,
 			);
 			productRefGroup = GRP002 /* Products */;
 			projectDirPath = "";
@@ -2627,6 +2648,7 @@
 				5F554587B84ECD2D958FF10F /* ContributionGraphView.swift in Sources */,
 				3A5F4D9A80EE6CB6B627CD3C /* RepositoryActivityViewModel.swift in Sources */,
 				0DB645D5AAE7FFC0E503241D /* AIServiceExtensions.swift in Sources */,
+				ACMLX0032F09000000000003 /* MLXProvider.swift in Sources */,
 				173F4FE19F91D1E4447F9461 /* PromptTemplateManager.swift in Sources */,
 				DD8F46FE884EC63E601B728D /* CloudSyncService.swift in Sources */,
 				61CF478CA5D5AE185242221E /* PresenceService.swift in Sources */,
@@ -2754,6 +2776,7 @@
 				D36FC421805A89519D5C8731 /* ResetView.swift in Sources */,
 				BF3725FB16445B45FFFD566A /* NotificationManager.swift in Sources */,
 				401C494F44685C32BE05E79B /* AutoFetchService.swift in Sources */,
+				PCG00001PRECOMMITGUARD01 /* PreCommitGuard.swift in Sources */,
 				A77D3189EAD7936087A1E850 /* CommitMessageHistory.swift in Sources */,
 				C26E99D3F81D4583828E3A78 /* InsightsView.swift in Sources */,
 				AC03C07BC65CA3253601A134 /* AISettingsTab.swift in Sources */,
@@ -3356,6 +3379,30 @@
 				minimumVersion = 0.9.0;
 			};
 		};
+		PKR004 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.31.3;
+			};
+		};
+		PKR005 /* XCRemoteSwiftPackageReference "swift-huggingface-mlx" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/DePasqualeOrg/swift-huggingface-mlx";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.0;
+			};
+		};
+		PKR006 /* XCRemoteSwiftPackageReference "swift-transformers-mlx" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/DePasqualeOrg/swift-transformers-mlx";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -3378,6 +3425,26 @@
 			isa = XCSwiftPackageProductDependency;
 			package = PKR003 /* XCRemoteSwiftPackageReference "CodeEditSourceEditor" */;
 			productName = CodeEditSourceEditor;
+		};
+		DEP004 /* MLXLLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PKR004 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLLM;
+		};
+		DEP005 /* MLXLMCommon */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PKR004 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLMCommon;
+		};
+		DEP006 /* MLXLMHuggingFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PKR005 /* XCRemoteSwiftPackageReference "swift-huggingface-mlx" */;
+			productName = MLXLMHuggingFace;
+		};
+		DEP007 /* MLXLMTransformers */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PKR006 /* XCRemoteSwiftPackageReference "swift-transformers-mlx" */;
+			productName = MLXLMTransformers;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

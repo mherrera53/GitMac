@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Remote Management View - Add, edit, remove remotes
 struct RemoteManagementView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = RemoteManagementViewModel()
     
     @State private var showAddRemote = false
@@ -60,11 +60,11 @@ struct RemoteManagementView: View {
         }
         .sheet(isPresented: $showAddRemote) {
             AddRemoteMgmtSheet(isPresented: $showAddRemote)
-                .environmentObject(appState)
+                .environment(appState)
         }
         .sheet(item: $showEditRemote) { remote in
             EditRemoteSheet(remote: remote)
-                .environmentObject(appState)
+                .environment(appState)
         }
         .task {
             viewModel.configure(appState: appState)
@@ -305,7 +305,7 @@ struct RemoteMgmtBranchRow: View {
 // MARK: - Add Remote Sheet
 
 struct AddRemoteMgmtSheet: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Binding var isPresented: Bool
     
     @State private var remoteName = ""
@@ -369,7 +369,7 @@ struct AddRemoteMgmtSheet: View {
 // MARK: - Edit Remote Sheet
 
 struct EditRemoteSheet: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     let remote: Remote
     @Environment(\.dismiss) private var dismiss
     

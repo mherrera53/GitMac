@@ -15,7 +15,6 @@ struct ListRow: View {
     var isSelected: Bool = false
     var style: RowStyle = .default
     var actions: [RowAction] = []
-    var contextMenu: (() -> AnyView)? = nil
     var onSelect: (() -> Void)? = nil
 
     enum ListRowTrailing {
@@ -23,7 +22,7 @@ struct ListRow: View {
         case icon(String, Color = .secondary)
         case badge(String, Color = .secondary)
         case chevron
-        case custom(AnyView)
+        case custom(any View)
     }
 
     var body: some View {
@@ -31,7 +30,6 @@ struct ListRow: View {
             isSelected: isSelected,
             style: style,
             actions: actions,
-            contextMenu: contextMenu,
             onSelect: onSelect
         ) {
             rowContent
@@ -107,7 +105,7 @@ struct ListRow: View {
                 .foregroundStyle(AppTheme.textPrimary)
 
         case .custom(let view):
-            view
+            AnyView(view)
         }
     }
 }

@@ -8,13 +8,14 @@
 import SwiftUI
 
 @MainActor
-class BottomPanelManager: ObservableObject {
+@Observable
+class BottomPanelManager {
     static let shared = BottomPanelManager()
 
-    @Published var openTabs: [BottomPanelTab] = []
-    @Published var activeTabId: UUID?
-    @Published var isPanelVisible: Bool = false
-    @Published var panelHeight: CGFloat = 300
+    var openTabs: [BottomPanelTab] = []
+    var activeTabId: UUID?
+    var isPanelVisible: Bool = false
+    var panelHeight: CGFloat = 300
 
     private let userDefaults = UserDefaults.standard
     private let openTabsKey = "bottomPanelOpenTabs"

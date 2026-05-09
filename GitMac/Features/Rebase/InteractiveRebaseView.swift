@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Interactive rebase view - reorder, squash, edit commits
 struct InteractiveRebaseView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = InteractiveRebaseViewModel()
     @Environment(\.dismiss) private var dismiss
     

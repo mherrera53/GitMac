@@ -3,8 +3,8 @@ import AppKit
 
 /// Staging area view - manage staged and unstaged changes
 struct StagingAreaView: View {
-    @EnvironmentObject var appState: AppState
-    @StateObject private var viewModel = StagingAreaViewModel()
+    @Environment(AppState.self) var appState
+    @State private var viewModel = StagingAreaViewModel()
     @State private var commitMessage = ""
     @State private var isAmending = false
     @State private var selectedFile: String?
@@ -14,8 +14,7 @@ struct StagingAreaView: View {
     @State private var showConflictResolver = false
     @State private var conflictFileToResolve: FileStatus?
     @State private var viewMode: FileViewMode = .tree
-    @State private var extensionFilter: String? = nil
-    @State private var searchText: String = ""
+    // extensionFilter and searchText moved to viewModel
     @Namespace private var animation
 
     // Section heights for resize functionality
@@ -23,8 +22,7 @@ struct StagingAreaView: View {
     @State private var stagedHeight: CGFloat = 200
     @State private var commitHeight: CGFloat = 150
 
-    // Pagination for large file lists
-    private let maxVisibleFiles = 500
+    // Pagination offsets
     @State private var unstagedOffset = 0
     @State private var stagedOffset = 0
 
@@ -104,6 +102,26 @@ struct StagingAreaView: View {
                     }
                 }
             }
+            .alert("Remote Has New Changes", isPresented: $viewModel.showPreCommitWarning) {
+                Button("Pull First", role: .cancel) {
+                    viewModel.preCommitPendingMessage = nil
+                    viewModel.preCommitPendingAmend = false
+                    viewModel.showPreCommitWarning = false
+                }
+                Button("Commit Anyway", role: .destructive) {
+                    Task {
+                        let success = await viewModel.commitBypassingGuard()
+                        if success {
+                            commitMessage = ""
+                            isAmending = false
+                        }
+                    }
+                }
+            } message: {
+                if let warning = viewModel.preCommitWarning {
+                    Text(warning)
+                }
+            }
 
             // Right: Diff viewer
             if let file = selectedFile {
@@ -131,7 +149,7 @@ struct StagingAreaView: View {
                     repoPath: repoPath,
                     onDismiss: { showCreatePRSheet = false }
                 )
-                .environmentObject(appState)
+                .environment(appState)
             }
         }
         .sheet(isPresented: $showConflictResolver) {
@@ -272,13 +290,13 @@ struct StagingAreaView: View {
                         .font(.system(size: 11))
                         .foregroundStyle(AppTheme.textMuted)
 
-                    TextField("Search files...", text: $searchText)
+                    TextField("Search files...", text: $viewModel.searchText)
                         .textFieldStyle(.plain)
                         .font(DesignTokens.Typography.caption)
 
-                    if !searchText.isEmpty {
+                    if !viewModel.searchText.isEmpty {
                         Button {
-                            searchText = ""
+                            viewModel.searchText = ""
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 10))
@@ -296,12 +314,12 @@ struct StagingAreaView: View {
                 // Extension filter
                 Menu {
                     Button("All Files") {
-                        extensionFilter = nil
+                        viewModel.extensionFilter = nil
                     }
                     Divider()
                     ForEach(viewModel.availableExtensions, id: \.self) { ext in
                         Button {
-                            extensionFilter = ext
+                            viewModel.extensionFilter = ext
                         } label: {
                             HStack {
                                 Image(systemName: "doc.fill")
@@ -312,20 +330,20 @@ struct StagingAreaView: View {
                         }
                     }
                 } label: {
-                    Image(systemName: extensionFilter != nil ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                    Image(systemName: viewModel.extensionFilter != nil ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                 }
-                .tint(extensionFilter != nil ? AppTheme.accent : AppTheme.textSecondary)
+                .tint(viewModel.extensionFilter != nil ? AppTheme.accent : AppTheme.textSecondary)
                 .menuStyle(.borderlessButton)
 
                 Spacer()
 
                 // File count with warning for large lists
-                if viewModel.totalFileCount > maxVisibleFiles {
+                if viewModel.totalFileCount > viewModel.maxVisibleFiles {
                     HStack(spacing: 4) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 10))
                             .foregroundStyle(AppTheme.warning)
-                        Text("\(viewModel.totalFileCount) files (showing \(maxVisibleFiles))")
+                        Text("\(viewModel.totalFileCount) files (showing \(viewModel.maxVisibleFiles))")
                             .font(DesignTokens.Typography.caption)
                             .foregroundStyle(AppTheme.warning)
                     }
@@ -341,22 +359,22 @@ struct StagingAreaView: View {
             .background(AppTheme.backgroundSecondary)
 
             // Active filters indicator
-            if extensionFilter != nil || !searchText.isEmpty {
+            if viewModel.extensionFilter != nil || !viewModel.searchText.isEmpty {
                 HStack(spacing: DesignTokens.Spacing.xs) {
-                    if let ext = extensionFilter {
+                    if let ext = viewModel.extensionFilter {
                         ActiveFilterTag(label: ".\(ext)") {
-                            extensionFilter = nil
+                            viewModel.extensionFilter = nil
                         }
                     }
-                    if !searchText.isEmpty {
-                        ActiveFilterTag(label: "\"\(searchText)\"") {
-                            searchText = ""
+                    if !viewModel.searchText.isEmpty {
+                        ActiveFilterTag(label: "\"\(viewModel.searchText)\"") {
+                            viewModel.searchText = ""
                         }
                     }
                     Spacer()
                     Button("Clear all") {
-                        extensionFilter = nil
-                        searchText = ""
+                        viewModel.extensionFilter = nil
+                        viewModel.searchText = ""
                     }
                     .font(DesignTokens.Typography.caption2)
                     .foregroundStyle(AppTheme.accent)
@@ -441,8 +459,8 @@ struct StagingAreaView: View {
     private var unstagedContent: some View {
             if viewMode == .tree {
                 FileTreeView(
-                    files: filteredUnstagedFiles,
-                    untrackedFiles: filteredUntrackedFiles,
+                    files: viewModel.filteredUnstagedFiles,
+                    untrackedFiles: viewModel.filteredUntrackedFiles,
                     selectedFile: selectedFile,
                     namespace: animation,
                     onSelect: { path in selectedFile = path },
@@ -458,9 +476,9 @@ struct StagingAreaView: View {
     private var flatUnstagedList: some View {
         Group {
             // When filtering, show grouped by status type
-            if extensionFilter != nil {
+            if viewModel.extensionFilter != nil {
                 // Modified files
-                let modifiedFiles = filteredUnstagedFiles.filter { $0.status == .modified }
+                let modifiedFiles = viewModel.filteredUnstagedFiles.filter { $0.status == .modified }
                 if !modifiedFiles.isEmpty {
                     FileStatusSeparator(title: "Modified", count: modifiedFiles.count, color: .orange)
                     ForEach(modifiedFiles) { file in
@@ -475,9 +493,9 @@ struct StagingAreaView: View {
                 }
 
                 // Added/New files (untracked)
-                if !filteredUntrackedFiles.isEmpty {
-                    FileStatusSeparator(title: "Added", count: filteredUntrackedFiles.count, color: AppTheme.success)
-                    ForEach(filteredUntrackedFiles, id: \.self) { path in
+                if !viewModel.filteredUntrackedFiles.isEmpty {
+                    FileStatusSeparator(title: "Added", count: viewModel.filteredUntrackedFiles.count, color: AppTheme.success)
+                    ForEach(viewModel.filteredUntrackedFiles, id: \.self) { path in
                         UntrackedFileRow(
                             path: path,
                             isSelected: selectedFile == path,
@@ -489,7 +507,7 @@ struct StagingAreaView: View {
                 }
 
                 // Other statuses (deleted, renamed, etc)
-                let otherFiles = filteredUnstagedFiles.filter { $0.status != .modified }
+                let otherFiles = viewModel.filteredUnstagedFiles.filter { $0.status != .modified }
                 if !otherFiles.isEmpty {
                     FileStatusSeparator(title: "Other Changes", count: otherFiles.count, color: AppTheme.accent)
                     ForEach(otherFiles) { file in
@@ -504,7 +522,7 @@ struct StagingAreaView: View {
                 }
             } else {
                 // No filter - show paginated files for performance
-                ForEach(paginatedUnstagedFiles) { file in
+                ForEach(viewModel.paginatedUnstagedFiles) { file in
                     FileRow(
                         file: file,
                         isSelected: selectedFile == file.path,
@@ -514,7 +532,7 @@ struct StagingAreaView: View {
                     )
                 }
 
-                ForEach(paginatedUntrackedFiles, id: \.self) { path in
+                ForEach(viewModel.paginatedUntrackedFiles, id: \.self) { path in
                     UntrackedFileRow(
                         path: path,
                         isSelected: selectedFile == path,
@@ -525,9 +543,9 @@ struct StagingAreaView: View {
                 }
 
                 // Show "more files" indicator
-                if hasMoreUnstagedFiles {
+                if viewModel.hasMoreUnstagedFiles {
                     MoreFilesIndicator(
-                        count: (filteredUnstagedFiles.count + filteredUntrackedFiles.count) - maxVisibleFiles,
+                        count: (viewModel.filteredUnstagedFiles.count + viewModel.filteredUntrackedFiles.count) - viewModel.maxVisibleFiles,
                         message: "Use search to find specific files"
                     )
                 }
@@ -582,7 +600,7 @@ struct StagingAreaView: View {
     private var stagedContent: some View {
         if viewMode == .tree {
             FileTreeView(
-                files: paginatedStagedFiles,
+                files: viewModel.paginatedStagedFiles,
                 untrackedFiles: [],
                 selectedFile: selectedFile,
                 isStaged: true,
@@ -593,7 +611,7 @@ struct StagingAreaView: View {
                 onDiscardStaged: { path in Task { await viewModel.discardStagedFile(path) } }
             )
         } else {
-            ForEach(paginatedStagedFiles) { file in
+            ForEach(viewModel.paginatedStagedFiles) { file in
                 FileRow(
                     file: file,
                     isSelected: selectedFile == file.path,
@@ -605,9 +623,9 @@ struct StagingAreaView: View {
         }
 
         // Show "more files" indicator for staged
-        if hasMoreStagedFiles {
+        if viewModel.hasMoreStagedFiles {
             MoreFilesIndicator(
-                count: filteredStagedFiles.count - maxVisibleFiles,
+                count: viewModel.filteredStagedFiles.count - viewModel.maxVisibleFiles,
                 message: "Use search to find specific files"
             )
         }
@@ -621,72 +639,7 @@ struct StagingAreaView: View {
             .padding()
     }
 
-    // MARK: - Filtered Files (with search and extension filter)
-
-    private func applyFilters(_ files: [FileStatus]) -> [FileStatus] {
-        var result = files
-
-        // Apply extension filter
-        if let ext = extensionFilter {
-            result = result.filter { $0.fileExtension == ext }
-        }
-
-        // Apply search filter
-        if !searchText.isEmpty {
-            let search = searchText.lowercased()
-            result = result.filter { $0.path.lowercased().contains(search) }
-        }
-
-        return result
-    }
-
-    private var filteredUnstagedFiles: [FileStatus] {
-        applyFilters(viewModel.unstagedFiles)
-    }
-
-    private var filteredUntrackedFiles: [String] {
-        var result = viewModel.untrackedFiles
-
-        // Apply extension filter
-        if let ext = extensionFilter {
-            result = result.filter {
-                URL(fileURLWithPath: $0).pathExtension.lowercased() == ext
-            }
-        }
-
-        // Apply search filter
-        if !searchText.isEmpty {
-            let search = searchText.lowercased()
-            result = result.filter { $0.lowercased().contains(search) }
-        }
-
-        return result
-    }
-
-    private var filteredStagedFiles: [FileStatus] {
-        applyFilters(viewModel.stagedFiles)
-    }
-
-    // Paginated versions for display
-    private var paginatedUnstagedFiles: [FileStatus] {
-        Array(filteredUnstagedFiles.prefix(maxVisibleFiles))
-    }
-
-    private var paginatedUntrackedFiles: [String] {
-        Array(filteredUntrackedFiles.prefix(maxVisibleFiles))
-    }
-
-    private var paginatedStagedFiles: [FileStatus] {
-        Array(filteredStagedFiles.prefix(maxVisibleFiles))
-    }
-
-    private var hasMoreUnstagedFiles: Bool {
-        filteredUnstagedFiles.count + filteredUntrackedFiles.count > maxVisibleFiles
-    }
-
-    private var hasMoreStagedFiles: Bool {
-        filteredStagedFiles.count > maxVisibleFiles
-    }
+    // Filtered/paginated properties moved to StagingAreaViewModel
 }
 
 // MARK: - More Files Indicator
@@ -796,21 +749,107 @@ enum CommitValidationError: LocalizedError {
 }
 
 @MainActor
-class StagingAreaViewModel: ObservableObject {
-    @Published var stagedFiles: [FileStatus] = []
-    @Published var unstagedFiles: [FileStatus] = []
-    @Published var untrackedFiles: [String] = []
-    @Published var conflictedFiles: [FileStatus] = []
-    @Published var isLoading = false
-    @Published var currentDiff = ""
-    @Published var commitError: CommitValidationError?
-    @Published var showError = false
-    @Published var availableExtensions: [String] = []
+@Observable
+class StagingAreaViewModel {
+    var stagedFiles: [FileStatus] = [] {
+        didSet { recomputeFilteredLists() }
+    }
+    var unstagedFiles: [FileStatus] = [] {
+        didSet { recomputeFilteredLists() }
+    }
+    var untrackedFiles: [String] = [] {
+        didSet { recomputeFilteredLists() }
+    }
+    var conflictedFiles: [FileStatus] = []
+    var isLoading = false
+    var currentDiff = ""
+    var commitError: CommitValidationError?
+    var showError = false
+    var availableExtensions: [String] = []
+
+    // Pre-commit guard state
+    var preCommitWarning: String?
+    var showPreCommitWarning = false
+    var preCommitPendingMessage: String?
+    var preCommitPendingAmend: Bool = false
+
+    // Filter inputs
+    var searchText: String = "" {
+        didSet { recomputeFilteredLists() }
+    }
+    var extensionFilter: String? = nil {
+        didSet { recomputeFilteredLists() }
+    }
+
+    // Cached filtered results
+    private(set) var filteredUnstagedFiles: [FileStatus] = []
+    private(set) var filteredUntrackedFiles: [String] = []
+    private(set) var filteredStagedFiles: [FileStatus] = []
 
     private var currentPath: String?
     private var gitService: GitService?
     private weak var appState: AppState?
     private var extensionCounts: [String: Int] = [:]
+    private var isBatchUpdating = false
+
+    // Pagination
+    let maxVisibleFiles = 500
+
+    var paginatedUnstagedFiles: [FileStatus] {
+        Array(filteredUnstagedFiles.prefix(maxVisibleFiles))
+    }
+
+    var paginatedUntrackedFiles: [String] {
+        Array(filteredUntrackedFiles.prefix(maxVisibleFiles))
+    }
+
+    var paginatedStagedFiles: [FileStatus] {
+        Array(filteredStagedFiles.prefix(maxVisibleFiles))
+    }
+
+    var hasMoreUnstagedFiles: Bool {
+        filteredUnstagedFiles.count + filteredUntrackedFiles.count > maxVisibleFiles
+    }
+
+    var hasMoreStagedFiles: Bool {
+        filteredStagedFiles.count > maxVisibleFiles
+    }
+
+    // MARK: - Filtering
+
+    private func applyFilters(_ files: [FileStatus]) -> [FileStatus] {
+        var result = files
+
+        if let ext = extensionFilter {
+            result = result.filter { $0.fileExtension == ext }
+        }
+
+        if !searchText.isEmpty {
+            let search = searchText.lowercased()
+            result = result.filter { $0.path.lowercased().contains(search) }
+        }
+
+        return result
+    }
+
+    private func recomputeFilteredLists() {
+        guard !isBatchUpdating else { return }
+        filteredUnstagedFiles = applyFilters(unstagedFiles)
+
+        var untrackedResult = untrackedFiles
+        if let ext = extensionFilter {
+            untrackedResult = untrackedResult.filter {
+                URL(fileURLWithPath: $0).pathExtension.lowercased() == ext
+            }
+        }
+        if !searchText.isEmpty {
+            let search = searchText.lowercased()
+            untrackedResult = untrackedResult.filter { $0.lowercased().contains(search) }
+        }
+        filteredUntrackedFiles = untrackedResult
+
+        filteredStagedFiles = applyFilters(stagedFiles)
+    }
 
     func configure(with appState: AppState) {
         self.appState = appState
@@ -863,10 +902,17 @@ class StagingAreaViewModel: ObservableObject {
 
     func loadStatus(for repo: Repository) async {
         currentPath = repo.path
+
+        // Suppress per-property recomputation during batch update
+        isBatchUpdating = true
         stagedFiles = repo.status.staged
         unstagedFiles = repo.status.unstaged
         untrackedFiles = repo.status.untracked
         conflictedFiles = repo.status.conflicted
+        isBatchUpdating = false
+
+        // Single recomputation after all lists are set
+        recomputeFilteredLists()
 
         // Update extension cache once after loading status
         updateExtensionCache()
@@ -990,14 +1036,31 @@ class StagingAreaViewModel: ObservableObject {
         return nil
     }
 
-    func commit(message: String, amend: Bool = false) async -> Bool {
+    func commit(message: String, amend: Bool = false, bypassGuard: Bool = false) async -> Bool {
         if let error = validateCommit(message: message, amend: amend) {
             commitError = error
             showError = true
             return false
         }
 
-        guard currentPath != nil, let gitService = gitService else { return false }
+        guard let repoPath = currentPath, let gitService = gitService else { return false }
+
+        // Pre-commit: fetch and check remote (skip if user already acknowledged)
+        if !bypassGuard {
+            let guardResult = await PreCommitGuard.shared.runPreCommitChecks(at: repoPath)
+            if let warning = guardResult.warning {
+                preCommitWarning = warning
+                if !guardResult.conflictingFiles.isEmpty {
+                    // Potential conflicts -- block and ask the user
+                    preCommitPendingMessage = message
+                    preCommitPendingAmend = amend
+                    showPreCommitWarning = true
+                    return false
+                }
+                // No conflicting files -- show as notification but proceed
+                NotificationManager.shared.warning("Pre-commit check", detail: warning)
+            }
+        }
 
         do {
             let commit = try await gitService.commit(message: message, amend: amend)
@@ -1032,6 +1095,16 @@ class StagingAreaViewModel: ObservableObject {
 
     func canCommit(message: String, amend: Bool = false) -> Bool {
         return validateCommit(message: message, amend: amend) == nil
+    }
+
+    /// Retry the pending commit, bypassing the pre-commit guard (user acknowledged the warning)
+    func commitBypassingGuard() async -> Bool {
+        guard let message = preCommitPendingMessage else { return false }
+        let amend = preCommitPendingAmend
+        preCommitPendingMessage = nil
+        preCommitPendingAmend = false
+        preCommitWarning = nil
+        return await commit(message: message, amend: amend, bypassGuard: true)
     }
 }
 
@@ -2062,7 +2135,7 @@ struct FilePreviewView: View {
     let filePath: String
     let repositoryPath: String
     @State private var content: String = ""
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager
     @State private var isLoading = true
     @State private var error: String?
     @State private var isBinary = false
@@ -2407,10 +2480,10 @@ struct CreatePRSheetFromCommit: View {
     let repoPath: String  // Pass repo path directly from the tab
     let onDismiss: () -> Void
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = PRListViewModel()
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     @State private var title = ""
     @State private var prBody = ""

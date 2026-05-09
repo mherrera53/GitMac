@@ -11,7 +11,7 @@ import Foundation
 
 // MARK: - Worktree Sidebar Section
 struct WorktreeSidebarSection: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var manager = WorktreeManager.shared
     @State private var showAddSheet = false
 
@@ -70,7 +70,7 @@ struct WorktreeSidebarSection: View {
 // MARK: - Worktree Sidebar Row
 struct WorktreeSidebarRow: View {
     let worktree: Worktree
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @State private var isHovered = false
 
     var body: some View {

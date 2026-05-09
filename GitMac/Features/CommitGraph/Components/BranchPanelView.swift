@@ -8,7 +8,7 @@ struct BranchPanelView: View {
 
     @State private var searchText = ""
     @State private var expandedSections: Set<String> = ["local", "remote"]
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -140,7 +140,7 @@ struct BranchSection: View {
     let isExpanded: Bool
     let onToggle: () -> Void
 
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -201,7 +201,7 @@ struct BranchPanelRow: View {
     let onCheckout: () -> Void
 
     @State private var isHovered = false
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)

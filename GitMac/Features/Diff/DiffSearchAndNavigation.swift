@@ -19,13 +19,14 @@ struct DiffSearchMatch: Identifiable, Equatable {
 
 /// Manages search state for diff view
 @MainActor
-class DiffSearchState: ObservableObject {
-    @Published var query: String = ""
-    @Published var matches: [DiffSearchMatch] = []
-    @Published var currentMatchIndex: Int = 0
-    @Published var isSearching: Bool = false
-    @Published var caseSensitive: Bool = false
-    @Published var useRegex: Bool = false
+@Observable
+class DiffSearchState {
+    var query: String = ""
+    var matches: [DiffSearchMatch] = []
+    var currentMatchIndex: Int = 0
+    var isSearching: Bool = false
+    var caseSensitive: Bool = false
+    var useRegex: Bool = false
 
     var currentMatch: DiffSearchMatch? {
         guard !matches.isEmpty, currentMatchIndex < matches.count else { return nil }
@@ -96,7 +97,7 @@ class DiffSearchState: ObservableObject {
 
 /// Search bar for diff view
 struct DiffSearchBar: View {
-    @ObservedObject var searchState: DiffSearchState
+    @Bindable var searchState: DiffSearchState
     @FocusState private var isFocused: Bool
     var onClose: () -> Void
 
@@ -190,9 +191,10 @@ struct DiffSearchBar: View {
 
 /// Manages navigation between changes
 @MainActor
-class DiffNavigationState: ObservableObject {
-    @Published var changePositions: [ChangePosition] = []
-    @Published var currentChangeIndex: Int = 0
+@Observable
+class DiffNavigationState {
+    var changePositions: [ChangePosition] = []
+    var currentChangeIndex: Int = 0
 
     struct ChangePosition: Identifiable {
         let id = UUID()
@@ -283,7 +285,7 @@ class DiffNavigationState: ObservableObject {
 
 /// Toolbar for navigating between changes
 struct DiffNavigationToolbar: View {
-    @ObservedObject var navigationState: DiffNavigationState
+    var navigationState: DiffNavigationState
     var onNavigate: (CGFloat) -> Void
 
     var body: some View {
@@ -705,8 +707,8 @@ struct EnhancedDiffViewer: View {
     let repoPath: String
     let staged: Bool
 
-    @StateObject private var searchState = DiffSearchState()
-    @StateObject private var navigationState = DiffNavigationState()
+    @State private var searchState = DiffSearchState()
+    @State private var navigationState = DiffNavigationState()
 
     @State private var hunks: [StreamingDiffHunk] = []
     @State private var isLoading = true
@@ -726,6 +728,8 @@ struct EnhancedDiffViewer: View {
     }
 
     var body: some View {
+        @Bindable var searchState = searchState
+
         VStack(spacing: 0) {
             // Toolbar
             diffToolbar
@@ -856,6 +860,7 @@ struct EnhancedDiffViewer: View {
 
     @ViewBuilder
     private var diffContent: some View {
+        let bindableSearch = Bindable(searchState)
         if isLargeFileMode {
             LargeDiffView(
                 hunks: hunks,
@@ -864,8 +869,8 @@ struct EnhancedDiffViewer: View {
                 options: options,
                 onExpandHunk: { expandHunk(at: $0) },
                 onCollapseHunk: { collapseHunk(at: $0) },
-                searchQuery: $searchState.query,
-                currentMatchIndex: $searchState.currentMatchIndex
+                searchQuery: bindableSearch.query,
+                currentMatchIndex: bindableSearch.currentMatchIndex
             )
         } else {
             switch viewMode {

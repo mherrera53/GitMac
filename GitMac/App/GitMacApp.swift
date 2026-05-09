@@ -60,9 +60,9 @@ class OllamaProcessManager: ObservableObject {
 
 @main
 struct GitMacApp: App {
-    @StateObject private var appState = AppState()
+    @State private var appState = AppState()
     @StateObject private var recentReposManager = RecentRepositoriesManager.shared
-    @StateObject private var themeManager = ThemeManager.shared
+    @State private var themeManager = ThemeManager.shared
     @StateObject private var ollamaManager = OllamaProcessManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
@@ -123,9 +123,9 @@ struct GitMacApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(appState)
+                .environment(appState)
                 .environmentObject(recentReposManager)
-                .environmentObject(themeManager)
+                .environment(themeManager)
                 .task {
                     // Restore previous session on launch
                     await appState.restoreSession()
@@ -157,8 +157,8 @@ struct GitMacApp: App {
 
         Settings {
             SettingsView()
-                .environmentObject(appState)
-                .environmentObject(themeManager)
+                .environment(appState)
+                .environment(themeManager)
         }
     }
 }
@@ -196,23 +196,21 @@ class RepositoryTab: Identifiable, ObservableObject, Hashable, Equatable {
 
 // MARK: - App State
 @MainActor
-class AppState: ObservableObject {
+@Observable
+class AppState {
     static let shared = AppState()
 
-    // Multiple repos support (tabs)
-    @Published var openTabs: [RepositoryTab] = [] {
+    var openTabs: [RepositoryTab] = [] {
         didSet { _refreshActiveTab() }
     }
-    @Published var activeTabId: UUID? {
+    var activeTabId: UUID? {
         didSet { _refreshActiveTab() }
     }
-    
-    // Computed property for active tab's branch manager
+
     var branchManager: BranchStateManager? {
         activeTab?.branchManager
     }
 
-    // Computed property for backward compatibility
     var currentRepository: Repository? {
         get { activeTab?.repository }
         set {
@@ -224,9 +222,7 @@ class AppState: ObservableObject {
         }
     }
 
-    /// Cached active tab — avoids O(n) scan on every view body evaluation.
-    /// Invalidated whenever activeTabId or openTabs changes.
-    @Published private(set) var activeTab: RepositoryTab?
+    private(set) var activeTab: RepositoryTab?
 
     private func _refreshActiveTab() {
         activeTab = openTabs.first { $0.id == activeTabId }
@@ -236,16 +232,13 @@ class AppState: ObservableObject {
         openTabs.firstIndex { $0.id == activeTabId }
     }
 
-    @Published var isLoading = false
-    @Published var errorMessage: String?
+    var isLoading = false
+    var errorMessage: String?
 
     var selectedCommit: Commit? {
         get { activeTab?.selectedCommit }
         set {
             if let index = activeTabIndex {
-                // Must send objectWillChange manually because mutating a nested
-                // ObservableObject inside a @Published array doesn't trigger it.
-                objectWillChange.send()
                 openTabs[index].selectedCommit = newValue
             }
         }
@@ -255,7 +248,6 @@ class AppState: ObservableObject {
         get { activeTab?.selectedBranch }
         set {
             if let index = activeTabIndex {
-                objectWillChange.send()
                 openTabs[index].selectedBranch = newValue
             }
         }
@@ -265,15 +257,13 @@ class AppState: ObservableObject {
         get { activeTab?.selectedStash }
         set {
             if let index = activeTabIndex {
-                objectWillChange.send()
                 openTabs[index].selectedStash = newValue
             }
         }
     }
 
-    // Commit comparison state
-    @Published var comparisonCommitA: Commit?
-    @Published var comparisonCommitB: Commit?
+    var comparisonCommitA: Commit?
+    var comparisonCommitB: Commit?
 
     var isComparing: Bool {
         comparisonCommitA != nil && comparisonCommitB != nil
@@ -365,10 +355,7 @@ class AppState: ObservableObject {
         for tab in openTabs {
             await tab.configureBranchManager()
         }
-        Logger.debug("✅ All tabs configured")
-        
-        // Force AppState update
-        objectWillChange.send()
+        Logger.debug("[OK] All tabs configured")
     }
 
     func openRepository(at path: String) async {
@@ -389,9 +376,6 @@ class AppState: ObservableObject {
                 activeTabId = newTab.id
                 await newTab.configureBranchManager()
             }
-            
-            // Force update
-            objectWillChange.send()
 
             // Save to recent repositories
             RecentRepositoriesManager.shared.addRecent(path: repo.path, name: repo.name)
@@ -430,7 +414,6 @@ class AppState: ObservableObject {
             openTabs.append(newTab)
             activeTabId = newTab.id
             await newTab.configureBranchManager()
-            objectWillChange.send()
         } catch {
             errorMessage = "Error cloning repository: \(error.localizedDescription)"
         }
@@ -479,17 +462,14 @@ class AppState: ObservableObject {
         activeTabId = tabId
         saveSession()
         
-        Logger.debug("✅ selectTab() done - activeTab: \(activeTab?.repository.name ?? "nil")")
-        Logger.debug("📊 branchManager.currentBranch: \(branchManager?.currentBranch?.name ?? "nil")")
-        
-        // Force UI update
-        objectWillChange.send()
+        Logger.debug("[OK] selectTab() done - activeTab: \(activeTab?.repository.name ?? "nil")")
+        Logger.debug("[chart] branchManager.currentBranch: \(branchManager?.currentBranch?.name ?? "nil")")
     }
     
     // MARK: - Navigation History
     
-    @Published var backStack: [UUID] = []
-    @Published var forwardStack: [UUID] = []
+    var backStack: [UUID] = []
+    var forwardStack: [UUID] = []
     
     var canGoBack: Bool { !backStack.isEmpty }
     var canGoForward: Bool { !forwardStack.isEmpty }
@@ -743,7 +723,7 @@ struct GitMacCommands: Commands {
             .keyboardShortcut("6", modifiers: .command)
 
             Button("CI/CD") {
-                // notification for cicd? 
+                NotificationCenter.default.post(name: .showCICD, object: nil)
             }
             .keyboardShortcut("7", modifiers: .command)
         }
@@ -805,6 +785,8 @@ extension Notification.Name {
     static let gitMergeCompleted = Notification.Name("gitMergeCompleted")
     static let refreshCICD = Notification.Name("refreshCICD")
     static let showCICD = Notification.Name("showCICD")
+    /// Posted when user requests conflict resolution (object: file path String)
+    static let resolveConflict = Notification.Name("resolveConflict")
     /// Posted when user requests file history from staging context menu (object: file path String)
     static let showFileHistory = Notification.Name("showFileHistory")
 }

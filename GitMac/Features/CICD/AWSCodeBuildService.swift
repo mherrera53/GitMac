@@ -91,9 +91,9 @@ struct CodeBuild: Identifiable, Codable {
 // MARK: - AWS CodeBuild View
 
 struct AWSCodeBuildView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = AWSCodeBuildViewModel()
     @StateObject private var workspaceManager = WorkspaceSettingsManager.shared
     @State private var selectedFilter: AWSBuildFilter = .all
@@ -409,7 +409,7 @@ enum AWSBuildFilter: CaseIterable {
 }
 
 struct FilterChip: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let title: String
     let isSelected: Bool
     let color: Color
@@ -448,7 +448,7 @@ struct AWSBuildRow: View {
         return f
     }()
 
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let build: CodeBuild
     @State private var isHovered = false
 
@@ -943,7 +943,7 @@ class AWSCodeBuildViewModel: ObservableObject {
 // MARK: - AWS Panel for sidebar
 
 struct AWSCodeBuildPanel: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {

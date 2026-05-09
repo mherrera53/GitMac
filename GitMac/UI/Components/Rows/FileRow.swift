@@ -12,7 +12,6 @@ struct FileRow: View {
     var showFileIcon: Bool = true
     var showDirectory: Bool = true
     var showStats: Bool = true
-    var contextMenu: (() -> AnyView)? = nil
     var onSelect: (() -> Void)? = nil
 
     // File actions
@@ -26,7 +25,6 @@ struct FileRow: View {
             isSelected: isSelected,
             style: style,
             actions: buildActions(),
-            contextMenu: contextMenu,
             onSelect: onSelect
         ) {
             fileContent

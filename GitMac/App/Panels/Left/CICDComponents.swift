@@ -11,9 +11,9 @@ import Foundation
 
 // MARK: - CI/CD Sidebar Section
 struct CICDSidebarSection: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = CICDSidebarViewModel()
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @State private var showCICDPanel = false
     @State private var selectedTab: CICDTab = .github
 
@@ -75,7 +75,7 @@ struct CICDSidebarSection: View {
         }
         .sheet(isPresented: $showCICDPanel) {
             UnifiedCICDPanel(selectedTab: $selectedTab, hasGitHub: viewModel.hasGitHub, hasAWS: viewModel.hasAWS)
-                .environmentObject(appState)
+                .environment(appState)
         }
         .onReceive(NotificationCenter.default.publisher(for: .showCICD)) { _ in
             selectedTab = viewModel.hasAWS ? .aws : .github
@@ -174,7 +174,7 @@ struct CICDProviderRow: View {
     let count: Int
     let action: () -> Void
 
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @State private var isHovered = false
 
     var body: some View {
@@ -314,7 +314,7 @@ class CICDSidebarViewModel: ObservableObject {
 
 // MARK: - Workflows Panel (Sheet)
 struct WorkflowsPanel: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {

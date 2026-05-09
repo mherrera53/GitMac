@@ -8,7 +8,7 @@ import Splash
 /// Automatically switches between rich and fast rendering based on file size
 /// Supports Mermaid diagrams (flowchart, sequence, class, state, ER, pie, gantt)
 struct MarkdownView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @Environment(\.colorScheme) private var colorScheme
     
     let content: String
@@ -94,7 +94,7 @@ struct MarkdownView: View {
 
 /// Mixed renderer that handles both markdown text and Mermaid diagrams
 struct MermaidMarkdownView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let content: String
     let isDarkMode: Bool
 

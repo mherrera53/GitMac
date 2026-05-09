@@ -22,7 +22,7 @@ struct KaleidoscopeSplitDiffView: View {
     @Binding var contentHeight: CGFloat
     @Binding var minimapScrollTrigger: UUID
 
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     // Scroll state management
     @State private var lastExternalScrollOffset: CGFloat = -1
@@ -689,7 +689,7 @@ private struct KaleidoscopeScrollContainer<Content: View>: NSViewRepresentable {
 }
 
 private struct KaleidoscopeGutterView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -715,7 +715,7 @@ struct KaleidoscopeDiffLine: View {
     let showLineNumber: Bool
     let pairedLine: DiffLine?
 
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     private var lineNumber: Int? {
         side == .left ? line.oldLineNumber : line.newLineNumber
@@ -914,7 +914,7 @@ struct KaleidoscopeHunkHeader: View {
     let header: String
     var onStageHunk: (() -> Void)? = nil
     var onDiscardHunk: (() -> Void)? = nil
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @State private var isHovered = false
 
     var body: some View {
@@ -1380,7 +1380,7 @@ struct FluidScrollViewWithOffset<Content: View>: NSViewRepresentable {
 struct RowConnectionLine: View {
     var isFluidMode: Bool
     let width: CGFloat
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     
     var body: some View {
         let theme = Color.Theme(themeManager.colors)

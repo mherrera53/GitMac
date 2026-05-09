@@ -104,7 +104,7 @@ struct ManagedSubmodule: Identifiable, Hashable {
 // MARK: - Submodule List View
 
 struct SubmoduleListView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = SubmoduleListViewModel()
     @State private var showAddSheet = false
     @State private var selectedSubmodule: ManagedSubmodule?
@@ -321,7 +321,7 @@ struct ManagedSubmoduleRow: View {
 
 struct AddSubmoduleSheetFromList: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @ObservedObject var viewModel: SubmoduleListViewModel
 
     @State private var url = ""

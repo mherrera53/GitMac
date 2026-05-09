@@ -1,16 +1,16 @@
 import SwiftUI
-import Combine
 import AppKit
 
 /// Theme Manager - Sistema completo de temas para GitMac
 /// Soporta temas predefinidos y personalizados
 @MainActor
-class ThemeManager: ObservableObject {
+@Observable
+class ThemeManager {
     static let shared = ThemeManager()
-    
-    @Published var currentTheme: Theme = .system
-    @Published var customColors: CustomColorScheme?
-    @Published var appearance: NSAppearance?
+
+    var currentTheme: Theme = .system
+    var customColors: CustomColorScheme?
+    var appearance: NSAppearance?
     
     private let defaults = UserDefaults.standard
     private let themeKey = "selectedTheme"
@@ -633,7 +633,7 @@ struct CodableColor: Codable, Equatable {
 // MARK: - Theme Settings View
 
 struct ThemeSettingsView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -735,7 +735,7 @@ struct ThemeOptionButton: View {
 }
 
 struct ThemePreview: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -1090,7 +1090,7 @@ struct ThemePalette: Identifiable {
 }
 
 struct CustomThemeEditor: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @State private var customColors: CustomColorScheme
     @State private var selectedPalette: UUID?
 

@@ -32,7 +32,7 @@ struct KaleidoscopeDiffView: View {
     var onHistoryTap: (() -> Void)?
     var onBlameTap: (() -> Void)?
 
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     // Select first file by default
     init(
@@ -83,8 +83,8 @@ struct KaleidoscopeDiffView: View {
                         .frame(width: 1)
                 }
 
-                // Diff view (main area) with Minimap Overlay
-                ZStack(alignment: .trailing) {
+                // Diff view (main area) with Minimap Side Panel
+                HStack(spacing: 0) {
                     if let file = selectedFile {
                         let currentHunks = swappedAB ? swapHunks(file.hunks) : file.hunks
                         let pairedLines = KaleidoscopePairingEngine.calculatePairs(from: currentHunks)
@@ -92,6 +92,10 @@ struct KaleidoscopeDiffView: View {
                             .frame(maxWidth: .infinity)
 
                         if showMinimap {
+                            Rectangle()
+                                .fill(theme.border)
+                                .frame(width: 1)
+
                             KaleidoscopeMinimapWrapper(
                                 rows: minimapRows(from: pairedLines),
                                 scrollOffset: $scrollOffset,
@@ -100,7 +104,6 @@ struct KaleidoscopeDiffView: View {
                                 minimapScrollTriggerAction: { minimapScrollTrigger = UUID() }
                             )
                             .frame(width: 80)
-                            .padding(.trailing, 4)
                             .padding(.vertical, 4)
                         }
                     } else {
@@ -760,7 +763,7 @@ struct CommitHistorySidebar: View {
     @Binding var selectedCommitB: Commit?
     @State private var filterText: String = ""
     @State private var currentChangeIndex: Int = 0
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     private var filteredCommits: [Commit] {
         if filterText.isEmpty {
@@ -889,7 +892,7 @@ struct CommitHistoryRow: View {
     let onSelectB: () -> Void
 
     @State private var isHovered = false
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     private var initials: String {
         let components = commit.author.components(separatedBy: " ")

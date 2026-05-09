@@ -139,8 +139,8 @@ struct WorkflowsResponse: Codable {
 // MARK: - Workflows View
 
 struct WorkflowsView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
-    @EnvironmentObject var appState: AppState
+    @Environment(ThemeManager.self) private var themeManager
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = WorkflowsViewModel()
     @State private var selectedFilter: WorkflowFilter = .all
     @State private var searchText = ""
@@ -338,7 +338,7 @@ enum WorkflowFilter: CaseIterable {
 }
 
 struct FilterButton: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     let title: String
     let count: Int
@@ -370,7 +370,7 @@ struct FilterButton: View {
 // MARK: - Workflow Run Row
 
 struct WorkflowRunRow: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     let run: WorkflowRun
     let onTap: (() -> Void)?
@@ -568,7 +568,7 @@ class WorkflowsViewModel: ObservableObject {
 // MARK: - Workflow Status Badge (for use in other views)
 
 struct WorkflowStatusBadge: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     let status: String
     let conclusion: String?

@@ -11,7 +11,7 @@ import SwiftUI
 // MARK: - Taiga Tickets Panel (Bottom Panel)
 
 struct TaigaTicketsPanel: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     @Binding var height: CGFloat
     let onClose: () -> Void

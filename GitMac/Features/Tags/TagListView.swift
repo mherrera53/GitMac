@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Tag list and management view
 struct TagListView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = TagListViewModel()
     @State private var selectedTag: Tag?
     @State private var showCreateTagSheet = false
@@ -282,7 +282,7 @@ struct EmptyTagView: View {
 
 struct CreateTagSheet: View {
     @ObservedObject var viewModel: TagListViewModel
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Environment(\.dismiss) private var dismiss
 
     @State private var tagName = ""

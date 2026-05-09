@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SubscriptionSettingsView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @StateObject private var storeManager = StoreManager.shared
     @State private var showSubscriptionSheet = false
 

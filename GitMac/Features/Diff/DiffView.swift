@@ -32,7 +32,7 @@ struct DiffView: View {
         @State private var scrollOffset: CGFloat = 0
     @State private var viewportHeight: CGFloat = 400
     @State private var contentHeight: CGFloat = 1000
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager
     
     // History and Blame panel states
     @State private var showHistory = false
@@ -62,6 +62,14 @@ struct DiffView: View {
     // Cached line counts (avoid recomputing on every body call)
     @State private var cachedTotalLineCount: Int = 0
     @State private var cachedVisualRowCount: Int = 0
+
+    // Cached content strings (avoid recomputing on every body evaluation)
+    @State private var cachedReconstructedOldContent: String = ""
+    @State private var cachedReconstructedNewContent: String = ""
+    @State private var cachedPreviewContent: String = ""
+
+    // Debounce task for kaleidoscope cache rebuilds
+    @State private var kaleidoscopeRebuildTask: Task<Void, Never>?
 
     private var effectiveHunks: [DiffHunk] {
         overrideHunks ?? fileDiff.hunks
@@ -190,45 +198,48 @@ struct DiffView: View {
         return ext == "md" || ext == "markdown"
     }
     
-    // Helper to reconstruct old file content from hunks
-    private var reconstructedOldContent: String {
-        var lines: [String] = []
+    // Accessors for cached content strings
+    private var reconstructedOldContent: String { cachedReconstructedOldContent }
+    private var reconstructedNewContent: String { cachedReconstructedNewContent }
+    private var previewContent: String { cachedPreviewContent }
+
+    /// Rebuild cached content strings from current hunks
+    private func rebuildContentCaches() {
+        // reconstructedOldContent
+        var oldLines: [String] = []
         for hunk in fileDiff.hunks {
             for line in hunk.lines {
                 if line.type != .addition {
-                    lines.append(line.content)
+                    oldLines.append(line.content)
                 }
             }
         }
-        return lines.joined(separator: "\n")
-    }
-    
-    // Helper to reconstruct new file content from hunks
-    private var reconstructedNewContent: String {
-        var lines: [String] = []
+        cachedReconstructedOldContent = oldLines.joined(separator: "\n")
+
+        // reconstructedNewContent
+        var newLines: [String] = []
         for hunk in fileDiff.hunks {
             for line in hunk.lines {
                 if line.type != .deletion {
-                    lines.append(line.content)
+                    newLines.append(line.content)
                 }
             }
         }
-        return lines.joined(separator: "\n")
-    }
+        cachedReconstructedNewContent = newLines.joined(separator: "\n")
 
-    private var previewContent: String {
-        var lines: [String] = []
+        // previewContent
+        var previewLines: [String] = []
         for hunk in effectiveHunks {
             for line in hunk.lines {
                 if line.type == .addition || line.type == .context {
                     let printable = line.content.filter { char in
                         !char.isNewline && !(char.unicodeScalars.first?.properties.generalCategory == .control)
                     }
-                    lines.append(printable)
+                    previewLines.append(printable)
                 }
             }
         }
-        return lines.joined(separator: "\n")
+        cachedPreviewContent = previewLines.joined(separator: "\n")
     }
 
     var body: some View {
@@ -280,13 +291,16 @@ struct DiffView: View {
         .background(theme.backgroundSecondary)
         .onAppear {
             rebuildKaleidoscopeCaches()
+            rebuildContentCaches()
             recalculateCounts()
         }
         .onChange(of: fileDiff.hunks) { _, _ in
-            rebuildKaleidoscopeCaches()
+            debouncedRebuildKaleidoscopeCaches()
+            rebuildContentCaches()
             recalculateCounts()
         }
         .onChange(of: effectiveHunks.count) { _, _ in
+            rebuildContentCaches()
             recalculateCounts()
         }
         .onChange(of: fileDiff.newPath) { _, _ in
@@ -301,7 +315,7 @@ struct DiffView: View {
             }
         }
         .onChange(of: overrideHunks?.count ?? -1) { _, _ in
-            rebuildKaleidoscopeCaches()
+            debouncedRebuildKaleidoscopeCaches()
         }
         .onChange(of: showHistory) { _, newValue in
             if !newValue {
@@ -322,7 +336,7 @@ struct DiffView: View {
         }
         .onChange(of: viewMode) { _, newValue in
             if newValue.isKaleidoscopeMode {
-                rebuildKaleidoscopeCaches()
+                debouncedRebuildKaleidoscopeCaches()
             }
             kaleidoscopeRenderVersion &+= 1
             recalculateCounts()
@@ -377,6 +391,9 @@ struct DiffView: View {
         cachedUnifiedLines.removeAll()
         availableCommits.removeAll()
         overrideHunks = nil
+        cachedReconstructedOldContent = ""
+        cachedReconstructedNewContent = ""
+        cachedPreviewContent = ""
     }
 
     private func rebuildKaleidoscopeCaches() {
@@ -385,6 +402,15 @@ struct DiffView: View {
         cachedPairedLines = KaleidoscopePairingEngine.calculatePairs(from: hunks)
         cachedUnifiedLines = KaleidoscopePairingEngine.calculateUnifiedLines(from: hunks)
         kaleidoscopeRenderVersion &+= 1
+    }
+
+    private func debouncedRebuildKaleidoscopeCaches() {
+        kaleidoscopeRebuildTask?.cancel()
+        kaleidoscopeRebuildTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            guard !Task.isCancelled else { return }
+            rebuildKaleidoscopeCaches()
+        }
     }
 
     private func loadHistoryDiffIfNeeded() {
@@ -829,7 +855,7 @@ struct BlameSheet: View {
 // MARK: - Large File Split Diff View Wrapper
 
 struct LargeFileSplitDiffViewWrapper: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager
     
     let hunks: [DiffHunk]
     let showLineNumbers: Bool
@@ -925,7 +951,7 @@ struct OptimizedSplitDiffView: View {
     var onDiscardHunk: ((Int) async -> Bool)? = nil
     var onUnstageHunk: ((Int) async -> Bool)? = nil
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager
 
     // Line selection state
     @State private var selectedPairIds: Set<Int> = []
@@ -935,6 +961,8 @@ struct OptimizedSplitDiffView: View {
 
     // Cached pairs to avoid recomputing on every body call
     @State private var cachedPairs: [DiffPair] = []
+    // Cached total line count to avoid O(N) reduce in onChange evaluator
+    @State private var cachedHunkLineCount: Int = 0
 
     private func buildPairs() -> [DiffPair] {
         var pairs: [DiffPair] = []
@@ -1065,6 +1093,7 @@ struct OptimizedSplitDiffView: View {
         .animation(.easeInOut(duration: 0.2), value: selectedPairIds.isEmpty)
         .onAppear {
             cachedPairs = buildPairs()
+            cachedHunkLineCount = hunks.reduce(0) { $0 + $1.lines.count }
             // Defer binding update to avoid SwiftUI appearance deadlock
             DispatchQueue.main.async {
                 let newDesired = desiredContentHeight(from: cachedPairs)
@@ -1075,12 +1104,14 @@ struct OptimizedSplitDiffView: View {
         }
         .onChange(of: hunks.count) { _, _ in
             cachedPairs = buildPairs()
+            cachedHunkLineCount = hunks.reduce(0) { $0 + $1.lines.count }
             let newDesired = desiredContentHeight(from: cachedPairs)
             if abs(contentHeight - newDesired) > 0.5 {
                 contentHeight = newDesired
             }
         }
-        .onChange(of: hunks.reduce(0) { $0 + $1.lines.count }) { _, _ in
+        .onChange(of: cachedHunkLineCount) { oldValue, newValue in
+            guard oldValue != newValue else { return }
             cachedPairs = buildPairs()
             let newDesired = desiredContentHeight(from: cachedPairs)
             if abs(contentHeight - newDesired) > 0.5 {
@@ -1955,7 +1986,7 @@ struct SplitDiffView: View {
     let hunks: [DiffHunk]
     let showLineNumbers: Bool
     let filename: String
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager
 
     // Build paired lines for proper alignment
     private var pairedLines: [(left: DiffLine?, right: DiffLine?, hunkHeader: String?)] {
@@ -2076,7 +2107,7 @@ struct SplitDiffView: View {
 
 struct SplitHunkHeaderRow: View {
     let header: String
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -2100,7 +2131,7 @@ struct SplitDiffLineRow: View {
     let side: DiffSide
     let showLineNumber: Bool
     let pairedLine: DiffLine?
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager
 
     var lineNumber: Int? {
         switch side {
@@ -2445,7 +2476,7 @@ struct HunkSummaryHeader: View {
     let hunkCount: Int
     let totalAdditions: Int
     let totalDeletions: Int
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -2497,7 +2528,7 @@ struct HunkSelectionToolbar: View {
     var onStageSelected: (() -> Void)?
     var onUnstageSelected: (() -> Void)?
     var onDiscardSelected: (() -> Void)?
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -2636,7 +2667,7 @@ struct CollapsibleHunkCard: View {
     var onDiscard: (() -> Void)?
 
     @State private var isHovered = false
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager
 
     private var additions: Int {
         hunk.lines.filter { $0.type == .addition }.count
@@ -2803,7 +2834,7 @@ struct HunkCard: View {
     var onUnstage: (() -> Void)?
     var onDiscard: (() -> Void)?
     @State private var isHovered = false
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -2926,7 +2957,7 @@ private struct LargeDiffLine: Identifiable {
 private struct LargeDiffLineView: View {
     let line: LargeDiffLine
     let showLineNumbers: Bool
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)

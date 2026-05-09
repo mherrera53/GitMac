@@ -3,7 +3,7 @@ import SwiftUI
 /// Fuzzy File Finder - Ultra-fast file search (Cmd+P)
 /// Optimized for large repos with thousands of files
 struct FuzzyFileFinder: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = FuzzyFileFinderViewModel()
     

@@ -2,9 +2,9 @@ import SwiftUI
 
 /// Three-way merge conflict resolver
 struct ConflictResolverView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = ConflictResolverViewModel()
     @State private var selectedFile: ConflictFile?
 
@@ -48,6 +48,9 @@ struct ConflictResolverView: View {
         .task {
             if let repo = appState.currentRepository {
                 await viewModel.loadConflicts(from: repo)
+                if selectedFile == nil {
+                    selectedFile = viewModel.conflictFiles.first
+                }
             }
         }
     }
@@ -61,7 +64,6 @@ class ConflictResolverViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
 
-    private let gitService = GitService()
     private let aiService = AIService()
     private var repositoryPath: String = ""
 
@@ -157,7 +159,10 @@ class ConflictResolverViewModel: ObservableObject {
             try content.write(to: fileURL, atomically: true, encoding: .utf8)
 
             // Stage the resolved file
-            try await gitService.stage(files: [file.path])
+            let _ = await ShellExecutor.shared.execute(
+                "git", arguments: ["add", file.path],
+                workingDirectory: repositoryPath
+            )
 
             // Update file status
             if let index = conflictFiles.firstIndex(where: { $0.id == file.id }) {
@@ -174,14 +179,19 @@ class ConflictResolverViewModel: ObservableObject {
             conflictFiles[index].isResolved = true
         }
         // Stage the file
-        try? await gitService.stage(files: [file.path])
+        let _ = await ShellExecutor.shared.execute(
+            "git", arguments: ["add", file.path],
+            workingDirectory: repositoryPath
+        )
     }
 
     func abortMerge() async {
-        do {
-            try await gitService.mergeAbort()
-        } catch {
-            self.error = error.localizedDescription
+        let result = await ShellExecutor.shared.execute(
+            "git", arguments: ["merge", "--abort"],
+            workingDirectory: repositoryPath
+        )
+        if result.exitCode != 0 {
+            self.error = result.stderr
         }
     }
 
@@ -189,14 +199,28 @@ class ConflictResolverViewModel: ObservableObject {
         // All conflicts must be resolved
         guard allResolved else { return }
 
+        // Read the merge message from .git/MERGE_MSG, fall back to default
+        let mergeMsgPath = "\(repositoryPath)/.git/MERGE_MSG"
+        let message = (try? String(contentsOfFile: mergeMsgPath, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines))
+            ?? "Merge conflict resolved"
+
         // Commit the merge
-        do {
-            let commit = try await gitService.commit(message: "Merge conflict resolved")
-            let shortSHA = String(commit.sha.prefix(7))
+        let result = await ShellExecutor.shared.execute(
+            "git", arguments: ["commit", "-m", message],
+            workingDirectory: repositoryPath
+        )
+
+        if result.exitCode == 0 {
+            // Extract short SHA from commit output
+            let revResult = await ShellExecutor.shared.execute(
+                "git", arguments: ["rev-parse", "--short", "HEAD"],
+                workingDirectory: repositoryPath
+            )
+            let shortSHA = revResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
             NotificationManager.shared.success("Merge resolved", detail: "SHA: \(shortSHA)")
-        } catch {
-            self.error = error.localizedDescription
-            NotificationManager.shared.error("Merge commit failed", detail: error.localizedDescription)
+        } else {
+            self.error = result.stderr
+            NotificationManager.shared.error("Merge commit failed", detail: result.stderr)
         }
     }
 }
@@ -325,6 +349,8 @@ struct ConflictParser {
                     }
                     i += 1
                 }
+                i += 1  // move past >>>>>>>
+                continue  // skip the outer i += 1
             }
             i += 1
         }
@@ -831,7 +857,14 @@ struct InlineConflictResolver: View {
 
         do {
             try resolvedContent.write(toFile: fullPath, atomically: true, encoding: .utf8)
-            onResolved()
+            // Stage the file, then notify resolution after staging completes
+            Task {
+                let _ = await ShellExecutor.shared.execute(
+                    "git", arguments: ["add", filePath],
+                    workingDirectory: repositoryPath
+                )
+                await MainActor.run { onResolved() }
+            }
         } catch {
             self.error = error.localizedDescription
         }

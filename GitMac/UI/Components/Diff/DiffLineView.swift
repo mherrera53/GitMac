@@ -12,7 +12,7 @@ enum DiffSide {
 /// Optimized diff line rendering for split view
 /// Shows one side (left or right) with optional word-level highlighting
 struct FastDiffLine: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     let line: DiffLine
     let side: DiffSide
@@ -152,7 +152,7 @@ struct FastDiffLine: View {
 /// Optimized diff line rendering for inline/unified view
 /// Shows both old and new line numbers
 struct FastInlineLine: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     let line: DiffLine
     let showLineNumber: Bool
@@ -245,7 +245,7 @@ struct FastInlineLine: View {
 /// Renders an empty line placeholder in split view
 /// Used when one side has content but the other doesn't
 struct FastEmptyLine: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     let showLineNumber: Bool
     var isDeleted: Bool = false  // True when line was deleted on this side

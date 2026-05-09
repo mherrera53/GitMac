@@ -434,7 +434,7 @@ public class DiffPreferencesManager: ObservableObject {
 
 /// Settings view for diff preferences
 struct DiffPreferencesView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     @StateObject private var manager = DiffPreferencesManager.shared
     @Environment(\.dismiss) private var dismiss

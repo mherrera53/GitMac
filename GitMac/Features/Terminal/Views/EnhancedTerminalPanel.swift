@@ -81,7 +81,7 @@ struct EnhancedTerminalPanel: View {
         return f
     }()
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var tabManager = EnhancedTerminalTabManager()
     @State private var viewMode: TerminalViewMode = .terminal
     @State private var showSessionSheet = false
@@ -217,7 +217,7 @@ struct EnhancedTerminalPanel: View {
                     }
                 }
                 
-                // 2. Warp-style AI Input Bar (Always Visible)
+                // 2. AI Input Bar (Always Visible)
                 warpAIInputBar
                 
                 // 3. Terminal Command Input
@@ -248,7 +248,7 @@ struct EnhancedTerminalPanel: View {
                     )
                 
                 // AI input field
-                TextField("Ask Warp AI...", text: $nlInputText)
+                TextField("Ask GitMac AI...", text: $nlInputText)
                     .font(.system(size: 14))
                     .textFieldStyle(.plain)
                     .lineLimit(1...3)

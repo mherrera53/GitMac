@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct IntegrationsSettingsView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @StateObject private var workspaceManager = WorkspaceSettingsManager.shared
     @StateObject private var recentReposManager = RecentRepositoriesManager.shared
 

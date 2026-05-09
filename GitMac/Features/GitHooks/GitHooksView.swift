@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct GitHooksView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = GitHooksViewModel()
     @StateObject private var modalCoordinator = ModalCoordinator<GitHookModal>()
     @State private var selectedHook: GitHook?

@@ -5,7 +5,7 @@ import AppKit
 
 /// High-performance diff view for large files with pagination
 struct LargeFileDiffViewWrapper: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     let hunks: [DiffHunk]
     let showLineNumbers: Bool
@@ -127,7 +127,7 @@ private struct LargeDiffLine: Identifiable {
 
 /// Simple line view for large diffs (minimal overhead)
 private struct LargeDiffLineView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     let line: LargeDiffLine
     let showLineNumbers: Bool

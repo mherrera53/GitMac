@@ -498,8 +498,10 @@ actor GitEngine {
                 status.untracked.append(filePath)
             }
 
-            // Handle conflicts
-            if indexStatus == "U" || worktreeStatus == "U" {
+            // Handle conflicts (U = unmerged, AA = both added, DD = both deleted)
+            if indexStatus == "U" || worktreeStatus == "U"
+                || (indexStatus == "A" && worktreeStatus == "A")
+                || (indexStatus == "D" && worktreeStatus == "D") {
                 status.conflicted.append(FileStatus(path: filePath, status: .unmerged))
             }
         }
@@ -1145,32 +1147,26 @@ actor GitEngine {
 
     /// Get files changed in a specific commit
     func getCommitFiles(sha: String, at path: String) async throws -> [CommitFile] {
-        let result = await shellExecutor.execute(
-            "git",
-            arguments: ["diff-tree", "--no-color", "--no-ext-diff", "--no-commit-id", "--name-status", "-r", "--numstat", sha],
-            workingDirectory: path
-        )
-
-        guard result.exitCode == 0 else {
-            throw GitError.commandFailed("git diff-tree", result.stderr)
-        }
-
-        // First get name-status for file status
-        let statusResult = await shellExecutor.execute(
+        async let statusResult = shellExecutor.execute(
             "git",
             arguments: ["diff-tree", "--no-color", "--no-ext-diff", "--no-commit-id", "--name-status", "-r", sha],
             workingDirectory: path
         )
 
-        // Then get numstat for additions/deletions
-        let numstatResult = await shellExecutor.execute(
+        async let numstatResult = shellExecutor.execute(
             "git",
             arguments: ["diff-tree", "--no-color", "--no-ext-diff", "--no-commit-id", "--numstat", "-r", sha],
             workingDirectory: path
         )
 
+        let (statusRes, numstatRes) = await (statusResult, numstatResult)
+
+        guard statusRes.exitCode == 0 else {
+            throw GitError.commandFailed("git diff-tree", statusRes.stderr)
+        }
+
         var fileStats: [String: (additions: Int, deletions: Int)] = [:]
-        for line in numstatResult.stdout.components(separatedBy: .newlines) where !line.isEmpty {
+        for line in numstatRes.stdout.components(separatedBy: .newlines) where !line.isEmpty {
             let parts = line.split(separator: "\t")
             if parts.count >= 3 {
                 let additions = Int(parts[0]) ?? 0
@@ -1181,7 +1177,7 @@ actor GitEngine {
         }
 
         var files: [CommitFile] = []
-        for line in statusResult.stdout.components(separatedBy: .newlines) where !line.isEmpty {
+        for line in statusRes.stdout.components(separatedBy: .newlines) where !line.isEmpty {
             let parts = line.split(separator: "\t", maxSplits: 1)
             guard parts.count >= 2 else { continue }
 

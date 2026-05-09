@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Command Palette - Fast access to all Git operations (Cmd+Shift+P)
 struct CommandPalette: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Environment(\.dismiss) private var dismiss
     
     @State private var searchText = ""

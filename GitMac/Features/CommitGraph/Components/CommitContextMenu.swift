@@ -4,7 +4,7 @@ import AppKit
 // MARK: - Commit Context Menu
 struct CommitContextMenu: View {
     let commits: [Commit]
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
 
     var body: some View {
         Group {

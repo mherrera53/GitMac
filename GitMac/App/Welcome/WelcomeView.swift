@@ -123,8 +123,8 @@ struct WelcomeView: View {
     let onOpen: () -> Void
     let onClone: () -> Void
     @EnvironmentObject var recentReposManager: RecentRepositoriesManager
-    @EnvironmentObject var appState: AppState
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(AppState.self) var appState
+    @Environment(ThemeManager.self) var themeManager
     @Environment(\.colorScheme) private var colorScheme
     @State private var refreshTrigger = UUID()
 
@@ -262,7 +262,7 @@ struct WelcomeButton: View {
 
 struct RecentRepoRow: View {
     let repo: RecentRepository
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @EnvironmentObject var recentReposManager: RecentRepositoriesManager
     @State private var isHovered = false
 

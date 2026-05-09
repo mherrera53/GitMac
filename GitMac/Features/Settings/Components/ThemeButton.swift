@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ThemeButton: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let theme: Theme
     let isSelected: Bool
     let action: () -> Void

@@ -180,6 +180,12 @@ actor AvatarService {
         }
     }
 
+    /// Check if avatar is already cached for an email
+    func hasCachedAvatar(for email: String) -> Bool {
+        let cacheKey = email.lowercased().trimmingCharacters(in: .whitespaces).md5Hash
+        return avatarCache[cacheKey] != nil
+    }
+
     /// Cache an avatar URL for an email
     func cacheAvatar(url: URL, for email: String) async {
         let normalizedEmail = email.lowercased().trimmingCharacters(in: .whitespaces)

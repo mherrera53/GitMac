@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Notion Connected View
 
 struct NotionConnectedView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let databases: [NotionDatabase]
     let onDisconnect: () -> Void
 
@@ -46,7 +46,7 @@ struct NotionConnectedView: View {
 // MARK: - Notion Login Settings View
 
 struct NotionLoginSettingsView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @Binding var token: String
     let isLoading: Bool
     let error: String?

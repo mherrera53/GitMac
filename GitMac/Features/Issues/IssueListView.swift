@@ -2,7 +2,7 @@ import SwiftUI
 
 /// GitHub Issues list and detail view
 struct IssueListView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = IssueListViewModel()
     @State private var selectedIssue: GitHubIssue?
     @State private var showCreateIssueSheet = false

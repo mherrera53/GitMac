@@ -9,7 +9,7 @@ import SwiftUI
 
 struct CloneRepositorySheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @State private var repoURL = ""
     @State private var destinationPath = ""
     @State private var isCloning = false

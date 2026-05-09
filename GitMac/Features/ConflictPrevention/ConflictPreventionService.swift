@@ -181,7 +181,7 @@ actor ConflictPreventionService {
     /// Get the merge base (common ancestor) of two branches
     private func getMergeBase(source: String, target: String, at repoPath: String) async throws -> String {
         let result = await shell.execute(
-            "cd \(repoPath.shellEscaped) && git merge-base \(source.shellEscaped) \(target.shellEscaped)"
+            "git", arguments: ["merge-base", source, target], workingDirectory: repoPath
         )
         return result.output.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }
@@ -194,7 +194,7 @@ actor ConflictPreventionService {
     ) async throws -> [String: FileChange] {
         // Get list of changed files
         let diffResult = await shell.execute(
-            "cd \(repoPath.shellEscaped) && git diff --name-only \(base.shellEscaped)..\(head.shellEscaped)"
+            "git", arguments: ["diff", "--name-only", "\(base)..\(head)"], workingDirectory: repoPath
         )
 
         let files = diffResult.output.components(separatedBy: "\n")
@@ -206,7 +206,7 @@ actor ConflictPreventionService {
         for file in files {
             // Get detailed diff for this file
             let fileDiff = await shell.execute(
-                "cd \(repoPath.shellEscaped) && git diff -U0 \(base.shellEscaped)..\(head.shellEscaped) -- \(file.shellEscaped)"
+                "git", arguments: ["diff", "-U0", "\(base)..\(head)", "--", file], workingDirectory: repoPath
             )
 
             // Parse the diff to get changed line numbers
@@ -214,13 +214,13 @@ actor ConflictPreventionService {
 
             // Get the last author who modified this file
             let blameResult: ShellResult? = await shell.execute(
-                "cd \(repoPath.shellEscaped) && git log -1 --format='%an' \(head.shellEscaped) -- \(file.shellEscaped)"
+                "git", arguments: ["log", "-1", "--format=%an", head, "--", file], workingDirectory: repoPath
             )
             let author = blameResult?.output.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 
             // Get the last commit for this file
             let commitResult: ShellResult? = await shell.execute(
-                "cd \(repoPath.shellEscaped) && git log -1 --format='%h' \(head.shellEscaped) -- \(file.shellEscaped)"
+                "git", arguments: ["log", "-1", "--format=%h", head, "--", file], workingDirectory: repoPath
             )
             let commit = commitResult?.output.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 
@@ -405,10 +405,3 @@ actor ConflictPreventionService {
     }
 }
 
-// MARK: - String Extension for Shell Escaping
-
-private extension String {
-    var shellEscaped: String {
-        "'\(self.replacingOccurrences(of: "'", with: "'\\''"))'"
-    }
-}

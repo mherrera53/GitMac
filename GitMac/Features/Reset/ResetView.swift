@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Reset operations view - powerful Git reset with safety
 struct ResetView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = ResetViewModel()
     @Environment(\.dismiss) private var dismiss
     

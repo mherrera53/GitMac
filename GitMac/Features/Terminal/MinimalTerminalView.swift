@@ -11,7 +11,7 @@ import AppKit
 // MARK: - Minimal Terminal View
 
 struct MinimalTerminalView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = GhosttyViewModel()
     @StateObject private var enhancedViewModel = GhosttyEnhancedViewModel()
 
@@ -187,7 +187,7 @@ struct MinimalSuggestionRow: View {
 struct MinimalTerminalView_Previews: PreviewProvider {
     static var previews: some View {
         MinimalTerminalView()
-            .environmentObject(AppState())
+            .environment(AppState())
             .frame(width: 800, height: 600)
     }
 }

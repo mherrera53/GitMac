@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Planner Login View
 
 struct PlannerLoginView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let isLoading: Bool
     let error: String?
     let onLogin: () -> Void
@@ -160,7 +160,7 @@ struct PlannerLoginView: View {
 // MARK: - Microsoft OAuth Waiting View
 
 struct MicrosoftOAuthWaitingView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let userCode: String
     let verificationUri: String
     let onCancel: () -> Void
@@ -229,7 +229,7 @@ struct MicrosoftOAuthWaitingView: View {
 // MARK: - Planner Connected View
 
 struct PlannerConnectedView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let selectedRepoPath: String?
     let plans: [PlannerPlan]
     @ObservedObject var workspaceManager: WorkspaceSettingsManager

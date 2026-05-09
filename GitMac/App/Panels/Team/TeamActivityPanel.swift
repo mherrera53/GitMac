@@ -35,7 +35,7 @@ struct TeamActivityPanel: View {
 struct TeamActivityView: View {
     nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = TeamActivityViewModel()
     @State private var selectedMember: TeamMember?
     @State private var showConflictAlert = false

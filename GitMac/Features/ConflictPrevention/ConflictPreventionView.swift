@@ -4,9 +4,9 @@ import SwiftUI
 
 /// Main view for analyzing potential merge conflicts before they happen
 struct ConflictPreventionView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = ConflictPreventionViewModel()
     @State private var selectedSourceBranch: String = ""
     @State private var selectedTargetBranch: String = "main"

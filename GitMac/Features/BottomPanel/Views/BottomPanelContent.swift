@@ -10,7 +10,7 @@ import AppKit
 
 struct BottomPanelContent: View {
     let tab: BottomPanelTab
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
 
     var body: some View {
         Group {
@@ -41,19 +41,19 @@ struct BottomPanelContent: View {
 // MARK: - Panel Content Views
 
 struct TerminalPanelContent: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
 
     var body: some View {
         // Ghostty + Custom AI Input
         GhosttyWithAIInput()
-            .environmentObject(appState)
+            .environment(appState)
     }
 }
 
 // MARK: - Ghostty + AI Input View
 
 struct GhosttyWithAIInput: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @State private var inputText = ""
     @StateObject private var ghosttyConnector = GhosttyConnector()
     @FocusState private var isInputFocused: Bool
@@ -145,7 +145,7 @@ struct GhosttyOutputView: NSViewRepresentable {
 // MARK: - Pure Ghostty View (100% native, no custom input bar)
 
 struct GhosttyPureView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
 
     var body: some View {
         #if GHOSTTY_AVAILABLE
@@ -648,7 +648,7 @@ struct EmptyPanelView: View {
 // MARK: - Block Terminal View (Warp-style with blocks)
 
 struct BlockTerminalView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = BlockTerminalViewModel()
     @State private var inputText: String = ""
     @FocusState private var isInputFocused: Bool

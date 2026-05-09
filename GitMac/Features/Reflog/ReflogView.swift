@@ -4,7 +4,7 @@ import SwiftUI
 struct ReflogView: View {
     nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = ReflogViewModel()
     @State private var selectedEntry: ReflogEntry?
     @State private var searchText = ""

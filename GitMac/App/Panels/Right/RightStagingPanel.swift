@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Right Staging Panel
 struct RightStagingPanel: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Binding var selectedFileDiff: FileDiff?
     @Binding var isLoadingDiff: Bool
     @ObservedObject var stagingVM: StagingViewModel
@@ -10,7 +10,7 @@ struct RightStagingPanel: View {
     @State private var commitMessage = ""
     @StateObject private var commitDetailVM = CommitDetailViewModel()
     @StateObject private var stashDetailVM = StashDetailViewModel()
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         VStack(spacing: 0) {

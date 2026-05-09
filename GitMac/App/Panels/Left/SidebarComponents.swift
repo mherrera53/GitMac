@@ -14,7 +14,7 @@ import UniformTypeIdentifiers
 // MARK: - Sidebar Branch Row
 struct SidebarBranchRow: View {
     let branch: Branch
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @State private var isHovered = false
     @State private var showPRSheet = false
     @State private var showUncommittedAlert = false
@@ -193,7 +193,7 @@ struct SidebarBranchRow: View {
         }
         .sheet(isPresented: $showPRSheet) {
             CreatePullRequestSheet(branch: branch)
-                .environmentObject(appState)
+                .environment(appState)
         }
         .alert("Uncommitted Changes", isPresented: $showUncommittedAlert) {
             Button("Cancel", role: .cancel) { }
@@ -222,7 +222,7 @@ struct SidebarBranchRow: View {
                     branch: currentBranch,
                     defaultBaseBranch: branch.name
                 )
-                .environmentObject(appState)
+                .environment(appState)
             }
         }
     }
@@ -400,7 +400,7 @@ struct SidebarRepoRow: View {
     let isFavorite: Bool
     var groupBadge: GroupBadge? = nil
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var groupsService = RepoGroupsService.shared
     @State private var isHovered = false
     @State private var showGroupPicker = false
@@ -504,7 +504,7 @@ struct SidebarRepoRow: View {
 struct SidebarRecentRepoRow: View {
     let repo: RecentRepository
     let isActive: Bool
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @State private var isHovered = false
 
     var body: some View {

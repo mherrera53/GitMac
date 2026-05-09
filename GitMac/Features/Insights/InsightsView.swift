@@ -5,7 +5,7 @@ import Charts
 
 /// Analytics dashboard showing repository metrics like cycle time, throughput, merge rate
 struct InsightsView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = InsightsViewModel()
     @State private var selectedTimeRange: TimeRange = .week
 

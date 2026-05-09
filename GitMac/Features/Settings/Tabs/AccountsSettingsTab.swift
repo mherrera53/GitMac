@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AccountsSettingsView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @State private var githubToken = ""
     @State private var isGitHubConnected = false
     @State private var githubUser: GitHubUser?
@@ -268,7 +268,7 @@ struct AccountsSettingsView: View {
 // MARK: - OAuth Waiting View
 
 struct GitHubOAuthWaitingView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let userCode: String
     let verificationUri: String
     let onCancel: () -> Void

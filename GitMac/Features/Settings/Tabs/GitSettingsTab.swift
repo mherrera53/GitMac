@@ -1,13 +1,15 @@
 import SwiftUI
 
 struct GitConfigView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @State private var userName = ""
     @State private var userEmail = ""
     @State private var defaultBranch = "main"
     @AppStorage("autoFetch") private var autoFetch = true
     @AppStorage("autoFetchInterval") private var autoFetchInterval = 5
     @AppStorage("pruneOnFetch") private var pruneOnFetch = true
+    @AppStorage("fetchBeforeCommit") private var fetchBeforeCommit = true
+    @AppStorage("warnRemoteAhead") private var warnRemoteAhead = true
     @State private var isLoading = true
     @State private var saveStatus: String?
     @State private var showAdvancedEditor = false
@@ -83,6 +85,16 @@ struct GitConfigView: View {
                 }
 
                 DSToggle("Prune remote-tracking branches on fetch", isOn: $pruneOnFetch)
+            }
+
+            SettingsSection(title: "Pre-Commit") {
+                DSToggle("Fetch from origin before commit", isOn: $fetchBeforeCommit)
+                DSToggle("Warn when remote branch is ahead", isOn: $warnRemoteAhead)
+
+                Text("When enabled, GitMac fetches the latest changes and warns you if the remote has new commits before committing")
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundStyle(AppTheme.textSecondary)
             }
 
             SettingsSection(title: "Email Aliases") {
@@ -549,7 +561,7 @@ struct GitConfigEntry: Identifiable {
 // MARK: - Email Aliases View
 
 struct EmailAliasesView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @StateObject private var settings = EmailAliasSettings.shared
     @State private var newAlias = ""
 

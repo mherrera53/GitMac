@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Taiga Login View
 
 struct TaigaLoginView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @Binding var username: String
     @Binding var password: String
     let isLoading: Bool
@@ -54,7 +54,7 @@ struct TaigaLoginView: View {
 // MARK: - Taiga Connected View
 
 struct TaigaConnectedView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let selectedRepoPath: String?
     let projects: [TaigaProject]
     @ObservedObject var workspaceManager: WorkspaceSettingsManager

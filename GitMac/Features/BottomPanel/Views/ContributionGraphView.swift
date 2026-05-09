@@ -77,10 +77,9 @@ struct ContributionGraphView: View {
     
     private var contributionGrid: some View {
         HStack(alignment: .top, spacing: cellSpacing) {
-            ForEach(weeklyData.indices, id: \.self) { weekIndex in
+            ForEach(Array(weeklyData.enumerated()), id: \.offset) { weekIndex, week in
                 VStack(spacing: cellSpacing) {
-                    ForEach(weeklyData[weekIndex].indices, id: \.self) { dayIndex in
-                        let day = weeklyData[weekIndex][dayIndex]
+                    ForEach(Array(week.enumerated()), id: \.offset) { _, day in
                         ContributionCell(
                             intensity: day?.intensity ?? 0,
                             commitCount: day?.commitCount ?? 0,

@@ -28,6 +28,7 @@ actor AIService {
         case openai = "openai"
         case anthropic = "anthropic"
         case gemini = "gemini"
+        case mlx = "mlx"
         case ollama = "ollama"
 
         var id: String { rawValue }
@@ -37,6 +38,7 @@ actor AIService {
             case .openai: return "OpenAI"
             case .anthropic: return "Anthropic"
             case .gemini: return "Google Gemini"
+            case .mlx: return "MLX (Native)"
             case .ollama: return "Ollama (Local)"
             }
         }
@@ -46,6 +48,7 @@ actor AIService {
             case .openai: return "https://api.openai.com/v1"
             case .anthropic: return "https://api.anthropic.com/v1"
             case .gemini: return "https://generativelanguage.googleapis.com/v1beta"
+            case .mlx: return "local://mlx"
             case .ollama: return AIService.ollamaBaseURL
             }
         }
@@ -53,7 +56,7 @@ actor AIService {
         /// Whether this provider requires an API key
         var requiresAPIKey: Bool {
             switch self {
-            case .ollama: return false
+            case .ollama, .mlx: return false
             default: return true
             }
         }
@@ -83,6 +86,10 @@ actor AIService {
                     AIModel(id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", provider: self),
                     AIModel(id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", provider: self)
                 ]
+            case .mlx:
+                return MLXProvider.availableModels.map { mlxModel in
+                    AIModel(id: mlxModel.id, name: "\(mlxModel.name) (\(mlxModel.sizeLabel))", provider: self)
+                }
             case .ollama:
                 // Default models - actual models fetched dynamically
                 return [
@@ -183,10 +190,13 @@ actor AIService {
     }
 
     func setProvider(_ provider: AIProvider, model: String) async throws {
-        // Verify we have an API key for this provider (or Ollama is running)
+        // Verify we have an API key for this provider (or local provider is available)
         guard await hasAPIKey(for: provider) else {
             if provider == .ollama {
                 throw AIError.connectionError("Ollama is not running. Start it with 'ollama serve'")
+            }
+            if provider == .mlx {
+                throw AIError.connectionError("MLX requires Apple Silicon (M1 or later)")
             }
             throw AIError.noAPIKey(provider)
         }
@@ -197,7 +207,7 @@ actor AIService {
         // Save to UserDefaults (works for all providers)
         UserDefaults.standard.set(provider.rawValue, forKey: "ai.preferredProvider")
         UserDefaults.standard.set(model, forKey: "ai.preferredModel")
-        
+
         // Start or stop Ollama based on selected provider
         await MainActor.run {
             if provider == .ollama {
@@ -207,7 +217,14 @@ actor AIService {
             }
         }
 
-        // Also try keychain for non-Ollama providers (backup)
+        // Pre-load MLX model when selected
+        if provider == .mlx {
+            Task {
+                try? await MLXProvider.shared.loadModel(model)
+            }
+        }
+
+        // Also try keychain for non-Ollama/MLX providers (backup)
         if let kcProvider = KeychainManager.AIProvider(rawValue: provider.rawValue) {
             try? await keychainManager.savePreferredAIProvider(kcProvider, model: model)
         }
@@ -217,6 +234,11 @@ actor AIService {
         // Ollama doesn't need API key - check if it's running
         if provider == .ollama {
             return await isOllamaRunning()
+        }
+
+        // MLX doesn't need API key - just needs Apple Silicon
+        if provider == .mlx {
+            return MLXProvider.isAvailable
         }
 
         guard let kcProvider = KeychainManager.AIProvider(rawValue: provider.rawValue) else {
@@ -650,9 +672,12 @@ actor AIService {
     private func sendQuickMessage(_ message: String, maxTokens: Int = 200) async throws -> String {
         await loadPreferencesIfNeeded()
 
-        // Ollama doesn't need API key
+        // Local providers don't need API keys
         if currentProvider == .ollama {
             return try await sendOllamaQuick(message, maxTokens: maxTokens)
+        }
+        if currentProvider == .mlx {
+            return try await sendMLXMessage(message, maxTokens: maxTokens, temperature: 0.3)
         }
 
         guard let kcProvider = KeychainManager.AIProvider(rawValue: currentProvider.rawValue),
@@ -669,6 +694,8 @@ actor AIService {
             return try await sendGeminiQuick(message, apiKey: apiKey, maxTokens: maxTokens)
         case .ollama:
             return try await sendOllamaQuick(message, maxTokens: maxTokens)
+        case .mlx:
+            return try await sendMLXMessage(message, maxTokens: maxTokens, temperature: 0.3)
         }
     }
 
@@ -726,6 +753,20 @@ actor AIService {
             throw AIError.invalidResponse
         }
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: - MLX (Native Apple Silicon)
+
+    private func sendMLXMessage(_ message: String, maxTokens: Int, temperature: Float) async throws -> String {
+        let mlx = MLXProvider.shared
+
+        // Lazy-load the model if not already loaded
+        if await !mlx.isModelLoaded {
+            let modelId = currentModel.isEmpty ? MLXProvider.defaultModelId : currentModel
+            try await mlx.loadModel(modelId)
+        }
+
+        return try await mlx.generate(prompt: message, maxTokens: maxTokens, temperature: temperature)
     }
 
     private func sendOpenAIQuick(_ message: String, apiKey: String, maxTokens: Int) async throws -> String {
@@ -1121,9 +1162,12 @@ actor AIService {
         // Load preferences on first use
         await loadPreferencesIfNeeded()
 
-        // Ollama doesn't need API key
+        // Local providers don't need API keys
         if currentProvider == .ollama {
             return try await sendOllamaMessage(message)
+        }
+        if currentProvider == .mlx {
+            return try await sendMLXMessage(message, maxTokens: 1000, temperature: 0.7)
         }
 
         guard let kcProvider = KeychainManager.AIProvider(rawValue: currentProvider.rawValue),
@@ -1140,6 +1184,8 @@ actor AIService {
             return try await sendGeminiMessage(message, apiKey: apiKey)
         case .ollama:
             return try await sendOllamaMessage(message)
+        case .mlx:
+            return try await sendMLXMessage(message, maxTokens: 1000, temperature: 0.7)
         }
     }
 

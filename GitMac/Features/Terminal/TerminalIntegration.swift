@@ -5,7 +5,7 @@ import AppKit
 /// Provides terminal access within GitMac for advanced operations
 struct TerminalView: View {
     @StateObject private var viewModel = TerminalViewModel()
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     
     @State private var commandInput = ""
     @State private var showHistory = false

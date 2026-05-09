@@ -74,9 +74,9 @@ enum BisectCommitStatus {
 // MARK: - Bisect View
 
 struct BisectView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = BisectViewModel()
     @State private var showStartSheet = false
 
@@ -386,7 +386,7 @@ struct BisectHistoryRow: View {
 
 struct BisectStartSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @ObservedObject var viewModel: BisectViewModel
 
     @State private var goodRef = ""

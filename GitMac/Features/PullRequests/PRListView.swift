@@ -2,9 +2,9 @@ import SwiftUI
 
 /// Pull Requests list and detail view
 struct PRListView: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @StateObject private var viewModel = PRListViewModel()
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @State private var selectedPR: GitHubPullRequest?
     @State private var showCreatePRSheet = false
     @State private var filterState: PRState = .open
@@ -321,7 +321,7 @@ struct PRRow: View {
     let isSelected: Bool
     var onMerge: ((MergeMethod) -> Void)?
     var onClose: (() -> Void)?
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -478,7 +478,7 @@ struct PRDetailView: View {
 
     let pr: GitHubPullRequest
     @ObservedObject var viewModel: PRListViewModel
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @State private var files: [GitHubPRFile] = []
     @State private var checks: [GitHubCheckRun] = []
     @State private var comments: [GitHubComment] = []
@@ -887,7 +887,7 @@ struct PRDetailView: View {
 struct PRStatusBadge: View {
     let state: String
     let draft: Bool
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -934,7 +934,7 @@ struct StatItem: View {
     let label: String
     let value: String
     var color: Color = .primary
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -956,7 +956,7 @@ struct StatItem: View {
 }
 
 struct PRFileRow: View {
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     let file: GitHubPRFile
 
     var body: some View {
@@ -995,7 +995,7 @@ struct PRFileRow: View {
 
 struct EmptyPRView: View {
     let state: PRState
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -1020,9 +1020,9 @@ struct EmptyPRView: View {
 
 struct CreatePRSheet: View {
     @ObservedObject var viewModel: PRListViewModel
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     @State private var title = ""
     @State private var prBody = ""
@@ -1333,7 +1333,7 @@ struct PRReviewView: View {
     let repo: String
 
     @StateObject private var viewModel = PRReviewViewModel()
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
     @State private var selectedFile: GitHubPRFile?
     @State private var showAIPanel = false
     @State private var selectedLines: Set<Int> = []
@@ -1759,7 +1759,7 @@ struct ReviewFileRow: View {
     let isSelected: Bool
     let commentCount: Int
     let onSelect: () -> Void
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -1827,7 +1827,7 @@ struct DiffCodeView: View {
     @Binding var selectedLines: Set<Int>
     let onAddComment: (Int) -> Void
     let onDeletePendingComment: (UUID) -> Void
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     @State private var hoveredLine: Int?
 
@@ -1915,7 +1915,7 @@ struct ReviewCommentRow: View {
     nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
 
     let comment: GitHubReviewComment
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -1966,7 +1966,7 @@ struct ReviewCommentRow: View {
 struct PendingReviewCommentRow: View {
     let comment: PendingReviewComment
     let onDelete: () -> Void
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -2022,7 +2022,7 @@ struct AddReviewCommentSheet: View {
     @State private var commentText = ""
     let onAdd: (String) -> Void
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
@@ -2086,7 +2086,7 @@ struct AISuggestionsSheet: View {
     let suggestions: [AISuggestion]
     let onAccept: (AISuggestion) -> Void
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager
 
     var body: some View {
         let theme = Color.Theme(themeManager.colors)
