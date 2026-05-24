@@ -87,7 +87,7 @@ struct GitWorkflowRow: View {
         HStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: workflow.icon)
                 .font(.title3)
-                .foregroundStyle(Color(hex: workflow.color) ?? AppTheme.accent)
+                .foregroundStyle(Color(hex: workflow.color))
                 .frame(width: 30)
 
             VStack(alignment: .leading, spacing: 2) {

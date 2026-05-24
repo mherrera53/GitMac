@@ -33,6 +33,7 @@ struct LeftSidebarPanel: View {
                         Image(systemName: "arrow.triangle.branch")
                             .font(.system(size: 10))
                             .foregroundStyle(AppTheme.textSecondary)
+                        let _ = appState.branchRefreshID
                         Text(appState.branchManager?.currentBranch?.name ?? "No Branch")
                             .font(.system(size: 10, weight: .medium, design: .monospaced))
                             .foregroundStyle(AppTheme.textSecondary)
@@ -65,6 +66,7 @@ struct LeftSidebarPanel: View {
         .onReceive(NotificationCenter.default.publisher(for: .showStashes)) { _ in selectedNavigator = .stashes }
         .onReceive(NotificationCenter.default.publisher(for: .showTags)) { _ in selectedNavigator = .tags }
         .onReceive(NotificationCenter.default.publisher(for: .showWorktrees)) { _ in selectedNavigator = .worktrees }
+        .onReceive(NotificationCenter.default.publisher(for: .showConflicts)) { _ in selectedNavigator = .conflicts }
         // Configure PR tracker when repository changes
         .task(id: appState.currentRepository?.path) {
             if let path = appState.currentRepository?.path {
@@ -200,6 +202,9 @@ struct LeftSidebarPanel: View {
 
         case .hooks:
             GitHooksSidebarSection()
+
+        case .conflicts:
+            ConflictPreventionView()
         }
     }
 }

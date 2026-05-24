@@ -113,14 +113,18 @@ actor MLXProvider {
 
         let output: String = try await container.perform { context in
             let input = try await context.processor.prepare(input: .init(prompt: prompt))
-            let result = try MLXLMCommon.generate(
+            let stream = try MLXLMCommon.generate(
                 input: input,
-                parameters: .init(temperature: temperature, topP: 0.9),
+                parameters: .init(maxTokens: maxTokens, temperature: temperature, topP: 0.9),
                 context: context
-            ) { tokens in
-                tokens.count < maxTokens ? .more : .stop
+            )
+            var result = ""
+            for await generation in stream {
+                if case .chunk(let text) = generation {
+                    result += text
+                }
             }
-            return result.output
+            return result
         }
         return output.trimmingCharacters(in: .whitespacesAndNewlines)
     }

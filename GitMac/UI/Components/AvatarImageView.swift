@@ -2,8 +2,6 @@ import SwiftUI
 import AppKit
 import CryptoKit
 
-// NSImage is thread-safe for read-only use but not marked Sendable in Swift 6
-extension NSImage: @unchecked @retroactive Sendable {}
 
 // MARK: - Avatar cache (memoria + disco)
 actor AvatarCache {

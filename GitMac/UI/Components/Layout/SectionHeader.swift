@@ -167,7 +167,7 @@ extension SectionHeader where Actions == EmptyView {
         title: String,
         count: Int,
         icon: String,
-        color: Color = AppTheme.accent,
+        color: Color = .accentColor,
         isCollapsible: Bool = true,
         isExpanded: Binding<Bool>,
         style: HeaderStyle = .default
@@ -187,7 +187,7 @@ extension SectionHeader where Actions == EmptyView {
         title: String,
         count: Int,
         icon: String,
-        color: Color = AppTheme.accent,
+        color: Color = .accentColor,
         style: HeaderStyle = .default
     ) -> SectionHeader<EmptyView> {
         SectionHeader(

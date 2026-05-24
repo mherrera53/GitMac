@@ -11,7 +11,7 @@ struct ToolbarActionButton: View {
     @AppStorage("toolbarDisplayMode") private var storedMode: ContentView.ToolbarDisplayMode = .iconAndText
 
     // Default initializer with empty help text if not provided (though we are providing it)
-    init(icon: String, title: String, helpText: String = "", color: Color = AppTheme.textSecondary, displayMode: ContentView.ToolbarDisplayMode? = nil, action: @escaping () -> Void) {
+    init(icon: String, title: String, helpText: String = "", color: Color = .secondary, displayMode: ContentView.ToolbarDisplayMode? = nil, action: @escaping () -> Void) {
         self.icon = icon
         self.title = title
         self.helpText = helpText

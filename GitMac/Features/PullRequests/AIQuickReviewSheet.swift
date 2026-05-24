@@ -45,7 +45,7 @@ struct AIQuickReviewSheet: View {
                 VStack(spacing: DesignTokens.Spacing.lg) {
                     ProgressView()
                         .scaleEffect(1.5)
-                    Text("Analyzing \(pr.changedFiles) file(s)...")
+                    Text("Analyzing \(pr.changedFiles ?? 0) file(s)...")
                         .foregroundStyle(AppTheme.textSecondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -240,7 +240,7 @@ struct AIQuickReviewSheet: View {
         }
 
         do {
-            try await appState.gitHubService.addPullRequestComment(
+            _ = try await appState.gitHubService.addPullRequestComment(
                 owner: ownerRepo.owner, repo: ownerRepo.repo, number: pr.number, body: body
             )
             commentPosted = true

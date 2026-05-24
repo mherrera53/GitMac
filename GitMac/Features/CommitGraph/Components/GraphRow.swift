@@ -218,7 +218,6 @@ struct GraphRow: View {
         p.move(to: from)
 
         // Professional smooth curve like GitKraken - railroad track style
-        let deltaX = to.x - from.x
         let deltaY = to.y - from.y
 
         // Use quadratic control points for smoother curves

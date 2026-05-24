@@ -31,7 +31,12 @@ let package = Package(
                 .product(name: "MLXLMHuggingFace", package: "swift-huggingface-mlx"),
                 .product(name: "MLXLMTransformers", package: "swift-transformers-mlx"),
             ],
-            path: "GitMac"
+            path: "GitMac",
+            exclude: [
+                "GitMac-Bridging-Header.h",
+                "Features/Terminal/GhosttyBridge.h",
+                "Features/Terminal/GhosttyBridge.m",
+            ]
         ),
         .testTarget(
             name: "GitMacTests",

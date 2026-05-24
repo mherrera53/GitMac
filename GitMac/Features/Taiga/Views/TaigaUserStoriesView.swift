@@ -123,8 +123,9 @@ struct TaigaStoryCard: View {
             // Tags
             if let tags = story.tags, !tags.isEmpty {
                 HStack(spacing: DesignTokens.Spacing.xs) {
-                    ForEach(Array(tags.prefix(3).enumerated()), id: \.offset) { item in
-                        let values = item.element.compactMap { $0 }
+                    let prefixedTags = Array(tags.prefix(3))
+                    ForEach(prefixedTags.indices, id: \.self) { i in
+                        let values = prefixedTags[i].compactMap { $0 }
                         if values.count >= 2 {
                             let tagName = values[0]
                             let tagColor = values[1]

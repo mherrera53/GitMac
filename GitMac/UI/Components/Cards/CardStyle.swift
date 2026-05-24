@@ -8,7 +8,7 @@ struct CardStyle: ViewModifier {
     let accentColor: Color
     let cornerRadius: CGFloat
 
-    init(isHovered: Binding<Bool>, accentColor: Color = AppTheme.accent, cornerRadius: CGFloat = 6) {
+    init(isHovered: Binding<Bool>, accentColor: Color = .accentColor, cornerRadius: CGFloat = 6) {
         self._isHovered = isHovered
         self.accentColor = accentColor
         self.cornerRadius = cornerRadius
@@ -36,7 +36,7 @@ extension View {
     ///   - accentColor: Color to use for hover border (default: AppTheme.accent)
     ///   - cornerRadius: Corner radius (default: 6)
     /// - Returns: Styled view
-    func cardStyle(isHovered: Binding<Bool>, accentColor: Color = AppTheme.accent, cornerRadius: CGFloat = 6) -> some View {
+    func cardStyle(isHovered: Binding<Bool>, accentColor: Color = .accentColor, cornerRadius: CGFloat = 6) -> some View {
         modifier(CardStyle(isHovered: isHovered, accentColor: accentColor, cornerRadius: cornerRadius))
     }
 }

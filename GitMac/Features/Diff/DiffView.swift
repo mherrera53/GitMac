@@ -1,6 +1,5 @@
 import SwiftUI
 import Splash
-import DifferenceKit
 
 // NOTE: The following components have been extracted to separate files in Features/Diff/Renderers:
 // - WordLevelDiff (DiffSegment, WordLevelDiffResult, WordLevelDiff enum)
@@ -1041,7 +1040,7 @@ struct OptimizedSplitDiffView: View {
             return max(total, 1)
         }
 
-        let desiredHeight = desiredContentHeight(from: rows)
+        _ = desiredContentHeight(from: rows)
 
         return ZStack(alignment: .bottom) {
             SynchronizedSplitDiffScrollView(
@@ -3371,66 +3370,27 @@ class DiffViewModel: ObservableObject {
         let oldLines = oldText.components(separatedBy: .newlines)
         let newLines = newText.components(separatedBy: .newlines)
         
-        // Create differentiable elements
-        let oldElements = oldLines.enumerated().map { index, content in
-            DiffElement(content: content, index: index, side: .old)
-        }
-        
-        let newElements = newLines.enumerated().map { index, content in
-            DiffElement(content: content, index: index, side: .new)
-        }
-        
-        // Calculate changeset using DifferenceKit
-        let changeset = StagedChangeset(source: oldElements, target: newElements)
-        
-        // Apply gap insertion algorithm using the changeset
+        // Calculate changeset using Swift native CollectionDifference
+        let difference = newLines.difference(from: oldLines)
+
         var finalRows: [DKDiffRow] = []
-        
-        for stage in changeset {
-            for deletion in stage.elementDeleted {
-                // Add deleted line to left, spacer to right
-                let element = oldElements[deletion.element]
-                finalRows.append(DKDiffRow(
-                    left: .content(element.content, lineNumber: element.index + 1),
-                    right: .spacer
-                ))
-            }
-            
-            for insertion in stage.elementInserted {
-                // Add spacer to left, inserted line to right
-                let element = newElements[insertion.element]
-                finalRows.append(DKDiffRow(
-                    left: .spacer,
-                    right: .content(element.content, lineNumber: element.index + 1)
-                ))
-            }
-            
-            for move in stage.elementMoved {
-                // Handle moves - for now treat as unchanged line
-                let newElement = newElements[move.target.element]
-                finalRows.append(DKDiffRow(
-                    left: .content(newElement.content, lineNumber: move.source.element + 1),
-                    right: .content(newElement.content, lineNumber: move.target.element + 1)
-                ))
-            }
-        }
-        
-        // Add unchanged lines that weren't in the changeset
         var processedOldIndices = Set<Int>()
         var processedNewIndices = Set<Int>()
-        
-        for stage in changeset {
-            for deletion in stage.elementDeleted {
-                processedOldIndices.insert(deletion.element)
-            }
-            
-            for insertion in stage.elementInserted {
-                processedNewIndices.insert(insertion.element)
-            }
-            
-            for move in stage.elementMoved {
-                processedOldIndices.insert(move.source.element)
-                processedNewIndices.insert(move.target.element)
+
+        for change in difference {
+            switch change {
+            case .remove(let offset, let content, _):
+                finalRows.append(DKDiffRow(
+                    left: .content(content, lineNumber: offset + 1),
+                    right: .spacer
+                ))
+                processedOldIndices.insert(offset)
+            case .insert(let offset, let content, _):
+                finalRows.append(DKDiffRow(
+                    left: .spacer,
+                    right: .content(content, lineNumber: offset + 1)
+                ))
+                processedNewIndices.insert(offset)
             }
         }
         
@@ -3586,24 +3546,16 @@ class DiffViewModel: ObservableObject {
     }
 }
 
-// MARK: - Diff Element for DifferenceKit
+// MARK: - Diff Element
 
-struct DiffElement: Differentiable {
+struct DiffElement {
     let content: String
     let index: Int
     let side: Side
-    
+
     enum Side {
         case old
         case new
-    }
-    
-    var differenceIdentifier: String {
-        return "\(side)_\(index)_\(content)"
-    }
-    
-    func isContentEqual(to source: DiffElement) -> Bool {
-        return content == source.content
     }
 }
 
@@ -3628,36 +3580,25 @@ struct DKWordLevelDiff {
         
         let oldElements = oldWords.map { DKWordElement(content: $0) }
         let newElements = newWords.map { DKWordElement(content: $0) }
-        
-        let changeset = StagedChangeset(source: oldElements, target: newElements)
-        
+
+        let difference = newElements.difference(from: oldElements) { $0.content == $1.content }
+
         var oldSegments: [Segment] = []
         var newSegments: [Segment] = []
-        
-        for stage in changeset {
-            for deletion in stage.elementDeleted {
-                oldSegments.append(Segment(text: oldElements[deletion.element].content, type: .removed))
+
+        for change in difference {
+            switch change {
+            case .remove(let offset, _, _):
+                oldSegments.append(Segment(text: oldElements[offset].content, type: .removed))
+            case .insert(let offset, _, _):
+                newSegments.append(Segment(text: newElements[offset].content, type: .added))
             }
-            
-            for insertion in stage.elementInserted {
-                newSegments.append(Segment(text: newElements[insertion.element].content, type: .added))
-            }
-            
-            // Moves are ignored for word-level diff
         }
         
         return (oldSegments, newSegments)
     }
 }
 
-struct DKWordElement: Differentiable {
+struct DKWordElement: Equatable {
     let content: String
-    
-    var differenceIdentifier: String {
-        return content
-    }
-    
-    func isContentEqual(to source: DKWordElement) -> Bool {
-        return content == source.content
-    }
 }

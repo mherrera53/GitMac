@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 @MainActor
 class OllamaProcessManager: ObservableObject {
@@ -68,6 +69,9 @@ struct GitMacApp: App {
 
     init() {
         URLCache.shared = URLCache(memoryCapacity: 10 * 1024 * 1024, diskCapacity: 0, diskPath: nil)
+
+        // Initialize subscription service early so transaction listener is active
+        _ = SubscriptionService.shared
 
         // Preload keychain cache to avoid repeated password prompts
         Task {
@@ -227,11 +231,20 @@ class AppState {
 
     private(set) var activeTab: RepositoryTab?
 
+    // Incremented whenever branchManager publishes a change, bridging
+    // ObservableObject → @Observable so views re-render on branch updates.
+    var branchRefreshID: Int = 0
+    @ObservationIgnored private var _branchManagerSub: AnyCancellable?
+
     private func _refreshActiveTab() {
         activeTab = openTabs.first { $0.id == activeTabId }
         selectedCommit = activeTab?.selectedCommit
         selectedBranch = activeTab?.selectedBranch
         selectedStash = activeTab?.selectedStash
+
+        _branchManagerSub = activeTab?.branchManager.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.branchRefreshID += 1 }
     }
 
     var activeTabIndex: Int? {
@@ -785,6 +798,7 @@ extension Notification.Name {
     static let showCICD = Notification.Name("showCICD")
     /// Posted when user requests conflict resolution (object: file path String)
     static let resolveConflict = Notification.Name("resolveConflict")
+    static let showConflicts = Notification.Name("showConflicts")
     /// Posted when user requests file history from staging context menu (object: file path String)
     static let showFileHistory = Notification.Name("showFileHistory")
 }
