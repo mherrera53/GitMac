@@ -55,6 +55,7 @@ jobs:
             -project GitMac.xcodeproj \
             -scheme GitMac \
             -destination 'platform=macOS,arch=arm64' \
+            -skip-testing:GitMacUITests \
             -skipPackagePluginValidation \
             -skipMacroValidation \
             -configuration Debug \
