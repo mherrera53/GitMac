@@ -78,6 +78,7 @@ struct LeftSidebarPanel: View {
 
     @ViewBuilder
     private var navigatorContent: some View {
+        let _ = appState.branchRefreshID
         switch selectedNavigator {
         case .repositories:
             RepositoryHierarchicalNavigator()
