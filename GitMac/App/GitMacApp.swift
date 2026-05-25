@@ -192,10 +192,18 @@ class RepositoryTab: Identifiable, ObservableObject, Hashable, Equatable {
         objectWillChange.send()
     }
     
+    @MainActor
+    var repoColor: Color? {
+        guard let hex = WorkspaceSettingsManager.shared.getConfig(for: repository.path).repositoryColor else {
+            return nil
+        }
+        return Color(hex: hex)
+    }
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
-    
+
     static func == (lhs: RepositoryTab, rhs: RepositoryTab) -> Bool {
         lhs.id == rhs.id
     }
@@ -683,6 +691,12 @@ struct GitMacCommands: Commands {
                 NotificationCenter.default.post(name: .popStash, object: nil)
             }
             .keyboardShortcut("s", modifiers: [.command, .option, .shift])
+
+            Divider()
+
+            Button("Git LFS...") {
+                NotificationCenter.default.post(name: .showLFS, object: nil)
+            }
         }
 
         CommandMenu("Branch") {
@@ -700,6 +714,12 @@ struct GitMacCommands: Commands {
                 NotificationCenter.default.post(name: .rebase, object: nil)
             }
             .keyboardShortcut("r", modifiers: [.command, .shift])
+
+            Divider()
+
+            Button("Bisect...") {
+                NotificationCenter.default.post(name: .showBisect, object: nil)
+            }
         }
 
         CommandMenu("Navigate") {
@@ -759,6 +779,28 @@ struct GitMacCommands: Commands {
 
             Divider()
 
+            Button("Reflog...") {
+                NotificationCenter.default.post(name: .showReflog, object: nil)
+            }
+
+            Button("GPG / SSH Keys...") {
+                NotificationCenter.default.post(name: .showGPGSSH, object: nil)
+            }
+
+            Button("Insights...") {
+                NotificationCenter.default.post(name: .showInsights, object: nil)
+            }
+
+            Button("File Browser...") {
+                NotificationCenter.default.post(name: .showFileBrowser, object: nil)
+            }
+
+            Button("Launchpad...") {
+                NotificationCenter.default.post(name: .showLaunchpad, object: nil)
+            }
+
+            Divider()
+
             Button("Terminal") {
                 BottomPanelManager.shared.openTab(type: .terminal)
             }
@@ -801,4 +843,13 @@ extension Notification.Name {
     static let showConflicts = Notification.Name("showConflicts")
     /// Posted when user requests file history from staging context menu (object: file path String)
     static let showFileHistory = Notification.Name("showFileHistory")
+
+    // Feature sheets (shown by ContentView)
+    static let showBisect = Notification.Name("showBisect")
+    static let showReflog = Notification.Name("showReflog")
+    static let showGPGSSH = Notification.Name("showGPGSSH")
+    static let showInsights = Notification.Name("showInsights")
+    static let showFileBrowser = Notification.Name("showFileBrowser")
+    static let showLaunchpad = Notification.Name("showLaunchpad")
+    static let showLFS = Notification.Name("showLFS")
 }

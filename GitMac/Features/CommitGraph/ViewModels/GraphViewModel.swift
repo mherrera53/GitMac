@@ -22,6 +22,8 @@ class GraphViewModel {
 
     var minimapNodes: [MinimapCommitNode] = []
     var totalCommitCount: Int = 0
+    var isShallowClone: Bool = false
+    var isDeepeningHistory: Bool = false
 
     private(set) var commitsBySHA: [String: Commit] = [:]
 
@@ -60,6 +62,25 @@ class GraphViewModel {
                 let loadedBranches = try await engine.getBranches(at: p)
                 debugLog("getBranches done: \(loadedBranches.count) branches")
                 guard !Task.isCancelled else { debugLog("CANCELLED after branches"); isLoading = false; return }
+
+                let shallowCheck = await ShellExecutor.shared.execute(
+                    "git", arguments: ["rev-parse", "--is-shallow-repository"],
+                    workingDirectory: p
+                )
+                isShallowClone = shallowCheck.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == "true"
+
+                if isShallowClone {
+                    isDeepeningHistory = true
+                    Task.detached { [weak self] in
+                        let shell = await ShellExecutor.shared
+                        await shell.execute("git", arguments: ["fetch", "--deepen=500"], workingDirectory: p)
+                        await MainActor.run {
+                            self?.isDeepeningHistory = false
+                            self?.isShallowClone = false
+                            self?.load(at: p)
+                        }
+                    }
+                }
 
                 debugLog("calling getCommitsV2...")
                 let loadedCommits = try await engine.getCommitsV2(at: p, limit: 100)

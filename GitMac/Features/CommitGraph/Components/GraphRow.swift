@@ -23,7 +23,7 @@ struct GraphRow: View {
                         BranchBadge(
                             name: label,
                             color: color(node.lane),
-                            isHead: label == "main" || label == "master",
+                            isHead: Branch.mainBranchNames.contains(label),
                             isTag: label.hasPrefix("v") || label.contains("."),
                             onDropBranch: { dropped in
                                 onDropBranch?(label, dropped)

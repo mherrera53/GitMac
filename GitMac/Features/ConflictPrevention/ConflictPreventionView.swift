@@ -287,11 +287,9 @@ struct ConflictPreventionView: View {
             selectedSourceBranch = currentBranch
         }
 
-        // Set main/master as target
-        if viewModel.branches.contains("main") {
-            selectedTargetBranch = "main"
-        } else if viewModel.branches.contains("master") {
-            selectedTargetBranch = "master"
+        // Set first matching main branch as target
+        if let main = Branch.mainBranchNames.first(where: { viewModel.branches.contains($0) }) {
+            selectedTargetBranch = main
         }
     }
 

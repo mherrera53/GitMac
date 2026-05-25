@@ -155,8 +155,13 @@ struct GitWorkflowRow: View {
 struct WorkflowEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    @State var workflow: GitWorkflow
+    @State private var workflow: GitWorkflow
     let onSave: (GitWorkflow) -> Void
+
+    init(workflow: GitWorkflow, onSave: @escaping (GitWorkflow) -> Void) {
+        self._workflow = State(initialValue: workflow)
+        self.onSave = onSave
+    }
 
     @State private var showAddStep = false
 

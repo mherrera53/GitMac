@@ -93,7 +93,7 @@ class WorkspaceSettingsManager: ObservableObject {
             }
         }
 
-        for candidate in ["main", "master", "develop"] {
+        for candidate in Branch.mainBranchNames {
             let check = await shell.execute(
                 "git", arguments: ["rev-parse", "--verify", "refs/heads/\(candidate)"],
                 workingDirectory: repoPath
@@ -139,10 +139,6 @@ struct WorkspaceConfig: Codable {
     var defaultPRBaseBranch: String?  // Default base branch for PRs
     var defaultReviewers: [String]?  // Default reviewers for PRs
     var prTitlePrefix: String?  // Prefix for PR titles
-
-    // MARK: - Auto-fetch Settings
-    var autoFetchEnabled: Bool?
-    var autoFetchIntervalMinutes: Int?  // Interval in minutes
 
     // MARK: - Taiga Integration
     var taigaProjectId: Int?

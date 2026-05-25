@@ -3,15 +3,8 @@ import AppKit
 
 // MARK: - Theme Environment Key
 
-private struct ThemeColorsKey: EnvironmentKey {
-    static let defaultValue: ColorScheme = ColorScheme.dark
-}
-
 extension EnvironmentValues {
-    var themeColors: ColorScheme {
-        get { self[ThemeColorsKey.self] }
-        set { self[ThemeColorsKey.self] = newValue }
-    }
+    @Entry var themeColors: ColorScheme = .dark
 }
 
 // MARK: - Apple HIG Compliant Theme System

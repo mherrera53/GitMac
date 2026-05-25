@@ -239,10 +239,21 @@ struct CommitSection: View {
                 // AI Generation + History buttons
                 HStack {
                     if let error = aiError {
-                        Text(error)
-                            .font(.system(size: 9))
-                            .foregroundStyle(AppTheme.error)
-                            .lineLimit(1)
+                        if error == "No API key configured" {
+                            Button {
+                                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                            } label: {
+                                Label("Set up AI provider", systemImage: "gear")
+                                    .font(.system(size: 9))
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(AppTheme.accent)
+                        } else {
+                            Text(error)
+                                .font(.system(size: 9))
+                                .foregroundStyle(AppTheme.error)
+                                .lineLimit(1)
+                        }
                     }
                     Spacer()
 
@@ -533,6 +544,7 @@ struct CommitSection: View {
                         switch err {
                         case .noAPIKey:
                             self.aiError = "No API key configured"
+                            NotificationManager.shared.info("AI not configured", detail: "Go to Settings -> AI to set up a provider. For local AI, install Ollama or use MLX (no API key needed).")
                         case .invalidProvider:
                             self.aiError = "Invalid AI provider"
                         case .requestFailed(let msg):

@@ -566,7 +566,7 @@ struct SimpleCommandInputAndOutput: View {
 struct ExpandableTextEditor: View {
     @Binding var text: String
     let placeholder: String
-    @FocusState var isInputFocused: Bool
+    @FocusState private var isInputFocused: Bool
     let onSubmit: () -> Void
     let onArrowUp: () -> Void
     let onArrowDown: () -> Void

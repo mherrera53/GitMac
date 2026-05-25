@@ -479,8 +479,39 @@ enum DesignTokens {
 // MARK: - Convenience Extensions
 
 extension View {
-    /// Aplica espaciado estándar de padding
     func padding(_ size: DesignTokens.Spacing.Type) -> some View {
         self.padding(DesignTokens.Spacing.md)
+    }
+}
+
+// MARK: - Liquid Glass Modifiers (macOS 26+)
+
+extension View {
+    @ViewBuilder
+    func liquidGlassTabBar() -> some View {
+        if #available(macOS 26, *) {
+            self.glassEffect(.regular, in: .rect(cornerRadius: 12))
+        } else {
+            self.background(.thinMaterial)
+        }
+    }
+
+    @ViewBuilder
+    func liquidGlassSidebar() -> some View {
+        if #available(macOS 26, *) {
+            self.glassEffect(.regular, in: .rect)
+        } else {
+            self.background(.ultraThinMaterial)
+        }
+    }
+
+    @ViewBuilder
+    func liquidGlassCard() -> some View {
+        if #available(macOS 26, *) {
+            self.glassEffect(.regular, in: .rect(cornerRadius: 8))
+        } else {
+            self.background(AppTheme.backgroundTertiary)
+                .clipShape(.rect(cornerRadius: 8))
+        }
     }
 }

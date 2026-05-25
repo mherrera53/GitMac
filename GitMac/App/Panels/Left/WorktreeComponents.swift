@@ -83,6 +83,7 @@ struct WorktreeSidebarRow: View {
                 .font(.system(size: 11))
                 .foregroundStyle(worktree.isMain ? AppTheme.textPrimary : AppTheme.textSecondary)
                 .lineLimit(1)
+                .truncationMode(.middle)
 
             if worktree.isLocked {
                 Image(systemName: "lock.fill")

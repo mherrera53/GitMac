@@ -100,6 +100,7 @@ struct SubmoduleSidebarRow: View {
                 .font(.system(size: 11))
                 .foregroundStyle(AppTheme.textSecondary)
                 .lineLimit(1)
+                .truncationMode(.middle)
 
             Spacer()
         }

@@ -38,6 +38,7 @@ struct LeftSidebarPanel: View {
                             .font(.system(size: 10, weight: .medium, design: .monospaced))
                             .foregroundStyle(AppTheme.textSecondary)
                             .lineLimit(1)
+                            .truncationMode(.middle)
                         Spacer()
                     }
                 }
@@ -124,9 +125,8 @@ struct LeftSidebarPanel: View {
                 let otherLocalBranches = localBranches
                     .filter { !$0.isCurrent }
                     .sorted { lhs, rhs in
-                        // master/main first among non-current branches
-                        let lhsIsMain = lhs.name == "master" || lhs.name == "main"
-                        let rhsIsMain = rhs.name == "master" || rhs.name == "main"
+                        let lhsIsMain = lhs.isMainBranch
+                        let rhsIsMain = rhs.isMainBranch
                         if lhsIsMain && !rhsIsMain { return true }
                         if !lhsIsMain && rhsIsMain { return false }
                         

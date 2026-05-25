@@ -19,6 +19,13 @@ struct ContentView: View {
     @State private var revertCommits: [Commit] = []
     @State private var showDetachedHeadAlert = false
     @State private var themeRefreshTrigger = UUID()
+    @State private var showBisectSheet = false
+    @State private var showReflogSheet = false
+    @State private var showGPGSSHSheet = false
+    @State private var showInsightsSheet = false
+    @State private var showFileBrowserSheet = false
+    @State private var showLaunchpadSheet = false
+    @State private var showLFSSheet = false
     @AppStorage("toolbarDisplayMode") private var toolbarDisplayMode: ToolbarDisplayMode = .iconAndText
 
     enum ToolbarDisplayMode: String, CaseIterable {
@@ -78,6 +85,17 @@ struct ContentView: View {
                 RepoStandardsSheet()
                     .environment(appState)
             }
+            .modifier(FeatureSheetsBatch1(
+                showBisect: $showBisectSheet,
+                showReflog: $showReflogSheet,
+                showGPGSSH: $showGPGSSHSheet
+            ))
+            .modifier(FeatureSheetsBatch2(
+                showInsights: $showInsightsSheet,
+                showFileBrowser: $showFileBrowserSheet,
+                showLaunchpad: $showLaunchpadSheet,
+                showLFS: $showLFSSheet
+            ))
             .overlay {
                 if gitOperationHandler.isOperationInProgress {
                     OperationProgressOverlay(message: gitOperationHandler.operationMessage)
@@ -169,6 +187,13 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .newBranch)) { _ in showNewBranchSheet = true }
             .onReceive(NotificationCenter.default.publisher(for: .showSyncWizard)) { _ in showSyncWizard = true }
             .onReceive(NotificationCenter.default.publisher(for: .showRepoStandards)) { _ in showRepoStandards = true }
+            .onReceive(NotificationCenter.default.publisher(for: .showBisect)) { _ in showBisectSheet = true }
+            .onReceive(NotificationCenter.default.publisher(for: .showReflog)) { _ in showReflogSheet = true }
+            .onReceive(NotificationCenter.default.publisher(for: .showGPGSSH)) { _ in showGPGSSHSheet = true }
+            .onReceive(NotificationCenter.default.publisher(for: .showInsights)) { _ in showInsightsSheet = true }
+            .onReceive(NotificationCenter.default.publisher(for: .showFileBrowser)) { _ in showFileBrowserSheet = true }
+            .onReceive(NotificationCenter.default.publisher(for: .showLaunchpad)) { _ in showLaunchpadSheet = true }
+            .onReceive(NotificationCenter.default.publisher(for: .showLFS)) { _ in showLFSSheet = true }
             .modifier(GitOperationListeners())
             .modifier(NavigationListeners(columnVisibility: $columnVisibility))
     }
@@ -350,7 +375,7 @@ struct MainLayout: View {
                 RepositoryTabsView()
                     .padding(.horizontal, DesignTokens.Spacing.md)
                     .padding(.vertical, 6)
-                    .background(.thinMaterial)
+                    .liquidGlassTabBar()
                     .overlay(Divider(), alignment: .bottom)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
@@ -577,5 +602,68 @@ struct CollapsedBottomPanelBar: View {
             }
         }
         .onHover { isHovered = $0 }
+    }
+}
+
+// MARK: - Orphan Feature Sheets
+
+private struct FeatureSheetsBatch1: ViewModifier {
+    @Environment(AppState.self) var appState
+    @Environment(ThemeManager.self) var themeManager
+    @Binding var showBisect: Bool
+    @Binding var showReflog: Bool
+    @Binding var showGPGSSH: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $showBisect) {
+                BisectView()
+                    .environment(appState)
+                    .environment(themeManager)
+                    .frame(minWidth: 720, minHeight: 520)
+            }
+            .sheet(isPresented: $showReflog) {
+                ReflogView()
+                    .environment(appState)
+                    .frame(minWidth: 720, minHeight: 520)
+            }
+            .sheet(isPresented: $showGPGSSH) {
+                GPGSSHManagementView()
+                    .frame(minWidth: 720, minHeight: 520)
+            }
+    }
+}
+
+private struct FeatureSheetsBatch2: ViewModifier {
+    @Environment(AppState.self) var appState
+    @Binding var showInsights: Bool
+    @Binding var showFileBrowser: Bool
+    @Binding var showLaunchpad: Bool
+    @Binding var showLFS: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $showInsights) {
+                InsightsView()
+                    .environment(appState)
+                    .frame(minWidth: 720, minHeight: 520)
+            }
+            .sheet(isPresented: $showFileBrowser) {
+                if let path = appState.currentRepository?.path {
+                    FileBrowserView(repoPath: path)
+                        .environment(appState)
+                        .frame(minWidth: 720, minHeight: 520)
+                }
+            }
+            .sheet(isPresented: $showLaunchpad) {
+                LaunchpadView()
+                    .environment(appState)
+                    .frame(minWidth: 720, minHeight: 520)
+            }
+            .sheet(isPresented: $showLFS) {
+                LFSManagerView()
+                    .environment(appState)
+                    .frame(minWidth: 720, minHeight: 520)
+            }
     }
 }

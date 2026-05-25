@@ -130,9 +130,8 @@ struct BranchPanelView: View {
 
     private func sortBranches(_ list: [Branch]) -> [Branch] {
         list.sorted { a, b in
-            let mainNames = ["main", "master", "develop"]
-            let aIsMain = mainNames.contains(a.name)
-            let bIsMain = mainNames.contains(b.name)
+            let aIsMain = a.isMainBranch
+            let bIsMain = b.isMainBranch
             if aIsMain != bIsMain { return aIsMain }
             if a.isCurrent != b.isCurrent { return a.isCurrent }
             let aDate = a.createdDate ?? .distantPast

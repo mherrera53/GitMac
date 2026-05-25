@@ -160,85 +160,8 @@ struct DiffPerformanceStats: Sendable {
     }
 }
 
-// MARK: - Frame Time Profiler
-
-/// Profiler for measuring frame rendering times
-@MainActor
-class FrameTimeProfiler: ObservableObject {
-    @Published var stats: DiffPerformanceStats = DiffPerformanceStats()
-    
-    private var frameTimes: [Double] = []
-    private let maxSamples = 100
-    
-    /// Record a frame time
-    func recordFrameTime(_ milliseconds: Double) {
-        frameTimes.append(milliseconds)
-        
-        // Keep only recent samples
-        if frameTimes.count > maxSamples {
-            frameTimes.removeFirst(frameTimes.count - maxSamples)
-        }
-        
-        // Update stats
-        updateStats()
-    }
-    
-    /// Reset profiler
-    func reset() {
-        frameTimes.removeAll()
-        updateStats()
-    }
-    
-    private func updateStats() {
-        guard !frameTimes.isEmpty else {
-            stats = DiffPerformanceStats()
-            return
-        }
-        
-        let avg = frameTimes.reduce(0, +) / Double(frameTimes.count)
-        
-        let sorted = frameTimes.sorted()
-        let p95Index = Int(Double(sorted.count) * 0.95)
-        let p99Index = Int(Double(sorted.count) * 0.99)
-        
-        let p95 = sorted[min(p95Index, sorted.count - 1)]
-        let p99 = sorted[min(p99Index, sorted.count - 1)]
-        
-        stats = DiffPerformanceStats(
-            parseTime: stats.parseTime,
-            memoryUsage: stats.memoryUsage,
-            averageFrameTime: avg,
-            p95FrameTime: p95,
-            p99FrameTime: p99
-        )
-    }
-    
-    /// Set parse time
-    func setParseTime(_ time: TimeInterval) {
-        stats = DiffPerformanceStats(
-            parseTime: time,
-            memoryUsage: stats.memoryUsage,
-            averageFrameTime: stats.averageFrameTime,
-            p95FrameTime: stats.p95FrameTime,
-            p99FrameTime: stats.p99FrameTime
-        )
-    }
-    
-    /// Set memory usage
-    func setMemoryUsage(_ bytes: Int) {
-        stats = DiffPerformanceStats(
-            parseTime: stats.parseTime,
-            memoryUsage: bytes,
-            averageFrameTime: stats.averageFrameTime,
-            p95FrameTime: stats.p95FrameTime,
-            p99FrameTime: stats.p99FrameTime
-        )
-    }
-}
-
-// MARK: - Preview
-
 #if DEBUG
+
 struct DiffStatusBar_Previews: PreviewProvider {
     static var previews: some View {
         VStack(spacing: 0) {

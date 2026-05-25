@@ -49,9 +49,10 @@ struct Branch: Identifiable, Equatable, Hashable {
         return name
     }
 
+    static let mainBranchNames: Set<String> = ["main", "master", "develop", "development"]
+
     var isMainBranch: Bool {
-        let mainNames = ["main", "master", "develop", "development"]
-        return mainNames.contains(name.lowercased())
+        Self.mainBranchNames.contains(name.lowercased())
     }
 
     /// Alias for isHead - whether this is the current checked out branch

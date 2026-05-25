@@ -103,7 +103,7 @@ class GitHubSyncManager: ObservableObject {
         guard let slug = extractGitHubSlug(from: remoteURL) else { return }
 
         // Check protection for main branches only
-        let branchesToCheck = ["main", "master", "develop"]
+        let branchesToCheck = Branch.mainBranchNames
 
         for branchName in branchesToCheck {
             let result = await shell.execute(

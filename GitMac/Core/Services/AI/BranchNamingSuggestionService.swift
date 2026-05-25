@@ -140,7 +140,7 @@ final class BranchNamingSuggestionService {
             return .docs
         }
         
-        if context.currentBranchName == "main" || context.currentBranchName == "master" {
+        if let name = context.currentBranchName, Branch.mainBranchNames.contains(name) {
             return .feature
         }
         
