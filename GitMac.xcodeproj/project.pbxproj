@@ -20,7 +20,6 @@
 		062283EE207115951F72E4C5 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5047BDB49D43A855C7EC4D /* SubscriptionService.swift */; };
 		0636C166410264DDE6B0E535 /* DiffSearchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9242EE99EDC7C5261B2CE9A /* DiffSearchEngine.swift */; };
 		085F6910CF88FEBE9B2FA7E7 /* Separator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7185C6D6E41796EB55EEF098 /* Separator.swift */; };
-		0B0D71EAC506822FA1808B9F /* SettingsScreenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FCDCD0E4BDE56125AAFA125 /* SettingsScreenshots.swift */; };
 		0DB14192B98FCE46D804E26B /* TerminalNLTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B56BCC2A0CBE440FE161710C /* TerminalNLTranslationService.swift */; };
 		0DB645D5AAE7FFC0E503241D /* AIServiceExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38AF44C8ADA6FAF518572B88 /* AIServiceExtensions.swift */; };
 		0E632C69DE3C7FEB51B55B7C /* FileRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12E643D92471924D88FBEFE /* FileRow.swift */; };
@@ -38,7 +37,6 @@
 		1636BF6E95E6083C096D2BF5 /* BranchPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1959EDC993C5EBC8C305A4F /* BranchPanelView.swift */; };
 		16FE878B5150049FCF623EDD /* GitHooksService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD8A795E6B8F62D83A911CA9 /* GitHooksService.swift */; };
 		173F4FE19F91D1E4447F9461 /* PromptTemplateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2E7451DB3B6F1CB079757B0 /* PromptTemplateManager.swift */; };
-		17CB898309B82A6F554266CF /* AdvancedFeaturesScreenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43D5FC96EC04149C71DA88A5 /* AdvancedFeaturesScreenshots.swift */; };
 		1810AA298FCF14BF6445D6AB /* EnhancedTerminalPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 451F64E5457594941DF51A31 /* EnhancedTerminalPanel.swift */; };
 		18133BDB02AD310F3DCD933A /* DSSkeletonBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50BF4669D757C60A0A258549 /* DSSkeletonBox.swift */; };
 		188CCF984171708DBB39331B /* TaigaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C03FD5905DF5162D37E89E /* TaigaService.swift */; };
@@ -118,7 +116,6 @@
 		4940D36AC7B1A9FFDA201CFD /* StashBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC936EFB7473E6277FA895EE /* StashBadge.swift */; };
 		4A0F46ECCB70D34F321DD7ED /* WorktreeBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95A1B9C7E9730EBEF2358FF5 /* WorktreeBadge.swift */; };
 		4A3F7A53E510D2BAF7381717 /* TerminalAIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15161D366FAC91D524B1F99C /* TerminalAIService.swift */; };
-		4AF24348D21EC9F70F7DDD6C /* WelcomeScreenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5330AB9E1CD7DCC0A41B7F98 /* WelcomeScreenshots.swift */; };
 		4AF3FA66E96333FEA7AB2990 /* JiraService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 710BE37EEC4AE2E2EDE63535 /* JiraService.swift */; };
 		4B71CB7D429E4F4BB2A82DBF /* CICDComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = E729B4D59A2644F69C62C147 /* CICDComponents.swift */; };
 		4C90D13F0F251AEBC05D5DA5 /* LinearService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E6FFF74126F40CCF366AC65 /* LinearService.swift */; };
@@ -169,7 +166,6 @@
 		63119CBB952238FF689EED9D /* MicrosoftOAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = C383AE50662C2E7BCD28F425 /* MicrosoftOAuth.swift */; };
 		639E5318F12FE7E443353643 /* XcodeBottomBarTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B99F846B0D4585643F00BD77 /* XcodeBottomBarTab.swift */; };
 		63D4EBA68098EB78E6F6DEE1 /* EnhancedDiffToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8263EEAA4CA902E6D88CC782 /* EnhancedDiffToolbar.swift */; };
-		652483C990186F2C7ED6A88C /* DiffViewerScreenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A572A4DFBCB8990DF9DA442 /* DiffViewerScreenshots.swift */; };
 		6700C7C42963864A6E288032 /* DSProgressBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C72A5B4B589599572CCE32D /* DSProgressBar.swift */; };
 		671C7AA457D286A11FF7A783 /* DiffScrollViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B167860182E35112201A438D /* DiffScrollViews.swift */; };
 		6722FC2E75BA6C34461DD3B9 /* CompactRepoTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52B84097EC63D294A2E2B7C /* CompactRepoTab.swift */; };
@@ -183,9 +179,7 @@
 		6C51CC38F134C2354B2C81A3 /* WorktreeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73E7B25E1888BF81E998C8BA /* WorktreeManager.swift */; };
 		6D448EC91E8E8F793BE81E2F /* GitMacUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12E80E96F49E9F5A1FE46EC7 /* GitMacUITests.swift */; };
 		6FA8EF328900860116035D76 /* Branch.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5D39602F9B9FA2983FFA4B5 /* Branch.swift */; };
-		70C39636FD7B403D575B96FD /* CommitGraphScreenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41158EA9A02FA8AD1ED246F9 /* CommitGraphScreenshots.swift */; };
 		70D84221BBE81104974AFA87 /* InitRepositorySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59820498B20A741308942117 /* InitRepositorySheet.swift */; };
-		710F171975C77B0984D8921F /* IntegrationsScreenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 274E4E6BDD64C4D1E1BFDE93 /* IntegrationsScreenshots.swift */; };
 		724B0CAB7823EA602CFC7EEE /* DiffSearchAndNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77FDB310B5DBFC8EC103E983 /* DiffSearchAndNavigation.swift */; };
 		728028D683743DD8430D2F42 /* CommandPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59B7AE52B61BB88CB19938B7 /* CommandPalette.swift */; };
 		735FE47AEA03BFB17CF41C85 /* TerminalInputBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40520EC2939EE30B975A15C7 /* TerminalInputBar.swift */; };
@@ -212,7 +206,6 @@
 		81EE6E1CC43A09A8A07D500B /* AppActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFD4F2579543138B566F4DF5 /* AppActivityManager.swift */; };
 		828BB25AC54F36715A313178 /* GeneralSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1169A7CE797833DAB1113376 /* GeneralSettingsTab.swift */; };
 		829F68FEF62B134675571C23 /* TiledDiffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A3477C5429FE5F172621B6 /* TiledDiffView.swift */; };
-		84980B0A252F49B6B020B540 /* MainWindowScreenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8E7FE613106FEE6EB0A0325 /* MainWindowScreenshots.swift */; };
 		84EA111FB47AC6FC85811516 /* DSGenericIntegrationPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E8861735FD09AB43C10F3AD /* DSGenericIntegrationPanel.swift */; };
 		857B3746AFFBC72DE1D99087 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED654E601E53971CD5E465F6 /* ContentView.swift */; };
 		8616CCBFC792559AE7841F06 /* LayoutHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44313C9929F962B9469DE8E7 /* LayoutHelpers.swift */; };
@@ -265,7 +258,6 @@
 		A69196017145B8ADA40C9993 /* BranchProtectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DD3FED5D44267E26346C5E6 /* BranchProtectionService.swift */; };
 		A6CACB9F9898072FF60B6D1A /* TerminalWorkflowsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 068E2976B54047B4D0261D74 /* TerminalWorkflowsView.swift */; };
 		A6F51E6777487026188DD38D /* DSLabeledField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9AE8B50C11C983BA3F87BC /* DSLabeledField.swift */; };
-		A707AF98F59B0FC465F135FA /* DialogsScreenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCD7081B8D9913484822982C /* DialogsScreenshots.swift */; };
 		A70EEF59AC4DF6D59D4B4AF8 /* JiraContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ED30154FBD5E02F2BB86ABF /* JiraContentView.swift */; };
 		A71EBC4E0777305FFE7007F3 /* TaigaSettingsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1640300D8BF15C19ED177B81 /* TaigaSettingsViews.swift */; };
 		A77D3189EAD7936087A1E850 /* CommitMessageHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D71C0500C4C2DB19F46D8A4 /* CommitMessageHistory.swift */; };
@@ -298,7 +290,6 @@
 		B051313AF74F9BA791E3F23A /* CloneRepositorySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83E77F535DA31CCD185F87AF /* CloneRepositorySheet.swift */; };
 		B148D8FC4B491F777493986A /* GitHubIntegration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2744088EB2B2CB3C9C518657 /* GitHubIntegration.swift */; };
 		B151DC00FFED37EF971E253F /* FileListSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABAB2827F401F387B51BC038 /* FileListSection.swift */; };
-		B169363156FED5DF23D58A53 /* ScreenshotEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D389955F882D1575D1230D9C /* ScreenshotEngine.swift */; };
 		B18924C7746FDCA18B427115 /* LaunchpadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F70BEAF1B46EFA08BD447ED /* LaunchpadView.swift */; };
 		B21354D400079A50FEFC5070 /* NotionPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B70C1A5D0DB3C69996CE7FA /* NotionPanel.swift */; };
 		B2EBAF7C10A2145058E5645D /* ThemeButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B54D444D43369E58E93BE1A2 /* ThemeButton.swift */; };
@@ -309,7 +300,6 @@
 		B4DA26C56859D2E184D7E860 /* DSDropZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F22F52D0E8130CC29E01D3 /* DSDropZone.swift */; };
 		B4F3A4510237C4B0D93B029C /* RemoteManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1202B39970A7D013600F46DF /* RemoteManagementView.swift */; };
 		B5D31659B0B71093C78ECFC1 /* RevertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FED351FD1776BBF7E389FFA /* RevertView.swift */; };
-		B6601966EA3CC203B4C03DD7 /* StagingScreenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD382CBA8345AD1DCFA3A87 /* StagingScreenshots.swift */; };
 		B792010810824E7B2933630E /* JiraViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CBD224C28988637497A106C /* JiraViewModel.swift */; };
 		B79DB79AA761D5CD94662D14 /* GitHubOAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86FA50E65BBBBC71CBFD6ED7 /* GitHubOAuth.swift */; };
 		B9101E55494C607B5E900A74 /* DSLoginPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BD7CE628B2B5B937AB429B6 /* DSLoginPrompt.swift */; };
@@ -393,7 +383,6 @@
 		E6F64B372727112EF636DBCE /* TaigaViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3500F4E08558A1C65E4E6108 /* TaigaViewModel.swift */; };
 		E8595C1C9E91E9A13CDA7F36 /* BottomPanelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48CED6026902BB06896B1582 /* BottomPanelManager.swift */; };
 		E9C01B6AE799F709F67A6549 /* NotionSettingsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BC4ADFAC6AD64D8E79C0C9A /* NotionSettingsViews.swift */; };
-		EA91A3EEEC9B9966FD049945 /* TerminalScreenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D26DB2BA5E67579FBD2061 /* TerminalScreenshots.swift */; };
 		EAAA7140BCA69E1F76879A69 /* GhosttyDirect.swift in Sources */ = {isa = PBXBuildFile; fileRef = E75012ED186D7236EF6AC78A /* GhosttyDirect.swift */; };
 		EB17F46A1960BCDE6F08CBE7 /* StatusIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0590EB77B9C55A604A68F573 /* StatusIcon.swift */; };
 		EB4AD7F9294C85750A6F0453 /* StaleBranchCleanupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DB3FD702AFB625F053F0699 /* StaleBranchCleanupView.swift */; };
@@ -404,7 +393,6 @@
 		EEC5FD52708C17DA03581BAC /* SearchQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D7FCE58539D9D09BCEB7261 /* SearchQuery.swift */; };
 		F18E05B60D6AB67A1CFD22EC /* PullSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7AC05D32D81D7C384612D99 /* PullSheet.swift */; };
 		F1A8C4C6FAF4A907FFAE77A7 /* AnalyticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F17F4FAEB8F8E5AF525BF3E9 /* AnalyticsViewModel.swift */; };
-		F267C86B66541CD2779AD7E4 /* BottomPanelScreenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F80C86EABF718203925E70 /* BottomPanelScreenshots.swift */; };
 		F26FC2660FA73DFC56A653DC /* CommitDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46786D226E232F901D917031 /* CommitDetailViewModel.swift */; };
 		F2BC2A1403166453E40C25EE /* GitHook.swift in Sources */ = {isa = PBXBuildFile; fileRef = F589958E042B6BD39D5C02C2 /* GitHook.swift */; };
 		F2D7CB4BBFDD3E979146413C /* GraphSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7407DC78A533B745E0A0B33 /* GraphSettings.swift */; };
@@ -484,7 +472,6 @@
 		12DA46B215C509E7162E6325 /* PluginRegistry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Core/PluginSystem/PluginRegistry.swift; sourceTree = SOURCE_ROOT; };
 		12E80E96F49E9F5A1FE46EC7 /* GitMacUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMacUITests/GitMacUITests.swift; sourceTree = SOURCE_ROOT; };
 		1319443A5D6F0D217BF7BEDA /* CardStyle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Cards/CardStyle.swift; sourceTree = SOURCE_ROOT; };
-		14D26DB2BA5E67579FBD2061 /* TerminalScreenshots.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TerminalScreenshots.swift; path = GitMacUITests/ScreenshotAutomation/Tests/TerminalScreenshots.swift; sourceTree = SOURCE_ROOT; };
 		15161D366FAC91D524B1F99C /* TerminalAIService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TerminalAIService.swift; path = Features/Terminal/Enhanced/TerminalAIService.swift; sourceTree = "<group>"; };
 		1540D12594BA091D091556B9 /* WorkspaceSettingsTab.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkspaceSettingsTab.swift; path = ../../Features/Settings/Tabs/WorkspaceSettingsTab.swift; sourceTree = "<group>"; };
 		1640300D8BF15C19ED177B81 /* TaigaSettingsViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TaigaSettingsViews.swift; path = ../../../Features/Settings/Components/IntegrationViews/TaigaSettingsViews.swift; sourceTree = "<group>"; };
@@ -524,7 +511,6 @@
 		26D98C63DDD16AED797E7450 /* JiraLoginPromptView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Jira/Views/JiraLoginPromptView.swift; sourceTree = SOURCE_ROOT; };
 		273DB06557D32B01CB61BEE5 /* MemoryPressureHandler.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MemoryPressureHandler.swift; path = GitMac/Core/Utils/MemoryPressureHandler.swift; sourceTree = SOURCE_ROOT; };
 		2744088EB2B2CB3C9C518657 /* GitHubIntegration.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Features/GitHub/GitHubIntegration.swift; sourceTree = SOURCE_ROOT; };
-		274E4E6BDD64C4D1E1BFDE93 /* IntegrationsScreenshots.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IntegrationsScreenshots.swift; path = GitMacUITests/ScreenshotAutomation/Tests/IntegrationsScreenshots.swift; sourceTree = SOURCE_ROOT; };
 		28CF794CA5CBA4509C1129DB /* DSExpandableItem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Molecules/Lists/DSExpandableItem.swift; sourceTree = SOURCE_ROOT; };
 		28FC445669998FA52E288626 /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = ../Features/Settings/SettingsView.swift; sourceTree = "<group>"; };
 		29A9EEC65D538BDB576F332D /* CloudPatchService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CloudPatchService.swift; path = ../Features/CloudPatches/CloudPatchService.swift; sourceTree = "<group>"; };
@@ -563,13 +549,10 @@
 		3DCECE17C0C42203380CB8A6 /* GhosttyEnhancedViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GhosttyEnhancedViewModel.swift; path = Features/Terminal/Enhanced/GhosttyEnhancedViewModel.swift; sourceTree = "<group>"; };
 		3E42F45A779174FB0192AA60 /* ResetView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Reset/ResetView.swift; sourceTree = SOURCE_ROOT; };
 		3E5FE2C8F4C1E2317EDCFB9A /* Repository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Repository.swift; path = Core/Git/Repository.swift; sourceTree = "<group>"; };
-		3FCDCD0E4BDE56125AAFA125 /* SettingsScreenshots.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsScreenshots.swift; path = GitMacUITests/ScreenshotAutomation/Tests/SettingsScreenshots.swift; sourceTree = SOURCE_ROOT; };
 		40520EC2939EE30B975A15C7 /* TerminalInputBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TerminalInputBar.swift; path = GitMac/Features/Terminal/Views/TerminalInputBar.swift; sourceTree = SOURCE_ROOT; };
-		41158EA9A02FA8AD1ED246F9 /* CommitGraphScreenshots.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CommitGraphScreenshots.swift; path = GitMacUITests/ScreenshotAutomation/Tests/CommitGraphScreenshots.swift; sourceTree = SOURCE_ROOT; };
 		416D4860255DDA9948479B7A /* FuzzyFileFinder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Search/FuzzyFileFinder.swift; sourceTree = SOURCE_ROOT; };
 		418DEF04AD5914A0852FBE2F /* TerminalCommandPalette.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TerminalCommandPalette.swift; path = Features/Terminal/Enhanced/TerminalCommandPalette.swift; sourceTree = "<group>"; };
 		43BA801C0F45F514B99B0554 /* BranchComparisonView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Branches/BranchComparisonView.swift; sourceTree = SOURCE_ROOT; };
-		43D5FC96EC04149C71DA88A5 /* AdvancedFeaturesScreenshots.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AdvancedFeaturesScreenshots.swift; path = GitMacUITests/ScreenshotAutomation/Tests/AdvancedFeaturesScreenshots.swift; sourceTree = SOURCE_ROOT; };
 		44313C9929F962B9469DE8E7 /* LayoutHelpers.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LayoutHelpers.swift; path = ../Components/Utilities/LayoutHelpers.swift; sourceTree = "<group>"; };
 		451F64E5457594941DF51A31 /* EnhancedTerminalPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EnhancedTerminalPanel.swift; path = Features/Terminal/Views/EnhancedTerminalPanel.swift; sourceTree = "<group>"; };
 		45438C33E7FA5A730083B876 /* TerminalView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TerminalView.swift; path = Features/Terminal/TerminalView.swift; sourceTree = "<group>"; };
@@ -590,7 +573,6 @@
 		511CFCE3FA2008A66F4C9EA1 /* DiffEnhancements.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Diff/DiffEnhancements.swift; sourceTree = SOURCE_ROOT; };
 		51E2503BBB1447E619977588 /* DiffStatusBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DiffStatusBar.swift; path = ../Features/Diff/DiffStatusBar.swift; sourceTree = "<group>"; };
 		52DB5D866FC40BF9D4931F12 /* ContextMenus.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ContextMenus.swift; path = Components/ContextMenus.swift; sourceTree = "<group>"; };
-		5330AB9E1CD7DCC0A41B7F98 /* WelcomeScreenshots.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WelcomeScreenshots.swift; path = GitMacUITests/ScreenshotAutomation/Tests/WelcomeScreenshots.swift; sourceTree = SOURCE_ROOT; };
 		53D000234FCCCC9F62D22DE0 /* SubmoduleManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Submodules/SubmoduleManager.swift; sourceTree = SOURCE_ROOT; };
 		54F22F52D0E8130CC29E01D3 /* DSDropZone.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Molecules/Lists/DSDropZone.swift; sourceTree = SOURCE_ROOT; };
 		557CA937B9386B978825F7B6 /* DSGroupedList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DSGroupedList.swift; path = Organisms/Lists/DSGroupedList.swift; sourceTree = "<group>"; };
@@ -686,7 +668,6 @@
 		88BD0BE0F4444FCE1396A212 /* BranchRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BranchRow.swift; path = ../Components/Rows/BranchRow.swift; sourceTree = "<group>"; };
 		8919B5353DAAE1D6C06F8BBB /* DSIntegrationPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DSIntegrationPanel.swift; path = Organisms/Integration/DSIntegrationPanel.swift; sourceTree = "<group>"; };
 		895A0312F04D67E50BB88FCA /* NotionContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotionContentView.swift; path = Features/Notion/NotionContentView.swift; sourceTree = "<group>"; };
-		8A572A4DFBCB8990DF9DA442 /* DiffViewerScreenshots.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DiffViewerScreenshots.swift; path = GitMacUITests/ScreenshotAutomation/Tests/DiffViewerScreenshots.swift; sourceTree = SOURCE_ROOT; };
 		8AB1EA918F36B9CA215847E9 /* GitSubmodule.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GitSubmodule.swift; path = Core/Models/GitSubmodule.swift; sourceTree = "<group>"; };
 		8B32BADC104E4660C5B68987 /* DSTabContainer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DSTabContainer.swift; path = Organisms/DSTabContainer.swift; sourceTree = "<group>"; };
 		8BE3A5493D73AF5335D28E79 /* XcodeToolbarButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = XcodeToolbarButton.swift; path = Components/Xcode/XcodeToolbarButton.swift; sourceTree = "<group>"; };
@@ -730,7 +711,6 @@
 		A1B3C55C29AB720739CDE519 /* AccountsSettingsTab.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AccountsSettingsTab.swift; path = ../../Features/Settings/Tabs/AccountsSettingsTab.swift; sourceTree = "<group>"; };
 		A28EB01A5FA82BA5F5A3728A /* UnifiedBottomPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = UnifiedBottomPanel.swift; path = Features/BottomPanel/Views/UnifiedBottomPanel.swift; sourceTree = "<group>"; };
 		A3D8DDC9BB7A5208EF261161 /* IssueListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IssueListView.swift; path = Features/Issues/IssueListView.swift; sourceTree = "<group>"; };
-		A5F80C86EABF718203925E70 /* BottomPanelScreenshots.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BottomPanelScreenshots.swift; path = GitMacUITests/ScreenshotAutomation/Tests/BottomPanelScreenshots.swift; sourceTree = SOURCE_ROOT; };
 		A61CFD75D08F95050EEA503D /* GraphViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GraphViewModel.swift; path = ../Features/CommitGraph/ViewModels/GraphViewModel.swift; sourceTree = "<group>"; };
 		A6949012590C4505C0112608 /* DSDraggableItem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Molecules/Lists/DSDraggableItem.swift; sourceTree = SOURCE_ROOT; };
 		A72B4B428ACA0A1D3C01558D /* LinearContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LinearContentView.swift; path = Features/Linear/LinearContentView.swift; sourceTree = "<group>"; };
@@ -779,7 +759,6 @@
 		B7407DC78A533B745E0A0B33 /* GraphSettings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GraphSettings.swift; path = ../Features/CommitGraph/Models/GraphSettings.swift; sourceTree = "<group>"; };
 		B7AC05D32D81D7C384612D99 /* PullSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Features/PullRequests/PullSheet.swift; sourceTree = SOURCE_ROOT; };
 		B8E11127F294B1C3EB7DA927 /* DiffView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DiffView.swift; path = ../Features/Diff/DiffView.swift; sourceTree = "<group>"; };
-		B8E7FE613106FEE6EB0A0325 /* MainWindowScreenshots.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MainWindowScreenshots.swift; path = GitMacUITests/ScreenshotAutomation/Tests/MainWindowScreenshots.swift; sourceTree = SOURCE_ROOT; };
 		B8FB12219D2488819C343911 /* DiffParser.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DiffParser.swift; path = ../Features/Diff/Renderers/DiffParser.swift; sourceTree = "<group>"; };
 		B99F846B0D4585643F00BD77 /* XcodeBottomBarTab.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = XcodeBottomBarTab.swift; path = Components/Xcode/XcodeBottomBarTab.swift; sourceTree = "<group>"; };
 		B9A088455C222CD24BD8A385 /* FileAnnotationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Blame/FileAnnotationView.swift; sourceTree = SOURCE_ROOT; };
@@ -822,7 +801,6 @@
 		D1959EDC993C5EBC8C305A4F /* BranchPanelView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BranchPanelView.swift; path = ../../Features/CommitGraph/Components/BranchPanelView.swift; sourceTree = "<group>"; };
 		D19D7A85D4110AB3954044F9 /* DSErrorState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/UI/Components/Molecules/Display/DSErrorState.swift; sourceTree = SOURCE_ROOT; };
 		D359DD82979AF160C3A6257C /* KaleidoscopeDiffView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KaleidoscopeDiffView.swift; path = ../Features/Diff/KaleidoscopeDiffView.swift; sourceTree = "<group>"; };
-		D389955F882D1575D1230D9C /* ScreenshotEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScreenshotEngine.swift; path = GitMacUITests/ScreenshotAutomation/ScreenshotEngine.swift; sourceTree = SOURCE_ROOT; };
 		D4BFCD937C8EA030DB8F6FDE /* AWSSettingsViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AWSSettingsViews.swift; path = ../../../Features/Settings/Components/IntegrationViews/AWSSettingsViews.swift; sourceTree = "<group>"; };
 		D667A4EEB0DA338B05F87CC9 /* LinearPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LinearPanel.swift; path = Features/Linear/LinearPanel.swift; sourceTree = "<group>"; };
 		D677ACBA3E4FD4FB7DFAD138 /* BottomPanelTab.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BottomPanelTab.swift; path = Features/BottomPanel/Models/BottomPanelTab.swift; sourceTree = "<group>"; };
@@ -889,9 +867,7 @@
 		F7B82AC93A83839A10C7CDCC /* MicrosoftPlannerService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MicrosoftPlannerService.swift; path = Core/Services/MicrosoftPlannerService.swift; sourceTree = "<group>"; };
 		F8D288AEB2C54F54B1E3C13E /* Tag.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Tag.swift; path = Core/Git/Tag.swift; sourceTree = "<group>"; };
 		F922D700B40B20BAD7EFCC38 /* DiffOptions.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Diff/DiffOptions.swift; sourceTree = SOURCE_ROOT; };
-		FBD382CBA8345AD1DCFA3A87 /* StagingScreenshots.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StagingScreenshots.swift; path = GitMacUITests/ScreenshotAutomation/Tests/StagingScreenshots.swift; sourceTree = SOURCE_ROOT; };
 		FC7110872A0069C25C89D7CF /* DiffPreferences.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DiffPreferences.swift; path = ../Features/Diff/DiffPreferences.swift; sourceTree = "<group>"; };
-		FCD7081B8D9913484822982C /* DialogsScreenshots.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DialogsScreenshots.swift; path = GitMacUITests/ScreenshotAutomation/Tests/DialogsScreenshots.swift; sourceTree = SOURCE_ROOT; };
 		FD8A795E6B8F62D83A911CA9 /* GitHooksService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GitHooksService.swift; path = Core/Services/GitHooksService.swift; sourceTree = "<group>"; };
 		FDB6FE5C91B2C9441FED36A8 /* SubscriptionSettingsTab.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SubscriptionSettingsTab.swift; path = ../../Features/Settings/Tabs/SubscriptionSettingsTab.swift; sourceTree = "<group>"; };
 		FE0A1FBEF59967F8CA33AE69 /* GPGSSHManagementView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GitMac/Features/Security/GPGSSHManagementView.swift; sourceTree = SOURCE_ROOT; };
@@ -1365,17 +1341,6 @@
 		42A8532FF58E4EE45DAB7333 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
-				B8E7FE613106FEE6EB0A0325 /* MainWindowScreenshots.swift */,
-				41158EA9A02FA8AD1ED246F9 /* CommitGraphScreenshots.swift */,
-				8A572A4DFBCB8990DF9DA442 /* DiffViewerScreenshots.swift */,
-				FBD382CBA8345AD1DCFA3A87 /* StagingScreenshots.swift */,
-				FCD7081B8D9913484822982C /* DialogsScreenshots.swift */,
-				3FCDCD0E4BDE56125AAFA125 /* SettingsScreenshots.swift */,
-				A5F80C86EABF718203925E70 /* BottomPanelScreenshots.swift */,
-				274E4E6BDD64C4D1E1BFDE93 /* IntegrationsScreenshots.swift */,
-				14D26DB2BA5E67579FBD2061 /* TerminalScreenshots.swift */,
-				43D5FC96EC04149C71DA88A5 /* AdvancedFeaturesScreenshots.swift */,
-				5330AB9E1CD7DCC0A41B7F98 /* WelcomeScreenshots.swift */,
 			);
 			name = Tests;
 			path = GitMacUITests/ScreenshotAutomation/Tests;
@@ -1612,7 +1577,6 @@
 			isa = PBXGroup;
 			children = (
 				42A8532FF58E4EE45DAB7333 /* Tests */,
-				D389955F882D1575D1230D9C /* ScreenshotEngine.swift */,
 			);
 			name = ScreenshotAutomation;
 			path = GitMacUITests/ScreenshotAutomation;
@@ -2587,18 +2551,6 @@
 				022561B6FB7711CB1874E16A /* GitMacScreenshotTests.swift in Sources */,
 				6D448EC91E8E8F793BE81E2F /* GitMacUITests.swift in Sources */,
 				E54CCCE4AC2D1D2E7B71C94E /* GitMacUITestsLaunchTests.swift in Sources */,
-				B169363156FED5DF23D58A53 /* ScreenshotEngine.swift in Sources */,
-				84980B0A252F49B6B020B540 /* MainWindowScreenshots.swift in Sources */,
-				70C39636FD7B403D575B96FD /* CommitGraphScreenshots.swift in Sources */,
-				652483C990186F2C7ED6A88C /* DiffViewerScreenshots.swift in Sources */,
-				B6601966EA3CC203B4C03DD7 /* StagingScreenshots.swift in Sources */,
-				A707AF98F59B0FC465F135FA /* DialogsScreenshots.swift in Sources */,
-				0B0D71EAC506822FA1808B9F /* SettingsScreenshots.swift in Sources */,
-				F267C86B66541CD2779AD7E4 /* BottomPanelScreenshots.swift in Sources */,
-				710F171975C77B0984D8921F /* IntegrationsScreenshots.swift in Sources */,
-				EA91A3EEEC9B9966FD049945 /* TerminalScreenshots.swift in Sources */,
-				17CB898309B82A6F554266CF /* AdvancedFeaturesScreenshots.swift in Sources */,
-				4AF24348D21EC9F70F7DDD6C /* WelcomeScreenshots.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3238,7 +3190,6 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = NO;
-				STRIP_INSTALLED_PRODUCT = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -3254,6 +3205,7 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				STRIP_INSTALLED_PRODUCT = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "GHOSTTY_AVAILABLE $(inherited)";
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
