@@ -77,19 +77,7 @@ struct PushToolbarButton: View {
         .onHover { isHovered = $0 }
         .animation(.easeInOut(duration: 0.15), value: aheadCount)
         .animation(.easeInOut(duration: 0.15), value: isHovered)
-        .onAppear { updateFromBranchManager() }
-        .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { _ in
-            updateFromBranchManager()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .branchDidChange)) { _ in
-            updateFromBranchManager()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .branchDidCheckout)) { _ in
-            updateFromBranchManager()
-        }
-        .onChange(of: appState.activeTabId) { _, _ in
-            updateFromBranchManager()
-        }
+        .observeBranchChanges { updateFromBranchManager() }
     }
 
     private func updateFromBranchManager() {
@@ -166,19 +154,7 @@ struct FetchToolbarButton: View {
         .onHover { isHovered = $0 }
         .animation(.easeInOut(duration: 0.15), value: behindCount)
         .animation(.easeInOut(duration: 0.15), value: isHovered)
-        .onAppear { updateFromBranchManager() }
-        .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { _ in
-            updateFromBranchManager()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .branchDidChange)) { _ in
-            updateFromBranchManager()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .branchDidCheckout)) { _ in
-            updateFromBranchManager()
-        }
-        .onChange(of: appState.activeTabId) { _, _ in
-            updateFromBranchManager()
-        }
+        .observeBranchChanges { updateFromBranchManager() }
     }
 
     private func updateFromBranchManager() {
@@ -253,23 +229,33 @@ struct PullToolbarButton: View {
         .onHover { isHovered = $0 }
         .animation(.easeInOut(duration: 0.15), value: behindCount)
         .animation(.easeInOut(duration: 0.15), value: isHovered)
-        .onAppear { updateFromBranchManager() }
-        .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { _ in
-            updateFromBranchManager()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .branchDidChange)) { _ in
-            updateFromBranchManager()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .branchDidCheckout)) { _ in
-            updateFromBranchManager()
-        }
-        .onChange(of: appState.activeTabId) { _, _ in
-            updateFromBranchManager()
-        }
+        .observeBranchChanges { updateFromBranchManager() }
     }
 
     private func updateFromBranchManager() {
         behindCount = appState.branchManager?.currentBranch?.aheadBehind?.behind ?? 0
+    }
+}
+
+// MARK: - Shared Branch Observer
+
+private struct BranchObserver: ViewModifier {
+    @Environment(AppState.self) var appState
+    let action: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { action() }
+            .onReceive(NotificationCenter.default.publisher(for: .repositoryDidRefresh)) { _ in action() }
+            .onReceive(NotificationCenter.default.publisher(for: .branchDidChange)) { _ in action() }
+            .onReceive(NotificationCenter.default.publisher(for: .branchDidCheckout)) { _ in action() }
+            .onChange(of: appState.activeTabId) { _, _ in action() }
+    }
+}
+
+private extension View {
+    func observeBranchChanges(perform action: @escaping () -> Void) -> some View {
+        modifier(BranchObserver(action: action))
     }
 }
 

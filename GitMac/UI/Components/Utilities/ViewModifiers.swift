@@ -20,7 +20,7 @@ struct DSHoverEffect: ViewModifier {
 
     init(
         isHovered: Binding<Bool>,
-        backgroundColor: Color? = AppTheme.hover,
+        backgroundColor: Color? = Color.accentColor.opacity(0.1),
         borderColor: Color? = nil,
         cornerRadius: CGFloat = DesignTokens.CornerRadius.md,
         animationDuration: Double = DesignTokens.Animation.fast
@@ -192,7 +192,7 @@ struct DSSelectionHighlight: ViewModifier {
 
     init(
         isSelected: Bool,
-        color: Color = AppTheme.accent,
+        color: Color = .accentColor,
         style: SelectionStyle = .background
     ) {
         self.isSelected = isSelected
@@ -296,7 +296,7 @@ extension View {
     /// Applies hover effect with consistent styling
     func hoverEffect(
         isHovered: Binding<Bool>,
-        backgroundColor: Color? = AppTheme.hover,
+        backgroundColor: Color? = Color.accentColor.opacity(0.1),
         borderColor: Color? = nil,
         cornerRadius: CGFloat = DesignTokens.CornerRadius.md,
         animationDuration: Double = DesignTokens.Animation.fast
@@ -352,7 +352,7 @@ extension View {
     /// Highlights when selected
     func selectionHighlight(
         isSelected: Bool,
-        color: Color = AppTheme.accent,
+        color: Color = .accentColor,
         style: DSSelectionHighlight.SelectionStyle = .background
     ) -> some View {
         modifier(DSSelectionHighlight(isSelected: isSelected, color: color, style: style))

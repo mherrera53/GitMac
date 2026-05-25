@@ -259,134 +259,79 @@ enum NotificationType {
 struct ToastNotificationView: View {
     let notification: ToastNotification
     let onDismiss: () -> Void
-    
+
     @State private var timeRemaining: CGFloat = 1.0
-    @State private var timer: Timer?
-    @State private var isHovered = false
-    @State private var dragOffset: CGFloat = 0
-    
+
+    private var title: String {
+        notification.message.components(separatedBy: "\n").first ?? notification.message
+    }
+
+    private var subtitle: String? {
+        let parts = notification.message.components(separatedBy: "\n")
+        return parts.count > 1 ? parts.dropFirst().joined(separator: " ") : nil
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 12) {
-                // Icon
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
                 Image(systemName: notification.type.icon)
-                    .font(.system(size: 20))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(notification.type.color)
-                
-                // Message
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(notification.message.components(separatedBy: "\n"), id: \.self) { line in
-                        Text(shouldCapitalize(line) ? line.capitalizedFirst : line)
-                            .font(line == notification.message.components(separatedBy: "\n").first ? .body : .caption)
-                            .foregroundStyle(line == notification.message.components(separatedBy: "\n").first ? .primary : .secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+
+                Text(title)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+
+                if let sub = subtitle {
+                    Text(sub)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                
-                // Close button - larger and more visible with high priority gesture
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 18))
-                    .foregroundStyle(isHovered ? AppTheme.textPrimary : AppTheme.textSecondary)
-                    .frame(width: 32, height: 32) // Larger click area
-                    .background(Color.clear)
-                    .contentShape(Rectangle())
-                    .highPriorityGesture(
-                        TapGesture()
-                            .onEnded { _ in
-                                onDismiss()
-                            }
-                    )
-            }
-            .padding()
-            
-            // Action button logic...
-            if notification.hasAction, let title = notification.actionTitle {
-                Divider()
-                    .padding(.horizontal)
-                
-                VStack(alignment: .leading, spacing: 6) {
-                    if let hint = notification.actionHint {
-                        Text("💡 \(hint)")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    
+
+                Spacer()
+
+                if notification.hasAction, let actionTitle = notification.actionTitle {
                     Button {
                         notification.performAction()
                         onDismiss()
                     } label: {
-                        HStack {
-                            Image(systemName: "arrow.right.circle.fill")
-                                .foregroundStyle(AppTheme.info)
-                            Text(title)
-                        }
+                        Text(actionTitle)
+                            .font(.system(size: 10, weight: .medium))
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
                     .tint(notification.type.color)
-                    .controlSize(.small)
                 }
-                .padding()
+
+                Button {
+                    onDismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .frame(width: 16, height: 16)
             }
-            
-            // Progress Bar (Visual Timer)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+
             GeometryReader { geo in
                 Rectangle()
                     .fill(notification.type.color)
-                    .frame(width: geo.size.width * timeRemaining, height: 4)
+                    .frame(width: geo.size.width * timeRemaining, height: 2)
                     .animation(.linear(duration: notification.duration), value: timeRemaining)
             }
-            .frame(height: 4)
+            .frame(height: 2)
         }
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(nsColor: .controlBackgroundColor))
-                .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(notification.type.color.opacity(0.5), lineWidth: 2)
-        )
-        .frame(width: 380)
-        .offset(x: dragOffset)
-        .onHover { hovering in
-            isHovered = hovering
-            // Pause timer on hover so user can interact with notification
-            if hovering {
-                // Reset timer progress to give user time to interact
-                withAnimation(.linear(duration: 0.2)) {
-                    timeRemaining = 0.5 // Give some time back
-                }
-            }
-        }
+        .background(notification.type.color.opacity(0.08))
         .onAppear {
             withAnimation(.linear(duration: notification.duration)) {
                 timeRemaining = 0
             }
         }
-        // Use simultaneousGesture to allow Button clicks to pass through if necessary,
-        // though usually standard gesture on container works fine with buttons.
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 20)
-                .onChanged { value in
-                    dragOffset = value.translation.width
-                }
-                .onEnded { value in
-                    if abs(value.translation.width) > 100 {
-                        onDismiss()
-                    } else {
-                        withAnimation(.spring()) {
-                            dragOffset = 0
-                        }
-                    }
-                }
-        )
-    }
-    
-    private func shouldCapitalize(_ text: String) -> Bool {
-        // Simple heuristic: capitalize if it starts with a letter
-        return !text.isEmpty
     }
 }
 
@@ -402,7 +347,7 @@ struct ToastContainer: View {
     @StateObject private var notificationManager = NotificationManager.shared
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 8) {
+        VStack(spacing: 0) {
             ForEach(notificationManager.notifications) { notification in
                 ToastNotificationView(
                     notification: notification,
@@ -411,20 +356,18 @@ struct ToastContainer: View {
                     }
                 )
                 .transition(.asymmetric(
-                    insertion: .move(edge: .trailing).combined(with: .opacity),
-                    removal: .move(edge: .trailing).combined(with: .opacity)
+                    insertion: .move(edge: .top).combined(with: .opacity),
+                    removal: .opacity
                 ))
             }
         }
-        .padding()
+        .animation(.easeInOut(duration: 0.2), value: notificationManager.notifications.count)
     }
 }
 
-// MARK: - View Extension
-
 extension View {
     func withToastNotifications() -> some View {
-        overlay(alignment: .topTrailing) {
+        overlay(alignment: .top) {
             ToastContainer()
         }
     }

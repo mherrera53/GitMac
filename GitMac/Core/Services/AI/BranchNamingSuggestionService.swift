@@ -100,7 +100,6 @@ final class BranchNamingSuggestionService {
         }
         
         if suggestions.isEmpty {
-            let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .none)
             suggestions.append(BranchSuggestion(
                 name: "\(detectedType.prefix)new-changes",
                 type: detectedType,
@@ -141,7 +140,7 @@ final class BranchNamingSuggestionService {
             return .docs
         }
         
-        if context.currentBranchName == "main" || context.currentBranchName == "master" {
+        if let name = context.currentBranchName, Branch.mainBranchNames.contains(name) {
             return .feature
         }
         

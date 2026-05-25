@@ -29,7 +29,7 @@ class BranchProtectionService: ObservableObject {
         self.isEnabled = UserDefaults.standard.object(forKey: forcePushEnabledKey) as? Bool ?? true
         self.blockDirectCommits = UserDefaults.standard.object(forKey: blockDirectCommitsKey) as? Bool ?? false
         self.protectedPatterns = UserDefaults.standard.stringArray(forKey: protectedPatternsKey)
-            ?? ["main", "master", "develop", "release/*", "hotfix/*"]
+            ?? Array(Branch.mainBranchNames) + ["release/*", "hotfix/*"]
     }
 
     /// Check if a branch is protected

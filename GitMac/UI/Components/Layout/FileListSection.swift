@@ -54,7 +54,7 @@ extension FileListSection where HeaderActions == EmptyView {
         title: String,
         count: Int,
         icon: String,
-        headerColor: Color = AppTheme.accent,
+        headerColor: Color = .accentColor,
         style: SectionHeader<EmptyView>.HeaderStyle = .default,
         maxHeight: CGFloat? = nil,
         @ViewBuilder content: @escaping () -> Content
@@ -127,7 +127,7 @@ extension ListSection where HeaderActions == EmptyView {
         title: String,
         count: Int,
         icon: String,
-        color: Color = AppTheme.accent,
+        color: Color = .accentColor,
         style: SectionHeader<EmptyView>.HeaderStyle = .default,
         isScrollable: Bool = true,
         maxHeight: CGFloat? = nil,

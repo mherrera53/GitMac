@@ -88,7 +88,7 @@ class GitHubSyncManager: ObservableObject {
     /// Check branch protection status for main/master branches via `gh` CLI
     /// Only checks key branches to avoid rate limiting
     private func checkBranchProtection() async {
-        guard let repoPath = await AppState.shared.currentRepository?.path else { return }
+        guard let repoPath = AppState.shared.currentRepository?.path else { return }
 
         let shell = ShellExecutor.shared
 
@@ -103,7 +103,7 @@ class GitHubSyncManager: ObservableObject {
         guard let slug = extractGitHubSlug(from: remoteURL) else { return }
 
         // Check protection for main branches only
-        let branchesToCheck = ["main", "master", "develop"]
+        let branchesToCheck = Branch.mainBranchNames
 
         for branchName in branchesToCheck {
             let result = await shell.execute(

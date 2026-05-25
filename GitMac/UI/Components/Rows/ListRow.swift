@@ -162,7 +162,7 @@ extension ListRow {
         title: String,
         value: String,
         icon: String? = nil,
-        iconColor: Color = AppTheme.accent,
+        iconColor: Color = .accentColor,
         isSelected: Bool = false,
         onSelect: (() -> Void)? = nil
     ) -> ListRow {

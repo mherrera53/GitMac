@@ -276,7 +276,7 @@ struct PlanCard: View {
 
 // MARK: - Paywall View
 
-struct PaywallView: View {
+struct ProFeatureLockedView: View {
     let feature: StoreManager.ProFeature
     @State private var showSubscription = false
     @Environment(\.dismiss) private var dismiss

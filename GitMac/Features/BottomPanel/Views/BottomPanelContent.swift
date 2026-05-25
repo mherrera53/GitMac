@@ -99,6 +99,16 @@ struct GhosttyWithAIInput: View {
     }
 }
 
+// MARK: - Ghostty Stub (when Ghostty not available)
+
+#if !GHOSTTY_AVAILABLE
+class GhosttyPureNSView: NSView {
+    init(repoPath: String?) { super.init(frame: .zero) }
+    required init?(coder: NSCoder) { fatalError() }
+    func sendText(_ text: String) {}
+}
+#endif
+
 // MARK: - Ghostty Connector (holds reference to NSView)
 
 @MainActor

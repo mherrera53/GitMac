@@ -23,7 +23,7 @@ struct GraphRow: View {
                         BranchBadge(
                             name: label,
                             color: color(node.lane),
-                            isHead: label == "main" || label == "master",
+                            isHead: Branch.mainBranchNames.contains(label),
                             isTag: label.hasPrefix("v") || label.contains("."),
                             onDropBranch: { dropped in
                                 onDropBranch?(label, dropped)
@@ -218,7 +218,6 @@ struct GraphRow: View {
         p.move(to: from)
 
         // Professional smooth curve like GitKraken - railroad track style
-        let deltaX = to.x - from.x
         let deltaY = to.y - from.y
 
         // Use quadratic control points for smoother curves

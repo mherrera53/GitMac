@@ -175,7 +175,7 @@ actor ShellExecutor {
         let cmdDesc = "\(command) \(arguments.prefix(3).joined(separator: " "))"
         return await withCheckedContinuation { continuation in
             let dbgFile = URL(fileURLWithPath: "/tmp/gitmac-graph-debug.log")
-            func dbgLog(_ msg: String) {
+            @Sendable func dbgLog(_ msg: String) {
                 if let d = "[\(Date())] [Shell] \(msg)\n".data(using: .utf8),
                    let fh = try? FileHandle(forWritingTo: dbgFile) { fh.seekToEndOfFile(); fh.write(d); fh.closeFile() }
             }

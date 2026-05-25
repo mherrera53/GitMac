@@ -610,10 +610,10 @@ class GPGSSHViewModel: ObservableObject {
                 let privateKeyPath = file.deletingPathExtension().path
                 
                 // Get fingerprint
-                if let fingerprint = try? await ShellExecutor.shared.execute(
+                let fingerprint = await ShellExecutor.shared.execute(
                     "ssh-keygen -lf '\(file.path)'"
-                ).output.trimmingCharacters(in: .whitespacesAndNewlines) {
-                    
+                ).output.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !fingerprint.isEmpty {
                     let parts = fingerprint.split(separator: " ")
                     let keyType = parts.count > 3 ? String(parts[3]).replacingOccurrences(of: "(", with: "").replacingOccurrences(of: ")", with: "") : "unknown"
                     
@@ -653,7 +653,7 @@ class GPGSSHViewModel: ObservableObject {
             command += " -b 4096"
         }
         
-        _ = try? await ShellExecutor.shared.execute(command)
+        _ = await ShellExecutor.shared.execute(command)
         await loadSSHKeys()
     }
     
@@ -673,18 +673,18 @@ class GPGSSHViewModel: ObservableObject {
     // MARK: - GPG
     
     func checkGPGInstallation() async {
-        let result = try? await ShellExecutor.shared.execute("which gpg")
-        gpgInstalled = !(result?.output.isEmpty ?? true)
+        let result = await ShellExecutor.shared.execute("which gpg")
+        gpgInstalled = !result.output.isEmpty
     }
     
     func loadGPGKeys() async {
         guard gpgInstalled else { return }
         
-        let result = try? await ShellExecutor.shared.execute(
+        let result = await ShellExecutor.shared.execute(
             "gpg --list-secret-keys --keyid-format LONG 2>/dev/null"
         )
-        
-        guard let output = result?.output, !output.isEmpty else {
+
+        guard !result.output.isEmpty else {
             gpgKeys = []
             return
         }
@@ -695,7 +695,7 @@ class GPGSSHViewModel: ObservableObject {
         var currentName = ""
         var currentEmail = ""
         
-        for line in output.components(separatedBy: "\n") {
+        for line in result.output.components(separatedBy: "\n") {
             if line.contains("sec ") {
                 // Extract key ID
                 if let match = line.range(of: #"/[A-F0-9]{16}"#, options: .regularExpression) {
@@ -731,11 +731,11 @@ class GPGSSHViewModel: ObservableObject {
     }
     
     func loadGPGConfig() async {
-        let signResult = try? await ShellExecutor.shared.execute("git config --global commit.gpgsign")
-        signCommitsByDefault = signResult?.output.trimmingCharacters(in: .whitespacesAndNewlines) == "true"
-        
-        let keyResult = try? await ShellExecutor.shared.execute("git config --global user.signingkey")
-        defaultSigningKey = keyResult?.output.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let signResult = await ShellExecutor.shared.execute("git config --global commit.gpgsign")
+        signCommitsByDefault = signResult.output.trimmingCharacters(in: .whitespacesAndNewlines) == "true"
+
+        let keyResult = await ShellExecutor.shared.execute("git config --global user.signingkey")
+        defaultSigningKey = keyResult.output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
     func generateGPGKey(name: String, email: String, passphrase: String) async {
@@ -752,34 +752,34 @@ class GPGSSHViewModel: ObservableObject {
         let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent("gpg-batch.txt")
         try? batchConfig.write(to: tempFile, atomically: true, encoding: .utf8)
         
-        _ = try? await ShellExecutor.shared.execute("gpg --batch --generate-key '\(tempFile.path)'")
+        _ = await ShellExecutor.shared.execute("gpg --batch --generate-key '\(tempFile.path)'")
         try? FileManager.default.removeItem(at: tempFile)
         
         await loadGPGKeys()
     }
     
     func copyGPGKey(_ key: GPGKey) {
-        if let result = try? ShellExecutor.shared.executeSync("gpg --armor --export \(key.keyId)") {
+        if let result = ShellExecutor.shared.executeSync("gpg --armor --export \(key.keyId)") {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(result.output, forType: .string)
         }
     }
     
     func deleteGPGKey(_ key: GPGKey) {
-        _ = try? ShellExecutor.shared.executeSync("gpg --batch --yes --delete-secret-keys \(key.keyId)")
-        _ = try? ShellExecutor.shared.executeSync("gpg --batch --yes --delete-keys \(key.keyId)")
+        _ = ShellExecutor.shared.executeSync("gpg --batch --yes --delete-secret-keys \(key.keyId)")
+        _ = ShellExecutor.shared.executeSync("gpg --batch --yes --delete-keys \(key.keyId)")
         Task { await loadGPGKeys() }
     }
     
     func setSignCommits(_ enabled: Bool) async {
-        _ = try? await ShellExecutor.shared.execute("git config --global commit.gpgsign \(enabled)")
+        _ = await ShellExecutor.shared.execute("git config --global commit.gpgsign \(enabled)")
     }
     
     func setDefaultSigningKey(_ keyId: String) async {
         if keyId.isEmpty {
-            _ = try? await ShellExecutor.shared.execute("git config --global --unset user.signingkey")
+            _ = await ShellExecutor.shared.execute("git config --global --unset user.signingkey")
         } else {
-            _ = try? await ShellExecutor.shared.execute("git config --global user.signingkey \(keyId)")
+            _ = await ShellExecutor.shared.execute("git config --global user.signingkey \(keyId)")
         }
     }
 }

@@ -2,8 +2,6 @@ import SwiftUI
 import AppKit
 import CryptoKit
 
-// NSImage is thread-safe for read-only use but not marked Sendable in Swift 6
-extension NSImage: @unchecked @retroactive Sendable {}
 
 // MARK: - Avatar cache (memoria + disco)
 actor AvatarCache {
@@ -33,21 +31,25 @@ actor AvatarCache {
         folderURL.appendingPathComponent(key + ".png")
     }
 
-    func image(for key: String) -> NSImage? {
-        if let img = memory.object(forKey: key as NSString) {
-            return img
+    func imageData(for key: String) -> Data? {
+        if let img = memory.object(forKey: key as NSString),
+           let tiff = img.tiffRepresentation {
+            return tiff
         }
         let path = diskPath(for: key)
         if let data = try? Data(contentsOf: path), let img = NSImage(data: data) {
             memory.setObject(img, forKey: key as NSString)
-            return img
+            return data
         }
         return nil
     }
 
-    func store(_ image: NSImage, for key: String) {
-        memory.setObject(image, forKey: key as NSString)
-        guard let tiff = image.tiffRepresentation,
+    func store(_ imageData: Data, for key: String) {
+        if let img = NSImage(data: imageData) {
+            memory.setObject(img, forKey: key as NSString)
+        }
+        guard let img = NSImage(data: imageData),
+              let tiff = img.tiffRepresentation,
               let rep = NSBitmapImageRep(data: tiff),
               let png = rep.representation(using: .png, properties: [:]) else { return }
         try? png.write(to: diskPath(for: key))
@@ -122,9 +124,8 @@ struct AvatarImageView: View {
     private func loadAvatar() async {
         guard !normalizedEmail.isEmpty else { return }
 
-        // Check cache first (NSImage is not Sendable but is safe for this use)
-        let cached: NSImage? = await AvatarCache.shared.image(for: cacheKey)
-        if let image = cached {
+        if let cachedData = await AvatarCache.shared.imageData(for: cacheKey),
+           let image = NSImage(data: cachedData) {
             nsImage = image
             return
         }
@@ -133,34 +134,28 @@ struct AvatarImageView: View {
         isLoading = true
         defer { isLoading = false }
 
-        // Try to get avatar from AvatarService (GitHub → Gravatar → Identicon)
         let token = try? await KeychainManager.shared.getGitHubToken()
         if let avatarURL = await AvatarService.shared.getAvatarURL(for: normalizedEmail, githubToken: token) {
             do {
                 let (data, response) = try await URLSession.shared.data(from: avatarURL, delegate: nil)
                 if let http = response as? HTTPURLResponse, http.statusCode == 200,
                    let img = NSImage(data: data) {
-                    await AvatarCache.shared.store(img, for: cacheKey)
+                    await AvatarCache.shared.store(data, for: cacheKey)
                     nsImage = img
                     return
                 }
-            } catch {
-                // Silently fail - will try Gravatar fallback
-            }
+            } catch { }
         }
 
-        // Final fallback: try Gravatar directly
         if let url = gravatarURL() {
             do {
                 let (data, response) = try await URLSession.shared.data(from: url, delegate: nil)
                 if let http = response as? HTTPURLResponse, http.statusCode == 200,
                    let img = NSImage(data: data) {
-                    await AvatarCache.shared.store(img, for: cacheKey)
+                    await AvatarCache.shared.store(data, for: cacheKey)
                     nsImage = img
                 }
-            } catch {
-                // Use fallback initial circle
-            }
+            } catch { }
         }
     }
 }

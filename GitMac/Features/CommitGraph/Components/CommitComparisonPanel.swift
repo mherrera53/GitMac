@@ -255,7 +255,7 @@ class CommitComparisonViewModel: ObservableObject {
 
         do {
             // Get list of changed files between two commits
-            let result = await ShellExecutor.shared.execute(
+            _ = await ShellExecutor.shared.execute(
                 "git",
                 arguments: ["diff", "--numstat", "--name-status", from, to],
                 workingDirectory: path

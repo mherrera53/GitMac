@@ -3,8 +3,8 @@ import AppKit
 
 /// Terminal Integration - Embedded terminal with Git context
 /// Provides terminal access within GitMac for advanced operations
-struct TerminalView: View {
-    @StateObject private var viewModel = TerminalViewModel()
+struct SimpleTerminalView: View {
+    @StateObject private var viewModel = SimpleTerminalViewModel()
     @Environment(AppState.self) var appState
     
     @State private var commandInput = ""
@@ -270,7 +270,7 @@ enum TerminalLineType {
 // MARK: - View Model
 
 @MainActor
-class TerminalViewModel: ObservableObject {
+class SimpleTerminalViewModel: ObservableObject {
     @Published var outputLines: [TerminalLine] = []
     @Published var commandHistory: [String] = []
     @Published var workingDirectory: String = "~"
@@ -425,7 +425,7 @@ struct AdvancedTerminalView: View {
             
             // Terminal content
             if !manager.terminals.isEmpty && selectedTab < manager.terminals.count {
-                TerminalView()
+                SimpleTerminalView()
                     .id(selectedTab)
             } else {
                 emptyTerminalView
@@ -494,14 +494,14 @@ struct IntegrationTerminalTab: View {
 class TerminalManager: ObservableObject {
     static let shared = TerminalManager()
     
-    @Published var terminals: [TerminalViewModel] = []
+    @Published var terminals: [SimpleTerminalViewModel] = []
     
     init() {
         createTerminal()
     }
     
     func createTerminal() {
-        let terminal = TerminalViewModel()
+        let terminal = SimpleTerminalViewModel()
         terminals.append(terminal)
     }
     

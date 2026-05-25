@@ -186,18 +186,32 @@ private struct CompactTabPill: View {
     let onClose: () -> Void
     
     @State private var isHovering = false
-    
+
+    private var tabBackground: Color {
+        if isActive {
+            return tab.repoColor?.opacity(0.15) ?? AppTheme.backgroundTertiary
+        }
+        if isHovering {
+            return tab.repoColor?.opacity(0.08) ?? AppTheme.backgroundTertiary.opacity(0.5)
+        }
+        return .clear
+    }
+
     var body: some View {
         Button(action: onSelect) {
             HStack(spacing: 4) {
-                // Repo name
+                if let color = tab.repoColor {
+                    Circle()
+                        .fill(color)
+                        .frame(width: 6, height: 6)
+                }
+
                 Text(tab.repository.name)
                     .font(.system(size: 11, weight: isActive ? .medium : .regular))
                     .foregroundStyle(isActive ? AppTheme.textPrimary : AppTheme.textSecondary)
                     .lineLimit(1)
-                    .fixedSize() // Allow text to determine width, but compress if needed in future
-                
-                // Close button (visible on hover or active)
+                    .fixedSize()
+
                 if isActive || isHovering {
                     Button(action: onClose) {
                         Image(systemName: "xmark")
@@ -212,7 +226,7 @@ private struct CompactTabPill: View {
             .padding(.vertical, 3)
             .background(
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(isActive ? AppTheme.backgroundTertiary : (isHovering ? AppTheme.backgroundTertiary.opacity(0.5) : Color.clear))
+                    .fill(tabBackground)
             )
         }
         .buttonStyle(.plain)

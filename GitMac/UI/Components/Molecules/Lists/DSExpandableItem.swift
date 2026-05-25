@@ -145,15 +145,15 @@ struct DSExpandableItem<Content: View>: View {
             isExpanded: true
         ) {
             VStack(spacing: 0) {
-                DSListItem(title: "ContentView.swift", subtitle: "12 lines changed") {
+                DSListItem(title: "ContentView.swift", subtitle: "12 lines changed", leading: {
                     DSIcon("doc.text.fill", size: .sm, color: AppTheme.fileSwift)
-                }
-                DSListItem(title: "ViewModel.swift", subtitle: "5 lines changed") {
+                })
+                DSListItem(title: "ViewModel.swift", subtitle: "5 lines changed", leading: {
                     DSIcon("doc.text.fill", size: .sm, color: AppTheme.fileSwift)
-                }
-                DSListItem(title: "README.md", subtitle: "2 lines changed") {
+                })
+                DSListItem(title: "README.md", subtitle: "2 lines changed", leading: {
                     DSIcon("doc.text.fill", size: .sm, color: AppTheme.fileMarkdown)
-                }
+                })
             }
             .padding(.top, DesignTokens.Spacing.sm)
         }
@@ -165,12 +165,12 @@ struct DSExpandableItem<Content: View>: View {
             badge: "2"
         ) {
             VStack(spacing: 0) {
-                DSListItem(title: "AppDelegate.swift", subtitle: "New file") {
+                DSListItem(title: "AppDelegate.swift", subtitle: "New file", leading: {
                     DSIcon("doc.text.fill", size: .sm, color: AppTheme.fileSwift)
-                }
-                DSListItem(title: "Config.json", subtitle: "Modified") {
+                })
+                DSListItem(title: "Config.json", subtitle: "Modified", leading: {
                     DSIcon("doc.text.fill", size: .sm, color: AppTheme.fileJSON)
-                }
+                })
             }
             .padding(.top, DesignTokens.Spacing.sm)
         }
@@ -191,25 +191,25 @@ struct DSExpandableItem<Content: View>: View {
             VStack(spacing: 0) {
                 DSListItem(
                     title: "Add authentication system",
-                    subtitle: "2 hours ago"
-                ) {
-                    Circle().fill(AppTheme.success).frame(width: 6, height: 6)
-                } trailing: {
-                    Text("a3f5b2c")
-                        .font(DesignTokens.Typography.commitHash)
-                        .foregroundStyle(AppTheme.textMuted)
-                }
+                    subtitle: "2 hours ago",
+                    leading: { Circle().fill(AppTheme.success).frame(width: 6, height: 6) },
+                    trailing: {
+                        Text("a3f5b2c")
+                            .font(DesignTokens.Typography.commitHash)
+                            .foregroundStyle(AppTheme.textMuted)
+                    }
+                )
 
                 DSListItem(
                     title: "Update dependencies",
-                    subtitle: "5 hours ago"
-                ) {
-                    Circle().fill(AppTheme.info).frame(width: 6, height: 6)
-                } trailing: {
-                    Text("d8e91fc")
-                        .font(DesignTokens.Typography.commitHash)
-                        .foregroundStyle(AppTheme.textMuted)
-                }
+                    subtitle: "5 hours ago",
+                    leading: { Circle().fill(AppTheme.info).frame(width: 6, height: 6) },
+                    trailing: {
+                        Text("d8e91fc")
+                            .font(DesignTokens.Typography.commitHash)
+                            .foregroundStyle(AppTheme.textMuted)
+                    }
+                )
             }
             .padding(.top, DesignTokens.Spacing.sm)
         }
@@ -223,14 +223,14 @@ struct DSExpandableItem<Content: View>: View {
             VStack(spacing: 0) {
                 DSListItem(
                     title: "Fix critical bug",
-                    subtitle: "yesterday"
-                ) {
-                    Circle().fill(AppTheme.error).frame(width: 6, height: 6)
-                } trailing: {
-                    Text("c2d4a1b")
-                        .font(DesignTokens.Typography.commitHash)
-                        .foregroundStyle(AppTheme.textMuted)
-                }
+                    subtitle: "yesterday",
+                    leading: { Circle().fill(AppTheme.error).frame(width: 6, height: 6) },
+                    trailing: {
+                        Text("c2d4a1b")
+                            .font(DesignTokens.Typography.commitHash)
+                            .foregroundStyle(AppTheme.textMuted)
+                    }
+                )
             }
             .padding(.top, DesignTokens.Spacing.sm)
         }

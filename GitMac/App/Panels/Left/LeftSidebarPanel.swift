@@ -33,10 +33,12 @@ struct LeftSidebarPanel: View {
                         Image(systemName: "arrow.triangle.branch")
                             .font(.system(size: 10))
                             .foregroundStyle(AppTheme.textSecondary)
+                        let _ = appState.branchRefreshID
                         Text(appState.branchManager?.currentBranch?.name ?? "No Branch")
                             .font(.system(size: 10, weight: .medium, design: .monospaced))
                             .foregroundStyle(AppTheme.textSecondary)
                             .lineLimit(1)
+                            .truncationMode(.middle)
                         Spacer()
                     }
                 }
@@ -65,6 +67,7 @@ struct LeftSidebarPanel: View {
         .onReceive(NotificationCenter.default.publisher(for: .showStashes)) { _ in selectedNavigator = .stashes }
         .onReceive(NotificationCenter.default.publisher(for: .showTags)) { _ in selectedNavigator = .tags }
         .onReceive(NotificationCenter.default.publisher(for: .showWorktrees)) { _ in selectedNavigator = .worktrees }
+        .onReceive(NotificationCenter.default.publisher(for: .showConflicts)) { _ in selectedNavigator = .conflicts }
         // Configure PR tracker when repository changes
         .task(id: appState.currentRepository?.path) {
             if let path = appState.currentRepository?.path {
@@ -122,9 +125,8 @@ struct LeftSidebarPanel: View {
                 let otherLocalBranches = localBranches
                     .filter { !$0.isCurrent }
                     .sorted { lhs, rhs in
-                        // master/main first among non-current branches
-                        let lhsIsMain = lhs.name == "master" || lhs.name == "main"
-                        let rhsIsMain = rhs.name == "master" || rhs.name == "main"
+                        let lhsIsMain = lhs.isMainBranch
+                        let rhsIsMain = rhs.isMainBranch
                         if lhsIsMain && !rhsIsMain { return true }
                         if !lhsIsMain && rhsIsMain { return false }
                         
@@ -200,6 +202,9 @@ struct LeftSidebarPanel: View {
 
         case .hooks:
             GitHooksSidebarSection()
+
+        case .conflicts:
+            ConflictPreventionView()
         }
     }
 }

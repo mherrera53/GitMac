@@ -599,9 +599,11 @@ actor AIService {
             """
         }
 
-        prompt += "\n\nGenerate only the PR description:"
+        prompt += "\n\nGenerate only the PR description. No thinking, no explanations outside the description, no <think> tags:"
 
-        return try await sendMessage(prompt)
+        var result = try await sendMessage(prompt)
+        result = Self.cleanAIResponse(result)
+        return result
     }
 
     /// Explain a commit or changes
@@ -614,10 +616,12 @@ actor AIService {
         \(diff.prefix(8000))
         ```
 
-        Explain what these changes do and why they might have been made:
+        Explain what these changes do and why they might have been made. No thinking, no <think> tags:
         """
 
-        return try await sendMessage(prompt)
+        var result = try await sendMessage(prompt)
+        result = Self.cleanAIResponse(result)
+        return result
     }
 
     // MARK: - Terminal Suggestions
@@ -908,13 +912,11 @@ actor AIService {
         - Be specific but concise
         - Imperative mood
 
-        Respond with ONLY the title, no quotes or explanation:
+        Respond with ONLY the title, no quotes or explanation. No thinking, no <think> tags:
         """
 
         let result = try await sendMessage(prompt)
-        // Clean up response - remove quotes if present
-        return result
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return Self.cleanAIResponse(result)
             .trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
     }
 
@@ -961,7 +963,7 @@ actor AIService {
         }
         """
 
-        let response = try await sendMessage(prompt)
+        let response = Self.cleanAIResponse(try await sendMessage(prompt))
 
         // Parse JSON response
         guard let data = response.data(using: .utf8),
@@ -999,13 +1001,21 @@ actor AIService {
 
     static func cleanAIResponse(_ text: String) -> String {
         var cleaned = text
-        if let thinkRange = cleaned.range(of: "<think>") {
-            if let endRange = cleaned.range(of: "</think>") {
-                cleaned.removeSubrange(thinkRange.lowerBound..<endRange.upperBound)
-            } else {
-                cleaned.removeSubrange(thinkRange.lowerBound...)
+
+        // Remove <think>...</think> and <thinking>...</thinking> blocks (case-insensitive, including unclosed)
+        for tag in ["thinking", "think"] {
+            // Remove closed blocks — loop to catch multiple blocks
+            let pattern = "(?i)<\(tag)>[\\s\\S]*?</\(tag)>"
+            while let range = cleaned.range(of: pattern, options: .regularExpression) {
+                cleaned.removeSubrange(range)
+            }
+            // Remove unclosed opening tag and everything after it
+            let openPattern = "(?i)<\(tag)>"
+            if let range = cleaned.range(of: openPattern, options: .regularExpression) {
+                cleaned.removeSubrange(range.lowerBound...)
             }
         }
+
         cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
         if cleaned.hasPrefix("```") {
             cleaned = cleaned.replacingOccurrences(of: "```", with: "")
@@ -1042,7 +1052,9 @@ actor AIService {
         \(prompt)
         """
 
-        return try await sendMessage(fullPrompt)
+        var result = try await sendMessage(fullPrompt)
+        result = Self.cleanAIResponse(result)
+        return result
     }
 
     /// Suggest a conflict resolution

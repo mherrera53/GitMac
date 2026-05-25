@@ -525,6 +525,12 @@ actor GitHubService {
         case 404:
             throw GitHubError.notFound
 
+        case 405:
+            throw GitHubError.validationFailed("Not mergeable: \(parseError(data)). CI checks may be running or reviews are pending.")
+
+        case 409:
+            throw GitHubError.validationFailed("Conflict: \(parseError(data)). The branch has conflicts that must be resolved.")
+
         case 422:
             throw GitHubError.validationFailed(parseError(data))
 

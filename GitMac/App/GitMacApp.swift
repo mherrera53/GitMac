@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 @MainActor
 class OllamaProcessManager: ObservableObject {
@@ -68,6 +69,9 @@ struct GitMacApp: App {
 
     init() {
         URLCache.shared = URLCache(memoryCapacity: 10 * 1024 * 1024, diskCapacity: 0, diskPath: nil)
+
+        // Initialize subscription service early so transaction listener is active
+        _ = SubscriptionService.shared
 
         // Preload keychain cache to avoid repeated password prompts
         Task {
@@ -188,10 +192,18 @@ class RepositoryTab: Identifiable, ObservableObject, Hashable, Equatable {
         objectWillChange.send()
     }
     
+    @MainActor
+    var repoColor: Color? {
+        guard let hex = WorkspaceSettingsManager.shared.getConfig(for: repository.path).repositoryColor else {
+            return nil
+        }
+        return Color(hex: hex)
+    }
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
-    
+
     static func == (lhs: RepositoryTab, rhs: RepositoryTab) -> Bool {
         lhs.id == rhs.id
     }
@@ -227,11 +239,20 @@ class AppState {
 
     private(set) var activeTab: RepositoryTab?
 
+    // Incremented whenever branchManager publishes a change, bridging
+    // ObservableObject → @Observable so views re-render on branch updates.
+    var branchRefreshID: Int = 0
+    @ObservationIgnored private var _branchManagerSub: AnyCancellable?
+
     private func _refreshActiveTab() {
         activeTab = openTabs.first { $0.id == activeTabId }
         selectedCommit = activeTab?.selectedCommit
         selectedBranch = activeTab?.selectedBranch
         selectedStash = activeTab?.selectedStash
+
+        _branchManagerSub = activeTab?.branchManager.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.branchRefreshID += 1 }
     }
 
     var activeTabIndex: Int? {
@@ -670,6 +691,12 @@ struct GitMacCommands: Commands {
                 NotificationCenter.default.post(name: .popStash, object: nil)
             }
             .keyboardShortcut("s", modifiers: [.command, .option, .shift])
+
+            Divider()
+
+            Button("Git LFS...") {
+                NotificationCenter.default.post(name: .showLFS, object: nil)
+            }
         }
 
         CommandMenu("Branch") {
@@ -687,6 +714,12 @@ struct GitMacCommands: Commands {
                 NotificationCenter.default.post(name: .rebase, object: nil)
             }
             .keyboardShortcut("r", modifiers: [.command, .shift])
+
+            Divider()
+
+            Button("Bisect...") {
+                NotificationCenter.default.post(name: .showBisect, object: nil)
+            }
         }
 
         CommandMenu("Navigate") {
@@ -746,6 +779,28 @@ struct GitMacCommands: Commands {
 
             Divider()
 
+            Button("Reflog...") {
+                NotificationCenter.default.post(name: .showReflog, object: nil)
+            }
+
+            Button("GPG / SSH Keys...") {
+                NotificationCenter.default.post(name: .showGPGSSH, object: nil)
+            }
+
+            Button("Insights...") {
+                NotificationCenter.default.post(name: .showInsights, object: nil)
+            }
+
+            Button("File Browser...") {
+                NotificationCenter.default.post(name: .showFileBrowser, object: nil)
+            }
+
+            Button("Launchpad...") {
+                NotificationCenter.default.post(name: .showLaunchpad, object: nil)
+            }
+
+            Divider()
+
             Button("Terminal") {
                 BottomPanelManager.shared.openTab(type: .terminal)
             }
@@ -785,6 +840,16 @@ extension Notification.Name {
     static let showCICD = Notification.Name("showCICD")
     /// Posted when user requests conflict resolution (object: file path String)
     static let resolveConflict = Notification.Name("resolveConflict")
+    static let showConflicts = Notification.Name("showConflicts")
     /// Posted when user requests file history from staging context menu (object: file path String)
     static let showFileHistory = Notification.Name("showFileHistory")
+
+    // Feature sheets (shown by ContentView)
+    static let showBisect = Notification.Name("showBisect")
+    static let showReflog = Notification.Name("showReflog")
+    static let showGPGSSH = Notification.Name("showGPGSSH")
+    static let showInsights = Notification.Name("showInsights")
+    static let showFileBrowser = Notification.Name("showFileBrowser")
+    static let showLaunchpad = Notification.Name("showLaunchpad")
+    static let showLFS = Notification.Name("showLFS")
 }

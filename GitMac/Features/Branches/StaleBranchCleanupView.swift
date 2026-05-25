@@ -306,7 +306,7 @@ class StaleBranchCleanupViewModel: ObservableObject {
                 return
             }
 
-            let protectedNames = Set(["main", "master", "develop", "development", defaultBranch, currentBranch])
+            let protectedNames = Branch.mainBranchNames.union([defaultBranch, currentBranch])
 
             mergedBranches = result.output
                 .split(separator: "\n")
@@ -373,7 +373,7 @@ class StaleBranchCleanupViewModel: ObservableObject {
         }
 
         // Fallback: check for main or master
-        for name in ["main", "master"] {
+        for name in Branch.mainBranchNames {
             let check = await ShellExecutor.shared.execute(
                 "git", arguments: ["rev-parse", "--verify", name],
                 workingDirectory: path

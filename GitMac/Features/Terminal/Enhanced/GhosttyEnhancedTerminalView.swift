@@ -7,9 +7,10 @@
 
 import SwiftUI
 import AppKit
-import GhosttyKit
 
 // MARK: - Enhanced Terminal View
+
+#if GHOSTTY_AVAILABLE
 
 enum TerminalInputMode {
     case direct       // Ghostty handles keyboard input directly
@@ -405,3 +406,39 @@ class EnhancedGhosttyContainerView: NSView {
         }
     }
 }
+
+#else
+
+// MARK: - Stubs when Ghostty not available
+
+enum TerminalInputMode {
+    case direct
+    case externalBar
+}
+
+@MainActor
+class GhosttyViewModel: ObservableObject {
+    @Published var currentDirectory = NSHomeDirectory()
+    @Published var terminalTitle = "Terminal"
+
+    func setWorkingDirectory(_ path: String) {
+        currentDirectory = path
+        terminalTitle = (path as NSString).lastPathComponent
+    }
+
+    func writeInput(_ text: String) {}
+    func clearTerminal() {}
+}
+
+struct GhosttyEnhancedTerminalView: View {
+    @ObservedObject var viewModel: GhosttyViewModel
+    @ObservedObject var enhancedViewModel: GhosttyEnhancedViewModel
+    let initialDirectory: String
+    let aiEnabled: Bool
+    let repoPath: String?
+    var inputMode: TerminalInputMode = .direct
+
+    var body: some View { EmptyView() }
+}
+
+#endif

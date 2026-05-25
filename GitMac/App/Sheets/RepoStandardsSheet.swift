@@ -260,7 +260,7 @@ struct RepoStandardsSheet: View {
             let hook = """
             #!/bin/sh
             branch=$(git rev-parse --abbrev-ref HEAD)
-            if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
+            if [ "$branch" = "main" ] || [ "$branch" = "master" ] || [ "$branch" = "develop" ] || [ "$branch" = "development" ]; then
                 echo "Direct commits to $branch are blocked. Use a feature branch."
                 exit 1
             fi

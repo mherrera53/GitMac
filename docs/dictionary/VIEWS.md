@@ -1,0 +1,1085 @@
+# All SwiftUI Views
+
+_852 entries_
+
+_Sorted alphabetically. Each is a `struct X: View`._
+
+- `AIAgentCommandPalette` : View -- [`GitMac/Features/Terminal/Views/EnhancedTerminalPanel.swift:812`](GitMac/Features/Terminal/Views/EnhancedTerminalPanel.swift)
+- `AIAgentCommandRow` : View -- [`GitMac/Features/Terminal/Views/EnhancedTerminalPanel.swift:975`](GitMac/Features/Terminal/Views/EnhancedTerminalPanel.swift)
+- `AIChatBubble` : View -- [`GitMac/Features/Terminal/EmbeddedTerminalView.swift:313`](GitMac/Features/Terminal/EmbeddedTerminalView.swift)
+- `AICommandSuggestionsOverlay` : View -- [`GitMac/Features/Terminal/Enhanced/AICommandSuggestions.swift:12`](GitMac/Features/Terminal/Enhanced/AICommandSuggestions.swift)
+- `AICommitMessageSheet` : View -- [`GitMac/Features/Staging/StagingAreaView.swift:1767`](GitMac/Features/Staging/StagingAreaView.swift)
+- `AIInputBar` : View -- [`GitMac/Features/Terminal/Views/TerminalInputBar.swift:13`](GitMac/Features/Terminal/Views/TerminalInputBar.swift)
+- `AIQuickReviewSheet` : View -- [`GitMac/Features/PullRequests/AIQuickReviewSheet.swift:3`](GitMac/Features/PullRequests/AIQuickReviewSheet.swift)
+- `AISettingsView` : View -- [`GitMac/Features/Settings/Tabs/AISettingsTab.swift:3`](GitMac/Features/Settings/Tabs/AISettingsTab.swift)
+- `AISuggestionsPopup` : View -- [`GitMac/Features/Terminal/TerminalView.swift:652`](GitMac/Features/Terminal/TerminalView.swift)
+- `AISuggestionsSheet` : View -- [`GitMac/Features/PullRequests/PRListView.swift:2103`](GitMac/Features/PullRequests/PRListView.swift)
+- `AITerminalInputView` : View -- [`GitMac/UI/Components/Terminal/AITerminalInputView.swift:3`](GitMac/UI/Components/Terminal/AITerminalInputView.swift)
+- `AITextEditor` : NSViewRepresentable -- [`GitMac/Features/Terminal/Core/TerminalSharedTypes.swift:13`](GitMac/Features/Terminal/Core/TerminalSharedTypes.swift)
+- `AWSBuildRow` : View -- [`GitMac/Features/CICD/AWSCodeBuildService.swift:434`](GitMac/Features/CICD/AWSCodeBuildService.swift)
+- `AWSCodeBuildPanel` : View -- [`GitMac/Features/CICD/AWSCodeBuildService.swift:945`](GitMac/Features/CICD/AWSCodeBuildService.swift)
+- `AWSCodeBuildView` : View -- [`GitMac/Features/CICD/AWSCodeBuildService.swift:93`](GitMac/Features/CICD/AWSCodeBuildService.swift)
+- `AWSConnectedView` : View -- [`GitMac/Features/Settings/Components/IntegrationViews/AWSSettingsViews.swift:5`](GitMac/Features/Settings/Components/IntegrationViews/AWSSettingsViews.swift)
+- `AWSLoginView` : View -- [`GitMac/Features/Settings/Components/IntegrationViews/AWSSettingsViews.swift:110`](GitMac/Features/Settings/Components/IntegrationViews/AWSSettingsViews.swift)
+- `AccountsSettingsView` : View -- [`GitMac/Features/Settings/Tabs/AccountsSettingsTab.swift:3`](GitMac/Features/Settings/Tabs/AccountsSettingsTab.swift)
+- `ActionBarButton` : View -- [`GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift:124`](GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift)
+- `ActionButton` : View -- [`GitMac/App/Components/ActionButton.swift:11`](GitMac/App/Components/ActionButton.swift)
+- `ActiveBranchRow` : View -- [`GitMac/Features/GitFlow/GitFlowManager.swift:522`](GitMac/Features/GitFlow/GitFlowManager.swift)
+- `ActiveBranchesSection` : View -- [`GitMac/Features/GitFlow/GitFlowManager.swift:418`](GitMac/Features/GitFlow/GitFlowManager.swift)
+- `ActiveFilterTag` : View -- [`GitMac/Features/Staging/StagingAreaView.swift:810`](GitMac/Features/Staging/StagingAreaView.swift)
+- `ActiveUserRow` : View -- [`GitMac/Core/Services/PresenceService.swift:499`](GitMac/Core/Services/PresenceService.swift)
+- `ActiveUsersPanel` : View -- [`GitMac/Core/Services/PresenceService.swift:449`](GitMac/Core/Services/PresenceService.swift)
+- `ActivityStatBadge` : View -- [`GitMac/Features/BottomPanel/Views/RepositoryActivityPanel.swift:412`](GitMac/Features/BottomPanel/Views/RepositoryActivityPanel.swift)
+- `AdaptiveDiffView` : View -- [`GitMac/Features/Diff/LightweightDiffView.swift:165`](GitMac/Features/Diff/LightweightDiffView.swift)
+  - Wrapper that automatically chooses between rich and lightweight diff views
+- `AdaptiveTiledDiffView` : View -- [`GitMac/Features/Diff/TiledDiffView.swift:346`](GitMac/Features/Diff/TiledDiffView.swift)
+  - Wrapper that automatically chooses TiledDiffView for large files
+- `AddRemoteMgmtSheet` : View -- [`GitMac/Features/Remotes/RemoteManagementView.swift:307`](GitMac/Features/Remotes/RemoteManagementView.swift)
+- `AddRemoteSheet` : View -- [`GitMac/Features/Remotes/RemoteListView.swift:374`](GitMac/Features/Remotes/RemoteListView.swift)
+- `AddReviewCommentSheet` : View -- [`GitMac/Features/PullRequests/PRListView.swift:2037`](GitMac/Features/PullRequests/PRListView.swift)
+- `AddSubmoduleSheet` : View -- [`GitMac/Features/Submodules/SubmoduleView.swift:264`](GitMac/Features/Submodules/SubmoduleView.swift)
+- `AddSubmoduleSheetFromList` : View -- [`GitMac/Features/Submodules/SubmoduleManager.swift:322`](GitMac/Features/Submodules/SubmoduleManager.swift)
+- `AddWorktreeSheet` : View -- [`GitMac/Features/Worktrees/WorktreeListView.swift:220`](GitMac/Features/Worktrees/WorktreeListView.swift)
+- `AdvancedGitConfigEditor` : View -- [`GitMac/Features/Settings/Tabs/GitSettingsTab.swift:162`](GitMac/Features/Settings/Tabs/GitSettingsTab.swift)
+- `AdvancedHunkHeaderView` : View -- [`GitMac/Features/Diff/SplitDiffView.swift:398`](GitMac/Features/Diff/SplitDiffView.swift)
+- `AdvancedMinimapView` : View -- [`GitMac/Features/Diff/MinimapView.swift:194`](GitMac/Features/Diff/MinimapView.swift)
+- `AdvancedPreview` : View -- [`GitMac/UI/Organisms/Lists/DSVirtualizedList.swift:288`](GitMac/UI/Organisms/Lists/DSVirtualizedList.swift)
+- `AdvancedSearchView` : View -- [`GitMac/Features/Search/SearchView.swift:5`](GitMac/Features/Search/SearchView.swift)
+  - Advanced Search View - Search commits, files, authors, and content
+- `AdvancedSplitDiffView` : View -- [`GitMac/Features/Diff/SplitDiffView.swift:14`](GitMac/Features/Diff/SplitDiffView.swift)
+  - Advanced Split Diff View - Side-by-side comparison (with advanced features)
+- `AdvancedTerminalView` : View -- [`GitMac/Features/Terminal/TerminalIntegration.swift:383`](GitMac/Features/Terminal/TerminalIntegration.swift)
+- `AnalyticsDashboard` : View -- [`GitMac/Features/Analytics/AnalyticsDashboard.swift:13`](GitMac/Features/Analytics/AnalyticsDashboard.swift)
+- `AnalyticsMetricCard` : View -- [`GitMac/Features/Analytics/AnalyticsDashboard.swift:437`](GitMac/Features/Analytics/AnalyticsDashboard.swift)
+- `AnalyticsPanelContent` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:605`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `AnimatedDemo` : View -- [`GitMac/UI/Organisms/Panels/DSCollapsiblePanel.swift:192`](GitMac/UI/Organisms/Panels/DSCollapsiblePanel.swift)
+- `AnimatedPanelDemo` : View -- [`GitMac/UI/Organisms/Panels/DSPanel.swift:91`](GitMac/UI/Organisms/Panels/DSPanel.swift)
+- `AnimatedTabDemo` : View -- [`GitMac/UI/Organisms/Panels/DSTabPanel.swift:250`](GitMac/UI/Organisms/Panels/DSTabPanel.swift)
+- `AnimationBox` : View -- [`GitMac/UI/Components/Utilities/AnimationExtensions.swift:345`](GitMac/UI/Components/Utilities/AnimationExtensions.swift)
+- `AnimationPresetsPreview` : View -- [`GitMac/UI/Components/Utilities/AnimationExtensions.swift:318`](GitMac/UI/Components/Utilities/AnimationExtensions.swift)
+- `AnnotationLegendView` : View -- [`GitMac/Features/Blame/FileAnnotationView.swift:465`](GitMac/Features/Blame/FileAnnotationView.swift)
+- `AnnotationRow` : View -- [`GitMac/Features/Blame/FileAnnotationView.swift:142`](GitMac/Features/Blame/FileAnnotationView.swift)
+- `AnnotationStatsView` : View -- [`GitMac/Features/Blame/FileAnnotationView.swift:586`](GitMac/Features/Blame/FileAnnotationView.swift)
+- `AppIconView` : View -- [`GitMac/App/Welcome/WelcomeView.swift:13`](GitMac/App/Welcome/WelcomeView.swift)
+  - Displays the official GitMac app icon from the bundle
+- `AsyncContentEmptyPreview` : View -- [`GitMac/UI/Components/Utilities/StateManagement.swift:344`](GitMac/UI/Components/Utilities/StateManagement.swift)
+- `AsyncContentErrorPreview` : View -- [`GitMac/UI/Components/Utilities/StateManagement.swift:313`](GitMac/UI/Components/Utilities/StateManagement.swift)
+- `AsyncContentLoadingPreview` : View -- [`GitMac/UI/Components/Utilities/StateManagement.swift:293`](GitMac/UI/Components/Utilities/StateManagement.swift)
+- `AsyncContentSuccessPreview` : View -- [`GitMac/UI/Components/Utilities/StateManagement.swift:268`](GitMac/UI/Components/Utilities/StateManagement.swift)
+- `AtomsView` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:50`](GitMac/UI/Components/ComponentCatalog.swift)
+- `AttributedText` : View -- [`GitMac/Features/Diff/DiffEnhancements.swift:790`](GitMac/Features/Diff/DiffEnhancements.swift)
+  - SwiftUI wrapper for NSAttributedString
+- `AuthorAvatar` : View -- [`GitMac/App/Panels/Right/CommitComponents.swift:126`](GitMac/App/Panels/Right/CommitComponents.swift)
+- `AvatarImageView` : View -- [`GitMac/UI/Components/AvatarImageView.swift:56`](GitMac/UI/Components/AvatarImageView.swift)
+- `BadgeTabDemo` : View -- [`GitMac/UI/Organisms/Panels/DSTabPanel.swift:204`](GitMac/UI/Organisms/Panels/DSTabPanel.swift)
+- `BaseRow` : View -- [`GitMac/UI/Components/Rows/BaseRow.swift:7`](GitMac/UI/Components/Rows/BaseRow.swift)
+  - Generic base row component that handles selection, hover, and actions
+- `BinaryFileView` : View -- [`GitMac/Features/Diff/Renderers/BinaryFileRenderers.swift:6`](GitMac/Features/Diff/Renderers/BinaryFileRenderers.swift)
+- `BisectHistoryRow` : View -- [`GitMac/Features/Bisect/BisectView.swift:360`](GitMac/Features/Bisect/BisectView.swift)
+- `BisectStartSheet` : View -- [`GitMac/Features/Bisect/BisectView.swift:387`](GitMac/Features/Bisect/BisectView.swift)
+- `BisectView` : View -- [`GitMac/Features/Bisect/BisectView.swift:76`](GitMac/Features/Bisect/BisectView.swift)
+- `BlameLineRow` : View -- [`GitMac/Features/History/HistoryView.swift:424`](GitMac/Features/History/HistoryView.swift)
+- `BlameListView` : View -- [`GitMac/Features/Diff/Components/EnhancedSplitDiffView.swift:356`](GitMac/Features/Diff/Components/EnhancedSplitDiffView.swift)
+- `BlameSheet` : View -- [`GitMac/Features/Diff/DiffView.swift:819`](GitMac/Features/Diff/DiffView.swift)
+- `BlameView` : View -- [`GitMac/Features/History/HistoryView.swift:357`](GitMac/Features/History/HistoryView.swift)
+- `BlockTerminalView` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:660`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `BlurModifier` : ViewModifier -- [`GitMac/UI/Components/Utilities/AnimationExtensions.swift:275`](GitMac/UI/Components/Utilities/AnimationExtensions.swift)
+- `BottomPanelContent` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:11`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `BottomPanelResizer` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelResizer.swift:104`](GitMac/Features/BottomPanel/Views/BottomPanelResizer.swift)
+- `BottomPanelTabBar` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelTabBar.swift:10`](GitMac/Features/BottomPanel/Views/BottomPanelTabBar.swift)
+- `BounceEffect` : ViewModifier -- [`GitMac/UI/Components/Utilities/AnimationExtensions.swift:244`](GitMac/UI/Components/Utilities/AnimationExtensions.swift)
+- `BounceEffectPreview` : View -- [`GitMac/UI/Components/Utilities/AnimationExtensions.swift:435`](GitMac/UI/Components/Utilities/AnimationExtensions.swift)
+- `BranchBadge` : View -- [`GitMac/Features/CommitGraph/Components/BranchBadge.swift:4`](GitMac/Features/CommitGraph/Components/BranchBadge.swift)
+- `BranchComparisonView` : View -- [`GitMac/Features/Branches/BranchComparisonView.swift:4`](GitMac/Features/Branches/BranchComparisonView.swift)
+  - Branch Comparison View - Compare any two branches/commits
+- `BranchContextMenu` : View -- [`GitMac/UI/Components/ContextMenus.swift:50`](GitMac/UI/Components/ContextMenus.swift)
+  - Context menu for branches
+- `BranchListView` : View -- [`GitMac/Features/Branches/BranchListView.swift:4`](GitMac/Features/Branches/BranchListView.swift)
+  - Branch list view with tree structure and context menus
+- `BranchPanelRow` : View -- [`GitMac/Features/CommitGraph/Components/BranchPanelView.swift:227`](GitMac/Features/CommitGraph/Components/BranchPanelView.swift)
+- `BranchPanelView` : View -- [`GitMac/Features/CommitGraph/Components/BranchPanelView.swift:3`](GitMac/Features/CommitGraph/Components/BranchPanelView.swift)
+- `BranchPickerPopover` : View -- [`GitMac/Features/Branches/BranchComparisonView.swift:309`](GitMac/Features/Branches/BranchComparisonView.swift)
+- `BranchPrefixesInfo` : View -- [`GitMac/Features/GitFlow/GitFlowManager.swift:662`](GitMac/Features/GitFlow/GitFlowManager.swift)
+- `BranchRow` : View -- [`GitMac/UI/Components/Rows/BranchRow.swift:9`](GitMac/UI/Components/Rows/BranchRow.swift)
+  - Specialized row for displaying git branches
+- `BranchSection` : View -- [`GitMac/Features/CommitGraph/Components/BranchPanelView.swift:167`](GitMac/Features/CommitGraph/Components/BranchPanelView.swift)
+- `BranchSelectorButton` : View -- [`GitMac/Features/CommitGraph/Components/BranchSelectorButton.swift:3`](GitMac/Features/CommitGraph/Components/BranchSelectorButton.swift)
+- `CICDBadge` : View -- [`GitMac/Features/CommitGraph/Components/PushFetchButtons.swift:171`](GitMac/Features/CommitGraph/Components/PushFetchButtons.swift)
+- `CICDProviderRow` : View -- [`GitMac/App/Panels/Left/CICDComponents.swift:169`](GitMac/App/Panels/Left/CICDComponents.swift)
+- `CICDSidebarSection` : View -- [`GitMac/App/Panels/Left/CICDComponents.swift:13`](GitMac/App/Panels/Left/CICDComponents.swift)
+- `CICDToolbarBadge` : View -- [`GitMac/Features/CommitGraph/Components/PushFetchButtons.swift:124`](GitMac/Features/CommitGraph/Components/PushFetchButtons.swift)
+- `CardPreviewExample` : View -- [`GitMac/UI/Components/Cards/CardStyle.swift:72`](GitMac/UI/Components/Cards/CardStyle.swift)
+- `CardStyle` : ViewModifier -- [`GitMac/UI/Components/Cards/CardStyle.swift:6`](GitMac/UI/Components/Cards/CardStyle.swift)
+  - Applies consistent card styling with hover effects and borders
+- `CatalogColorSwatch` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:1276`](GitMac/UI/Components/ComponentCatalog.swift)
+- `CatalogSection` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:1123`](GitMac/UI/Components/ComponentCatalog.swift)
+- `CenterPanel` : View -- [`GitMac/App/Panels/Center/CenterPanel.swift:11`](GitMac/App/Panels/Center/CenterPanel.swift)
+- `ChangedFileRow` : View -- [`GitMac/Features/Branches/BranchComparisonView.swift:412`](GitMac/Features/Branches/BranchComparisonView.swift)
+- `CheckerboardPattern` : View -- [`GitMac/Features/Diff/Renderers/BinaryFileRenderers.swift:377`](GitMac/Features/Diff/Renderers/BinaryFileRenderers.swift)
+- `CherryPickCommitRow` : View -- [`GitMac/Features/CherryPick/CherryPickView.swift:224`](GitMac/Features/CherryPick/CherryPickView.swift)
+- `CherryPickView` : View -- [`GitMac/Features/CherryPick/CherryPickView.swift:4`](GitMac/Features/CherryPick/CherryPickView.swift)
+  - Cherry-pick commits from one branch to another
+- `CherryPickWizard` : View -- [`GitMac/Features/CherryPick/CherryPickView.swift:419`](GitMac/Features/CherryPick/CherryPickView.swift)
+  - Multi-commit cherry-pick wizard
+- `ClickableFileRow` : View -- [`GitMac/App/Panels/Right/StagingComponents.swift:339`](GitMac/App/Panels/Right/StagingComponents.swift)
+- `CloneRepositorySheet` : View -- [`GitMac/App/Sheets/CloneRepositorySheet.swift:10`](GitMac/App/Sheets/CloneRepositorySheet.swift)
+- `CloudSyncSettingsView` : View -- [`GitMac/Core/Services/CloudSyncService.swift:392`](GitMac/Core/Services/CloudSyncService.swift)
+- `CodeEditorView` : NSViewRepresentable -- [`GitMac/Features/Editor/CodeEditorView.swift:49`](GitMac/Features/Editor/CodeEditorView.swift)
+- `CodeReviewPanel` : View -- [`GitMac/Features/CodeReview/CodeReviewService.swift:442`](GitMac/Features/CodeReview/CodeReviewService.swift)
+- `CollapsedBottomPanelBar` : View -- [`GitMac/App/ContentView.swift:519`](GitMac/App/ContentView.swift)
+  - Minimal bar shown when bottom panel is hidden - click to expand
+- `CollapsibleDemo` : View -- [`GitMac/UI/Organisms/Panels/DSCollapsiblePanel.swift:100`](GitMac/UI/Organisms/Panels/DSCollapsiblePanel.swift)
+- `CollapsibleHunkCard` : View -- [`GitMac/Features/Diff/DiffView.swift:2653`](GitMac/Features/Diff/DiffView.swift)
+- `ColorPickerButton` : View -- [`GitMac/App/Sheets/GroupSheets.swift:303`](GitMac/App/Sheets/GroupSheets.swift)
+- `ColorSection` : View -- [`GitMac/UI/Theme/ThemeManager.swift:1305`](GitMac/UI/Theme/ThemeManager.swift)
+- `ColorSwatch` : View -- [`GitMac/UI/Theme/ThemeManager.swift:783`](GitMac/UI/Theme/ThemeManager.swift)
+- `ColumnResizer` : View -- [`GitMac/Features/CommitGraph/CommitGraphView.swift:862`](GitMac/Features/CommitGraph/CommitGraphView.swift)
+  - Draggable divider between columns for resizing
+- `CommandBlockView` : View -- [`GitMac/Features/Terminal/TerminalView.swift:370`](GitMac/Features/Terminal/TerminalView.swift)
+- `CommandHistoryView` : View -- [`GitMac/Features/Terminal/TerminalIntegration.swift:205`](GitMac/Features/Terminal/TerminalIntegration.swift)
+- `CommandPalette` : View -- [`GitMac/Features/CommandPalette/CommandPalette.swift:4`](GitMac/Features/CommandPalette/CommandPalette.swift)
+  - Command Palette - Fast access to all Git operations (Cmd+Shift+P)
+- `CommandRow` : View -- [`GitMac/Features/CommandPalette/CommandPalette.swift:422`](GitMac/Features/CommandPalette/CommandPalette.swift)
+- `CommitActivityRow` : View -- [`GitMac/Features/BottomPanel/Views/RepositoryActivityPanel.swift:494`](GitMac/Features/BottomPanel/Views/RepositoryActivityPanel.swift)
+- `CommitComparisonPanel` : View -- [`GitMac/Features/CommitGraph/Components/CommitComparisonPanel.swift:6`](GitMac/Features/CommitGraph/Components/CommitComparisonPanel.swift)
+  - Shows diff between two selected commits
+- `CommitContextMenu` : View -- [`GitMac/Features/CommitGraph/Components/CommitContextMenu.swift:5`](GitMac/Features/CommitGraph/Components/CommitContextMenu.swift)
+- `CommitDetailPanel` : View -- [`GitMac/Features/CommitGraph/Components/CommitDetailPanel.swift:3`](GitMac/Features/CommitGraph/Components/CommitDetailPanel.swift)
+- `CommitDetailView` : View -- [`GitMac/Features/Search/SearchView.swift:693`](GitMac/Features/Search/SearchView.swift)
+- `CommitFileDiffView` : View -- [`GitMac/Features/History/HistoryView.swift:291`](GitMac/Features/History/HistoryView.swift)
+- `CommitFileRow` : View -- [`GitMac/App/Panels/Right/CommitComponents.swift:7`](GitMac/App/Panels/Right/CommitComponents.swift)
+- `CommitGraphView` : View -- [`GitMac/Features/CommitGraph/CommitGraphView.swift:13`](GitMac/Features/CommitGraph/CommitGraphView.swift)
+- `CommitGraphWithStatus` : View -- [`GitMac/Core/Services/RemoteOperationTracker.swift:268`](GitMac/Core/Services/RemoteOperationTracker.swift)
+- `CommitHistoryRow` : View -- [`GitMac/Features/Diff/KaleidoscopeDiffView.swift:887`](GitMac/Features/Diff/KaleidoscopeDiffView.swift)
+- `CommitHistorySidebar` : View -- [`GitMac/Features/Diff/KaleidoscopeDiffView.swift:760`](GitMac/Features/Diff/KaleidoscopeDiffView.swift)
+- `CommitInfoCard` : View -- [`GitMac/Features/Revert/RevertView.swift:138`](GitMac/Features/Revert/RevertView.swift)
+- `CommitMessageArea` : View -- [`GitMac/UI/Components/Commit/CommitMessageArea.swift:7`](GitMac/UI/Components/Commit/CommitMessageArea.swift)
+  - Complete commit message input area with validation and options
+- `CommitRowView` : View -- [`GitMac/Features/Diff/Components/EnhancedSplitDiffView.swift:327`](GitMac/Features/Diff/Components/EnhancedSplitDiffView.swift)
+- `CommitSection` : View -- [`GitMac/App/Panels/Right/CommitComponents.swift:149`](GitMac/App/Panels/Right/CommitComponents.swift)
+- `CompactColorPicker` : View -- [`GitMac/UI/Theme/ThemeManager.swift:1326`](GitMac/UI/Theme/ThemeManager.swift)
+- `CompactRepoTab` : View -- [`GitMac/App/Toolbars/CompactRepoTab.swift:4`](GitMac/App/Toolbars/CompactRepoTab.swift)
+- `CompactTabPill` : View -- [`GitMac/UI/Components/Navigation/RepositoryTabsView.swift:181`](GitMac/UI/Components/Navigation/RepositoryTabsView.swift)
+- `ComparisonCommitRow` : View -- [`GitMac/Features/Branches/BranchComparisonView.swift:371`](GitMac/Features/Branches/BranchComparisonView.swift)
+- `ComparisonFileRow` : View -- [`GitMac/Features/CommitGraph/Components/CommitComparisonPanel.swift:180`](GitMac/Features/CommitGraph/Components/CommitComparisonPanel.swift)
+- `ComparisonStatCard` : View -- [`GitMac/Features/Branches/BranchComparisonView.swift:435`](GitMac/Features/Branches/BranchComparisonView.swift)
+- `ComponentCatalog` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:14`](GitMac/UI/Components/ComponentCatalog.swift)
+- `ComponentShowcase` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:1146`](GitMac/UI/Components/ComponentCatalog.swift)
+- `ConfidenceBadge` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:707`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+- `ConfirmStep` : View -- [`GitMac/Features/CherryPick/CherryPickView.swift:678`](GitMac/Features/CherryPick/CherryPickView.swift)
+- `ConflictActionBar` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:976`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+- `ConflictChunkView` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:919`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+- `ConflictFileList` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:421`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+- `ConflictFileRow` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:446`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+- `ConflictHeader` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:381`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+- `ConflictPreventionBadge` : View -- [`GitMac/Features/ConflictPrevention/ConflictPreventionView.swift:506`](GitMac/Features/ConflictPrevention/ConflictPreventionView.swift)
+  - A small badge to show conflict status in branch lists
+- `ConflictPreventionView` : View -- [`GitMac/Features/ConflictPrevention/ConflictPreventionView.swift:6`](GitMac/Features/ConflictPrevention/ConflictPreventionView.swift)
+  - Main view for analyzing potential merge conflicts before they happen
+- `ConflictResolverView` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:4`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+  - Three-way merge conflict resolver
+- `ConflictRowView` : View -- [`GitMac/Features/ConflictPrevention/ConflictPreventionView.swift:310`](GitMac/Features/ConflictPrevention/ConflictPreventionView.swift)
+- `ConflictedFileRow` : View -- [`GitMac/Features/Staging/StagingAreaView.swift:1254`](GitMac/Features/Staging/StagingAreaView.swift)
+- `ConnectionOverlay` : View -- [`GitMac/Features/Diff/Components/EnhancedSplitDiffView.swift:179`](GitMac/Features/Diff/Components/EnhancedSplitDiffView.swift)
+  - Overlay that draws connection lines spanning both panes
+- `ConnectionRibbonsView` : View -- [`GitMac/Features/Diff/ConnectionRibbonsView.swift:4`](GitMac/Features/Diff/ConnectionRibbonsView.swift)
+  - Visual connection ribbons that link related lines between left and right diff panels
+- `ContentMatchDetailView` : View -- [`GitMac/Features/Search/SearchView.swift:759`](GitMac/Features/Search/SearchView.swift)
+- `ContentView` : View -- [`GitMac/App/ContentView.swift:4`](GitMac/App/ContentView.swift)
+- `ContentView` : View -- [`GitMac/Features/Editor/CodeEditorView.swift:402`](GitMac/Features/Editor/CodeEditorView.swift)
+- `ContributionCell` : View -- [`GitMac/Features/BottomPanel/Views/ContributionGraphView.swift:199`](GitMac/Features/BottomPanel/Views/ContributionGraphView.swift)
+- `ContributionGraphView` : View -- [`GitMac/Features/BottomPanel/Views/ContributionGraphView.swift:10`](GitMac/Features/BottomPanel/Views/ContributionGraphView.swift)
+- `ContributorRow` : View -- [`GitMac/Features/BottomPanel/Views/RepositoryActivityPanel.swift:439`](GitMac/Features/BottomPanel/Views/RepositoryActivityPanel.swift)
+- `CornerRadiusRow` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:1243`](GitMac/UI/Components/ComponentCatalog.swift)
+- `CreateBranchSheet` : View -- [`GitMac/App/Sheets/CreateBranchSheet.swift:10`](GitMac/App/Sheets/CreateBranchSheet.swift)
+- `CreateGroupSheet` : View -- [`GitMac/App/Sheets/GroupSheets.swift:137`](GitMac/App/Sheets/GroupSheets.swift)
+- `CreateIssueSheet` : View -- [`GitMac/Features/Issues/IssueListView.swift:411`](GitMac/Features/Issues/IssueListView.swift)
+- `CreatePRSheet` : View -- [`GitMac/Features/PullRequests/PRListView.swift:1039`](GitMac/Features/PullRequests/PRListView.swift)
+- `CreatePRSheetFromCommit` : View -- [`GitMac/Features/Staging/StagingAreaView.swift:2698`](GitMac/Features/Staging/StagingAreaView.swift)
+  - Sheet to create a PR after commit + push flow
+- `CreatePullRequestSheet` : View -- [`GitMac/Features/Branches/BranchListView.swift:1121`](GitMac/Features/Branches/BranchListView.swift)
+- `CreateStashSheet` : View -- [`GitMac/Features/Stash/StashListView.swift:964`](GitMac/Features/Stash/StashListView.swift)
+- `CreateTagSheet` : View -- [`GitMac/Features/Tags/TagListView.swift:283`](GitMac/Features/Tags/TagListView.swift)
+- `CreateWorkflowSheet` : View -- [`GitMac/Features/Terminal/Enhanced/TerminalWorkflowsView.swift:216`](GitMac/Features/Terminal/Enhanced/TerminalWorkflowsView.swift)
+- `CreateWorktreeFromCommitSheet` : View -- [`GitMac/Features/Worktrees/WorktreeListView.swift:325`](GitMac/Features/Worktrees/WorktreeListView.swift)
+- `CustomResizerView` : NSViewRepresentable -- [`GitMac/Features/BottomPanel/Views/BottomPanelResizer.swift:77`](GitMac/Features/BottomPanel/Views/BottomPanelResizer.swift)
+  - SwiftUI wrapper for custom resizer
+- `CustomThemeEditor` : View -- [`GitMac/UI/Theme/ThemeManager.swift:1105`](GitMac/UI/Theme/ThemeManager.swift)
+- `DSActionBar` : View -- [`GitMac/UI/Components/Molecules/Forms/DSActionBar.swift:46`](GitMac/UI/Components/Molecules/Forms/DSActionBar.swift)
+  - Action bar molecule with horizontal button layout
+- `DSAsyncContent` : View -- [`GitMac/UI/Components/Utilities/StateManagement.swift:39`](GitMac/UI/Components/Utilities/StateManagement.swift)
+  - Wrapper for async content with automatic loading/error/success states
+- `DSAvatar` : View -- [`GitMac/UI/Components/Atoms/Display/DSAvatar.swift:37`](GitMac/UI/Components/Atoms/Display/DSAvatar.swift)
+  - Design System Avatar component
+- `DSBadge` : View -- [`GitMac/UI/Components/Atoms/Display/DSBadge.swift:42`](GitMac/UI/Components/Atoms/Display/DSBadge.swift)
+  - Design System Badge/Tag component
+- `DSButton` : View -- [`GitMac/UI/Components/Atoms/Buttons/DSButton.swift:22`](GitMac/UI/Components/Atoms/Buttons/DSButton.swift)
+  - Base button component with async support and loading states
+- `DSCardStyle` : ViewModifier -- [`GitMac/UI/Components/Utilities/ViewModifiers.swift:108`](GitMac/UI/Components/Utilities/ViewModifiers.swift)
+  - Applies card styling with elevation and shadow
+- `DSCloseButton` : View -- [`GitMac/UI/Components/Atoms/Buttons/DSCloseButton.swift:12`](GitMac/UI/Components/Atoms/Buttons/DSCloseButton.swift)
+  - Close button for modals, panels, and tabs
+- `DSCollapsiblePanel` : View -- [`GitMac/UI/Organisms/Panels/DSCollapsiblePanel.swift:13`](GitMac/UI/Organisms/Panels/DSCollapsiblePanel.swift)
+  - Collapsible panel organism with animated expansion
+- `DSConditionalModifier` : ViewModifier -- [`GitMac/UI/Components/Utilities/ViewModifiers.swift:56`](GitMac/UI/Components/Utilities/ViewModifiers.swift)
+  - Applies a modifier conditionally
+- `DSContainer` : View -- [`GitMac/UI/Components/Utilities/LayoutHelpers.swift:240`](GitMac/UI/Components/Utilities/LayoutHelpers.swift)
+  - Container with consistent padding and optional background
+- `DSDivider` : View -- [`GitMac/UI/Components/Atoms/Display/DSDivider.swift:17`](GitMac/UI/Components/Atoms/Display/DSDivider.swift)
+  - Design System Divider component
+- `DSDoubleTappable` : ViewModifier -- [`GitMac/UI/Components/Utilities/GestureHandlers.swift:81`](GitMac/UI/Components/Utilities/GestureHandlers.swift)
+  - Adds double tap gesture with haptic feedback
+- `DSDraggable` : ViewModifier where Data: Transferable -- [`GitMac/UI/Components/Utilities/GestureHandlers.swift:14`](GitMac/UI/Components/Utilities/GestureHandlers.swift)
+  - Makes a view draggable with visual feedback
+- `DSDraggableItem` : View -- [`GitMac/UI/Components/Molecules/Lists/DSDraggableItem.swift:13`](GitMac/UI/Components/Molecules/Lists/DSDraggableItem.swift)
+  - Draggable list item component with drag handle
+- `DSDraggableList` : View -- [`GitMac/UI/Organisms/Lists/DSDraggableList.swift:13`](GitMac/UI/Organisms/Lists/DSDraggableList.swift)
+  - Lista con capacidad de reordenamiento mediante drag & drop
+- `DSDraggableListExample` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:1419`](GitMac/UI/Components/ComponentCatalog.swift)
+- `DSDropTarget` : ViewModifier where Data: Transferable -- [`GitMac/UI/Components/Utilities/GestureHandlers.swift:53`](GitMac/UI/Components/Utilities/GestureHandlers.swift)
+  - Makes a view a drop target with visual feedback
+- `DSDropZone` : View -- [`GitMac/UI/Components/Molecules/Lists/DSDropZone.swift:13`](GitMac/UI/Components/Molecules/Lists/DSDropZone.swift)
+  - Drop zone component for drag & drop operations
+- `DSEmptyState` : View -- [`GitMac/UI/Components/Molecules/Display/DSEmptyState.swift:12`](GitMac/UI/Components/Molecules/Display/DSEmptyState.swift)
+  - Empty state display component - Icon + Title + Description + Action
+- `DSErrorState` : View -- [`GitMac/UI/Components/Molecules/Display/DSErrorState.swift:12`](GitMac/UI/Components/Molecules/Display/DSErrorState.swift)
+  - Error state display component - Error icon + Message + Retry button
+- `DSExpandableItem` : View -- [`GitMac/UI/Components/Molecules/Lists/DSExpandableItem.swift:12`](GitMac/UI/Components/Molecules/Lists/DSExpandableItem.swift)
+  - Expandable list item component with collapse/expand functionality
+- `DSFilterMenu` : View -- [`GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift:28`](GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift)
+  - Filter menu molecule with dropdown selection
+- `DSFlexibleSpacer` : View -- [`GitMac/UI/Components/Utilities/LayoutHelpers.swift:271`](GitMac/UI/Components/Utilities/LayoutHelpers.swift)
+  - Spacer that grows to fill available space with min/max constraints
+- `DSGenericIntegrationPanel` : View -- [`GitMac/UI/Components/Organisms/Integration/DSGenericIntegrationPanel.swift:38`](GitMac/UI/Components/Organisms/Integration/DSGenericIntegrationPanel.swift)
+  - Generic integration panel that works with any IntegrationPlugin
+- `DSGrid` : View -- [`GitMac/UI/Components/Utilities/LayoutHelpers.swift:152`](GitMac/UI/Components/Utilities/LayoutHelpers.swift)
+  - Grid layout with Design System spacing
+- `DSGroupedListExample` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:1562`](GitMac/UI/Components/ComponentCatalog.swift)
+- `DSHStack` : View -- [`GitMac/UI/Components/Utilities/LayoutHelpers.swift:14`](GitMac/UI/Components/Utilities/LayoutHelpers.swift)
+  - HStack with Design System spacing by default
+- `DSHeader` : View -- [`GitMac/UI/Components/Molecules/Display/DSHeader.swift:12`](GitMac/UI/Components/Molecules/Display/DSHeader.swift)
+  - Header display component - Title + Subtitle + Actions
+- `DSHoverEffect` : ViewModifier -- [`GitMac/UI/Components/Utilities/ViewModifiers.swift:14`](GitMac/UI/Components/Utilities/ViewModifiers.swift)
+  - Applies consistent hover effect with background and optional border
+- `DSIcon` : View -- [`GitMac/UI/Components/Atoms/Display/DSIcon.swift:28`](GitMac/UI/Components/Atoms/Display/DSIcon.swift)
+  - Design System Icon component - SF Symbol wrapper
+- `DSIconButton` : View -- [`GitMac/UI/Components/Atoms/Buttons/DSIconButton.swift:12`](GitMac/UI/Components/Atoms/Buttons/DSIconButton.swift)
+  - Icon-only button with circular design
+- `DSInfiniteList` : View -- [`GitMac/UI/Organisms/Lists/DSInfiniteList.swift:14`](GitMac/UI/Organisms/Lists/DSInfiniteList.swift)
+  - Lista con infinite scroll para cargar contenido paginado
+- `DSInfiniteListExample` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:1450`](GitMac/UI/Components/ComponentCatalog.swift)
+- `DSIntegrationBottomPanel` : View -- [`GitMac/UI/Organisms/Integration/DSIntegrationPanel.swift:91`](GitMac/UI/Organisms/Integration/DSIntegrationPanel.swift)
+  - Generic bottom panel component for plugin integrations
+- `DSIntegrationPanel` : View -- [`GitMac/UI/Organisms/Integration/DSIntegrationPanel.swift:13`](GitMac/UI/Organisms/Integration/DSIntegrationPanel.swift)
+  - Generic panel component for plugin integrations
+- `DSInternalTabButton` : View -- [`GitMac/UI/Organisms/Panels/DSTabPanel.swift:83`](GitMac/UI/Organisms/Panels/DSTabPanel.swift)
+- `DSLabeledField` : View -- [`GitMac/UI/Components/Molecules/Forms/DSLabeledField.swift:14`](GitMac/UI/Components/Molecules/Forms/DSLabeledField.swift)
+  - Labeled text field molecule that combines label, text field, and error display
+- `DSLazyHStack` : View -- [`GitMac/UI/Components/Utilities/LayoutHelpers.swift:121`](GitMac/UI/Components/Utilities/LayoutHelpers.swift)
+  - LazyHStack with Design System spacing by default
+- `DSLazyVStack` : View -- [`GitMac/UI/Components/Utilities/LayoutHelpers.swift:90`](GitMac/UI/Components/Utilities/LayoutHelpers.swift)
+  - LazyVStack with Design System spacing by default
+- `DSLinkButton` : View -- [`GitMac/UI/Components/Atoms/Buttons/DSLinkButton.swift:12`](GitMac/UI/Components/Atoms/Buttons/DSLinkButton.swift)
+  - Link-style button with underline on hover
+- `DSListItem` : View -- [`GitMac/UI/Components/Molecules/Lists/DSListItem.swift:12`](GitMac/UI/Components/Molecules/Lists/DSListItem.swift)
+  - Generic list item component - Icon + Title + Subtitle + Trailing content
+- `DSLoadingOverlay` : ViewModifier -- [`GitMac/UI/Components/Utilities/ViewModifiers.swift:75`](GitMac/UI/Components/Utilities/ViewModifiers.swift)
+  - Displays loading overlay on the view
+- `DSLoadingState` : View -- [`GitMac/UI/Components/Molecules/Display/DSLoadingState.swift:12`](GitMac/UI/Components/Molecules/Display/DSLoadingState.swift)
+  - Loading state display component - Spinner + Message
+- `DSLoginPrompt` : View -- [`GitMac/UI/Organisms/Integration/DSLoginPrompt.swift:13`](GitMac/UI/Organisms/Integration/DSLoginPrompt.swift)
+  - Generic login form for integrations
+- `DSLoginPromptExample` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:1553`](GitMac/UI/Components/ComponentCatalog.swift)
+- `DSLongPressable` : ViewModifier -- [`GitMac/UI/Components/Utilities/GestureHandlers.swift:108`](GitMac/UI/Components/Utilities/GestureHandlers.swift)
+  - Adds long press gesture with visual feedback
+- `DSMagnifiable` : ViewModifier -- [`GitMac/UI/Components/Utilities/GestureHandlers.swift:245`](GitMac/UI/Components/Utilities/GestureHandlers.swift)
+  - Adds pinch-to-zoom magnification gesture
+- `DSPanel` : View -- [`GitMac/UI/Organisms/Panels/DSPanel.swift:13`](GitMac/UI/Organisms/Panels/DSPanel.swift)
+  - Generic panel container organism
+- `DSPicker` : View -- [`GitMac/UI/Components/Atoms/Inputs/DSPicker.swift:11`](GitMac/UI/Components/Atoms/Inputs/DSPicker.swift)
+- `DSPickerExample` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:1352`](GitMac/UI/Components/ComponentCatalog.swift)
+- `DSProgressBar` : View -- [`GitMac/UI/Components/Atoms/Feedback/DSProgressBar.swift:11`](GitMac/UI/Components/Atoms/Feedback/DSProgressBar.swift)
+  - Design System Progress Bar component
+- `DSResizablePanel` : View -- [`GitMac/UI/Organisms/Panels/DSResizablePanel.swift:13`](GitMac/UI/Organisms/Panels/DSResizablePanel.swift)
+  - Resizable panel organism with drag handle
+- `DSScrollView` : View -- [`GitMac/UI/Components/Utilities/LayoutHelpers.swift:60`](GitMac/UI/Components/Utilities/LayoutHelpers.swift)
+  - ScrollView with consistent configuration and indicators
+- `DSSearchBar` : View -- [`GitMac/UI/Components/Molecules/Forms/DSSearchBar.swift:14`](GitMac/UI/Components/Molecules/Forms/DSSearchBar.swift)
+  - Search bar molecule with integrated search field and optional filter button
+- `DSSearchField` : View -- [`GitMac/UI/Components/Atoms/Inputs/DSSearchField.swift:11`](GitMac/UI/Components/Atoms/Inputs/DSSearchField.swift)
+- `DSSection` : View -- [`GitMac/UI/Components/Utilities/LayoutHelpers.swift:195`](GitMac/UI/Components/Utilities/LayoutHelpers.swift)
+  - Section container with consistent padding and background
+- `DSSecureField` : View -- [`GitMac/UI/Components/Atoms/Inputs/DSSecureField.swift:11`](GitMac/UI/Components/Atoms/Inputs/DSSecureField.swift)
+- `DSSelectionHighlight` : ViewModifier -- [`GitMac/UI/Components/Utilities/ViewModifiers.swift:184`](GitMac/UI/Components/Utilities/ViewModifiers.swift)
+  - Highlights the view when selected
+- `DSSettingsSheet` : View -- [`GitMac/UI/Organisms/Integration/DSSettingsSheet.swift:13`](GitMac/UI/Organisms/Integration/DSSettingsSheet.swift)
+  - Generic settings modal for integrations
+- `DSSheet` : View -- [`GitMac/UI/Organisms/DSSheet.swift:14`](GitMac/UI/Organisms/DSSheet.swift)
+  - Sheet/Modal estándar del Design System
+- `DSShimmer` : ViewModifier -- [`GitMac/UI/Components/Utilities/ViewModifiers.swift:155`](GitMac/UI/Components/Utilities/ViewModifiers.swift)
+  - Adds shimmer loading effect for skeleton screens
+- `DSSkeletonBox` : View -- [`GitMac/UI/Components/Atoms/Feedback/DSSkeletonBox.swift:11`](GitMac/UI/Components/Atoms/Feedback/DSSkeletonBox.swift)
+  - Design System Skeleton Loading Placeholder
+- `DSSpacer` : View -- [`GitMac/UI/Components/Atoms/Display/DSSpacer.swift:34`](GitMac/UI/Components/Atoms/Display/DSSpacer.swift)
+  - Design System Spacer component with preset sizes
+- `DSSpinner` : View -- [`GitMac/UI/Components/Atoms/Feedback/DSSpinner.swift:11`](GitMac/UI/Components/Atoms/Feedback/DSSpinner.swift)
+  - Design System Loading Spinner component
+- `DSStatefulView` : View -- [`GitMac/UI/Components/Utilities/StateManagement.swift:117`](GitMac/UI/Components/Utilities/StateManagement.swift)
+  - View that handles loading, error, and success states
+- `DSStatusBadge` : View -- [`GitMac/UI/Components/Molecules/Display/DSStatusBadge.swift:12`](GitMac/UI/Components/Molecules/Display/DSStatusBadge.swift)
+  - Status badge display component - Icon + Text badge
+- `DSSwipeable` : ViewModifier -- [`GitMac/UI/Components/Utilities/GestureHandlers.swift:148`](GitMac/UI/Components/Utilities/GestureHandlers.swift)
+  - Makes a view swipeable with actions
+- `DSTabButton` : View -- [`GitMac/UI/Components/Atoms/Buttons/DSTabButton.swift:13`](GitMac/UI/Components/Atoms/Buttons/DSTabButton.swift)
+  - Tab selector button with active state indicator
+- `DSTabContainer` : View -- [`GitMac/UI/Organisms/DSTabContainer.swift:26`](GitMac/UI/Organisms/DSTabContainer.swift)
+  - Tab container con selector de tabs superior
+- `DSTabPanel` : View -- [`GitMac/UI/Organisms/Panels/DSTabPanel.swift:28`](GitMac/UI/Organisms/Panels/DSTabPanel.swift)
+  - Tab panel organism with tab navigation
+- `DSTabPanelExample` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:1383`](GitMac/UI/Components/ComponentCatalog.swift)
+- `DSText` : View -- [`GitMac/UI/Components/Atoms/Display/DSText.swift:52`](GitMac/UI/Components/Atoms/Display/DSText.swift)
+  - Design System Text component with semantic variants
+- `DSTextEditor` : View -- [`GitMac/UI/Components/Atoms/Inputs/DSTextEditor.swift:11`](GitMac/UI/Components/Atoms/Inputs/DSTextEditor.swift)
+- `DSTextField` : View -- [`GitMac/UI/Components/Atoms/Inputs/DSTextField.swift:15`](GitMac/UI/Components/Atoms/Inputs/DSTextField.swift)
+- `DSToggle` : View -- [`GitMac/UI/Components/Atoms/Inputs/DSToggle.swift:17`](GitMac/UI/Components/Atoms/Inputs/DSToggle.swift)
+- `DSToolbarButton` : View -- [`GitMac/UI/Components/Atoms/Buttons/DSToolbarButton.swift:12`](GitMac/UI/Components/Atoms/Buttons/DSToolbarButton.swift)
+  - Toolbar toggle button with active state
+- `DSTooltip` : View -- [`GitMac/UI/Components/Atoms/Feedback/DSTooltip.swift:11`](GitMac/UI/Components/Atoms/Feedback/DSTooltip.swift)
+  - Design System Tooltip wrapper component
+- `DSVStack` : View -- [`GitMac/UI/Components/Utilities/LayoutHelpers.swift:37`](GitMac/UI/Components/Utilities/LayoutHelpers.swift)
+  - VStack with Design System spacing by default
+- `DSVirtualizedList` : View -- [`GitMac/UI/Organisms/Lists/DSVirtualizedList.swift:14`](GitMac/UI/Organisms/Lists/DSVirtualizedList.swift)
+  - Lista virtualizada de alto rendimiento para grandes datasets
+- `DSVirtualizedListAdvanced` : View -- [`GitMac/UI/Organisms/Lists/DSVirtualizedList.swift:66`](GitMac/UI/Organisms/Lists/DSVirtualizedList.swift)
+  - Variante ultra-optimizada con geometría manual para datasets masivos
+- `DSVirtualizedListExample` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:1504`](GitMac/UI/Components/ComponentCatalog.swift)
+- `DataRow` : View -- [`GitMac/UI/Components/Rows/BaseRow.swift:90`](GitMac/UI/Components/Rows/BaseRow.swift)
+  - Base row that takes RowData directly
+- `DateGroupedPreview` : View -- [`GitMac/UI/Organisms/Lists/DSGroupedList.swift:210`](GitMac/UI/Organisms/Lists/DSGroupedList.swift)
+- `DesignTokensView` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:886`](GitMac/UI/Components/ComponentCatalog.swift)
+- `DiffBreadcrumb` : View -- [`GitMac/Features/Diff/DiffBreadcrumb.swift:6`](GitMac/Features/Diff/DiffBreadcrumb.swift)
+  - Breadcrumb navigation showing file path and version selectors
+- `DiffCodeView` : View -- [`GitMac/Features/PullRequests/PRListView.swift:1840`](GitMac/Features/PullRequests/PRListView.swift)
+- `DiffLineContextMenu` : View -- [`GitMac/UI/Components/ContextMenus.swift:6`](GitMac/UI/Components/ContextMenus.swift)
+- `DiffLineRow` : View -- [`GitMac/Features/Diff/Renderers/DiffLineRenderers.swift:5`](GitMac/Features/Diff/Renderers/DiffLineRenderers.swift)
+- `DiffModeButton` : View -- [`GitMac/UI/Components/Diff/DiffToolbar.swift:357`](GitMac/UI/Components/Diff/DiffToolbar.swift)
+  - View mode selector button with text (for wider layouts)
+- `DiffModeIconButton` : View -- [`GitMac/UI/Components/Diff/DiffToolbar.swift:332`](GitMac/UI/Components/Diff/DiffToolbar.swift)
+  - Compact icon-only mode selector button with tooltip
+- `DiffNavigationToolbar` : View -- [`GitMac/Features/Diff/DiffSearchAndNavigation.swift:287`](GitMac/Features/Diff/DiffSearchAndNavigation.swift)
+  - Toolbar for navigating between changes
+- `DiffPaneHeader` : View -- [`GitMac/Features/Diff/SplitDiffView.swift:375`](GitMac/Features/Diff/SplitDiffView.swift)
+- `DiffPaneView` : View -- [`GitMac/Features/Diff/DiffView.swift:3176`](GitMac/Features/Diff/DiffView.swift)
+- `DiffPreferencesView` : View -- [`GitMac/Features/Diff/DiffEnhancements.swift:436`](GitMac/Features/Diff/DiffEnhancements.swift)
+  - Settings view for diff preferences
+- `DiffPreviewView` : View -- [`GitMac/Features/Staging/StagingAreaView.swift:1632`](GitMac/Features/Staging/StagingAreaView.swift)
+- `DiffRowView` : View -- [`GitMac/Features/Diff/DiffView.swift:3130`](GitMac/Features/Diff/DiffView.swift)
+- `DiffSearchBar` : View -- [`GitMac/Features/Diff/DiffSearchAndNavigation.swift:99`](GitMac/Features/Diff/DiffSearchAndNavigation.swift)
+  - Search bar for diff view
+- `DiffSelectionActionBar` : View -- [`GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift:1128`](GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift)
+- `DiffStatsView` : View -- [`GitMac/UI/Components/Diff/DiffStatsView.swift:7`](GitMac/UI/Components/Diff/DiffStatsView.swift)
+  - Displays diff statistics showing additions and deletions
+- `DiffStatusBar` : View -- [`GitMac/Features/Diff/DiffStatusBar.swift:6`](GitMac/Features/Diff/DiffStatusBar.swift)
+  - Status bar showing performance metrics and active degradations
+- `DiffToolbar` : View -- [`GitMac/UI/Components/Diff/DiffToolbar.swift:54`](GitMac/UI/Components/Diff/DiffToolbar.swift)
+  - Main toolbar for diff views
+- `DiffView` : View -- [`GitMac/Features/Diff/DiffView.swift:17`](GitMac/Features/Diff/DiffView.swift)
+  - Complete diff viewer with multiple view modes - OPTIMIZED
+- `DiffViewWithClose` : View -- [`GitMac/App/Panels/Center/DiffViewWithClose.swift:11`](GitMac/App/Panels/Center/DiffViewWithClose.swift)
+- `DiffViewWithMinimap` : View -- [`GitMac/Features/Diff/MinimapView.swift:115`](GitMac/Features/Diff/MinimapView.swift)
+- `DiffViewerWithFullFeatures` : View -- [`GitMac/Features/Diff/MinimapView.swift:437`](GitMac/Features/Diff/MinimapView.swift)
+- `DifferenceKitSplitDiffView` : View -- [`GitMac/Features/Diff/DiffView.swift:3075`](GitMac/Features/Diff/DiffView.swift)
+- `DirectoryHeader` : View -- [`GitMac/Features/Diff/KaleidoscopeFileList.swift:151`](GitMac/Features/Diff/KaleidoscopeFileList.swift)
+- `DoubleTapPreview` : View -- [`GitMac/UI/Components/Utilities/GestureHandlers.swift:330`](GitMac/UI/Components/Utilities/GestureHandlers.swift)
+- `EditGroupSheet` : View -- [`GitMac/App/Sheets/GroupSheets.swift:215`](GitMac/App/Sheets/GroupSheets.swift)
+- `EditRemoteSheet` : View -- [`GitMac/Features/Remotes/RemoteManagementView.swift:371`](GitMac/Features/Remotes/RemoteManagementView.swift)
+- `EditorSheet` : View -- [`GitMac/Features/Editor/CodeEditorView.swift:279`](GitMac/Features/Editor/CodeEditorView.swift)
+- `EmailAliasesView` : View -- [`GitMac/Features/Settings/Tabs/GitSettingsTab.swift:570`](GitMac/Features/Settings/Tabs/GitSettingsTab.swift)
+- `EmbeddedTerminalToolbar` : View -- [`GitMac/Features/Terminal/EmbeddedTerminalView.swift:90`](GitMac/Features/Terminal/EmbeddedTerminalView.swift)
+- `EmbeddedTerminalView` : View -- [`GitMac/Features/Terminal/EmbeddedTerminalView.swift:10`](GitMac/Features/Terminal/EmbeddedTerminalView.swift)
+  - A real terminal emulator embedded in GitMac using SwiftTerm
+- `EmbeddedTerminalView` : View -- [`GitMac/Features/Terminal/EmbeddedTerminalView.swift:350`](GitMac/Features/Terminal/EmbeddedTerminalView.swift)
+- `EmptyConflictView` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:730`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+- `EmptyDiffLine` : View -- [`GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift:1289`](GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift)
+- `EmptyHistoryView` : View -- [`GitMac/Features/History/HistoryView.swift:485`](GitMac/Features/History/HistoryView.swift)
+- `EmptyIssueView` : View -- [`GitMac/Features/Issues/IssueListView.swift:389`](GitMac/Features/Issues/IssueListView.swift)
+- `EmptyLineRow` : View -- [`GitMac/Features/Diff/Renderers/DiffLineRenderers.swift:265`](GitMac/Features/Diff/Renderers/DiffLineRenderers.swift)
+- `EmptyPRView` : View -- [`GitMac/Features/PullRequests/PRListView.swift:1014`](GitMac/Features/PullRequests/PRListView.swift)
+- `EmptyPaletteState` : View -- [`GitMac/Features/Terminal/Enhanced/TerminalCommandPalette.swift:201`](GitMac/Features/Terminal/Enhanced/TerminalCommandPalette.swift)
+- `EmptyPanelView` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:638`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `EmptyRemoteView` : View -- [`GitMac/Features/Remotes/RemoteListView.swift:357`](GitMac/Features/Remotes/RemoteListView.swift)
+- `EmptyStashView` : View -- [`GitMac/Features/Stash/StashListView.swift:941`](GitMac/Features/Stash/StashListView.swift)
+- `EmptyTagView` : View -- [`GitMac/Features/Tags/TagListView.swift:258`](GitMac/Features/Tags/TagListView.swift)
+- `EnhancedDiffLineRow` : View -- [`GitMac/Features/Diff/WordLevelDiff.swift:315`](GitMac/Features/Diff/WordLevelDiff.swift)
+- `EnhancedDiffMinimap` : View -- [`GitMac/Features/Diff/Components/EnhancedSplitDiffView.swift:122`](GitMac/Features/Diff/Components/EnhancedSplitDiffView.swift)
+  - Simple minimap showing change locations
+- `EnhancedDiffToolbar` : View -- [`GitMac/Features/Diff/Components/EnhancedDiffToolbar.swift:6`](GitMac/Features/Diff/Components/EnhancedDiffToolbar.swift)
+  - Simplified toolbar with single button for each feature
+- `EnhancedDiffViewer` : View -- [`GitMac/Features/Diff/DiffSearchAndNavigation.swift:705`](GitMac/Features/Diff/DiffSearchAndNavigation.swift)
+  - Complete diff viewer with search, navigation, and mode switching
+- `EnhancedFileAnnotationView` : View -- [`GitMac/Features/Blame/FileAnnotationView.swift:534`](GitMac/Features/Blame/FileAnnotationView.swift)
+- `EnhancedHistoryBlameView` : View -- [`GitMac/Features/Diff/Components/EnhancedSplitDiffView.swift:242`](GitMac/Features/Diff/Components/EnhancedSplitDiffView.swift)
+  - Unified view for history and blame with diff visualization
+- `EnhancedSplitDiffView` : View -- [`GitMac/Features/Diff/Components/EnhancedSplitDiffView.swift:6`](GitMac/Features/Diff/Components/EnhancedSplitDiffView.swift)
+  - High-performance split diff view with Kaleidoscope-style features
+- `EnhancedTerminalPanel` : View -- [`GitMac/Features/Terminal/Views/EnhancedTerminalPanel.swift:76`](GitMac/Features/Terminal/Views/EnhancedTerminalPanel.swift)
+- `EnhancedTerminalTabBar` : View -- [`GitMac/Features/Terminal/Views/EnhancedTerminalPanel.swift:674`](GitMac/Features/Terminal/Views/EnhancedTerminalPanel.swift)
+- `EnhancedTerminalTabButton` : View -- [`GitMac/Features/Terminal/Views/EnhancedTerminalPanel.swift:770`](GitMac/Features/Terminal/Views/EnhancedTerminalPanel.swift)
+- `ExecuteWorkflowSheet` : View -- [`GitMac/Features/Terminal/Enhanced/TerminalWorkflowsView.swift:389`](GitMac/Features/Terminal/Enhanced/TerminalWorkflowsView.swift)
+- `ExpandableTextEditor` : View -- [`GitMac/Features/Terminal/TerminalView.swift:566`](GitMac/Features/Terminal/TerminalView.swift)
+- `ExternalToolsSettingsView` : View -- [`GitMac/Core/Services/ExternalToolsManager.swift:256`](GitMac/Core/Services/ExternalToolsManager.swift)
+- `FastDiffLine` : View -- [`GitMac/UI/Components/Diff/DiffLineView.swift:14`](GitMac/UI/Components/Diff/DiffLineView.swift)
+  - Optimized diff line rendering for split view
+- `FastEmptyLine` : View -- [`GitMac/UI/Components/Diff/DiffLineView.swift:253`](GitMac/UI/Components/Diff/DiffLineView.swift)
+  - Renders an empty line placeholder in split view
+- `FastFileContentView` : NSViewRepresentable -- [`GitMac/Features/FileViewer/FileContentView.swift:260`](GitMac/Features/FileViewer/FileContentView.swift)
+- `FastHunkHeader` : View -- [`GitMac/UI/Components/Diff/DiffHunkView.swift:7`](GitMac/UI/Components/Diff/DiffHunkView.swift)
+  - Optimized hunk header rendering
+- `FastInlineLine` : View -- [`GitMac/UI/Components/Diff/DiffLineView.swift:158`](GitMac/UI/Components/Diff/DiffLineView.swift)
+  - Optimized diff line rendering for inline/unified view
+- `FastMarkdownView` : NSViewRepresentable -- [`GitMac/Features/Markdown/MarkdownView.swift:251`](GitMac/Features/Markdown/MarkdownView.swift)
+  - Ultra-fast markdown renderer using TextKit 2 with lazy line rendering
+- `FavoriteButton` : View -- [`GitMac/Features/RepoGroups/RepoGroupsService.swift:198`](GitMac/Features/RepoGroups/RepoGroupsService.swift)
+- `FeatureGateButton` : View -- [`GitMac/Services/FeatureManager.swift:318`](GitMac/Services/FeatureManager.swift)
+- `FeatureRow` : View -- [`GitMac/Features/Settings/Tabs/AISettingsTab.swift:417`](GitMac/Features/Settings/Tabs/AISettingsTab.swift)
+- `FetchToolbarButton` : View -- [`GitMac/UI/Components/Xcode/PushToolbarButton.swift:103`](GitMac/UI/Components/Xcode/PushToolbarButton.swift)
+  - State-aware fetch button that shows behind count
+- `FileAnnotationView` : View -- [`GitMac/Features/Blame/FileAnnotationView.swift:5`](GitMac/Features/Blame/FileAnnotationView.swift)
+  - File Annotation View - Blame with visual heatmap
+- `FileBrowserView` : View -- [`GitMac/Features/FileViewer/FileBrowserView.swift:213`](GitMac/Features/FileViewer/FileBrowserView.swift)
+- `FileChangesIndicator` : View -- [`GitMac/Features/CommitGraph/Components/FileChangesIndicator.swift:4`](GitMac/Features/CommitGraph/Components/FileChangesIndicator.swift)
+  - Visual indicator showing file changes with count and add/delete bars
+- `FileCodeEditorView` : View -- [`GitMac/Features/Editor/CodeEditorView.swift:141`](GitMac/Features/Editor/CodeEditorView.swift)
+- `FileCommitRow` : View -- [`GitMac/Features/History/HistoryView.swift:250`](GitMac/Features/History/HistoryView.swift)
+- `FileContentView` : View -- [`GitMac/Features/FileViewer/FileContentView.swift:9`](GitMac/Features/FileViewer/FileContentView.swift)
+  - High-performance file viewer that handles any file type
+- `FileContextMenu` : View -- [`GitMac/Features/Staging/StagingAreaView.swift:1322`](GitMac/Features/Staging/StagingAreaView.swift)
+- `FileHistorySheet` : View -- [`GitMac/Features/Diff/DiffView.swift:787`](GitMac/Features/Diff/DiffView.swift)
+- `FileHistoryView` : View -- [`GitMac/Features/History/HistoryView.swift:194`](GitMac/Features/History/HistoryView.swift)
+- `FileListRow` : View -- [`GitMac/Features/Diff/KaleidoscopeFileList.swift:194`](GitMac/Features/Diff/KaleidoscopeFileList.swift)
+- `FileListSection` : View -- [`GitMac/UI/Components/Layout/FileListSection.swift:7`](GitMac/UI/Components/Layout/FileListSection.swift)
+  - Collapsible section with header and scrollable content
+- `FileMatchDetailView` : View -- [`GitMac/Features/Search/SearchView.swift:734`](GitMac/Features/Search/SearchView.swift)
+- `FilePreviewView` : View -- [`GitMac/Features/Staging/StagingAreaView.swift:2354`](GitMac/Features/Staging/StagingAreaView.swift)
+- `FileResultRow` : View -- [`GitMac/Features/Search/FuzzyFileFinder.swift:266`](GitMac/Features/Search/FuzzyFileFinder.swift)
+- `FileRow` : View -- [`GitMac/UI/Components/Rows/FileRow.swift:7`](GitMac/UI/Components/Rows/FileRow.swift)
+  - Specialized row for displaying git file status
+- `FileStatusSeparator` : View -- [`GitMac/Features/Staging/StagingAreaView.swift:1598`](GitMac/Features/Staging/StagingAreaView.swift)
+- `FileTreeView` : View -- [`GitMac/Features/Staging/StagingAreaView.swift:1975`](GitMac/Features/Staging/StagingAreaView.swift)
+- `FileTypeIcon` : View -- [`GitMac/UI/Components/Icons/FileTypeIcon.swift:6`](GitMac/UI/Components/Icons/FileTypeIcon.swift)
+  - Displays an icon representing a file type based on its extension or name
+- `FilterButton` : View -- [`GitMac/Features/Workflows/WorkflowsView.swift:340`](GitMac/Features/Workflows/WorkflowsView.swift)
+- `FilterChip` : View -- [`GitMac/Features/CICD/AWSCodeBuildService.swift:411`](GitMac/Features/CICD/AWSCodeBuildService.swift)
+- `FlatTreeRowView` : View -- [`GitMac/Features/Staging/StagingAreaView.swift:2100`](GitMac/Features/Staging/StagingAreaView.swift)
+- `FluidScrollViewWithOffset` : NSViewRepresentable -- [`GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift:1300`](GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift)
+- `FolderContextMenu` : View -- [`GitMac/UI/Components/UnifiedFileContextMenu.swift:633`](GitMac/UI/Components/UnifiedFileContextMenu.swift)
+  - Context menu for folders in tree view
+- `FuzzyFileFinder` : View -- [`GitMac/Features/Search/FuzzyFileFinder.swift:5`](GitMac/Features/Search/FuzzyFileFinder.swift)
+  - Fuzzy File Finder - Ultra-fast file search (Cmd+P)
+- `GPGKeyRow` : View -- [`GitMac/Features/Security/GPGSSHManagementView.swift:432`](GitMac/Features/Security/GPGSSHManagementView.swift)
+- `GPGSSHManagementView` : View -- [`GitMac/Features/Security/GPGSSHManagementView.swift:86`](GitMac/Features/Security/GPGSSHManagementView.swift)
+- `GeneralSettingsView` : View -- [`GitMac/Features/Settings/Tabs/GeneralSettingsTab.swift:3`](GitMac/Features/Settings/Tabs/GeneralSettingsTab.swift)
+- `GenerateGPGKeySheet` : View -- [`GitMac/Features/Security/GPGSSHManagementView.swift:537`](GitMac/Features/Security/GPGSSHManagementView.swift)
+- `GenerateSSHKeySheet` : View -- [`GitMac/Features/Security/GPGSSHManagementView.swift:487`](GitMac/Features/Security/GPGSSHManagementView.swift)
+- `GenericBinaryView` : View -- [`GitMac/Features/Diff/Renderers/BinaryFileRenderers.swift:459`](GitMac/Features/Diff/Renderers/BinaryFileRenderers.swift)
+- `GenericFileTreeView` : View -- [`GitMac/UI/Components/FileTree/GenericFileTreeView.swift:20`](GitMac/UI/Components/FileTree/GenericFileTreeView.swift)
+- `GhostBranchesOverlay` : View -- [`GitMac/Features/CommitGraph/Components/GhostBranchesOverlay.swift:6`](GitMac/Features/CommitGraph/Components/GhostBranchesOverlay.swift)
+  - Shows nearby branches when hovering over a commit in the graph
+- `GhosttyDirectRepresentable` : NSViewRepresentable -- [`GitMac/Features/Terminal/GhosttyDirect.swift:273`](GitMac/Features/Terminal/GhosttyDirect.swift)
+- `GhosttyDirectView` : View -- [`GitMac/Features/Terminal/GhosttyDirect.swift:19`](GitMac/Features/Terminal/GhosttyDirect.swift)
+  - Native Ghostty terminal view using GhosttyKit framework
+- `GhosttyDirectView` : View -- [`GitMac/Features/Terminal/GhosttyDirect.swift:848`](GitMac/Features/Terminal/GhosttyDirect.swift)
+  - Stub view when Ghostty framework is not available
+- `GhosttyEnhancedTerminalView` : NSViewRepresentable -- [`GitMac/Features/Terminal/Enhanced/GhosttyEnhancedTerminalView.swift:20`](GitMac/Features/Terminal/Enhanced/GhosttyEnhancedTerminalView.swift)
+- `GhosttyEnhancedTerminalView` : View -- [`GitMac/Features/Terminal/Enhanced/GhosttyEnhancedTerminalView.swift:433`](GitMac/Features/Terminal/Enhanced/GhosttyEnhancedTerminalView.swift)
+- `GhosttyHeaderBar` : View -- [`GitMac/Features/Terminal/TerminalView.swift:1468`](GitMac/Features/Terminal/TerminalView.swift)
+- `GhosttyNativeView` : View -- [`GitMac/Features/Terminal/GhosttyNativeView.swift:37`](GitMac/Features/Terminal/GhosttyNativeView.swift)
+  - Native Ghostty terminal integration
+- `GhosttyNativeView` : View -- [`GitMac/Features/Terminal/GhosttyNativeView.swift:137`](GitMac/Features/Terminal/GhosttyNativeView.swift)
+  - Stub view when Ghostty framework is not available
+- `GhosttyOutputView` : NSViewRepresentable -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:131`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `GhosttyPureTerminal` : NSViewRepresentable -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:172`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `GhosttyPureView` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:157`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `GhosttyTerminalRepresentable` : NSViewRepresentable -- [`GitMac/Features/Terminal/GhosttyNativeView.swift:59`](GitMac/Features/Terminal/GhosttyNativeView.swift)
+- `GhosttyTerminalRepresentable` : NSViewRepresentable -- [`GitMac/Features/Terminal/GhosttyTerminalView.swift:194`](GitMac/Features/Terminal/GhosttyTerminalView.swift)
+- `GhosttyTerminalView` : View -- [`GitMac/Features/Terminal/GhosttyTerminalView.swift:13`](GitMac/Features/Terminal/GhosttyTerminalView.swift)
+  - High-performance terminal view using SwiftTerm (Ghostty-like rendering)
+- `GhosttyTerminalView` : View -- [`GitMac/Features/Terminal/GhosttyTerminalView.swift:265`](GitMac/Features/Terminal/GhosttyTerminalView.swift)
+  - Stub view when Ghostty framework is not available
+- `GhosttyWithAIInput` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:55`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `GitConfigView` : View -- [`GitMac/Features/Settings/Tabs/GitSettingsTab.swift:3`](GitMac/Features/Settings/Tabs/GitSettingsTab.swift)
+- `GitFlowInitSheet` : View -- [`GitMac/Features/GitFlow/GitFlowManager.swift:751`](GitMac/Features/GitFlow/GitFlowManager.swift)
+- `GitFlowView` : View -- [`GitMac/Features/GitFlow/GitFlowManager.swift:4`](GitMac/Features/GitFlow/GitFlowManager.swift)
+  - Git Flow Manager - Initialize and manage Git Flow workflow
+- `GitHookEditorSheet` : View -- [`GitMac/Features/GitHooks/GitHooksView.swift:230`](GitMac/Features/GitHooks/GitHooksView.swift)
+- `GitHookRow` : View -- [`GitMac/Features/GitHooks/GitHooksView.swift:180`](GitMac/Features/GitHooks/GitHooksView.swift)
+- `GitHooksSidebarSection` : View -- [`GitMac/App/Panels/Left/GitHooksComponents.swift:13`](GitMac/App/Panels/Left/GitHooksComponents.swift)
+- `GitHooksView` : View -- [`GitMac/Features/GitHooks/GitHooksView.swift:3`](GitMac/Features/GitHooks/GitHooksView.swift)
+- `GitHubCreateIssueSheet` : View -- [`GitMac/Features/GitHub/GitHubIntegration.swift:660`](GitMac/Features/GitHub/GitHubIntegration.swift)
+- `GitHubCreatePRSheet` : View -- [`GitMac/Features/GitHub/GitHubIntegration.swift:624`](GitMac/Features/GitHub/GitHubIntegration.swift)
+- `GitHubIntegrationView` : View -- [`GitMac/Features/GitHub/GitHubIntegration.swift:389`](GitMac/Features/GitHub/GitHubIntegration.swift)
+- `GitHubIssueRow` : View -- [`GitMac/Features/GitHub/GitHubIntegration.swift:591`](GitMac/Features/GitHub/GitHubIntegration.swift)
+- `GitHubOAuthWaitingView` : View -- [`GitMac/Features/Settings/Tabs/AccountsSettingsTab.swift:270`](GitMac/Features/Settings/Tabs/AccountsSettingsTab.swift)
+- `GitOperationListeners` : ViewModifier -- [`GitMac/App/ContentView.swift:176`](GitMac/App/ContentView.swift)
+- `GitWorkflowRow` : View -- [`GitMac/Features/Settings/Tabs/WorkflowSettingsTab.swift:70`](GitMac/Features/Settings/Tabs/WorkflowSettingsTab.swift)
+- `GraphDataModifiers` : ViewModifier -- [`GitMac/Features/CommitGraph/CommitGraphView.swift:930`](GitMac/Features/CommitGraph/CommitGraphView.swift)
+- `GraphMinimapView` : View -- [`GitMac/Features/CommitGraph/Components/GraphMinimapView.swift:3`](GitMac/Features/CommitGraph/Components/GraphMinimapView.swift)
+- `GraphNotificationModifiers` : ViewModifier -- [`GitMac/Features/CommitGraph/CommitGraphView.swift:1027`](GitMac/Features/CommitGraph/CommitGraphView.swift)
+- `GraphRow` : View -- [`GitMac/Features/CommitGraph/Components/GraphRow.swift:4`](GitMac/Features/CommitGraph/Components/GraphRow.swift)
+- `GraphSheetModifiers` : ViewModifier -- [`GitMac/Features/CommitGraph/CommitGraphView.swift:992`](GitMac/Features/CommitGraph/CommitGraphView.swift)
+- `GraphStashRow` : View -- [`GitMac/Features/CommitGraph/Components/GraphStashRow.swift:4`](GitMac/Features/CommitGraph/Components/GraphStashRow.swift)
+- `GroupBadge` : View -- [`GitMac/Features/RepoGroups/RepoGroupsService.swift:214`](GitMac/Features/RepoGroups/RepoGroupsService.swift)
+- `GroupContainer` : View -- [`GitMac/UI/Components/Navigation/RepositoryTabsView.swift:121`](GitMac/UI/Components/Navigation/RepositoryTabsView.swift)
+- `GroupManagementRow` : View -- [`GitMac/App/Sheets/GroupSheets.swift:91`](GitMac/App/Sheets/GroupSheets.swift)
+- `GroupManagementSheet` : View -- [`GitMac/App/Sheets/GroupSheets.swift:12`](GitMac/App/Sheets/GroupSheets.swift)
+- `GroupedPreview` : View -- [`GitMac/UI/Organisms/Lists/DSGroupedList.swift:106`](GitMac/UI/Organisms/Lists/DSGroupedList.swift)
+- `HealthIndicator` : View -- [`GitMac/Features/Analytics/AnalyticsDashboard.swift:477`](GitMac/Features/Analytics/AnalyticsDashboard.swift)
+- `HighlightedDiffLineView` : View -- [`GitMac/Core/Utils/SyntaxHighlighter.swift:529`](GitMac/Core/Utils/SyntaxHighlighter.swift)
+- `HighlightedDiffView` : View -- [`GitMac/Core/Utils/SyntaxHighlighter.swift:495`](GitMac/Core/Utils/SyntaxHighlighter.swift)
+- `HistoryView` : View -- [`GitMac/Features/History/HistoryView.swift:4`](GitMac/Features/History/HistoryView.swift)
+  - File history and blame view
+- `HoverEffectPreview` : View -- [`GitMac/UI/Components/Utilities/ViewModifiers.swift:431`](GitMac/UI/Components/Utilities/ViewModifiers.swift)
+- `HunkActionButton` : View -- [`GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift:1022`](GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift)
+- `HunkCard` : View -- [`GitMac/Features/Diff/DiffView.swift:2827`](GitMac/Features/Diff/DiffView.swift)
+- `HunkContextMenu` : View -- [`GitMac/UI/Components/UnifiedFileContextMenu.swift:523`](GitMac/UI/Components/UnifiedFileContextMenu.swift)
+  - Context menu specifically for diff hunks
+- `HunkDiffView` : View -- [`GitMac/Features/Diff/DiffView.swift:2290`](GitMac/Features/Diff/DiffView.swift)
+- `HunkHeaderRow` : View -- [`GitMac/Features/Diff/Renderers/DiffLineRenderers.swift:218`](GitMac/Features/Diff/Renderers/DiffLineRenderers.swift)
+- `HunkHeaderView` : View -- [`GitMac/Core/Utils/SyntaxHighlighter.swift:577`](GitMac/Core/Utils/SyntaxHighlighter.swift)
+- `HunkHeaderWithActions` : View -- [`GitMac/UI/Components/Diff/DiffHunkView.swift:126`](GitMac/UI/Components/Diff/DiffHunkView.swift)
+  - Hunk header with built-in stage/discard actions
+- `HunkLineRow` : View -- [`GitMac/Features/Diff/Renderers/DiffLineRenderers.swift:137`](GitMac/Features/Diff/Renderers/DiffLineRenderers.swift)
+- `HunkSelectionToolbar` : View -- [`GitMac/Features/Diff/DiffView.swift:2521`](GitMac/Features/Diff/DiffView.swift)
+- `HunkSummaryHeader` : View -- [`GitMac/Features/Diff/DiffView.swift:2475`](GitMac/Features/Diff/DiffView.swift)
+- `HunkView` : View -- [`GitMac/Features/Diff/MinimapView.swift:546`](GitMac/Features/Diff/MinimapView.swift)
+- `ImageDiffView` : View -- [`GitMac/Features/Diff/Renderers/BinaryFileRenderers.swift:52`](GitMac/Features/Diff/Renderers/BinaryFileRenderers.swift)
+- `ImagePreviewInSheet` : View -- [`GitMac/Features/Markdown/MarkdownView.swift:705`](GitMac/Features/Markdown/MarkdownView.swift)
+  - Simple image preview for the sheet
+- `ImagePreviewView` : View -- [`GitMac/Features/Diff/Renderers/BinaryFileRenderers.swift:313`](GitMac/Features/Diff/Renderers/BinaryFileRenderers.swift)
+- `InfinitePreview` : View -- [`GitMac/UI/Organisms/Lists/DSInfiniteList.swift:88`](GitMac/UI/Organisms/Lists/DSInfiniteList.swift)
+- `InitRepositorySheet` : View -- [`GitMac/App/Sheets/InitRepositorySheet.swift:10`](GitMac/App/Sheets/InitRepositorySheet.swift)
+- `InlineAISuggestionBar` : View -- [`GitMac/Features/Terminal/TerminalView.swift:1884`](GitMac/Features/Terminal/TerminalView.swift)
+- `InlineConflictResolver` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:749`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+- `InlineDiffLineRow` : View -- [`GitMac/Features/Diff/Renderers/DiffLineRenderers.swift:59`](GitMac/Features/Diff/Renderers/DiffLineRenderers.swift)
+- `InlineDiffText` : View -- [`GitMac/Features/Diff/WordLevelDiff.swift:259`](GitMac/Features/Diff/WordLevelDiff.swift)
+  - Renders text with inline diff highlighting
+- `InlineDiffView` : View -- [`GitMac/Features/Diff/DiffView.swift:2263`](GitMac/Features/Diff/DiffView.swift)
+- `InlineMermaidView` : View -- [`GitMac/Features/Markdown/MermaidDiagramView.swift:317`](GitMac/Features/Markdown/MermaidDiagramView.swift)
+  - A compact mermaid diagram view for inline display
+- `InsetSeparator` : View -- [`GitMac/UI/Components/Layout/Separator.swift:128`](GitMac/UI/Components/Layout/Separator.swift)
+  - Separator with horizontal insets (padding on sides)
+- `InsightsView` : View -- [`GitMac/Features/Insights/InsightsView.swift:7`](GitMac/Features/Insights/InsightsView.swift)
+  - Analytics dashboard showing repository metrics like cycle time, throughput, merge rate
+- `InstantTooltip` : ViewModifier -- [`GitMac/UI/Components/Utilities/ViewModifiers.swift:235`](GitMac/UI/Components/Utilities/ViewModifiers.swift)
+  - Shows a tooltip immediately on hover (no delay like .help())
+- `InstructionItem` : View -- [`GitMac/Core/Services/ExternalToolsManager.swift:419`](GitMac/Core/Services/ExternalToolsManager.swift)
+- `IntegrationTerminalTab` : View -- [`GitMac/Features/Terminal/TerminalIntegration.swift:457`](GitMac/Features/Terminal/TerminalIntegration.swift)
+- `IntegrationsSettingsView` : View -- [`GitMac/Features/Settings/Tabs/IntegrationsSettingsTab.swift:3`](GitMac/Features/Settings/Tabs/IntegrationsSettingsTab.swift)
+- `InteractiveRebaseView` : View -- [`GitMac/Features/Rebase/InteractiveRebaseView.swift:4`](GitMac/Features/Rebase/InteractiveRebaseView.swift)
+  - Interactive rebase view - reorder, squash, edit commits
+- `IntralineDiffLineView` : View -- [`GitMac/Features/Diff/DiffEnhancements.swift:572`](GitMac/Features/Diff/DiffEnhancements.swift)
+  - Line view with intraline word-diff highlighting
+- `IssueDetailView` : View -- [`GitMac/Features/Issues/IssueListView.swift:244`](GitMac/Features/Issues/IssueListView.swift)
+- `IssueLabelBadge` : View -- [`GitMac/Features/Issues/IssueListView.swift:230`](GitMac/Features/Issues/IssueListView.swift)
+- `IssueListView` : View -- [`GitMac/Features/Issues/IssueListView.swift:4`](GitMac/Features/Issues/IssueListView.swift)
+  - GitHub Issues list and detail view
+- `IssueRow` : View -- [`GitMac/Features/Issues/IssueListView.swift:155`](GitMac/Features/Issues/IssueListView.swift)
+- `IssueStatusBadge` : View -- [`GitMac/Features/Issues/IssueListView.swift:366`](GitMac/Features/Issues/IssueListView.swift)
+- `JiraConnectedView` : View -- [`GitMac/Features/Settings/Components/IntegrationViews/JiraSettingsViews.swift:5`](GitMac/Features/Settings/Components/IntegrationViews/JiraSettingsViews.swift)
+- `JiraContentView` : View -- [`GitMac/Features/Jira/JiraContentView.swift:13`](GitMac/Features/Jira/JiraContentView.swift)
+  - Content view for Jira integration
+- `JiraIssueRow` : View -- [`GitMac/Features/Jira/Views/JiraIssuesListView.swift:26`](GitMac/Features/Jira/Views/JiraIssuesListView.swift)
+- `JiraIssuesListView` : View -- [`GitMac/Features/Jira/Views/JiraIssuesListView.swift:11`](GitMac/Features/Jira/Views/JiraIssuesListView.swift)
+- `JiraLoginPrompt` : View -- [`GitMac/Features/Jira/Views/JiraLoginPromptView.swift:11`](GitMac/Features/Jira/Views/JiraLoginPromptView.swift)
+- `JiraLoginSettingsView` : View -- [`GitMac/Features/Settings/Components/IntegrationViews/JiraSettingsViews.swift:49`](GitMac/Features/Settings/Components/IntegrationViews/JiraSettingsViews.swift)
+- `JiraPanel` : View -- [`GitMac/Features/Jira/JiraPanel.swift:13`](GitMac/Features/Jira/JiraPanel.swift)
+- `JiraPanelContent` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:582`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `JiraPanelGeneric` : View -- [`GitMac/Features/Jira/JiraPanelGeneric.swift:21`](GitMac/Features/Jira/JiraPanelGeneric.swift)
+  - Test implementation of JiraPanel using the generic DSGenericIntegrationPanel
+- `JiraPanelIssueRow` : View -- [`GitMac/Features/Jira/JiraPanel.swift:113`](GitMac/Features/Jira/JiraPanel.swift)
+- `JiraPanelIssuesListView` : View -- [`GitMac/Features/Jira/JiraPanel.swift:98`](GitMac/Features/Jira/JiraPanel.swift)
+- `JiraPanelSettingsSheet` : View -- [`GitMac/Features/Jira/JiraPanel.swift:232`](GitMac/Features/Jira/JiraPanel.swift)
+- `JiraSettingsContent` : View -- [`GitMac/Features/Jira/JiraSettingsContent.swift:13`](GitMac/Features/Jira/JiraSettingsContent.swift)
+  - Settings content for Jira integration
+- `JiraSettingsContentView` : View -- [`GitMac/Features/Jira/JiraPanelGeneric.swift:46`](GitMac/Features/Jira/JiraPanelGeneric.swift)
+  - Extracted settings content from JiraSettingsSheet
+- `JiraSettingsSheet` : View -- [`GitMac/Features/Jira/Views/JiraSettingsSheet.swift:11`](GitMac/Features/Jira/Views/JiraSettingsSheet.swift)
+- `KaleidoscopeDiffLine` : View -- [`GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift:710`](GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift)
+- `KaleidoscopeDiffView` : View -- [`GitMac/Features/Diff/KaleidoscopeDiffView.swift:8`](GitMac/Features/Diff/KaleidoscopeDiffView.swift)
+  - Professional diff viewer matching Kaleidoscope design exactly
+- `KaleidoscopeFileList` : View -- [`GitMac/Features/Diff/KaleidoscopeFileList.swift:6`](GitMac/Features/Diff/KaleidoscopeFileList.swift)
+  - Left sidebar showing changed files in the changeset (Kaleidoscope-style)
+- `KaleidoscopeGutterView` : View -- [`GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift:689`](GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift)
+- `KaleidoscopeHunkHeader` : View -- [`GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift:911`](GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift)
+- `KaleidoscopeMinimapWrapper` : View -- [`GitMac/Features/Diff/Renderers/DiffMinimap.swift:128`](GitMac/Features/Diff/Renderers/DiffMinimap.swift)
+- `KaleidoscopeScrollContainer` : NSViewRepresentable -- [`GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift:560`](GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift)
+- `KaleidoscopeSplitDiffView` : View -- [`GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift:7`](GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift)
+  - Enhanced split diff view with connected change visualization
+- `KeyCap` : View -- [`GitMac/UI/Components/KeyboardShortcuts.swift:184`](GitMac/UI/Components/KeyboardShortcuts.swift)
+- `KeyboardShortcutHint` : View -- [`GitMac/Features/CommandPalette/CommandPalette.swift:494`](GitMac/Features/CommandPalette/CommandPalette.swift)
+- `KeyboardShortcutRow` : View -- [`GitMac/UI/Components/KeyboardShortcuts.swift:161`](GitMac/UI/Components/KeyboardShortcuts.swift)
+- `KeyboardShortcutsHelpView` : View -- [`GitMac/UI/Components/KeyboardShortcuts.swift:79`](GitMac/UI/Components/KeyboardShortcuts.swift)
+- `KeyboardShortcutsView` : View -- [`GitMac/Features/Settings/Tabs/KeyboardShortcutsTab.swift:3`](GitMac/Features/Settings/Tabs/KeyboardShortcutsTab.swift)
+- `LFMStatusBadge` : View -- [`GitMac/Features/Diff/LargeDiffView.swift:578`](GitMac/Features/Diff/LargeDiffView.swift)
+  - Shows Large File Mode status
+- `LFSFileRow` : View -- [`GitMac/Features/LFS/LFSManager.swift:341`](GitMac/Features/LFS/LFSManager.swift)
+- `LFSManagerView` : View -- [`GitMac/Features/LFS/LFSManager.swift:59`](GitMac/Features/LFS/LFSManager.swift)
+- `LargeDiffLineView` : View -- [`GitMac/Features/Diff/DiffView.swift:2957`](GitMac/Features/Diff/DiffView.swift)
+  - Simple line view for large diffs (minimal overhead)
+- `LargeDiffLineView` : View -- [`GitMac/Features/Diff/Renderers/LargeFileDiffRenderer.swift:129`](GitMac/Features/Diff/Renderers/LargeFileDiffRenderer.swift)
+  - Simple line view for large diffs (minimal overhead)
+- `LargeDiffView` : NSViewRepresentable -- [`GitMac/Features/Diff/LargeDiffView.swift:9`](GitMac/Features/Diff/LargeDiffView.swift)
+  - High-performance diff view for large files
+- `LargeFileDiffViewWrapper` : View -- [`GitMac/Features/Diff/Renderers/LargeFileDiffRenderer.swift:7`](GitMac/Features/Diff/Renderers/LargeFileDiffRenderer.swift)
+  - High-performance diff view for large files with pagination
+- `LargeFileSplitDiffViewWrapper` : View -- [`GitMac/Features/Diff/DiffView.swift:856`](GitMac/Features/Diff/DiffView.swift)
+- `LaunchpadFilterChip` : View -- [`GitMac/Features/Launchpad/LaunchpadView.swift:395`](GitMac/Features/Launchpad/LaunchpadView.swift)
+- `LaunchpadItemRow` : View -- [`GitMac/Features/Launchpad/LaunchpadView.swift:338`](GitMac/Features/Launchpad/LaunchpadView.swift)
+- `LaunchpadView` : View -- [`GitMac/Features/Launchpad/LaunchpadView.swift:7`](GitMac/Features/Launchpad/LaunchpadView.swift)
+  - Unified view of Pull Requests and Issues across all repositories
+- `LeftSidebarPanel` : View -- [`GitMac/App/Panels/Left/LeftSidebarPanel.swift:12`](GitMac/App/Panels/Left/LeftSidebarPanel.swift)
+- `LegendItem` : View -- [`GitMac/Features/Blame/FileAnnotationView.swift:515`](GitMac/Features/Blame/FileAnnotationView.swift)
+- `LightweightDiffView` : NSViewRepresentable -- [`GitMac/Features/Diff/LightweightDiffView.swift:8`](GitMac/Features/Diff/LightweightDiffView.swift)
+  - High-performance diff view using NSTextView for large files (500+ lines)
+- `LineSelectionContextMenu` : View -- [`GitMac/UI/Components/UnifiedFileContextMenu.swift:576`](GitMac/UI/Components/UnifiedFileContextMenu.swift)
+  - Context menu for selected lines in diff view
+- `LinearConnectedView` : View -- [`GitMac/Features/Settings/Components/IntegrationViews/LinearSettingsViews.swift:5`](GitMac/Features/Settings/Components/IntegrationViews/LinearSettingsViews.swift)
+- `LinearContentView` : View -- [`GitMac/Features/Linear/LinearContentView.swift:13`](GitMac/Features/Linear/LinearContentView.swift)
+  - Content view for Linear integration
+- `LinearIssueRow` : View -- [`GitMac/Features/Linear/LinearContentView.swift:89`](GitMac/Features/Linear/LinearContentView.swift)
+- `LinearIssuesListView` : View -- [`GitMac/Features/Linear/LinearContentView.swift:74`](GitMac/Features/Linear/LinearContentView.swift)
+- `LinearLoginPrompt` : View -- [`GitMac/Features/Linear/LinearPanel.swift:132`](GitMac/Features/Linear/LinearPanel.swift)
+- `LinearLoginSettingsView` : View -- [`GitMac/Features/Settings/Components/IntegrationViews/LinearSettingsViews.swift:46`](GitMac/Features/Settings/Components/IntegrationViews/LinearSettingsViews.swift)
+- `LinearPanel` : View -- [`GitMac/Features/Linear/LinearPanel.swift:5`](GitMac/Features/Linear/LinearPanel.swift)
+- `LinearPanelContent` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:574`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `LinearPanelContentView` : View -- [`GitMac/Features/Linear/LinearPanel.swift:270`](GitMac/Features/Linear/LinearPanel.swift)
+- `LinearSettingsSheet` : View -- [`GitMac/Features/Linear/LinearPanel.swift:215`](GitMac/Features/Linear/LinearPanel.swift)
+- `ListRow` : View -- [`GitMac/UI/Components/Rows/ListRow.swift:7`](GitMac/UI/Components/Rows/ListRow.swift)
+  - Simple generic row for lists - most versatile row type
+- `ListSection` : View -- [`GitMac/UI/Components/Layout/FileListSection.swift:76`](GitMac/UI/Components/Layout/FileListSection.swift)
+  - Generic list section for any content (not just files)
+- `LoadingOverlayPreview` : View -- [`GitMac/UI/Components/Utilities/ViewModifiers.swift:501`](GitMac/UI/Components/Utilities/ViewModifiers.swift)
+- `LongPressPreview` : View -- [`GitMac/UI/Components/Utilities/GestureHandlers.swift:358`](GitMac/UI/Components/Utilities/GestureHandlers.swift)
+- `MagnifiablePreview` : View -- [`GitMac/UI/Components/Utilities/GestureHandlers.swift:431`](GitMac/UI/Components/Utilities/GestureHandlers.swift)
+- `MainLayout` : View -- [`GitMac/App/ContentView.swift:284`](GitMac/App/ContentView.swift)
+- `ManagedSubmoduleRow` : View -- [`GitMac/Features/Submodules/SubmoduleManager.swift:236`](GitMac/Features/Submodules/SubmoduleManager.swift)
+- `MarkdownPreviewSheet` : View -- [`GitMac/Features/Editor/CodeEditorView.swift:351`](GitMac/Features/Editor/CodeEditorView.swift)
+- `MarkdownView` : View -- [`GitMac/Features/Markdown/MarkdownView.swift:10`](GitMac/Features/Markdown/MarkdownView.swift)
+  - High-performance GitHub-style Markdown viewer
+- `MergeBranchSheet` : View -- [`GitMac/App/Sheets/MergeBranchSheet.swift:10`](GitMac/App/Sheets/MergeBranchSheet.swift)
+- `MergePanel` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:608`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+- `MergeSheet` : View -- [`GitMac/Features/Branches/BranchListView.swift:1013`](GitMac/Features/Branches/BranchListView.swift)
+- `MermaidDiagramView` : NSViewRepresentable -- [`GitMac/Features/Markdown/MermaidDiagramView.swift:9`](GitMac/Features/Markdown/MermaidDiagramView.swift)
+  - Renders Mermaid diagrams using WKWebView with mermaid.js
+- `MermaidMarkdownView` : View -- [`GitMac/Features/Markdown/MarkdownView.swift:96`](GitMac/Features/Markdown/MarkdownView.swift)
+  - Mixed renderer that handles both markdown text and Mermaid diagrams
+- `MermaidSegmentView` : View -- [`GitMac/Features/Markdown/MarkdownView.swift:165`](GitMac/Features/Markdown/MarkdownView.swift)
+  - Renders a Mermaid diagram segment
+- `MetricCard` : View -- [`GitMac/Features/Insights/InsightsView.swift:305`](GitMac/Features/Insights/InsightsView.swift)
+- `MicrosoftOAuthWaitingView` : View -- [`GitMac/Features/Settings/Components/IntegrationViews/PlannerSettingsViews.swift:162`](GitMac/Features/Settings/Components/IntegrationViews/PlannerSettingsViews.swift)
+- `MiniSidebarSection` : View -- [`GitMac/App/Panels/Left/RecentRepositoriesList.swift:197`](GitMac/App/Panels/Left/RecentRepositoriesList.swift)
+- `MinimalSuggestionRow` : View -- [`GitMac/Features/Terminal/MinimalTerminalView.swift:122`](GitMac/Features/Terminal/MinimalTerminalView.swift)
+- `MinimalSuggestionsOverlay` : View -- [`GitMac/Features/Terminal/MinimalTerminalView.swift:83`](GitMac/Features/Terminal/MinimalTerminalView.swift)
+- `MinimalTerminalView` : View -- [`GitMac/Features/Terminal/MinimalTerminalView.swift:13`](GitMac/Features/Terminal/MinimalTerminalView.swift)
+- `MinimapView` : View -- [`GitMac/Features/Diff/MinimapView.swift:5`](GitMac/Features/Diff/MinimapView.swift)
+  - Minimap View - Visual overview for large files (like Sublime Text)
+- `ModalCoordinatorExample` : View -- [`GitMac/UI/Utilities/ModalCoordinator.swift:125`](GitMac/UI/Utilities/ModalCoordinator.swift)
+- `MoleculesView` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:472`](GitMac/UI/Components/ComponentCatalog.swift)
+- `MoreFilesIndicator` : View -- [`GitMac/Features/Staging/StagingAreaView.swift:777`](GitMac/Features/Staging/StagingAreaView.swift)
+- `MultilineInputBar` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:1003`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `MultilineTextField` : NSViewRepresentable -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:1136`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `MultiplePanelsDemo` : View -- [`GitMac/UI/Organisms/Panels/DSCollapsiblePanel.swift:126`](GitMac/UI/Organisms/Panels/DSCollapsiblePanel.swift)
+- `NavigationCategoryRow` : View -- [`GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift:348`](GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift)
+- `NavigationListeners` : ViewModifier -- [`GitMac/App/ContentView.swift:211`](GitMac/App/ContentView.swift)
+- `NearbyBranchRow` : View -- [`GitMac/Features/CommitGraph/Components/GhostBranchesOverlay.swift:100`](GitMac/Features/CommitGraph/Components/GhostBranchesOverlay.swift)
+- `NewBranchSheet` : View -- [`GitMac/Features/Branches/BranchListView.swift:864`](GitMac/Features/Branches/BranchListView.swift)
+- `NormalLineView` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:899`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+- `NotionConnectedView` : View -- [`GitMac/Features/Settings/Components/IntegrationViews/NotionSettingsViews.swift:5`](GitMac/Features/Settings/Components/IntegrationViews/NotionSettingsViews.swift)
+- `NotionContentView` : View -- [`GitMac/Features/Notion/NotionContentView.swift:13`](GitMac/Features/Notion/NotionContentView.swift)
+  - Content view for Notion integration
+- `NotionLoginPrompt` : View -- [`GitMac/Features/Notion/NotionPanel.swift:134`](GitMac/Features/Notion/NotionPanel.swift)
+- `NotionLoginSettingsView` : View -- [`GitMac/Features/Settings/Components/IntegrationViews/NotionSettingsViews.swift:48`](GitMac/Features/Settings/Components/IntegrationViews/NotionSettingsViews.swift)
+- `NotionPanel` : View -- [`GitMac/Features/Notion/NotionPanel.swift:5`](GitMac/Features/Notion/NotionPanel.swift)
+- `NotionPanelContent` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:590`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `NotionPanelContentView` : View -- [`GitMac/Features/Notion/NotionPanel.swift:280`](GitMac/Features/Notion/NotionPanel.swift)
+- `NotionSettingsSheet` : View -- [`GitMac/Features/Notion/NotionPanel.swift:221`](GitMac/Features/Notion/NotionPanel.swift)
+- `NotionTaskRow` : View -- [`GitMac/Features/Notion/NotionContentView.swift:82`](GitMac/Features/Notion/NotionContentView.swift)
+- `NotionTasksListView` : View -- [`GitMac/Features/Notion/NotionContentView.swift:67`](GitMac/Features/Notion/NotionContentView.swift)
+- `OperationProgressOverlay` : View -- [`GitMac/App/Components/OperationProgressOverlay.swift:11`](GitMac/App/Components/OperationProgressOverlay.swift)
+- `OperationRow` : View -- [`GitMac/Core/Services/UndoManager.swift:501`](GitMac/Core/Services/UndoManager.swift)
+- `OptimizedDiffView` : View -- [`GitMac/Features/Diff/LargeDiffView.swift:439`](GitMac/Features/Diff/LargeDiffView.swift)
+  - Container view that manages LargeDiffView with DiffEngine
+- `OptimizedInlineDiffView` : View -- [`GitMac/Features/Diff/DiffView.swift:1701`](GitMac/Features/Diff/DiffView.swift)
+- `OptimizedMinimapView` : View -- [`GitMac/Features/Diff/Renderers/DiffMinimap.swift:20`](GitMac/Features/Diff/Renderers/DiffMinimap.swift)
+- `OptimizedSplitDiffView` : View -- [`GitMac/Features/Diff/DiffView.swift:936`](GitMac/Features/Diff/DiffView.swift)
+- `OrganismsView` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:744`](GitMac/UI/Components/ComponentCatalog.swift)
+- `OursSection` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:1021`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+- `OutlineFileBrowserView` : NSViewRepresentable -- [`GitMac/Features/FileViewer/FileBrowserView.swift:64`](GitMac/Features/FileViewer/FileBrowserView.swift)
+- `OutputLineView` : View -- [`GitMac/Features/Terminal/TerminalView.swift:514`](GitMac/Features/Terminal/TerminalView.swift)
+- `OutputPanel` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:677`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+- `PDFPreviewView` : View -- [`GitMac/Features/Diff/Renderers/BinaryFileRenderers.swift:402`](GitMac/Features/Diff/Renderers/BinaryFileRenderers.swift)
+- `PRDetailView` : View -- [`GitMac/Features/PullRequests/PRListView.swift:494`](GitMac/Features/PullRequests/PRListView.swift)
+- `PRFileRow` : View -- [`GitMac/Features/PullRequests/PRListView.swift:976`](GitMac/Features/PullRequests/PRListView.swift)
+- `PRListView` : View -- [`GitMac/Features/PullRequests/PRListView.swift:4`](GitMac/Features/PullRequests/PRListView.swift)
+  - Pull Requests list and detail view
+- `PRReviewView` : View -- [`GitMac/Features/PullRequests/PRListView.swift:1348`](GitMac/Features/PullRequests/PRListView.swift)
+  - PR code review interface with inline comments and AI suggestions
+- `PRRow` : View -- [`GitMac/Features/PullRequests/PRListView.swift:328`](GitMac/Features/PullRequests/PRListView.swift)
+- `PRStatusBadge` : View -- [`GitMac/Features/PullRequests/PRListView.swift:905`](GitMac/Features/PullRequests/PRListView.swift)
+- `PaletteCard` : View -- [`GitMac/UI/Theme/ThemeManager.swift:1250`](GitMac/UI/Theme/ThemeManager.swift)
+- `PaletteHint` : View -- [`GitMac/Features/Terminal/Enhanced/TerminalCommandPalette.swift:226`](GitMac/Features/Terminal/Enhanced/TerminalCommandPalette.swift)
+- `PanelHeader` : View -- [`GitMac/UI/Components/Layout/PanelHeader.swift:12`](GitMac/UI/Components/Layout/PanelHeader.swift)
+  - Generic reusable panel header component
+- `PanelHeaderActions` : View -- [`GitMac/UI/Components/Layout/PanelHeader.swift:116`](GitMac/UI/Components/Layout/PanelHeader.swift)
+  - Standard panel header actions (refresh + settings)
+- `PanelIssueRow` : View -- [`GitMac/UI/Components/Rows/IssueRow.swift:12`](GitMac/UI/Components/Rows/IssueRow.swift)
+  - Generic reusable issue/task row component
+- `PanelTypeMenu` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelTabBar.swift:89`](GitMac/Features/BottomPanel/Views/BottomPanelTabBar.swift)
+- `PaywallView` : View -- [`GitMac/App/Subscription/PaywallView.swift:4`](GitMac/App/Subscription/PaywallView.swift)
+- `PendingReviewCommentRow` : View -- [`GitMac/Features/PullRequests/PRListView.swift:1984`](GitMac/Features/PullRequests/PRListView.swift)
+- `PlaceholderPanelContent` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:612`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `PlainTextPreviewView` : View -- [`GitMac/Features/Markdown/MarkdownView.swift:733`](GitMac/Features/Markdown/MarkdownView.swift)
+  - Simple plain text viewer for non-markdown files
+- `PlanCard` : View -- [`GitMac/Features/Settings/SubscriptionView.swift:215`](GitMac/Features/Settings/SubscriptionView.swift)
+- `PlannerBoardView` : View -- [`GitMac/Features/Planner/PlannerTasksPanel.swift:248`](GitMac/Features/Planner/PlannerTasksPanel.swift)
+- `PlannerConnectedView` : View -- [`GitMac/Features/Settings/Components/IntegrationViews/PlannerSettingsViews.swift:231`](GitMac/Features/Settings/Components/IntegrationViews/PlannerSettingsViews.swift)
+- `PlannerContentView` : View -- [`GitMac/Features/Planner/PlannerPlugin.swift:28`](GitMac/Features/Planner/PlannerPlugin.swift)
+  - Content view for Planner plugin
+- `PlannerEmptyView` : View -- [`GitMac/Features/Planner/PlannerTasksPanel.swift:374`](GitMac/Features/Planner/PlannerTasksPanel.swift)
+- `PlannerKanbanColumn` : View -- [`GitMac/Features/Planner/PlannerTasksPanel.swift:270`](GitMac/Features/Planner/PlannerTasksPanel.swift)
+- `PlannerLoginPrompt` : View -- [`GitMac/Features/Planner/PlannerTasksPanel.swift:231`](GitMac/Features/Planner/PlannerTasksPanel.swift)
+- `PlannerLoginView` : View -- [`GitMac/Features/Settings/Components/IntegrationViews/PlannerSettingsViews.swift:5`](GitMac/Features/Settings/Components/IntegrationViews/PlannerSettingsViews.swift)
+- `PlannerPanelContent` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:566`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `PlannerSettingsSheet` : View -- [`GitMac/Features/Planner/PlannerTasksPanel.swift:393`](GitMac/Features/Planner/PlannerTasksPanel.swift)
+- `PlannerTaskCard` : View -- [`GitMac/Features/Planner/PlannerTasksPanel.swift:313`](GitMac/Features/Planner/PlannerTasksPanel.swift)
+- `PlannerTasksPanel` : View -- [`GitMac/Features/Planner/PlannerTasksPanel.swift:5`](GitMac/Features/Planner/PlannerTasksPanel.swift)
+- `PrefixRow` : View -- [`GitMac/Features/GitFlow/GitFlowManager.swift:684`](GitMac/Features/GitFlow/GitFlowManager.swift)
+- `PresenceIndicatorView` : View -- [`GitMac/Core/Services/PresenceService.swift:384`](GitMac/Core/Services/PresenceService.swift)
+- `PreviewFileTypeIcon` : View -- [`GitMac/Features/Staging/StagingAreaView.swift:2636`](GitMac/Features/Staging/StagingAreaView.swift)
+- `PreviewSheet` : View -- [`GitMac/Features/Markdown/MarkdownView.swift:648`](GitMac/Features/Markdown/MarkdownView.swift)
+  - Modal sheet for previewing files (Markdown with Mermaid, images, or plain text)
+- `PreviewWrapper` : View -- [`GitMac/UI/Organisms/DSTabContainer.swift:94`](GitMac/UI/Organisms/DSTabContainer.swift)
+- `PreviewWrapper` : View -- [`GitMac/UI/Organisms/Integration/DSIntegrationPanel.swift:245`](GitMac/UI/Organisms/Integration/DSIntegrationPanel.swift)
+- `PreviewWrapper` : View -- [`GitMac/UI/Organisms/Lists/DSDraggableList.swift:89`](GitMac/UI/Organisms/Lists/DSDraggableList.swift)
+- `ProBadge` : View -- [`GitMac/Features/Settings/SubscriptionView.swift:319`](GitMac/Features/Settings/SubscriptionView.swift)
+- `ProFeatureGate` : View -- [`GitMac/App/Subscription/PaywallView.swift:260`](GitMac/App/Subscription/PaywallView.swift)
+- `ProFeatureLockedView` : View -- [`GitMac/Features/Settings/SubscriptionView.swift:279`](GitMac/Features/Settings/SubscriptionView.swift)
+- `ProFeatureModifier` : ViewModifier -- [`GitMac/Services/FeatureManager.swift:117`](GitMac/Services/FeatureManager.swift)
+- `ProFeatureRow` : View -- [`GitMac/Features/Settings/SubscriptionView.swift:184`](GitMac/Features/Settings/SubscriptionView.swift)
+- `ProUpgradeButton` : View -- [`GitMac/App/Subscription/PaywallView.swift:232`](GitMac/App/Subscription/PaywallView.swift)
+- `PromptEditor` : View -- [`GitMac/Features/Settings/Tabs/AISettingsTab.swift:444`](GitMac/Features/Settings/Tabs/AISettingsTab.swift)
+- `PromptTemplateEditorView` : View -- [`GitMac/Core/Services/AI/PromptTemplateManager.swift:576`](GitMac/Core/Services/AI/PromptTemplateManager.swift)
+- `ProviderPromptTabs` : View -- [`GitMac/Features/Settings/Tabs/AISettingsTab.swift:517`](GitMac/Features/Settings/Tabs/AISettingsTab.swift)
+- `PullRequestRow` : View -- [`GitMac/Features/GitHub/GitHubIntegration.swift:568`](GitMac/Features/GitHub/GitHubIntegration.swift)
+- `PullResultView` : View -- [`GitMac/Features/PullRequests/PullSheet.swift:190`](GitMac/Features/PullRequests/PullSheet.swift)
+- `PullSheet` : View -- [`GitMac/Features/PullRequests/PullSheet.swift:3`](GitMac/Features/PullRequests/PullSheet.swift)
+- `PullToolbarButton` : View -- [`GitMac/UI/Components/Xcode/PushToolbarButton.swift:190`](GitMac/UI/Components/Xcode/PushToolbarButton.swift)
+  - State-aware pull button that shows behind count and indicates if pull is available
+- `PulseEffect` : ViewModifier -- [`GitMac/UI/Components/Utilities/AnimationExtensions.swift:212`](GitMac/UI/Components/Utilities/AnimationExtensions.swift)
+- `PulseEffectPreview` : View -- [`GitMac/UI/Components/Utilities/AnimationExtensions.swift:395`](GitMac/UI/Components/Utilities/AnimationExtensions.swift)
+- `PushFetchButtons` : View -- [`GitMac/Features/CommitGraph/Components/PushFetchButtons.swift:3`](GitMac/Features/CommitGraph/Components/PushFetchButtons.swift)
+- `PushToolbarButton` : View -- [`GitMac/UI/Components/Xcode/PushToolbarButton.swift:4`](GitMac/UI/Components/Xcode/PushToolbarButton.swift)
+  - State-aware push button that shows ahead count and disables when nothing to push
+- `QuickActionRow` : View -- [`GitMac/UI/Components/KeyboardShortcuts.swift:281`](GitMac/UI/Components/KeyboardShortcuts.swift)
+- `QuickActionsPalette` : View -- [`GitMac/UI/Components/KeyboardShortcuts.swift:206`](GitMac/UI/Components/KeyboardShortcuts.swift)
+- `QuickCherryPickSheet` : View -- [`GitMac/Features/CherryPick/CherryPickView.swift:284`](GitMac/Features/CherryPick/CherryPickView.swift)
+  - Quick cherry-pick from context menu
+- `QuickConflictResolverSheet` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:1107`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+  - Quick resolver for a single conflicted file - shows as sheet
+- `QuickResetMenu` : View -- [`GitMac/Features/Reset/ResetView.swift:338`](GitMac/Features/Reset/ResetView.swift)
+- `RebaseInstructionHint` : View -- [`GitMac/Features/Rebase/InteractiveRebaseView.swift:525`](GitMac/Features/Rebase/InteractiveRebaseView.swift)
+- `RebaseInstructionItem` : View -- [`GitMac/Features/Rebase/InteractiveRebaseView.swift:221`](GitMac/Features/Rebase/InteractiveRebaseView.swift)
+- `RebaseItemRow` : View -- [`GitMac/Features/Rebase/InteractiveRebaseView.swift:265`](GitMac/Features/Rebase/InteractiveRebaseView.swift)
+- `RebaseSheet` : View -- [`GitMac/Features/Branches/BranchListView.swift:1062`](GitMac/Features/Branches/BranchListView.swift)
+- `RebaseStatBadge` : View -- [`GitMac/Features/Rebase/InteractiveRebaseView.swift:237`](GitMac/Features/Rebase/InteractiveRebaseView.swift)
+- `RecentRepoRow` : View -- [`GitMac/App/Welcome/WelcomeView.swift:263`](GitMac/App/Welcome/WelcomeView.swift)
+- `RecentReposSidebar` : View -- [`GitMac/App/Welcome/WelcomeView.swift:195`](GitMac/App/Welcome/WelcomeView.swift)
+- `RecentRepositoriesList` : View -- [`GitMac/App/Panels/Left/RecentRepositoriesList.swift:26`](GitMac/App/Panels/Left/RecentRepositoriesList.swift)
+- `ReflogEntryDetailView` : View -- [`GitMac/Features/Reflog/ReflogView.swift:302`](GitMac/Features/Reflog/ReflogView.swift)
+- `ReflogEntryRow` : View -- [`GitMac/Features/Reflog/ReflogView.swift:192`](GitMac/Features/Reflog/ReflogView.swift)
+- `ReflogView` : View -- [`GitMac/Features/Reflog/ReflogView.swift:4`](GitMac/Features/Reflog/ReflogView.swift)
+  - Reflog viewer - Git's safety net
+- `RemoteBranchRow` : View -- [`GitMac/Features/Branches/BranchListView.swift:821`](GitMac/Features/Branches/BranchListView.swift)
+- `RemoteDetailView` : View -- [`GitMac/Features/Remotes/RemoteManagementView.swift:208`](GitMac/Features/Remotes/RemoteManagementView.swift)
+- `RemoteListView` : View -- [`GitMac/Features/Remotes/RemoteListView.swift:4`](GitMac/Features/Remotes/RemoteListView.swift)
+  - Remote repositories management view
+- `RemoteManagementView` : View -- [`GitMac/Features/Remotes/RemoteManagementView.swift:4`](GitMac/Features/Remotes/RemoteManagementView.swift)
+  - Remote Management View - Add, edit, remove remotes
+- `RemoteMgmtBranchRow` : View -- [`GitMac/Features/Remotes/RemoteManagementView.swift:280`](GitMac/Features/Remotes/RemoteManagementView.swift)
+- `RemoteMgmtRow` : View -- [`GitMac/Features/Remotes/RemoteManagementView.swift:115`](GitMac/Features/Remotes/RemoteManagementView.swift)
+- `RemoteOperationRow` : View -- [`GitMac/Core/Services/RemoteOperationTracker.swift:387`](GitMac/Core/Services/RemoteOperationTracker.swift)
+- `RemoteOperationsPanel` : View -- [`GitMac/Core/Services/RemoteOperationTracker.swift:327`](GitMac/Core/Services/RemoteOperationTracker.swift)
+- `RemoteProviderIcon` : View -- [`GitMac/Features/Remotes/RemoteListView.swift:311`](GitMac/Features/Remotes/RemoteListView.swift)
+- `RemoteRow` : View -- [`GitMac/Features/Remotes/RemoteListView.swift:161`](GitMac/Features/Remotes/RemoteListView.swift)
+- `RemoteSidebarRow` : View -- [`GitMac/App/Panels/Left/SidebarComponents.swift:306`](GitMac/App/Panels/Left/SidebarComponents.swift)
+- `RemoteStatusBadge` : View -- [`GitMac/Core/Services/RemoteOperationTracker.swift:210`](GitMac/Core/Services/RemoteOperationTracker.swift)
+- `RepoActionButton` : View -- [`GitMac/App/Panels/Left/RecentRepositoriesList.swift:234`](GitMac/App/Panels/Left/RecentRepositoriesList.swift)
+- `RepoStandardsSheet` : View -- [`GitMac/App/Sheets/RepoStandardsSheet.swift:13`](GitMac/App/Sheets/RepoStandardsSheet.swift)
+- `RepositoryActionBar` : View -- [`GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift:93`](GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift)
+- `RepositoryActivityPanel` : View -- [`GitMac/Features/BottomPanel/Views/RepositoryActivityPanel.swift:10`](GitMac/Features/BottomPanel/Views/RepositoryActivityPanel.swift)
+- `RepositoryBreadcrumbBar` : View -- [`GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift:48`](GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift)
+- `RepositoryHierarchicalNavigator` : View -- [`GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift:156`](GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift)
+- `RepositorySelectorButton` : View -- [`GitMac/Features/CommitGraph/Components/RepositorySelectorButton.swift:3`](GitMac/Features/CommitGraph/Components/RepositorySelectorButton.swift)
+- `RepositoryTabBar` : View -- [`GitMac/App/Toolbars/RepositoryTabBar.swift:5`](GitMac/App/Toolbars/RepositoryTabBar.swift)
+- `RepositoryTabsView` : View -- [`GitMac/UI/Components/Navigation/RepositoryTabsView.swift:5`](GitMac/UI/Components/Navigation/RepositoryTabsView.swift)
+- `ResetModeOption` : View -- [`GitMac/Features/Reset/ResetView.swift:220`](GitMac/Features/Reset/ResetView.swift)
+- `ResetView` : View -- [`GitMac/Features/Reset/ResetView.swift:4`](GitMac/Features/Reset/ResetView.swift)
+  - Reset operations view - powerful Git reset with safety
+- `ResizableDemo` : View -- [`GitMac/UI/Organisms/Panels/DSResizablePanel.swift:105`](GitMac/UI/Organisms/Panels/DSResizablePanel.swift)
+- `ResizablePanelWrapper` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:1315`](GitMac/UI/Components/ComponentCatalog.swift)
+- `ResizerViewRepresentable` : NSViewRepresentable -- [`GitMac/UI/Components/Common/UniversalResizer.swift:207`](GitMac/UI/Components/Common/UniversalResizer.swift)
+- `RevertView` : View -- [`GitMac/Features/Revert/RevertView.swift:4`](GitMac/Features/Revert/RevertView.swift)
+  - Revert commit view - create inverse commit
+- `ReviewCommentRow` : View -- [`GitMac/Features/PullRequests/PRListView.swift:1932`](GitMac/Features/PullRequests/PRListView.swift)
+- `ReviewCommentView` : View -- [`GitMac/Features/CodeReview/CodeReviewService.swift:555`](GitMac/Features/CodeReview/CodeReviewService.swift)
+- `ReviewFileRow` : View -- [`GitMac/Features/PullRequests/PRListView.swift:1775`](GitMac/Features/PullRequests/PRListView.swift)
+- `RichMarkdownView` : NSViewRepresentable -- [`GitMac/Features/Markdown/MarkdownView.swift:627`](GitMac/Features/Markdown/MarkdownView.swift)
+  - Full-featured markdown renderer for files under 500 lines
+- `RightCommitDetailPanel` : View -- [`GitMac/App/Panels/Right/RightCommitDetailPanel.swift:5`](GitMac/App/Panels/Right/RightCommitDetailPanel.swift)
+- `RightStagingPanel` : View -- [`GitMac/App/Panels/Right/RightStagingPanel.swift:4`](GitMac/App/Panels/Right/RightStagingPanel.swift)
+- `RotateEffect` : ViewModifier -- [`GitMac/UI/Components/Utilities/AnimationExtensions.swift:260`](GitMac/UI/Components/Utilities/AnimationExtensions.swift)
+- `RotateEffectPreview` : View -- [`GitMac/UI/Components/Utilities/AnimationExtensions.swift:457`](GitMac/UI/Components/Utilities/AnimationExtensions.swift)
+- `RowConnectionLine` : View -- [`GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift:1377`](GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift)
+- `SSHKeyRow` : View -- [`GitMac/Features/Security/GPGSSHManagementView.swift:383`](GitMac/Features/Security/GPGSSHManagementView.swift)
+- `SaveTemplateSheet` : View -- [`GitMac/App/Panels/Right/CommitComponents.swift:556`](GitMac/App/Panels/Right/CommitComponents.swift)
+- `SearchResultRow` : View -- [`GitMac/Features/Search/SearchView.swift:322`](GitMac/Features/Search/SearchView.swift)
+- `SectionHeader` : View -- [`GitMac/UI/Components/Layout/SectionHeader.swift:7`](GitMac/UI/Components/Layout/SectionHeader.swift)
+  - Collapsible section header with icon, title, count, and actions
+- `SectionedSeparator` : View -- [`GitMac/UI/Components/Layout/Separator.swift:101`](GitMac/UI/Components/Layout/Separator.swift)
+  - Separator with optional label/text in the middle
+- `SelectCommitsStep` : View -- [`GitMac/Features/CherryPick/CherryPickView.swift:606`](GitMac/Features/CherryPick/CherryPickView.swift)
+- `SelectableDiffLine` : View -- [`GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift:1070`](GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift)
+- `SelectableInlineLineRow` : View -- [`GitMac/Features/Diff/DiffView.swift:1931`](GitMac/Features/Diff/DiffView.swift)
+- `SelectableSplitDiffContentView` : View -- [`GitMac/Features/Diff/DiffView.swift:1510`](GitMac/Features/Diff/DiffView.swift)
+  - Renders one side of the split diff with line selection support
+- `SelectableSplitDiffRow` : View -- [`GitMac/Features/Diff/DiffView.swift:1633`](GitMac/Features/Diff/DiffView.swift)
+  - A single selectable row in the split diff view
+- `Separator` : View -- [`GitMac/UI/Components/Layout/Separator.swift:7`](GitMac/UI/Components/Layout/Separator.swift)
+  - Styled separator/divider for layouts
+- `SeparatorSection` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:1056`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+- `SessionSharingSheet` : View -- [`GitMac/Features/Terminal/Enhanced/TerminalSessionSharingService.swift:284`](GitMac/Features/Terminal/Enhanced/TerminalSessionSharingService.swift)
+- `SettingsSection` : View -- [`GitMac/Features/Settings/Components/SettingsSection.swift:3`](GitMac/Features/Settings/Components/SettingsSection.swift)
+- `SettingsView` : View -- [`GitMac/Features/Settings/SettingsView.swift:4`](GitMac/Features/Settings/SettingsView.swift)
+- `ShakeEffect` : ViewModifier -- [`GitMac/UI/Components/Utilities/AnimationExtensions.swift:187`](GitMac/UI/Components/Utilities/AnimationExtensions.swift)
+- `ShakeEffectPreview` : View -- [`GitMac/UI/Components/Utilities/AnimationExtensions.swift:365`](GitMac/UI/Components/Utilities/AnimationExtensions.swift)
+- `ShortcutCategorySection` : View -- [`GitMac/UI/Components/KeyboardShortcuts.swift:121`](GitMac/UI/Components/KeyboardShortcuts.swift)
+- `ShortcutRecorder` : View -- [`GitMac/Core/Services/KeyboardShortcutManager.swift:578`](GitMac/Core/Services/KeyboardShortcutManager.swift)
+- `ShortcutRow` : View -- [`GitMac/Core/Services/KeyboardShortcutManager.swift:507`](GitMac/Core/Services/KeyboardShortcutManager.swift)
+- `ShortcutSettingsView` : View -- [`GitMac/Core/Services/KeyboardShortcutManager.swift:416`](GitMac/Core/Services/KeyboardShortcutManager.swift)
+- `SideBySideDiffView` : View -- [`GitMac/Features/Diff/DiffSearchAndNavigation.swift:469`](GitMac/Features/Diff/DiffSearchAndNavigation.swift)
+  - Side-by-side diff view for medium-sized files
+- `SideBySideHunkView` : View -- [`GitMac/Features/Diff/DiffSearchAndNavigation.swift:531`](GitMac/Features/Diff/DiffSearchAndNavigation.swift)
+  - Individual hunk in side-by-side view
+- `SideBySideLineRow` : View -- [`GitMac/Features/Diff/DiffSearchAndNavigation.swift:574`](GitMac/Features/Diff/DiffSearchAndNavigation.swift)
+  - Single line in side-by-side view
+- `SidebarBranchRow` : View -- [`GitMac/App/Panels/Left/SidebarComponents.swift:15`](GitMac/App/Panels/Left/SidebarComponents.swift)
+- `SidebarRecentRepoRow` : View -- [`GitMac/App/Panels/Left/SidebarComponents.swift:504`](GitMac/App/Panels/Left/SidebarComponents.swift)
+- `SidebarRepoRow` : View -- [`GitMac/App/Panels/Left/SidebarComponents.swift:396`](GitMac/App/Panels/Left/SidebarComponents.swift)
+- `SidebarSection` : View -- [`GitMac/App/Components/SidebarSection.swift:11`](GitMac/App/Components/SidebarSection.swift)
+- `SimpleCommandInputAndOutput` : View -- [`GitMac/Features/Terminal/TerminalView.swift:537`](GitMac/Features/Terminal/TerminalView.swift)
+- `SimpleCommitInput` : View -- [`GitMac/UI/Components/Commit/CommitMessageArea.swift:254`](GitMac/UI/Components/Commit/CommitMessageArea.swift)
+  - Minimal commit message input without extra features
+- `SimpleLinearIssueRow` : View -- [`GitMac/Features/Linear/LinearPanel.swift:346`](GitMac/Features/Linear/LinearPanel.swift)
+- `SimpleLinearIssuesListView` : View -- [`GitMac/Features/Linear/LinearPanel.swift:331`](GitMac/Features/Linear/LinearPanel.swift)
+- `SimpleNotionTaskRow` : View -- [`GitMac/Features/Notion/NotionPanel.swift:349`](GitMac/Features/Notion/NotionPanel.swift)
+- `SimpleNotionTasksListView` : View -- [`GitMac/Features/Notion/NotionPanel.swift:334`](GitMac/Features/Notion/NotionPanel.swift)
+- `SimplePreview` : View -- [`GitMac/UI/Organisms/Lists/DSDraggableList.swift:150`](GitMac/UI/Organisms/Lists/DSDraggableList.swift)
+- `SimplePreview` : View -- [`GitMac/UI/Organisms/Lists/DSInfiniteList.swift:192`](GitMac/UI/Organisms/Lists/DSInfiniteList.swift)
+- `SimpleShortcutRow` : View -- [`GitMac/Features/Settings/Tabs/KeyboardShortcutsTab.swift:36`](GitMac/Features/Settings/Tabs/KeyboardShortcutsTab.swift)
+- `SimpleTerminalView` : View -- [`GitMac/Features/Terminal/TerminalIntegration.swift:6`](GitMac/Features/Terminal/TerminalIntegration.swift)
+  - Terminal Integration - Embedded terminal with Git context
+- `SingleRepoTab` : View -- [`GitMac/App/Toolbars/RepositoryTabBar.swift:106`](GitMac/App/Toolbars/RepositoryTabBar.swift)
+- `SourceBranchStep` : View -- [`GitMac/Features/CherryPick/CherryPickView.swift:553`](GitMac/Features/CherryPick/CherryPickView.swift)
+- `SpacingRow` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:1209`](GitMac/UI/Components/ComponentCatalog.swift)
+- `SplitDiffContentView` : View -- [`GitMac/Features/Diff/DiffView.swift:1465`](GitMac/Features/Diff/DiffView.swift)
+  - Renders one side (left or right) of the split diff
+- `SplitDiffLine` : View -- [`GitMac/Features/Diff/SplitDiffView.swift:316`](GitMac/Features/Diff/SplitDiffView.swift)
+- `SplitDiffLineRow` : View -- [`GitMac/Features/Diff/DiffView.swift:2129`](GitMac/Features/Diff/DiffView.swift)
+- `SplitDiffPane` : View -- [`GitMac/Features/Diff/SplitDiffView.swift:272`](GitMac/Features/Diff/SplitDiffView.swift)
+- `SplitDiffView` : View -- [`GitMac/Features/Diff/DiffView.swift:1985`](GitMac/Features/Diff/DiffView.swift)
+- `SplitHunkHeaderRow` : View -- [`GitMac/Features/Diff/DiffView.swift:2108`](GitMac/Features/Diff/DiffView.swift)
+- `StaggeredAnimationPreview` : View -- [`GitMac/UI/Components/Utilities/AnimationExtensions.swift:476`](GitMac/UI/Components/Utilities/AnimationExtensions.swift)
+- `StagingAreaPanel` : View -- [`GitMac/App/Panels/Right/StagingAreaPanel.swift:4`](GitMac/App/Panels/Right/StagingAreaPanel.swift)
+- `StagingAreaView` : View -- [`GitMac/Features/Staging/StagingAreaView.swift:5`](GitMac/Features/Staging/StagingAreaView.swift)
+  - Staging area view - manage staged and unstaged changes
+- `StagingBulkAlerts` : ViewModifier -- [`GitMac/App/Panels/Right/StagingAreaPanel.swift:453`](GitMac/App/Panels/Right/StagingAreaPanel.swift)
+- `StagingFileAlerts` : ViewModifier -- [`GitMac/App/Panels/Right/StagingAreaPanel.swift:423`](GitMac/App/Panels/Right/StagingAreaPanel.swift)
+- `StagingFolderAlerts` : ViewModifier -- [`GitMac/App/Panels/Right/StagingAreaPanel.swift:477`](GitMac/App/Panels/Right/StagingAreaPanel.swift)
+- `StagingRowContent` : View -- [`GitMac/App/Panels/Right/StagingComponents.swift:198`](GitMac/App/Panels/Right/StagingComponents.swift)
+- `StagingSection` : View -- [`GitMac/App/Panels/Right/StagingComponents.swift:702`](GitMac/App/Panels/Right/StagingComponents.swift)
+- `StagingSectionWithTree` : View -- [`GitMac/App/Panels/Right/StagingComponents.swift:5`](GitMac/App/Panels/Right/StagingComponents.swift)
+- `StagingSplitResizer` : View -- [`GitMac/App/Panels/Right/StagingAreaPanel.swift:518`](GitMac/App/Panels/Right/StagingAreaPanel.swift)
+  - Draggable divider between Unstaged and Staged sections
+- `StagingTreeView` : View -- [`GitMac/App/Panels/Right/StagingComponents.swift:158`](GitMac/App/Panels/Right/StagingComponents.swift)
+- `StaleBranchCleanupView` : View -- [`GitMac/Features/Branches/StaleBranchCleanupView.swift:5`](GitMac/Features/Branches/StaleBranchCleanupView.swift)
+- `StaleBranchRow` : View -- [`GitMac/Features/Branches/StaleBranchCleanupView.swift:221`](GitMac/Features/Branches/StaleBranchCleanupView.swift)
+- `StandardDiffContent` : View -- [`GitMac/Features/Diff/LargeDiffView.swift:549`](GitMac/Features/Diff/LargeDiffView.swift)
+  - SwiftUI-based diff view for smaller files
+- `StartBranchSheet` : View -- [`GitMac/Features/GitFlow/GitFlowManager.swift:699`](GitMac/Features/GitFlow/GitFlowManager.swift)
+- `StartButton` : View -- [`GitMac/Features/GitFlow/GitFlowManager.swift:628`](GitMac/Features/GitFlow/GitFlowManager.swift)
+- `StartNewSection` : View -- [`GitMac/Features/GitFlow/GitFlowManager.swift:555`](GitMac/Features/GitFlow/GitFlowManager.swift)
+- `StashBadge` : View -- [`GitMac/Features/CommitGraph/Components/StashBadge.swift:4`](GitMac/Features/CommitGraph/Components/StashBadge.swift)
+- `StashContextMenu` : View -- [`GitMac/UI/Components/ContextMenus.swift:139`](GitMac/UI/Components/ContextMenus.swift)
+  - Context menu for stash entries
+- `StashDetailFileRow` : View -- [`GitMac/App/Panels/Right/StashComponents.swift:70`](GitMac/App/Panels/Right/StashComponents.swift)
+- `StashDetailPanel` : View -- [`GitMac/App/Panels/Right/StashDetailPanel.swift:5`](GitMac/App/Panels/Right/StashDetailPanel.swift)
+- `StashDetailView` : View -- [`GitMac/Features/Stash/StashListView.swift:786`](GitMac/Features/Stash/StashListView.swift)
+- `StashFileRow` : View -- [`GitMac/Features/Stash/StashListView.swift:530`](GitMac/Features/Stash/StashListView.swift)
+- `StashFileTreeView` : View -- [`GitMac/Features/Stash/StashListView.swift:577`](GitMac/Features/Stash/StashListView.swift)
+- `StashListView` : View -- [`GitMac/Features/Stash/StashListView.swift:4`](GitMac/Features/Stash/StashListView.swift)
+  - Stash list and management view
+- `StashRow` : View -- [`GitMac/Features/Stash/StashListView.swift:333`](GitMac/Features/Stash/StashListView.swift)
+- `StashSidebarRow` : View -- [`GitMac/App/Panels/Left/SidebarComponents.swift:346`](GitMac/App/Panels/Left/SidebarComponents.swift)
+- `StashTreeNodeView` : View -- [`GitMac/Features/Stash/StashListView.swift:652`](GitMac/Features/Stash/StashListView.swift)
+- `StatItem` : View -- [`GitMac/Features/PullRequests/PRListView.swift:950`](GitMac/Features/PullRequests/PRListView.swift)
+- `StatefulViewInteractivePreview` : View -- [`GitMac/UI/Components/Utilities/StateManagement.swift:364`](GitMac/UI/Components/Utilities/StateManagement.swift)
+- `StatusBadge` : View -- [`GitMac/UI/Components/Rows/IssueRow.swift:66`](GitMac/UI/Components/Rows/IssueRow.swift)
+  - Standard status badge with text and color
+- `StatusIcon` : View -- [`GitMac/UI/Components/Icons/StatusIcon.swift:6`](GitMac/UI/Components/Icons/StatusIcon.swift)
+  - Displays a git file status badge with customizable size and style
+- `StepPickerSheet` : View -- [`GitMac/Features/Settings/Tabs/WorkflowSettingsTab.swift:317`](GitMac/Features/Settings/Tabs/WorkflowSettingsTab.swift)
+- `SubmoduleListView` : View -- [`GitMac/Features/Submodules/SubmoduleManager.swift:106`](GitMac/Features/Submodules/SubmoduleManager.swift)
+- `SubmoduleRow` : View -- [`GitMac/Features/Submodules/SubmoduleView.swift:185`](GitMac/Features/Submodules/SubmoduleView.swift)
+- `SubmoduleSidebarRow` : View -- [`GitMac/App/Panels/Left/SubmoduleComponents.swift:89`](GitMac/App/Panels/Left/SubmoduleComponents.swift)
+- `SubmoduleSidebarSection` : View -- [`GitMac/App/Panels/Left/SubmoduleComponents.swift:13`](GitMac/App/Panels/Left/SubmoduleComponents.swift)
+- `SubmoduleView` : View -- [`GitMac/Features/Submodules/SubmoduleView.swift:3`](GitMac/Features/Submodules/SubmoduleView.swift)
+- `SubscriptionSettingsView` : View -- [`GitMac/Features/Settings/Tabs/SubscriptionSettingsTab.swift:3`](GitMac/Features/Settings/Tabs/SubscriptionSettingsTab.swift)
+- `SubscriptionView` : View -- [`GitMac/Features/Settings/SubscriptionView.swift:6`](GitMac/Features/Settings/SubscriptionView.swift)
+- `SuggestionRow` : View -- [`GitMac/Features/Terminal/Enhanced/AICommandSuggestions.swift:60`](GitMac/Features/Terminal/Enhanced/AICommandSuggestions.swift)
+- `SwiftTermView` : NSViewRepresentable -- [`GitMac/Features/Terminal/EmbeddedTerminalView.swift:54`](GitMac/Features/Terminal/EmbeddedTerminalView.swift)
+- `SwipeablePreview` : View -- [`GitMac/UI/Components/Utilities/GestureHandlers.swift:387`](GitMac/UI/Components/Utilities/GestureHandlers.swift)
+- `SyncWizardSheet` : View -- [`GitMac/App/Sheets/SyncWizardSheet.swift:70`](GitMac/App/Sheets/SyncWizardSheet.swift)
+- `SynchronizedSplitDiffScrollView` : NSViewRepresentable -- [`GitMac/Features/Diff/DiffView.swift:1217`](GitMac/Features/Diff/DiffView.swift)
+  - NSViewRepresentable wrapper for split diff with synchronized horizontal and vertical scrolling
+- `SyntaxHighlightedDiffLine` : View -- [`GitMac/Core/Utils/SyntaxHighlighter.swift:6`](GitMac/Core/Utils/SyntaxHighlighter.swift)
+  - Syntax Highlighter for Diffs - Makes code changes readable
+- `SyntaxHighlightedLineView` : View -- [`GitMac/Features/Diff/DiffEnhancements.swift:712`](GitMac/Features/Diff/DiffEnhancements.swift)
+  - Line view with syntax highlighting
+- `SyntaxHighlightedText` : View -- [`GitMac/Features/Diff/Renderers/DiffSyntaxHighlighter.swift:6`](GitMac/Features/Diff/Renderers/DiffSyntaxHighlighter.swift)
+- `TabPanelDemo` : View -- [`GitMac/UI/Organisms/Panels/DSTabPanel.swift:140`](GitMac/UI/Organisms/Panels/DSTabPanel.swift)
+- `TabsOverflowMenu` : View -- [`GitMac/UI/Components/Navigation/RepositoryTabsView.swift:255`](GitMac/UI/Components/Navigation/RepositoryTabsView.swift)
+- `TagListView` : View -- [`GitMac/Features/Tags/TagListView.swift:4`](GitMac/Features/Tags/TagListView.swift)
+  - Tag list and management view
+- `TagRow` : View -- [`GitMac/Features/Tags/TagListView.swift:161`](GitMac/Features/Tags/TagListView.swift)
+- `TagSidebarRow` : View -- [`GitMac/App/Panels/Left/SidebarComponents.swift:371`](GitMac/App/Panels/Left/SidebarComponents.swift)
+- `TaigaConnectedView` : View -- [`GitMac/Features/Settings/Components/IntegrationViews/TaigaSettingsViews.swift:56`](GitMac/Features/Settings/Components/IntegrationViews/TaigaSettingsViews.swift)
+- `TaigaContentView` : View -- [`GitMac/Features/Taiga/TaigaContentView.swift:13`](GitMac/Features/Taiga/TaigaContentView.swift)
+  - Content view for Taiga integration
+- `TaigaEmptyView` : View -- [`GitMac/Features/Taiga/Views/TaigaSharedViews.swift:13`](GitMac/Features/Taiga/Views/TaigaSharedViews.swift)
+- `TaigaEpicRow` : View -- [`GitMac/Features/Taiga/Views/TaigaEpicsView.swift:26`](GitMac/Features/Taiga/Views/TaigaEpicsView.swift)
+- `TaigaEpicsView` : View -- [`GitMac/Features/Taiga/Views/TaigaEpicsView.swift:11`](GitMac/Features/Taiga/Views/TaigaEpicsView.swift)
+- `TaigaIssueRow` : View -- [`GitMac/Features/Taiga/Views/TaigaIssuesView.swift:26`](GitMac/Features/Taiga/Views/TaigaIssuesView.swift)
+- `TaigaIssuesView` : View -- [`GitMac/Features/Taiga/Views/TaigaIssuesView.swift:11`](GitMac/Features/Taiga/Views/TaigaIssuesView.swift)
+- `TaigaKanbanColumn` : View -- [`GitMac/Features/Taiga/Views/TaigaUserStoriesView.swift:39`](GitMac/Features/Taiga/Views/TaigaUserStoriesView.swift)
+- `TaigaLoginPrompt` : View -- [`GitMac/Features/Taiga/Views/TaigaLoginPrompt.swift:11`](GitMac/Features/Taiga/Views/TaigaLoginPrompt.swift)
+- `TaigaLoginView` : View -- [`GitMac/Features/Settings/Components/IntegrationViews/TaigaSettingsViews.swift:5`](GitMac/Features/Settings/Components/IntegrationViews/TaigaSettingsViews.swift)
+- `TaigaPanelContent` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:558`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `TaigaSettingsContent` : View -- [`GitMac/Features/Taiga/TaigaSettingsContent.swift:13`](GitMac/Features/Taiga/TaigaSettingsContent.swift)
+  - Settings content for Taiga integration
+- `TaigaSettingsSheet` : View -- [`GitMac/Features/Taiga/Views/TaigaSharedViews.swift:32`](GitMac/Features/Taiga/Views/TaigaSharedViews.swift)
+- `TaigaStoryCard` : View -- [`GitMac/Features/Taiga/Views/TaigaUserStoriesView.swift:85`](GitMac/Features/Taiga/Views/TaigaUserStoriesView.swift)
+- `TaigaTaskRow` : View -- [`GitMac/Features/Taiga/Views/TaigaTasksView.swift:26`](GitMac/Features/Taiga/Views/TaigaTasksView.swift)
+- `TaigaTasksView` : View -- [`GitMac/Features/Taiga/Views/TaigaTasksView.swift:11`](GitMac/Features/Taiga/Views/TaigaTasksView.swift)
+- `TaigaTicketsPanel` : View -- [`GitMac/Features/Taiga/TaigaTicketsPanel.swift:13`](GitMac/Features/Taiga/TaigaTicketsPanel.swift)
+- `TaigaUserStoriesView` : View -- [`GitMac/Features/Taiga/Views/TaigaUserStoriesView.swift:11`](GitMac/Features/Taiga/Views/TaigaUserStoriesView.swift)
+- `TaskStateManagerPreview` : View -- [`GitMac/UI/Components/Utilities/StateManagement.swift:432`](GitMac/UI/Components/Utilities/StateManagement.swift)
+- `TeamActivityPanel` : View -- [`GitMac/App/Panels/Team/TeamActivityPanel.swift:12`](GitMac/App/Panels/Team/TeamActivityPanel.swift)
+- `TeamActivityPanelContent` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:598`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `TeamActivityView` : View -- [`GitMac/App/Panels/Team/TeamActivityPanel.swift:35`](GitMac/App/Panels/Team/TeamActivityPanel.swift)
+  - Team activity view to prevent merge conflicts
+- `TeamMemberRow` : View -- [`GitMac/App/Panels/Team/TeamComponents.swift:12`](GitMac/App/Panels/Team/TeamComponents.swift)
+- `TerminalAIChatBubble` : View -- [`GitMac/Features/Terminal/TerminalView.swift:1356`](GitMac/Features/Terminal/TerminalView.swift)
+- `TerminalAIChatView` : View -- [`GitMac/Features/Terminal/EmbeddedTerminalView.swift:163`](GitMac/Features/Terminal/EmbeddedTerminalView.swift)
+- `TerminalAIChatView` : View -- [`GitMac/Features/Terminal/TerminalView.swift:1212`](GitMac/Features/Terminal/TerminalView.swift)
+- `TerminalBlockRow` : View -- [`GitMac/Features/Terminal/Enhanced/TerminalBlocksView.swift:89`](GitMac/Features/Terminal/Enhanced/TerminalBlocksView.swift)
+- `TerminalBlocksView` : View -- [`GitMac/Features/Terminal/Enhanced/TerminalBlocksView.swift:26`](GitMac/Features/Terminal/Enhanced/TerminalBlocksView.swift)
+- `TerminalCommandPaletteView` : View -- [`GitMac/Features/Terminal/Enhanced/TerminalCommandPalette.swift:12`](GitMac/Features/Terminal/Enhanced/TerminalCommandPalette.swift)
+- `TerminalGhosttyRepresentable` : NSViewRepresentable -- [`GitMac/Features/Terminal/TerminalView.swift:1668`](GitMac/Features/Terminal/TerminalView.swift)
+- `TerminalGhosttyView` : View -- [`GitMac/Features/Terminal/TerminalView.swift:1391`](GitMac/Features/Terminal/TerminalView.swift)
+  - Native Ghostty terminal view with Warp-like AI overlay
+- `TerminalLineView` : View -- [`GitMac/Features/Terminal/TerminalIntegration.swift:176`](GitMac/Features/Terminal/TerminalIntegration.swift)
+- `TerminalNLInputView` : View -- [`GitMac/Features/Terminal/Enhanced/TerminalNLInputView.swift:13`](GitMac/Features/Terminal/Enhanced/TerminalNLInputView.swift)
+- `TerminalPanel` : View -- [`GitMac/App/Panels/Center/TerminalPanel.swift:11`](GitMac/App/Panels/Center/TerminalPanel.swift)
+- `TerminalPanelContent` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:43`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `TerminalSessionView` : View -- [`GitMac/Features/Terminal/TerminalView.swift:198`](GitMac/Features/Terminal/TerminalView.swift)
+- `TerminalTabBar` : View -- [`GitMac/Features/Terminal/TerminalView.swift:108`](GitMac/Features/Terminal/TerminalView.swift)
+- `TerminalTabButton` : View -- [`GitMac/Features/Terminal/TerminalView.swift:156`](GitMac/Features/Terminal/TerminalView.swift)
+- `TerminalView` : View -- [`GitMac/Features/Terminal/TerminalView.swift:18`](GitMac/Features/Terminal/TerminalView.swift)
+- `TerminalWorkflowsView` : View -- [`GitMac/Features/Terminal/Enhanced/TerminalWorkflowsView.swift:12`](GitMac/Features/Terminal/Enhanced/TerminalWorkflowsView.swift)
+- `TextSegmentView` : NSViewRepresentable -- [`GitMac/Features/Markdown/MarkdownView.swift:130`](GitMac/Features/Markdown/MarkdownView.swift)
+  - Renders a text segment using the fast markdown renderer
+- `TheirsSection` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:1069`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+- `ThemeButton` : View -- [`GitMac/Features/Settings/Components/ThemeButton.swift:3`](GitMac/Features/Settings/Components/ThemeButton.swift)
+- `ThemeOptionButton` : View -- [`GitMac/UI/Theme/ThemeManager.swift:703`](GitMac/UI/Theme/ThemeManager.swift)
+- `ThemePreview` : View -- [`GitMac/UI/Theme/ThemeManager.swift:750`](GitMac/UI/Theme/ThemeManager.swift)
+- `ThemeSettingsView` : View -- [`GitMac/UI/Theme/ThemeManager.swift:648`](GitMac/UI/Theme/ThemeManager.swift)
+- `ThreeWayMergeView` : View -- [`GitMac/Features/MergeConflict/ConflictResolverView.swift:483`](GitMac/Features/MergeConflict/ConflictResolverView.swift)
+- `TiledDiffView` : NSViewRepresentable -- [`GitMac/Features/Diff/TiledDiffView.swift:13`](GitMac/Features/Diff/TiledDiffView.swift)
+  - Ultra-high-performance diff view using direct CoreText drawing
+- `ToastContainer` : View -- [`GitMac/Core/Services/NotificationManager.swift:401`](GitMac/Core/Services/NotificationManager.swift)
+- `ToastNotificationView` : View -- [`GitMac/Core/Services/NotificationManager.swift:259`](GitMac/Core/Services/NotificationManager.swift)
+- `ToastOverlay` : ViewModifier -- [`GitMac/UI/Components/ContextMenus.swift:287`](GitMac/UI/Components/ContextMenus.swift)
+- `ToastView` : View -- [`GitMac/UI/Components/ContextMenus.swift:207`](GitMac/UI/Components/ContextMenus.swift)
+- `TokenRow` : View -- [`GitMac/UI/Components/ComponentCatalog.swift:1182`](GitMac/UI/Components/ComponentCatalog.swift)
+- `ToolRow` : View -- [`GitMac/Core/Services/ExternalToolsManager.swift:380`](GitMac/Core/Services/ExternalToolsManager.swift)
+- `ToolbarActionButton` : View -- [`GitMac/App/Toolbars/ToolbarComponents.swift:4`](GitMac/App/Toolbars/ToolbarComponents.swift)
+- `ToolbarButton` : View -- [`GitMac/UI/Components/Diff/DiffToolbar.swift:304`](GitMac/UI/Components/Diff/DiffToolbar.swift)
+  - Toggle button for toolbar options (line numbers, word wrap, minimap)
+- `ToolbarToggle` : View -- [`GitMac/Features/Diff/KaleidoscopeDiffView.swift:993`](GitMac/Features/Diff/KaleidoscopeDiffView.swift)
+- `TopResizeDemo` : View -- [`GitMac/UI/Organisms/Panels/DSResizablePanel.swift:149`](GitMac/UI/Organisms/Panels/DSResizablePanel.swift)
+- `TrackPatternSheet` : View -- [`GitMac/Features/LFS/LFSManager.swift:383`](GitMac/Features/LFS/LFSManager.swift)
+- `TriggerPicker` : View -- [`GitMac/Features/Settings/Tabs/WorkflowSettingsTab.swift:265`](GitMac/Features/Settings/Tabs/WorkflowSettingsTab.swift)
+- `UncommittedChangesRow` : View -- [`GitMac/Features/CommitGraph/Components/UncommittedChangesRow.swift:4`](GitMac/Features/CommitGraph/Components/UncommittedChangesRow.swift)
+- `UndoHistoryView` : View -- [`GitMac/Core/Services/UndoManager.swift:404`](GitMac/Core/Services/UndoManager.swift)
+- `UnifiedBottomPanel` : View -- [`GitMac/Features/BottomPanel/Views/UnifiedBottomPanel.swift:10`](GitMac/Features/BottomPanel/Views/UnifiedBottomPanel.swift)
+- `UnifiedCICDPanel` : View -- [`GitMac/App/Panels/Left/CICDComponents.swift:89`](GitMac/App/Panels/Left/CICDComponents.swift)
+- `UnifiedDiffLine` : View -- [`GitMac/Features/Diff/SplitDiffView.swift:212`](GitMac/Features/Diff/SplitDiffView.swift)
+- `UnifiedDiffScrollView` : View -- [`GitMac/Features/Diff/Renderers/DiffScrollViews.swift:5`](GitMac/Features/Diff/Renderers/DiffScrollViews.swift)
+- `UnifiedFileContextMenu` : View -- [`GitMac/UI/Components/UnifiedFileContextMenu.swift:9`](GitMac/UI/Components/UnifiedFileContextMenu.swift)
+  - A unified, reusable context menu component for all file operations in GitMac.
+- `UnifiedHunkView` : View -- [`GitMac/Features/Diff/SplitDiffView.swift:190`](GitMac/Features/Diff/SplitDiffView.swift)
+- `UniversalResizer` : View -- [`GitMac/UI/Components/Common/UniversalResizer.swift:147`](GitMac/UI/Components/Common/UniversalResizer.swift)
+- `UntrackedFileRow` : View -- [`GitMac/Features/Staging/StagingAreaView.swift:1495`](GitMac/Features/Staging/StagingAreaView.swift)
+- `UpgradePromptView` : View -- [`GitMac/Services/FeatureManager.swift:157`](GitMac/Services/FeatureManager.swift)
+- `ViewModeButton` : View -- [`GitMac/Features/Diff/KaleidoscopeDiffView.swift:967`](GitMac/Features/Diff/KaleidoscopeDiffView.swift)
+- `ViewerDiffStatusBar` : View -- [`GitMac/Features/Diff/DiffSearchAndNavigation.swift:380`](GitMac/Features/Diff/DiffSearchAndNavigation.swift)
+  - Status bar showing diff metrics and LFM status for EnhancedDiffViewer
+- `VirtualizedPreview` : View -- [`GitMac/UI/Organisms/Lists/DSVirtualizedList.swift:226`](GitMac/UI/Organisms/Lists/DSVirtualizedList.swift)
+- `VisualEffectBlur` : NSViewRepresentable -- [`GitMac/UI/Utilities/VisualEffectBlur.swift:15`](GitMac/UI/Utilities/VisualEffectBlur.swift)
+  - NSVisualEffectView wrapper for macOS blur effects
+- `WarpAIInputBar` : View -- [`GitMac/Features/Terminal/Views/WarpAIInputBar.swift:5`](GitMac/Features/Terminal/Views/WarpAIInputBar.swift)
+- `WarpAIResultCard` : View -- [`GitMac/Features/Terminal/Views/WarpAIInputBar.swift:89`](GitMac/Features/Terminal/Views/WarpAIInputBar.swift)
+- `WarpBlockView` : View -- [`GitMac/Features/BottomPanel/Views/BottomPanelContent.swift:879`](GitMac/Features/BottomPanel/Views/BottomPanelContent.swift)
+- `WelcomeButton` : View -- [`GitMac/App/Welcome/WelcomeView.swift:236`](GitMac/App/Welcome/WelcomeView.swift)
+- `WelcomeView` : View -- [`GitMac/App/Welcome/WelcomeView.swift:122`](GitMac/App/Welcome/WelcomeView.swift)
+- `WiggleEffect` : ViewModifier -- [`GitMac/UI/Components/Utilities/AnimationExtensions.swift:228`](GitMac/UI/Components/Utilities/AnimationExtensions.swift)
+- `WiggleEffectPreview` : View -- [`GitMac/UI/Components/Utilities/AnimationExtensions.swift:416`](GitMac/UI/Components/Utilities/AnimationExtensions.swift)
+- `WorkflowCard` : View -- [`GitMac/Features/Terminal/Enhanced/TerminalWorkflowsView.swift:108`](GitMac/Features/Terminal/Enhanced/TerminalWorkflowsView.swift)
+- `WorkflowEditorSheet` : View -- [`GitMac/Features/Settings/Tabs/WorkflowSettingsTab.swift:155`](GitMac/Features/Settings/Tabs/WorkflowSettingsTab.swift)
+- `WorkflowRow` : View -- [`GitMac/Features/Terminal/Enhanced/TerminalCommandPalette.swift:132`](GitMac/Features/Terminal/Enhanced/TerminalCommandPalette.swift)
+- `WorkflowRunRow` : View -- [`GitMac/Features/Workflows/WorkflowsView.swift:372`](GitMac/Features/Workflows/WorkflowsView.swift)
+- `WorkflowSettingsView` : View -- [`GitMac/Features/Settings/Tabs/WorkflowSettingsTab.swift:3`](GitMac/Features/Settings/Tabs/WorkflowSettingsTab.swift)
+- `WorkflowStatusBadge` : View -- [`GitMac/Features/Workflows/WorkflowsView.swift:570`](GitMac/Features/Workflows/WorkflowsView.swift)
+- `WorkflowsPanel` : View -- [`GitMac/App/Panels/Left/CICDComponents.swift:316`](GitMac/App/Panels/Left/CICDComponents.swift)
+- `WorkflowsView` : View -- [`GitMac/Features/Workflows/WorkflowsView.swift:141`](GitMac/Features/Workflows/WorkflowsView.swift)
+- `WorkspaceConfigView` : View -- [`GitMac/Features/Settings/Tabs/WorkspaceSettingsTab.swift:5`](GitMac/Features/Settings/Tabs/WorkspaceSettingsTab.swift)
+- `WorktreeBadge` : View -- [`GitMac/Features/CommitGraph/Components/WorktreeBadge.swift:11`](GitMac/Features/CommitGraph/Components/WorktreeBadge.swift)
+  - Badge indicating a branch has an active worktree
+- `WorktreeIndicator` : View -- [`GitMac/Features/CommitGraph/Components/WorktreeBadge.swift:65`](GitMac/Features/CommitGraph/Components/WorktreeBadge.swift)
+  - Compact worktree indicator (just icon)
+- `WorktreeListView` : View -- [`GitMac/Features/Worktrees/WorktreeListView.swift:3`](GitMac/Features/Worktrees/WorktreeListView.swift)
+- `WorktreeRow` : View -- [`GitMac/Features/Worktrees/WorktreeListView.swift:117`](GitMac/Features/Worktrees/WorktreeListView.swift)
+- `WorktreeSidebarRow` : View -- [`GitMac/App/Panels/Left/WorktreeComponents.swift:71`](GitMac/App/Panels/Left/WorktreeComponents.swift)
+- `WorktreeSidebarSection` : View -- [`GitMac/App/Panels/Left/WorktreeComponents.swift:13`](GitMac/App/Panels/Left/WorktreeComponents.swift)
+- `XcodeBottomBarTab` : View -- [`GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift:12`](GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift)
+  - Xcode-style tab for bottom panel tab bar
+- `XcodeSidebarNavigatorBar` : View -- [`GitMac/UI/Components/Xcode/XcodeSidebarNavigator.swift:128`](GitMac/UI/Components/Xcode/XcodeSidebarNavigator.swift)
+  - Xcode-style horizontal navigator bar for sidebar
+- `XcodeSidebarNavigatorButton` : View -- [`GitMac/UI/Components/Xcode/XcodeSidebarNavigator.swift:83`](GitMac/UI/Components/Xcode/XcodeSidebarNavigator.swift)
+  - Xcode-style horizontal navigator tab button
+- `XcodeToolbarButton` : View -- [`GitMac/UI/Components/Xcode/XcodeToolbarButton.swift:12`](GitMac/UI/Components/Xcode/XcodeToolbarButton.swift)
+  - Xcode-style toolbar button with icon-only and icon+label variants
+- `XcodeToolbarButtonAsync` : View -- [`GitMac/UI/Components/Xcode/XcodeToolbarButton.swift:118`](GitMac/UI/Components/Xcode/XcodeToolbarButton.swift)
+  - Xcode-style toolbar button with async action support
+- `XcodeToolbarDivider` : View -- [`GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift:12`](GitMac/UI/Components/Xcode/XcodeToolbarDivider.swift)
+  - Xcode-style vertical divider for toolbar button groups

@@ -109,7 +109,6 @@ struct DSPicker<Item: Hashable & Identifiable, Label: View>: View {
             .foregroundStyle(AppTheme.textPrimary)
         }
         .foregroundStyle(AppTheme.textPrimary)
-        .accentColor(AppTheme.textPrimary)
         .tint(AppTheme.textPrimary)
         .menuStyle(.borderlessButton)
         .buttonStyle(.plain)

@@ -61,6 +61,8 @@ struct SidebarBranchRow: View {
                 .font(.system(size: 12))
                 .foregroundStyle(branch.isCurrent ? AppTheme.textPrimary : AppTheme.textSecondary)
                 .lineLimit(1)
+                .truncationMode(.middle)
+                .help(branch.name)
 
             if branch.isProtected {
                 Image(systemName: "lock.fill")
@@ -248,25 +250,17 @@ struct SidebarBranchRow: View {
     }
 
     private func performCheckout() async {
-        // Check for uncommitted changes
         if let status = appState.currentRepository?.status {
             let hasChanges = !status.staged.isEmpty || !status.unstaged.isEmpty || !status.untracked.isEmpty
             if hasChanges {
-                // Auto stash -> checkout -> pop (to avoid accumulating stashes)
                 await performCheckoutWithAutoStash()
                 return
             }
         }
 
-        // No changes, proceed with checkout using GitService
         do {
             try await appState.gitService.checkoutBranch(branch)
-            // Refresh appState to sync the updated repository to tabs
-            await appState.refresh()
-            // Update selected branch to the checked out branch
-            appState.selectBranch(branch)
-            let targetName = branch.isRemote ? branch.displayName : branch.name
-            NotificationManager.shared.success("Checked out", detail: targetName)
+            await postCheckoutRefresh()
         } catch {
             NotificationManager.shared.error("Checkout failed", detail: error.localizedDescription)
         }
@@ -275,29 +269,52 @@ struct SidebarBranchRow: View {
     private func performCheckoutWithAutoStash() async {
         do {
             try await appState.gitService.checkoutBranchWithAutoStash(branch)
-            // Refresh appState to sync the updated repository to tabs
-            await appState.refresh()
-            // Update selected branch to the checked out branch
-            appState.selectBranch(branch)
-            let targetName = branch.isRemote ? branch.displayName : branch.name
-            NotificationManager.shared.success("Checked out", detail: targetName)
+            await postCheckoutRefresh()
         } catch {
             NotificationManager.shared.error("Checkout failed", detail: error.localizedDescription)
         }
     }
 
+    private func postCheckoutRefresh() async {
+        await appState.refresh()
+        await appState.branchManager?.refresh()
+        let refreshedBranch = appState.branchManager?.localBranches.first { $0.name == branch.name } ?? branch
+        appState.selectBranch(refreshedBranch)
+        let targetName = branch.isRemote ? branch.displayName : branch.name
+        NotificationCenter.default.post(name: .branchDidCheckout, object: branch.name)
+        NotificationCenter.default.post(name: .branchDidChange, object: nil)
+        NotificationManager.shared.success("Checked out", detail: targetName)
+    }
+
     private func mergePR(_ pr: GitHubPullRequest, method: MergeMethod) async {
         do {
             try await prTracker.mergePR(pr, method: method)
-            // Refresh repository and branchManager after merge for immediate UI update
             try? await appState.gitService.refresh()
             await appState.branchManager?.refresh()
             await appState.refresh()
         } catch {
-            NotificationManager.shared.error(
-                "Merge failed",
-                detail: error.localizedDescription
-            )
+            let msg = error.localizedDescription.lowercased()
+            if msg.contains("not mergeable") || msg.contains("405") {
+                NotificationManager.shared.warning(
+                    "PR #\(pr.number) can't be merged yet",
+                    detail: "CI checks may still be running or reviews are pending. Wait for all checks to pass and try again."
+                )
+            } else if msg.contains("conflict") || msg.contains("409") {
+                NotificationManager.shared.error(
+                    "Merge conflicts detected",
+                    detail: "Resolve conflicts in the PR branch before merging."
+                )
+            } else if msg.contains("review") || msg.contains("approval") {
+                NotificationManager.shared.warning(
+                    "Reviews required",
+                    detail: "This PR needs approved reviews before it can be merged."
+                )
+            } else {
+                NotificationManager.shared.error(
+                    "Merge failed",
+                    detail: error.localizedDescription
+                )
+            }
         }
     }
 }
@@ -357,6 +374,8 @@ struct StashSidebarRow: View {
                 .font(.system(size: 12))
                 .foregroundStyle(AppTheme.textSecondary)
                 .lineLimit(1)
+                .truncationMode(.middle)
+                .help(stash.message)
 
             Spacer()
         }
@@ -382,6 +401,7 @@ struct TagSidebarRow: View {
                 .font(.system(size: 12))
                 .foregroundStyle(AppTheme.textSecondary)
                 .lineLimit(1)
+                .truncationMode(.middle)
 
             Spacer()
         }

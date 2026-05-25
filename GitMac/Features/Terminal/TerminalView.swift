@@ -566,7 +566,7 @@ struct SimpleCommandInputAndOutput: View {
 struct ExpandableTextEditor: View {
     @Binding var text: String
     let placeholder: String
-    @FocusState var isInputFocused: Bool
+    @FocusState private var isInputFocused: Bool
     let onSubmit: () -> Void
     let onArrowUp: () -> Void
     let onArrowDown: () -> Void
@@ -916,7 +916,16 @@ class TerminalViewModel: ObservableObject {
     }
 
     func stop() {
-        currentProcess?.terminate()
+        guard let process = currentProcess, process.isRunning else {
+            isRunning = false
+            return
+        }
+        process.interrupt()
+        DispatchQueue.global().asyncAfter(deadline: .now() + 2) { [weak process] in
+            if process?.isRunning == true {
+                process?.terminate()
+            }
+        }
         isRunning = false
     }
 

@@ -19,6 +19,7 @@ enum SidebarNavigator: String, CaseIterable, Identifiable {
     case submodules = "Submodules"
     case hooks = "Hooks"
     case cicd = "CI/CD"
+    case conflicts = "Conflicts"
 
     var id: String { rawValue }
 
@@ -42,6 +43,8 @@ enum SidebarNavigator: String, CaseIterable, Identifiable {
             return "link"
         case .cicd:
             return "gearshape.2.fill"
+        case .conflicts:
+            return "exclamationmark.triangle.fill"
         }
     }
 
@@ -65,6 +68,8 @@ enum SidebarNavigator: String, CaseIterable, Identifiable {
             return "Show Git Hooks"
         case .cicd:
             return "Show CI/CD Pipelines"
+        case .conflicts:
+            return "Show Conflict Detector"
         }
     }
 

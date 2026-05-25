@@ -25,21 +25,25 @@ struct WorkflowSettingsView: View {
                 .font(DesignTokens.Typography.caption)
                 .foregroundStyle(AppTheme.textSecondary)
 
-            ForEach(engine.workflows) { workflow in
-                GitWorkflowRow(
-                    workflow: workflow,
-                    onToggle: { enabled in
-                        var updated = workflow
-                        updated.isEnabled = enabled
-                        engine.updateWorkflow(updated)
-                    },
-                    onEdit: {
-                        selectedWorkflow = workflow
-                    },
-                    onDelete: {
-                        engine.deleteWorkflow(workflow)
+            ScrollView {
+                LazyVStack(spacing: DesignTokens.Spacing.sm) {
+                    ForEach(engine.workflows) { workflow in
+                        GitWorkflowRow(
+                            workflow: workflow,
+                            onToggle: { enabled in
+                                var updated = workflow
+                                updated.isEnabled = enabled
+                                engine.updateWorkflow(updated)
+                            },
+                            onEdit: {
+                                selectedWorkflow = workflow
+                            },
+                            onDelete: {
+                                engine.deleteWorkflow(workflow)
+                            }
+                        )
                     }
-                )
+                }
             }
         }
         .padding()
@@ -87,7 +91,7 @@ struct GitWorkflowRow: View {
         HStack(spacing: DesignTokens.Spacing.md) {
             Image(systemName: workflow.icon)
                 .font(.title3)
-                .foregroundStyle(Color(hex: workflow.color) ?? AppTheme.accent)
+                .foregroundStyle(Color(hex: workflow.color))
                 .frame(width: 30)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -155,8 +159,13 @@ struct GitWorkflowRow: View {
 struct WorkflowEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    @State var workflow: GitWorkflow
+    @State private var workflow: GitWorkflow
     let onSave: (GitWorkflow) -> Void
+
+    init(workflow: GitWorkflow, onSave: @escaping (GitWorkflow) -> Void) {
+        self._workflow = State(initialValue: workflow)
+        self.onSave = onSave
+    }
 
     @State private var showAddStep = false
 
@@ -231,7 +240,7 @@ struct WorkflowEditorSheet: View {
                     }
                 }
             }
-            .frame(maxHeight: 200)
+            Spacer(minLength: 0)
 
             HStack {
                 Button("Cancel") { dismiss() }
@@ -246,7 +255,7 @@ struct WorkflowEditorSheet: View {
             }
         }
         .padding()
-        .frame(width: 520, height: 500)
+        .frame(minWidth: 560, idealWidth: 640, minHeight: 500, idealHeight: 650)
         .sheet(isPresented: $showAddStep) {
             StepPickerSheet { step in
                 workflow.steps.append(step)

@@ -62,7 +62,7 @@ extension PanelHeader where Selector == EmptyView, Actions == EmptyView {
     init(
         title: String,
         icon: String,
-        iconColor: Color = AppTheme.textPrimary,
+        iconColor: Color = .primary,
         onClose: @escaping () -> Void
     ) {
         self.title = title
@@ -79,7 +79,7 @@ extension PanelHeader where Selector == EmptyView {
     init(
         title: String,
         icon: String,
-        iconColor: Color = AppTheme.textPrimary,
+        iconColor: Color = .primary,
         @ViewBuilder actions: @escaping () -> Actions,
         onClose: @escaping () -> Void
     ) {
@@ -97,7 +97,7 @@ extension PanelHeader where Actions == EmptyView {
     init(
         title: String,
         icon: String,
-        iconColor: Color = AppTheme.textPrimary,
+        iconColor: Color = .primary,
         @ViewBuilder selector: @escaping () -> Selector,
         onClose: @escaping () -> Void
     ) {

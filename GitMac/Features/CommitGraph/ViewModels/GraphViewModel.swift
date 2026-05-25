@@ -22,6 +22,8 @@ class GraphViewModel {
 
     var minimapNodes: [MinimapCommitNode] = []
     var totalCommitCount: Int = 0
+    var isShallowClone: Bool = false
+    var isDeepeningHistory: Bool = false
 
     private(set) var commitsBySHA: [String: Commit] = [:]
 
@@ -61,6 +63,23 @@ class GraphViewModel {
                 debugLog("getBranches done: \(loadedBranches.count) branches")
                 guard !Task.isCancelled else { debugLog("CANCELLED after branches"); isLoading = false; return }
 
+                let shallowCheck = await ShellExecutor.shared.execute(
+                    "git", arguments: ["rev-parse", "--is-shallow-repository"],
+                    workingDirectory: p
+                )
+                isShallowClone = shallowCheck.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == "true"
+
+                if isShallowClone {
+                    isDeepeningHistory = true
+                    let repoPath = p
+                    Task { @MainActor [weak self] in
+                        await ShellExecutor.shared.execute("git", arguments: ["fetch", "--deepen=500"], workingDirectory: repoPath)
+                        self?.isDeepeningHistory = false
+                        self?.isShallowClone = false
+                        self?.load(at: repoPath)
+                    }
+                }
+
                 debugLog("calling getCommitsV2...")
                 let loadedCommits = try await engine.getCommitsV2(at: p, limit: 100)
                 debugLog("getCommitsV2 done: \(loadedCommits.count) commits")
@@ -93,24 +112,24 @@ class GraphViewModel {
                 isLoading = false
                 debugLog("DONE: \(timelineItems.count) items, isLoading=false")
 
-                Task {
-                    let status = try? await engine.getStatus(at: p)
+                Task { [self] in
+                    let status = try? await self.engine.getStatus(at: p)
                     if let status, !Task.isCancelled {
-                        stagedCount = status.staged.count
-                        unstagedCount = status.unstaged.count + status.untracked.count
-                        hasUncommittedChanges = stagedCount > 0 || unstagedCount > 0
-                        buildTimeline()
+                        self.stagedCount = status.staged.count
+                        self.unstagedCount = status.unstaged.count + status.untracked.count
+                        self.hasUncommittedChanges = self.stagedCount > 0 || self.unstagedCount > 0
+                        self.buildTimeline()
                     }
-                    let stashes = try? await engine.getStashes(at: p)
+                    let stashes = try? await self.engine.getStashes(at: p)
                     if let stashes, !Task.isCancelled {
-                        stashNodes = stashes.map { StashNode(id: "stash-\($0.index)", stash: $0) }
-                        buildTimeline()
+                        self.stashNodes = stashes.map { StashNode(id: "stash-\($0.index)", stash: $0) }
+                        self.buildTimeline()
                     }
                     let emailResult = await ShellExecutor.shared.execute(
                         "git", arguments: ["config", "user.email"], workingDirectory: p
                     )
                     if emailResult.exitCode == 0 {
-                        currentUserEmail = emailResult.output.trimmingCharacters(in: .whitespacesAndNewlines)
+                        self.currentUserEmail = emailResult.output.trimmingCharacters(in: .whitespacesAndNewlines)
                     }
                 }
                 Task.detached(priority: .utility) { await self.loadMinimapData(at: p) }
@@ -251,7 +270,7 @@ class GraphViewModel {
 
     /// Load avatars by fetching commits from GitHub API, skipping already-cached emails
     private func loadAvatarsBySHA(owner: String, repo: String, token: String) async {
-        let uniqueEmails = Set(commits.map { $0.authorEmail.lowercased() })
+        _ = Set(commits.map { $0.authorEmail.lowercased() })
         var emailsToFetch: [String: String] = [:]
         for commit in commits {
             let email = commit.authorEmail.lowercased()

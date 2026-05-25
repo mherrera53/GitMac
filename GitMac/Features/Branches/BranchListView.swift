@@ -1178,7 +1178,7 @@ struct CreatePullRequestSheet: View {
                         } else {
                             // Selectable base branch from context menu
                             DSPicker(
-                                items: ["main", "master", "develop"],
+                                items: Array(Branch.mainBranchNames),
                                 selection: $baseBranch
                             )
                         }
@@ -1432,7 +1432,7 @@ struct CreatePullRequestSheet: View {
 
     private func detectDefaultBranch(at path: String) async -> String? {
         // Check common default branch names
-        for candidate in ["main", "master", "develop"] {
+        for candidate in Branch.mainBranchNames {
             let result = await ShellExecutor.shared.execute(
                 "git",
                 arguments: ["rev-parse", "--verify", candidate],
