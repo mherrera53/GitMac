@@ -71,14 +71,12 @@ class GraphViewModel {
 
                 if isShallowClone {
                     isDeepeningHistory = true
-                    Task.detached { [weak self] in
-                        let shell = await ShellExecutor.shared
-                        await shell.execute("git", arguments: ["fetch", "--deepen=500"], workingDirectory: p)
-                        await MainActor.run {
-                            self?.isDeepeningHistory = false
-                            self?.isShallowClone = false
-                            self?.load(at: p)
-                        }
+                    let repoPath = p
+                    Task { @MainActor [weak self] in
+                        await ShellExecutor.shared.execute("git", arguments: ["fetch", "--deepen=500"], workingDirectory: repoPath)
+                        self?.isDeepeningHistory = false
+                        self?.isShallowClone = false
+                        self?.load(at: repoPath)
                     }
                 }
 
