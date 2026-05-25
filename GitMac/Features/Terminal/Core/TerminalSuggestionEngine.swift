@@ -21,6 +21,8 @@ actor TerminalSuggestionEngine {
         for input: String,
         context: TerminalSuggestionContext
     ) async -> [String] {
+        guard !input.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
+
         // Try Ollama first (local, fast)
         if await AIService.shared.hasAPIKey(for: .ollama) {
             do {
@@ -29,19 +31,21 @@ actor TerminalSuggestionEngine {
                     return parseSuggestions(result, prefix: input)
                 }
             } catch {
-                Logger.debug("[SuggestionEngine] Ollama failed: \(error)")
+                // Ollama not running or model not ready -- fall through silently
             }
         }
 
         // Fallback to configured AI service
-        do {
-            let suggestions = try await AIService.shared.suggestTerminalCommands(
-                input: input,
-                repoPath: context.workingDirectory
-            )
-            return suggestions.map { $0.command }
-        } catch {
-            Logger.debug("[SuggestionEngine] Fallback AI failed: \(error)")
+        if await AIService.shared.isAvailable() {
+            do {
+                let suggestions = try await AIService.shared.suggestTerminalCommands(
+                    input: input,
+                    repoPath: context.workingDirectory
+                )
+                return suggestions.map { $0.command }
+            } catch {
+                // AI service error -- return empty, don't crash
+            }
         }
 
         return []
@@ -59,7 +63,7 @@ actor TerminalSuggestionEngine {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 3 // Fast timeout for inline suggestions
+        request.timeoutInterval = 8
 
         let prompt = buildPrompt(for: input, context: context)
         let model = await getOllamaModel()

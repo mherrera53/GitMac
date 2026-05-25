@@ -916,7 +916,16 @@ class TerminalViewModel: ObservableObject {
     }
 
     func stop() {
-        currentProcess?.terminate()
+        guard let process = currentProcess, process.isRunning else {
+            isRunning = false
+            return
+        }
+        process.interrupt()
+        DispatchQueue.global().asyncAfter(deadline: .now() + 2) { [weak process] in
+            if process?.isRunning == true {
+                process?.terminate()
+            }
+        }
         isRunning = false
     }
 

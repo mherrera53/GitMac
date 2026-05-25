@@ -25,21 +25,25 @@ struct WorkflowSettingsView: View {
                 .font(DesignTokens.Typography.caption)
                 .foregroundStyle(AppTheme.textSecondary)
 
-            ForEach(engine.workflows) { workflow in
-                GitWorkflowRow(
-                    workflow: workflow,
-                    onToggle: { enabled in
-                        var updated = workflow
-                        updated.isEnabled = enabled
-                        engine.updateWorkflow(updated)
-                    },
-                    onEdit: {
-                        selectedWorkflow = workflow
-                    },
-                    onDelete: {
-                        engine.deleteWorkflow(workflow)
+            ScrollView {
+                LazyVStack(spacing: DesignTokens.Spacing.sm) {
+                    ForEach(engine.workflows) { workflow in
+                        GitWorkflowRow(
+                            workflow: workflow,
+                            onToggle: { enabled in
+                                var updated = workflow
+                                updated.isEnabled = enabled
+                                engine.updateWorkflow(updated)
+                            },
+                            onEdit: {
+                                selectedWorkflow = workflow
+                            },
+                            onDelete: {
+                                engine.deleteWorkflow(workflow)
+                            }
+                        )
                     }
-                )
+                }
             }
         }
         .padding()
@@ -236,7 +240,7 @@ struct WorkflowEditorSheet: View {
                     }
                 }
             }
-            .frame(maxHeight: 200)
+            Spacer(minLength: 0)
 
             HStack {
                 Button("Cancel") { dismiss() }
@@ -251,7 +255,7 @@ struct WorkflowEditorSheet: View {
             }
         }
         .padding()
-        .frame(width: 520, height: 500)
+        .frame(minWidth: 560, idealWidth: 640, minHeight: 500, idealHeight: 650)
         .sheet(isPresented: $showAddStep) {
             StepPickerSheet { step in
                 workflow.steps.append(step)
