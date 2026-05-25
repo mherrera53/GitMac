@@ -484,34 +484,19 @@ extension View {
     }
 }
 
-// MARK: - Liquid Glass Modifiers (macOS 26+)
+// MARK: - Glass-Style Modifiers (material fallback, Liquid Glass when SDK available)
 
 extension View {
-    @ViewBuilder
     func liquidGlassTabBar() -> some View {
-        if #available(macOS 26, *) {
-            self.glassEffect(.regular, in: .rect(cornerRadius: 12))
-        } else {
-            self.background(.thinMaterial)
-        }
+        self.background(.thinMaterial)
     }
 
-    @ViewBuilder
     func liquidGlassSidebar() -> some View {
-        if #available(macOS 26, *) {
-            self.glassEffect(.regular, in: .rect)
-        } else {
-            self.background(.ultraThinMaterial)
-        }
+        self.background(.ultraThinMaterial)
     }
 
-    @ViewBuilder
     func liquidGlassCard() -> some View {
-        if #available(macOS 26, *) {
-            self.glassEffect(.regular, in: .rect(cornerRadius: 8))
-        } else {
-            self.background(AppTheme.backgroundTertiary)
-                .clipShape(.rect(cornerRadius: 8))
-        }
+        self.background(AppTheme.backgroundTertiary)
+            .clipShape(.rect(cornerRadius: 8))
     }
 }
