@@ -289,15 +289,32 @@ struct SidebarBranchRow: View {
     private func mergePR(_ pr: GitHubPullRequest, method: MergeMethod) async {
         do {
             try await prTracker.mergePR(pr, method: method)
-            // Refresh repository and branchManager after merge for immediate UI update
             try? await appState.gitService.refresh()
             await appState.branchManager?.refresh()
             await appState.refresh()
         } catch {
-            NotificationManager.shared.error(
-                "Merge failed",
-                detail: error.localizedDescription
-            )
+            let msg = error.localizedDescription.lowercased()
+            if msg.contains("not mergeable") || msg.contains("405") {
+                NotificationManager.shared.warning(
+                    "PR #\(pr.number) can't be merged yet",
+                    detail: "CI checks may still be running or reviews are pending. Wait for all checks to pass and try again."
+                )
+            } else if msg.contains("conflict") || msg.contains("409") {
+                NotificationManager.shared.error(
+                    "Merge conflicts detected",
+                    detail: "Resolve conflicts in the PR branch before merging."
+                )
+            } else if msg.contains("review") || msg.contains("approval") {
+                NotificationManager.shared.warning(
+                    "Reviews required",
+                    detail: "This PR needs approved reviews before it can be merged."
+                )
+            } else {
+                NotificationManager.shared.error(
+                    "Merge failed",
+                    detail: error.localizedDescription
+                )
+            }
         }
     }
 }
