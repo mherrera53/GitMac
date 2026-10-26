@@ -2,320 +2,198 @@ import Testing
 import Foundation
 @testable import GitMac
 
-// MARK: - Diff Engine Tests
+private final class DiffFixture: @unchecked Sendable {
+    let directory: URL
+    let file = "file ñ.txt"
+    init() throws {
+        directory = FileManager.default.temporaryDirectory.appendingPathComponent("gitmac-diff-\(UUID())")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+    }
+    deinit { try? FileManager.default.removeItem(at: directory) }
+    func write(_ text: String) throws { try text.write(to: directory.appendingPathComponent(file), atomically: true, encoding: .utf8) }
+    func git(_ arguments: [String]) async throws -> String {
+        let result = await ShellExecutor.shared.execute("git", arguments: arguments, workingDirectory: directory.path)
+        guard result.isSuccess else { throw GitError.commandFailed(arguments.joined(separator: " "), result.output) }
+        return result.stdout
+    }
+    func baseline(_ text: String) async throws {
+        _ = try await git(["init", "--quiet"])
+        try write(text)
+        _ = try await git(["add", "--", file])
+        _ = try await git(["commit", "--quiet", "-m", "Fixture"])
+    }
+    func hunks(_ engine: DiffEngine, options: DiffOptions = .default) async throws -> [StreamingDiffHunk] {
+        var hunks: [StreamingDiffHunk] = []
+        for try await hunk in engine.diff(file: file, at: directory.path, options: options) { hunks.append(hunk) }
+        return hunks
+    }
+}
 
-@Suite("DiffEngine Streaming Parser Tests")
+@Suite("Production DiffEngine and Git oracle")
 struct DiffEngineTests {
-    
-    @Test("Parse simple unified diff")
-    func testSimpleDiffParsing() async throws {
-        let sampleDiff = """
-        diff --git a/test.swift b/test.swift
-        index 1234567..abcdefg 100644
-        --- a/test.swift
-        +++ b/test.swift
-        @@ -1,5 +1,6 @@
-         import Foundation
-         
-        -let oldValue = 42
-        +let newValue = 100
-        +let extraLine = true
-         
-         print("done")
-        """
-        
-        let lines = sampleDiff.split(separator: "\n").map(String.init)
-        let lineStream = AsyncThrowingStream<String, Error> { continuation in
-            for line in lines {
-                continuation.yield(line)
-            }
-            continuation.finish()
-        }
-        
-        let parser = DiffStreamParser(options: .default)
-        var hunks: [DiffHunk] = []
-        
-        for await hunk in try await parser.parse(lineStream: lineStream) {
-            hunks.append(hunk)
-        }
-        
+    @Test func unifiedParsing() async throws {
+        let fixture = try DiffFixture()
+        try await fixture.baseline("one\nbefore\nlast\n")
+        try fixture.write("one\nafter\nextra\nlast\n")
+        let hunks = try await fixture.hunks(DiffEngine())
         #expect(hunks.count == 1)
-        
-        let hunk = hunks[0]
-        #expect(hunk.oldStart == 1)
-        #expect(hunk.oldLines == 5)
-        #expect(hunk.newStart == 1)
-        #expect(hunk.newLines == 6)
-        #expect(hunk.lines.count == 5)
-        
-        // Check line types
-        #expect(hunk.lines[0].type == .context)
-        #expect(hunk.lines[1].type == .context)
-        #expect(hunk.lines[2].type == .deletion)
-        #expect(hunk.lines[3].type == .addition)
-        #expect(hunk.lines[4].type == .addition)
+        let hunk = try #require(hunks.first)
+        #expect(hunk.oldStart == 1 && hunk.oldLines == 3 && hunk.newStart == 1 && hunk.newLines == 4)
+        #expect(hunk.lines?.map(\.type) == [.context, .deletion, .addition, .addition, .context])
     }
-    
-    @Test("Parse multiple hunks")
-    func testMultipleHunks() async throws {
-        let sampleDiff = """
-        diff --git a/test.swift b/test.swift
-        @@ -1,3 +1,3 @@
-         line 1
-        -line 2
-        +line 2 modified
-         line 3
-        @@ -10,3 +10,4 @@
-         line 10
-        +line 10.5
-         line 11
-         line 12
-        """
-        
-        let lines = sampleDiff.split(separator: "\n").map(String.init)
-        let lineStream = AsyncThrowingStream<String, Error> { continuation in
-            for line in lines {
-                continuation.yield(line)
-            }
-            continuation.finish()
-        }
-        
-        let parser = DiffStreamParser(options: .default)
-        var hunks: [DiffHunk] = []
-        
-        for await hunk in try await parser.parse(lineStream: lineStream) {
-            hunks.append(hunk)
-        }
-        
+    @Test func multipleHunks() async throws {
+        let fixture = try DiffFixture()
+        let before = (1...20).map { "line \($0)" }
+        try await fixture.baseline(before.joined(separator: "\n") + "\n")
+        var after = before
+        after[1] = "changed first"
+        after[18] = "changed last"
+        try fixture.write(after.joined(separator: "\n") + "\n")
+        var options = DiffOptions.default
+        options.contextLines = 1
+        let hunks = try await fixture.hunks(DiffEngine(), options: options)
         #expect(hunks.count == 2)
-        
-        let hunk1 = hunks[0]
-        #expect(hunk1.oldStart == 1)
-        #expect(hunk1.lines.count == 3)
-        
-        let hunk2 = hunks[1]
-        #expect(hunk2.oldStart == 10)
-        #expect(hunk2.lines.count == 4)
+        #expect(hunks.first?.oldStart == 1 && hunks.last?.oldStart == 18)
     }
-    
-    @Test("Handle UTF-8 multibyte characters")
-    func testUTF8Handling() async throws {
-        let sampleDiff = """
-        @@ -1,2 +1,2 @@
-        -Hola mundo 🌍
-        +Hola 世界 🚀
-         Final line
-        """
-        
-        let lines = sampleDiff.split(separator: "\n").map(String.init)
-        let lineStream = AsyncThrowingStream<String, Error> { continuation in
-            for line in lines {
-                continuation.yield(line)
-            }
-            continuation.finish()
-        }
-        
-        let parser = DiffStreamParser(options: .default)
-        var hunks: [DiffHunk] = []
-        
-        for await hunk in try await parser.parse(lineStream: lineStream) {
-            hunks.append(hunk)
-        }
-        
-        #expect(hunks.count == 1)
-        #expect(hunks[0].lines[0].content == "Hola mundo 🌍")
-        #expect(hunks[0].lines[1].content == "Hola 世界 🚀")
+    @Test func unicodeAndNoFinalNewline() async throws {
+        let fixture = try DiffFixture()
+        try await fixture.baseline("Hola 🌍")
+        try fixture.write("Hola 世界 🚀")
+        let hunks = try await fixture.hunks(DiffEngine())
+        let lines = try #require(hunks.first?.lines)
+        #expect(lines.contains { $0.content == "Hola 🌍" && $0.type == .deletion })
+        #expect(lines.contains { $0.content == "Hola 世界 🚀" && $0.type == .addition })
+        #expect(lines.contains { $0.content.contains("No newline") })
+    }
+    @Test func contentMustNotBeMistakenForFileHeaders() async throws {
+        let fixture = try DiffFixture()
+        try await fixture.baseline("-- before\n")
+        try fixture.write("++ after\n")
+        let hunks = try await fixture.hunks(DiffEngine())
+        #expect(hunks.first?.lines?.contains { $0.type == .deletion && $0.content == "-- before" } == true)
+        #expect(hunks.first?.lines?.contains { $0.type == .addition && $0.content == "++ after" } == true)
+    }
+    @Test func cacheInvalidatesAfterWorkingTreeChanges() async throws {
+        let fixture = try DiffFixture()
+        try await fixture.baseline("before\n")
+        let engine = DiffEngine()
+        try fixture.write("first\n")
+        _ = try await fixture.hunks(engine)
+        try fixture.write("second\n")
+        let hunks = try await fixture.hunks(engine)
+        #expect(hunks.first?.lines?.contains { $0.content == "second" && $0.type == .addition } == true)
+        #expect(hunks.first?.lines?.contains { $0.content == "first" } == false)
+    }
+    @Test func contextAndLargeFileModeAreNotStaleCacheKeys() async throws {
+        let fixture = try DiffFixture()
+        try await fixture.baseline("one\ntwo\nthree\n")
+        try fixture.write("one\nchanged\nthree\n")
+        let engine = DiffEngine()
+        _ = try await fixture.hunks(engine)
+        var narrow = DiffOptions.default
+        narrow.contextLines = 0
+        let hunks = try await fixture.hunks(engine, options: narrow)
+        #expect(hunks.first?.oldLines == 1 && hunks.first?.newLines == 1)
+        narrow.largeFileMode = .forceOn
+        let lazy = try await fixture.hunks(engine, options: narrow)
+        #expect(lazy.first?.lines == nil && lazy.first?.byteRange != nil)
+    }
+    @Test func lazyMaterialization() async throws {
+        let fixture = try DiffFixture()
+        try await fixture.baseline("before\n")
+        try fixture.write("after\n")
+        var options = DiffOptions.default
+        options.largeFileMode = .forceOn
+        let engine = DiffEngine()
+        let hunks = try await fixture.hunks(engine, options: options)
+        let raw = try await fixture.git(["diff", "--no-color", "--no-ext-diff", "--unified=3", "--no-renames", "--", fixture.file])
+        let lines = try await engine.materialize(hunk: #require(hunks.first), rawDiffData: Data(raw.utf8))
+        #expect(lines.map(\.content) == ["before", "after"])
+    }
+    @Test func preflightDoesNotHideProcessFailure() async throws {
+        let fixture = try DiffFixture()
+        do {
+            _ = try await DiffEngine().preflight(file: fixture.file, at: fixture.directory.path)
+            Issue.record("Non-repository preflight must fail")
+        } catch {}
+    }
+    @Test func invalidMaterializationRangeIsRejected() async throws {
+        let hunk = StreamingDiffHunk(header: "@@ -1 +1 @@", oldStart: 1, oldLines: 1, newStart: 1, newLines: 1, byteRange: 100..<200)
+        do {
+            _ = try await DiffEngine().materialize(hunk: hunk, rawDiffData: Data("tiny".utf8))
+            Issue.record("Invalid byte ranges must fail before indexing Data")
+        } catch { #expect(error is DiffEngineError) }
+    }
+    @Test func thresholdsUseActualProductionConfiguration() async throws {
+        let fixture = try DiffFixture()
+        try await fixture.baseline("one\n")
+        try fixture.write("one\ntwo\n")
+        var threshold = LargeFileModeConfig.default
+        threshold.fileSizeThreshold = 1
+        let stats = try await DiffEngine().preflight(file: fixture.file, at: fixture.directory.path, config: threshold)
+        #expect(stats.additions == 1 && stats.deletions == 0 && stats.isLargeFile)
+        #expect(stats.suggestedOptions.largeFileMode == .forceOn)
     }
 }
 
-// MARK: - Diff Cache Tests
-
-@Suite("DiffCache LRU Tests")
+@Suite("Production diff cache budgets")
 struct DiffCacheTests {
-    
-    @Test("Basic cache operations")
-    func testBasicCacheOperations() async throws {
-        let cache = DiffCache(maxBytes: 10_000, maxEntries: 10)
-        
-        let hunk = DiffHunk(
-            header: "@@ -1,1 +1,1 @@",
-            oldStart: 1,
-            oldLines: 1,
-            newStart: 1,
-            newLines: 1,
-            lines: [
-                DiffLine(type: .context, content: "test", oldLineNumber: 1, newLineNumber: 1)
-            ]
-        )
-        
-        let cached = CachedHunk(hunk: hunk, materializedLines: hunk.lines, fileKey: "test.swift")
-        
-        // Set
-        await cache.set("key1", hunk: cached)
-        
-        // Get (hit)
-        let retrieved = await cache.get("key1")
-        #expect(retrieved != nil)
-        #expect(retrieved?.hunk.header == hunk.header)
-        
-        // Stats
-        let stats = await cache.stats()
-        #expect(stats.hits == 1)
-        #expect(stats.misses == 0)
-        #expect(stats.entries == 1)
+    private func cached(_ content: String) -> CachedHunk {
+        let line = DiffLine(type: .context, content: content, oldLineNumber: 1, newLineNumber: 1)
+        let hunk = DiffHunk(header: "@@ -1 +1 @@", oldStart: 1, oldLines: 1, newStart: 1, newLines: 1, lines: [line])
+        return CachedHunk(hunk: hunk, materializedLines: [line], fileKey: "fixture")
     }
-    
-    @Test("LRU eviction by byte budget")
-    func testLRUEvictionByBytes() async throws {
+    @Test func hitAndMissStats() async {
+        let cache = DiffCache(maxBytes: 10000, maxEntries: 3)
+        await cache.set("one", hunk: cached("one"))
+        #expect(await cache.get("one") != nil)
+        #expect(await cache.get("missing") == nil)
+        let stats = await cache.stats()
+        #expect(stats.hits == 1 && stats.misses == 1 && stats.entries == 1)
+    }
+    @Test func leastRecentlyUsedIsEvicted() async {
+        let cache = DiffCache(maxBytes: 100000, maxEntries: 3)
+        for key in ["one", "two", "three"] { await cache.set(key, hunk: cached(key)) }
+        _ = await cache.get("one")
+        await cache.set("four", hunk: cached("four"))
+        #expect(await cache.get("two") == nil)
+        #expect(await cache.get("one") != nil)
+        #expect(await cache.get("three") != nil)
+    }
+    @Test func byteBudgetIsRespected() async {
         let cache = DiffCache(maxBytes: 1000, maxEntries: 100)
-        
-        // Add entries until we exceed budget
-        for i in 0..<10 {
-            let content = String(repeating: "x", count: 200)  // 200 bytes each
-            let hunk = DiffHunk(
-                header: "@@ -1,1 +1,1 @@",
-                oldStart: 1,
-                oldLines: 1,
-                newStart: 1,
-                newLines: 1,
-                lines: [
-                    DiffLine(type: .context, content: content, oldLineNumber: 1, newLineNumber: 1)
-                ]
-            )
-            let cached = CachedHunk(hunk: hunk, materializedLines: hunk.lines, fileKey: "test.swift")
-            await cache.set("key\(i)", hunk: cached)
-        }
-        
+        for index in 0..<10 { await cache.set(String(index), hunk: cached(String(repeating: "x", count: 200))) }
         let stats = await cache.stats()
-        
-        // Should have evicted some entries to stay under budget
-        #expect(stats.entries < 10)
-        #expect(stats.evictions > 0)
-        #expect(stats.totalBytes <= 1000)
+        #expect(stats.totalBytes <= 1000 && stats.evictions > 0)
     }
-    
-    @Test("LRU ordering")
-    func testLRUOrdering() async throws {
-        let cache = DiffCache(maxBytes: 500, maxEntries: 3)
-        
-        // Add 3 entries
-        for i in 1...3 {
-            let hunk = DiffHunk(
-                header: "@@ -\(i),1 +\(i),1 @@",
-                oldStart: i,
-                oldLines: 1,
-                newStart: i,
-                newLines: 1,
-                lines: [
-                    DiffLine(type: .context, content: String(repeating: "x", count: 100), oldLineNumber: i, newLineNumber: i)
-                ]
-            )
-            let cached = CachedHunk(hunk: hunk, materializedLines: hunk.lines, fileKey: "test.swift")
-            await cache.set("key\(i)", hunk: cached)
-        }
-        
-        // Access key1 (make it most recently used)
-        _ = await cache.get("key1")
-        
-        // Add key4 (should evict key2, the LRU)
-        let hunk4 = DiffHunk(
-            header: "@@ -4,1 +4,1 @@",
-            oldStart: 4,
-            oldLines: 1,
-            newStart: 4,
-            newLines: 1,
-            lines: [
-                DiffLine(type: .context, content: String(repeating: "x", count: 100), oldLineNumber: 4, newLineNumber: 4)
-            ]
-        )
-        let cached4 = CachedHunk(hunk: hunk4, materializedLines: hunk4.lines, fileKey: "test.swift")
-        await cache.set("key4", hunk: cached4)
-        
-        // key2 should be evicted
-        let key2 = await cache.get("key2")
-        #expect(key2 == nil)
-        
-        // key1 and key3 should still exist
-        let key1 = await cache.get("key1")
-        let key3 = await cache.get("key3")
-        #expect(key1 != nil)
-        #expect(key3 != nil)
+    @Test func coreCacheRejectsOversizedEntry() {
+        let cache = LRUDiffCache<String, String>(maxCostBytes: 10)
+        cache.set(key: "valid", value: "valid", cost: 4)
+        cache.set(key: "oversized", value: "large", cost: 100)
+        #expect(cache.stats().bytesUsed <= 10)
+        #expect(cache.get(key: "valid") == "valid")
+        #expect(cache.get(key: "oversized") == nil)
+    }
+    @Test func zeroCostEntriesStillConsumeBudget() {
+        let cache = LRUDiffCache<String, String>(maxCostBytes: 50)
+        for index in 0..<5000 { cache.set(key: String(index), value: "", cost: 0) }
+        #expect(cache.stats().entries <= 50 && cache.stats().bytesUsed <= 50)
     }
 }
 
-// MARK: - Diff Options Tests
-
-@Suite("DiffOptions and LFM Tests")
+@Suite("Production diff preferences")
 struct DiffOptionsTests {
-    
-    @Test("LFM threshold detection")
-    func testLFMThresholds() throws {
-        let thresholds = LFMThresholds.default
-        
-        // Should NOT activate for small file
-        let smallStats = DiffPreflightStats(
-            additions: 100,
-            deletions: 50,
-            patchSizeBytes: 10_000,
-            estimatedLines: 150,
-            maxLineLength: 100,
-            hunkCount: 5
-        )
-        #expect(!thresholds.shouldActivateLFM(stats: smallStats))
-        
-        // SHOULD activate for large file (by lines)
-        let largeByLines = DiffPreflightStats(
-            additions: 30_000,
-            deletions: 25_000,
-            patchSizeBytes: 1_000_000,
-            estimatedLines: 55_000,
-            maxLineLength: 100,
-            hunkCount: 100
-        )
-        #expect(thresholds.shouldActivateLFM(stats: largeByLines))
-        
-        // SHOULD activate for long lines
-        let longLines = DiffPreflightStats(
-            additions: 100,
-            deletions: 50,
-            patchSizeBytes: 100_000,
-            estimatedLines: 150,
-            maxLineLength: 3_000,
-            hunkCount: 5
-        )
-        #expect(thresholds.shouldActivateLFM(stats: longLines))
-        
-        // SHOULD activate for many hunks
-        let manyHunks = DiffPreflightStats(
-            additions: 500,
-            deletions: 500,
-            patchSizeBytes: 100_000,
-            estimatedLines: 1_000,
-            maxLineLength: 100,
-            hunkCount: 1_500
-        )
-        #expect(thresholds.shouldActivateLFM(stats: manyHunks))
-    }
-    
-    @Test("Diff preferences persistence")
-    func testDiffPreferencesPersistence() throws {
-        let defaults = UserDefaults.standard
-        
-        // Set custom preferences
-        var prefs = DiffPreferences.default
-        prefs.defaultContextLines = 5
-        prefs.enableWordDiffOnDemand = false
-        prefs.setLfmOverride(for: "large.txt", enabled: true)
-        
-        defaults.diffPreferences = prefs
-        
-        // Retrieve
-        let retrieved = defaults.diffPreferences
-        #expect(retrieved.defaultContextLines == 5)
-        #expect(retrieved.enableWordDiffOnDemand == false)
-        #expect(retrieved.lfmOverride(for: "large.txt") == true)
-        
-        // Clean up
-        defaults.removeObject(forKey: "com.gitmac.diffPreferences")
+    @Test func isolatedPreferencesRoundTrip() throws {
+        let name = "gitmac-tests-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        var preferences = DiffPreferences.default
+        preferences.defaultContextLines = 5
+        preferences.enableWordDiffOnDemand = false
+        preferences.setLfmOverride(for: "large.txt", enabled: true)
+        defaults.diffPreferences = preferences
+        #expect(defaults.diffPreferences.defaultContextLines == 5)
+        #expect(defaults.diffPreferences.enableWordDiffOnDemand == false)
+        #expect(defaults.diffPreferences.lfmOverride(for: "large.txt") == true)
     }
 }

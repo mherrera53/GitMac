@@ -175,6 +175,62 @@ enum DesignTokens {
             static let minHeight: CGFloat = 380
         }
 
+        /// Geometry is expressed in logical points, never backing pixels.
+        enum Responsive {
+            static let compactToolbarWidth: CGFloat = 1120
+            static let inspectorWidth: CGFloat = 1040
+            static let sidebarWidth: CGFloat = 760
+
+            struct Panels: Equatable {
+                var sidebarVisible = true
+                var inspectorVisible = true
+                var sidebarCollapsedForSpace = false
+                var inspectorCollapsedForSpace = false
+
+                func fitting(width: CGFloat) -> Self {
+                    guard width.isFinite, width > 0 else { return self }
+                    var result = self
+                    if width < Responsive.inspectorWidth {
+                        if result.inspectorVisible { result.inspectorCollapsedForSpace = true; result.inspectorVisible = false }
+                    } else if result.inspectorCollapsedForSpace {
+                        result.inspectorCollapsedForSpace = false
+                        result.inspectorVisible = true
+                    }
+                    if width < Responsive.sidebarWidth {
+                        if result.sidebarVisible { result.sidebarCollapsedForSpace = true; result.sidebarVisible = false }
+                    } else if result.sidebarCollapsedForSpace {
+                        result.sidebarCollapsedForSpace = false
+                        result.sidebarVisible = true
+                    }
+                    return result
+                }
+            }
+
+            static func bottomPanelLimit(availableHeight: CGFloat) -> CGFloat {
+                guard availableHeight.isFinite, availableHeight > 0 else { return 0 }
+                return max(0, min(BottomPanel.maxHeight, availableHeight * 0.45, availableHeight - 180))
+            }
+
+            static func bottomPanelHeight(preferred: CGFloat, maximum: CGFloat) -> CGFloat {
+                let limit = maximum.isFinite ? max(0, maximum) : BottomPanel.maxHeight
+                let requested = preferred.isFinite ? preferred : BottomPanel.defaultHeight
+                return min(limit, max(min(BottomPanel.minHeight, limit), requested))
+            }
+
+            static func windowFrame(_ frame: CGRect, fitting visibleFrame: CGRect) -> CGRect {
+                guard visibleFrame.width.isFinite, visibleFrame.height.isFinite,
+                      visibleFrame.minX.isFinite, visibleFrame.minY.isFinite,
+                      visibleFrame.width > 0, visibleFrame.height > 0 else { return frame }
+                let width = min(visibleFrame.width, max(1, frame.width.isFinite ? frame.width : visibleFrame.width))
+                let height = min(visibleFrame.height, max(1, frame.height.isFinite ? frame.height : visibleFrame.height))
+                let x = frame.minX.isFinite ? frame.minX : visibleFrame.minX
+                let y = frame.minY.isFinite ? frame.minY : visibleFrame.minY
+                return CGRect(x: min(max(x, visibleFrame.minX), visibleFrame.maxX - width),
+                              y: min(max(y, visibleFrame.minY), visibleFrame.maxY - height),
+                              width: width, height: height)
+            }
+        }
+
         /// CI/CD Panel metrics
         enum CICDPanel {
             static let width: CGFloat = 900

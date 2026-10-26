@@ -1,0 +1,15 @@
+[
+  {
+    "id": "ram-parent-slices-review",
+    "role": "reviewer",
+    "readFiles": [
+      "GitMac/Features/CommitGraph/Models/GraphNode.swift",
+      "GitMac/Features/CommitGraph/ViewModels/GraphViewModel.swift",
+      "scripts/test-minimap-allocation.mjs",
+      "Tests/GitMacTests/MinimapLayoutTests.swift",
+      "docs/roadmap/2026-10-20/implementation/experiments/minimap-allocation/GraphNode.before.swift"
+    ],
+    "writeFiles": [],
+    "instruction": "Review the MinimapLayout.build memory change for exact behavior vs Previous source (GraphNode.before.swift). 130 differential checks pass. Identify at most THREE concrete bugs or test gaps; no edits or test execution claims. New implementation retains a parent slice per unique row, owned String SHA dictionary, integer lane array and missing-parent dictionary; scans newline Characters without retaining split lines. It must preserve exact String Character whitespace/newline behavior, duplicate first-row wins, known/unknown first parents, missing later parents, lane reuse, merges, parent order and full identity. Heap of original product had 199999 Array<Int> objects and 100k nodes; this change only reduces transient metadata, not edge arrays. No memory improvement is approved until full Release measurement with same fixture readiness. Do not demand validation of SHA length as a new contract: production receives git log but compatibility tests accept arbitrary token strings. Do not conflate samples <=4096 with truncating identity. Cite function and reproducible input for alleged mismatches."
+  }
+]

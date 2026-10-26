@@ -16,6 +16,9 @@ struct ConflictPreventionView: View {
         VStack(spacing: 0) {
             // Header
             headerView
+            Text("This local estimate is advisory. Git may still report conflicts when integrating changes.")
+                .font(.caption).foregroundStyle(AppTheme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12).padding(.vertical, 8)
 
             if isExpanded {
                 // Branch Selection
@@ -35,7 +38,7 @@ struct ConflictPreventionView: View {
                 }
             }
         }
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(AppTheme.backgroundSecondary)
         .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.lg))
         .task {
             await loadBranches()
@@ -63,7 +66,7 @@ struct ConflictPreventionView: View {
                 .font(DesignTokens.Typography.callout)
                 .foregroundStyle(AppTheme.warning)
 
-            Text("CONFLICT PREVENTION")
+            Text("POTENTIAL OVERLAPS")
                 .font(DesignTokens.Typography.caption)
                 .fontWeight(.semibold)
                 .foregroundStyle(AppTheme.textPrimary)
@@ -116,7 +119,7 @@ struct ConflictPreventionView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(DesignTokens.Typography.caption2)
                     .foregroundStyle(AppTheme.success)
-                Text("Safe")
+                Text("No overlap")
                     .font(DesignTokens.Typography.caption2)
                     .fontWeight(.semibold)
             }
@@ -138,7 +141,7 @@ struct ConflictPreventionView: View {
                     .font(DesignTokens.Typography.caption2)
                     .foregroundStyle(AppTheme.textPrimary)
 
-                Picker("", selection: $selectedSourceBranch) {
+                Picker("Source branch", selection: $selectedSourceBranch) {
                     ForEach(viewModel.branches, id: \.self) { branch in
                         Text(branch).tag(branch)
                     }
@@ -157,7 +160,7 @@ struct ConflictPreventionView: View {
                     .font(DesignTokens.Typography.caption2)
                     .foregroundStyle(AppTheme.textPrimary)
 
-                Picker("", selection: $selectedTargetBranch) {
+                Picker("Target branch", selection: $selectedTargetBranch) {
                     ForEach(viewModel.branches, id: \.self) { branch in
                         Text(branch).tag(branch)
                     }
@@ -172,7 +175,8 @@ struct ConflictPreventionView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
-            .disabled(selectedSourceBranch.isEmpty || selectedTargetBranch.isEmpty || viewModel.isAnalyzing)
+            .disabled(selectedSourceBranch.isEmpty || selectedTargetBranch.isEmpty || selectedSourceBranch == selectedTargetBranch || viewModel.isAnalyzing)
+            .help("Choose two different branches to estimate potential overlaps")
         }
         .padding(DesignTokens.Spacing.md)
     }
@@ -268,9 +272,9 @@ struct ConflictPreventionView: View {
                 .font(DesignTokens.Typography.callout)
                 .foregroundStyle(AppTheme.textPrimary)
 
-            Text("Detect potential merge conflicts before they happen")
+            Text("Estimate overlapping changes between local revisions")
                 .font(DesignTokens.Typography.caption)
-                .foregroundStyle(.secondary.opacity(0.7))
+                .foregroundStyle(AppTheme.textPrimary)
         }
         .frame(maxWidth: .infinity)
         .padding(DesignTokens.Spacing.xl)
@@ -447,7 +451,7 @@ struct ConflictRowView: View {
 
             Divider()
         }
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(AppTheme.backgroundSecondary)
     }
 
     private var severityColor: Color {

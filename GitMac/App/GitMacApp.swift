@@ -61,14 +61,21 @@ class OllamaProcessManager: ObservableObject {
 
 @main
 struct GitMacApp: App {
-    @State private var appState = AppState()
+    @State private var appState: AppState
     @StateObject private var recentReposManager = RecentRepositoriesManager.shared
     @State private var themeManager = ThemeManager.shared
-    @StateObject private var ollamaManager = OllamaProcessManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        let fixtureMode = CommandLine.arguments.contains("--performance-fixture")
+        let preferences = fixtureMode
+            ? UserDefaults(suiteName: "com.gitmac.performance.\(UUID().uuidString)")!
+            : UserDefaults.standard
+        _appState = State(initialValue: AppState(sessionPreferences: preferences))
         URLCache.shared = URLCache(memoryCapacity: 10 * 1024 * 1024, diskCapacity: 0, diskPath: nil)
+        // Fixture runs must not preload real credentials, restore user projects,
+        // start background maintenance/fetch or contact subscription services.
+        if fixtureMode { return }
 
         // Initialize subscription service early so transaction listener is active
         _ = SubscriptionService.shared
@@ -136,8 +143,6 @@ struct GitMacApp: App {
                 .task {
                     // Restore previous session on launch
                     await appState.restoreSession()
-                    // Start Ollama if configured as default provider
-                    await ollamaManager.startIfNeeded()
                 }
                 .onAppear {
                     configureWindow()
@@ -154,11 +159,6 @@ struct GitMacApp: App {
             if newPhase == .background || newPhase == .inactive {
                 // Save session when app goes to background or becomes inactive
                 appState.saveSession()
-            } else if newPhase == .active {
-                // Check Ollama status when app becomes active
-                Task {
-                    await ollamaManager.startIfNeeded()
-                }
             }
         }
 
@@ -167,6 +167,8 @@ struct GitMacApp: App {
                 .environment(appState)
                 .environment(themeManager)
         }
+        .defaultSize(SettingsWindowMetrics.preferred)
+        .windowResizability(.contentMinSize)
     }
 }
 
@@ -243,9 +245,12 @@ class AppState {
     // ObservableObject → @Observable so views re-render on branch updates.
     var branchRefreshID: Int = 0
     @ObservationIgnored private var _branchManagerSub: AnyCancellable?
+    @ObservationIgnored private var refreshGenerations: [UUID: UUID] = [:]
+    @ObservationIgnored private var openGeneration = UUID()
 
     private func _refreshActiveTab() {
         activeTab = openTabs.first { $0.id == activeTabId }
+        gitService.activateRepository(activeTab?.repository)
         selectedCommit = activeTab?.selectedCommit
         selectedBranch = activeTab?.selectedBranch
         selectedStash = activeTab?.selectedStash
@@ -296,6 +301,11 @@ class AppState {
     let gitService = GitService()
     let gitHubService = GitHubService()
     let aiService = AIService()
+    private let sessionPreferences: UserDefaults
+
+    init(sessionPreferences: UserDefaults = .standard) {
+        self.sessionPreferences = sessionPreferences
+    }
 
     private let openReposKey = "openRepositoryPaths"
     private let activeRepoKey = "activeRepositoryPath"
@@ -305,53 +315,59 @@ class AppState {
     /// Save current session (open tabs and active tab)
     func saveSession() {
         let paths = openTabs.map { $0.repository.path }
-        UserDefaults.standard.set(paths, forKey: openReposKey)
+        sessionPreferences.set(paths, forKey: openReposKey)
 
         if let activePath = activeTab?.repository.path {
-            UserDefaults.standard.set(activePath, forKey: activeRepoKey)
+            sessionPreferences.set(activePath, forKey: activeRepoKey)
+        } else {
+            sessionPreferences.removeObject(forKey: activeRepoKey)
         }
     }
 
     /// Restore previous session
-    func restoreSession() async {
-        // Check if running in demo mode (UI tests pass this as launch argument)
-        // Launch arguments format: ["-demo-mode", "true"] -> check if array contains "-demo-mode"
-        let args = CommandLine.arguments
-        let isDemoMode = args.contains("-demo-mode")
-
-        if isDemoMode {
-            // Open demo repository instead of restoring session
-            let demoRepoPath = "/Users/mario/gitmac-demo-repo"
-            if FileManager.default.fileExists(atPath: demoRepoPath) {
-                do {
-                    let repo = try await gitService.openRepository(at: demoRepoPath)
-                    let newTab = RepositoryTab(repository: repo)
-                    openTabs.append(newTab)
-                    activeTabId = newTab.id
-                    // Force write to file since NSLog might not show up
-                    try? "Demo mode activated".write(toFile: "/tmp/gitmac-demo-mode.txt", atomically: true, encoding: .utf8)
-                    return
-                } catch {
-                    try? "Demo mode failed: \(error)".write(toFile: "/tmp/gitmac-demo-mode.txt", atomically: true, encoding: .utf8)
-                }
-            } else {
-                try? "Demo repo not found".write(toFile: "/tmp/gitmac-demo-mode.txt", atomically: true, encoding: .utf8)
+    func restoreSession(arguments args: [String] = CommandLine.arguments) async {
+        let request = openGeneration
+        let fixtureFlag = args.contains("--performance-fixture") ? "--performance-fixture" : "-fixture-repository"
+        if args.contains("--performance-fixture") || args.contains("-demo-mode") {
+            guard let index = args.firstIndex(of: fixtureFlag), index + 1 < args.count,
+                  args[index + 1].hasPrefix("/"),
+                  FileManager.default.fileExists(atPath: args[index + 1]) else {
+                errorMessage = "An explicit absolute fixture repository is required. User sessions were not restored."
+                return
             }
-        }
-
-        // Normal session restore
-        guard let paths = UserDefaults.standard.stringArray(forKey: openReposKey), !paths.isEmpty else {
+            do {
+                let repo = try await gitService.readRepository(at: args[index + 1])
+                guard !Task.isCancelled, openGeneration == request else { return }
+                let tab = RepositoryTab(repository: repo)
+                openTabs.append(tab)
+                activeTabId = tab.id
+                PerformanceProbe.record("repository-loaded", counts: ["branches": repo.branches.count])
+                await tab.configureBranchManager()
+                guard !Task.isCancelled, openGeneration == request,
+                      openTabs.contains(where: { $0.id == tab.id }) else { return }
+                PerformanceProbe.record("branches-loaded", counts: ["local": tab.branchManager.localBranches.count,
+                                                                   "remote": tab.branchManager.remoteBranches.count])
+            } catch {
+                errorMessage = "Fixture could not be opened. User sessions were not restored: \(error.localizedDescription)"
+            }
             return
         }
 
-        let activePath = UserDefaults.standard.string(forKey: activeRepoKey)
+        // Normal session restore
+        guard let paths = sessionPreferences.stringArray(forKey: openReposKey), !paths.isEmpty else {
+            return
+        }
+
+        let activePath = sessionPreferences.string(forKey: activeRepoKey)
 
         for path in paths {
             // Verify path exists
             guard FileManager.default.fileExists(atPath: path) else { continue }
 
             do {
-                let repo = try await gitService.openRepository(at: path)
+                let repo = try await gitService.readRepository(at: path)
+                guard !Task.isCancelled, openGeneration == request else { return }
+                if openTabs.contains(where: { $0.repository.path == repo.path }) { continue }
                 let newTab = RepositoryTab(repository: repo)
                 openTabs.append(newTab)
 
@@ -372,17 +388,22 @@ class AppState {
         Logger.debug("🔧 Configuring \(openTabs.count) tabs...")
         // Configure branch manager for each tab
         for tab in openTabs {
+            guard !Task.isCancelled, openGeneration == request else { return }
             await tab.configureBranchManager()
         }
         Logger.debug("[OK] All tabs configured")
     }
 
     func openRepository(at path: String) async {
+        let request = UUID()
+        openGeneration = request
         isLoading = true
         errorMessage = nil
+        defer { if openGeneration == request { isLoading = false } }
 
         do {
-            let repo = try await gitService.openRepository(at: path)
+            let repo = try await gitService.readRepository(at: path)
+            guard !Task.isCancelled, openGeneration == request else { return }
 
             // Check if already open
             if let existingTab = openTabs.first(where: { $0.repository.path == repo.path }) {
@@ -397,11 +418,13 @@ class AppState {
             }
 
             // Save to recent repositories
+            guard !Task.isCancelled, openGeneration == request else { return }
             RecentRepositoriesManager.shared.addRecent(path: repo.path, name: repo.name)
 
             // Auto-save session
             saveSession()
         } catch {
+            guard !Task.isCancelled, openGeneration == request else { return }
             errorMessage = "Error opening repository: \(error.localizedDescription)"
         }
 
@@ -409,16 +432,25 @@ class AppState {
     }
 
     func refresh() async {
-        guard let path = currentRepository?.path else { return }
+        guard let target = activeTab else { return }
+        let id = target.id
+        let path = target.repository.path
+        let request = UUID()
+        refreshGenerations[id] = request
+        defer { if refreshGenerations[id] == request { refreshGenerations.removeValue(forKey: id) } }
         do {
-            let repo = try await gitService.openRepository(at: path)
-            if let index = openTabs.firstIndex(where: { $0.id == activeTabId }) {
-                let tab = openTabs[index]
-                tab.repository = repo
-            }
-            await branchManager?.refresh()
+            let repo = try await gitService.readRepository(at: path)
+            guard !Task.isCancelled, refreshGenerations[id] == request,
+                  let tab = openTabs.first(where: { $0.id == id && $0.repository.path == path }) else { return }
+            tab.repository = repo
+            if activeTabId == id { gitService.activateRepository(repo) }
+            await tab.branchManager.refresh()
+            guard !Task.isCancelled, refreshGenerations[id] == request,
+                  openTabs.contains(where: { $0.id == id }) else { return }
             NotificationCenter.default.post(name: .repositoryDidRefresh, object: path)
         } catch {
+            guard !Task.isCancelled, refreshGenerations[id] == request,
+                  activeTabId == id, openTabs.contains(where: { $0.id == id }) else { return }
             errorMessage = "Error refreshing: \(error.localizedDescription)"
         }
     }
@@ -441,6 +473,9 @@ class AppState {
     }
 
     func closeTab(_ tabId: UUID) {
+        refreshGenerations.removeValue(forKey: tabId)
+        backStack.removeAll { $0 == tabId }
+        forwardStack.removeAll { $0 == tabId }
         openTabs.removeAll { $0.id == tabId }
 
         // If we closed the active tab, activate another one
@@ -470,10 +505,15 @@ class AppState {
     }
 
     func selectTab(_ tabId: UUID, fromNavigation: Bool = false) {
+        guard openTabs.contains(where: { $0.id == tabId }) else { return }
+        openGeneration = UUID()
+        isLoading = false
+        if activeTabId != tabId { clearComparison() }
         Logger.debug("👆 selectTab() called - tabId: \(tabId)")
         
         if !fromNavigation, let current = activeTabId, current != tabId {
             backStack.append(current)
+            backStack = Array(backStack.suffix(100))
             forwardStack.removeAll()
         }
         

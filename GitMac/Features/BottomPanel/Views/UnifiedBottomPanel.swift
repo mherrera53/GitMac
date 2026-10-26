@@ -10,15 +10,20 @@ import SwiftUI
 struct UnifiedBottomPanel: View {
     @Bindable var panelManager: BottomPanelManager
     @Environment(AppState.self) var appState
+    var maximumHeight: CGFloat = DesignTokens.Layout.BottomPanel.maxHeight
+
+    private var displayedHeight: CGFloat {
+        DesignTokens.Layout.Responsive.bottomPanelHeight(preferred: panelManager.panelHeight, maximum: maximumHeight)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             // Resizer handle at the top (only when expanded)
             if panelManager.isPanelVisible {
                 UniversalResizer(
-                    dimension: $panelManager.panelHeight,
-                    minDimension: 100,
-                    maxDimension: 600,
+                    dimension: Binding(get: { displayedHeight }, set: { panelManager.panelHeight = $0 }),
+                    minDimension: min(DesignTokens.Layout.BottomPanel.minHeight, maximumHeight),
+                    maxDimension: maximumHeight,
                     orientation: .vertical
                 )
             }
@@ -49,7 +54,7 @@ struct UnifiedBottomPanel: View {
                 }
             }
         }
-        .frame(height: panelManager.isPanelVisible ? panelManager.panelHeight : 28)
+        .frame(height: panelManager.isPanelVisible ? displayedHeight : 28)
         .background(AppTheme.panel)
         .onChange(of: panelManager.panelHeight) { _, newHeight in
             // Auto-save height changes

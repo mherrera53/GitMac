@@ -427,98 +427,30 @@ final class GitEngine: @unchecked Sendable {
 
     /// Get repository status
     func getStatus(at path: String) async throws -> RepositoryStatus {
-        // Get status and diff stats in parallel
-        async let statusResult = shellExecutor.execute(
-            "git",
-            arguments: ["status", "--porcelain=v1", "-uall"],
-            workingDirectory: path
-        )
-        async let unstagedStats = shellExecutor.execute(
-            "git",
-            arguments: ["diff", "--numstat"],
-            workingDirectory: path
-        )
-        async let stagedStats = shellExecutor.execute(
-            "git",
-            arguments: ["diff", "--cached", "--numstat"],
-            workingDirectory: path
-        )
-
-        let result = await statusResult
-        guard result.exitCode == 0 else {
-            throw GitError.commandFailed("git status", result.stderr)
-        }
-
-        // Parse diff stats into dictionaries
-        let unstagedOutput = await unstagedStats.stdout
-        let stagedOutput = await stagedStats.stdout
-        let unstagedDiffStats = parseDiffStats(unstagedOutput)
-        let stagedDiffStats = parseDiffStats(stagedOutput)
-
-        var status = RepositoryStatus()
-
-        for line in result.stdout.components(separatedBy: .newlines) where !line.isEmpty {
-            guard line.count >= 3 else { continue }
-
-            let index = line.index(line.startIndex, offsetBy: 0)
-            let worktree = line.index(line.startIndex, offsetBy: 1)
-            var filePath = String(line.dropFirst(3))
-
-            let indexStatus = String(line[index])
-            let worktreeStatus = String(line[worktree])
-
-            // Handle renames: "R  old_path -> new_path" - use new_path
-            if filePath.contains(" -> ") {
-                let parts = filePath.components(separatedBy: " -> ")
-                if parts.count == 2 {
-                    filePath = parts[1]  // Use the new (destination) path
-                }
-            }
-
-            // Handle staged changes
-            if indexStatus != " " && indexStatus != "?" {
-                if let statusType = FileStatusType(rawValue: indexStatus) {
-                    let stats = stagedDiffStats[filePath] ?? (0, 0)
-                    status.staged.append(FileStatus(path: filePath, status: statusType, additions: stats.0, deletions: stats.1))
-                }
-            }
-
-            // Handle unstaged changes
-            if worktreeStatus != " " && worktreeStatus != "?" {
-                if let statusType = FileStatusType(rawValue: worktreeStatus) {
-                    let stats = unstagedDiffStats[filePath] ?? (0, 0)
-                    status.unstaged.append(FileStatus(path: filePath, status: statusType, additions: stats.0, deletions: stats.1))
-                }
-            }
-
-            // Handle untracked files
-            if indexStatus == "?" && worktreeStatus == "?" {
-                status.untracked.append(filePath)
-            }
-
-            // Handle conflicts (U = unmerged, AA = both added, DD = both deleted)
-            if indexStatus == "U" || worktreeStatus == "U"
-                || (indexStatus == "A" && worktreeStatus == "A")
-                || (indexStatus == "D" && worktreeStatus == "D") {
-                status.conflicted.append(FileStatus(path: filePath, status: .unmerged))
-            }
-        }
-
-        return status
+        try await getStatusV2(at: path)
     }
 
-    /// Parse git diff --numstat output into a dictionary of [path: (additions, deletions)]
+    /// Parse --numstat -z: regular records contain tabs; renames have two
+    /// additional NUL-delimited paths. Never split filenames by tabs/newlines.
     private func parseDiffStats(_ output: String) -> [String: (Int, Int)] {
         var stats: [String: (Int, Int)] = [:]
 
-        for line in output.components(separatedBy: .newlines) where !line.isEmpty {
-            let parts = line.split(separator: "\t", omittingEmptySubsequences: false)
-            guard parts.count >= 3 else { continue }
+        let records = output.split(separator: "\0", omittingEmptySubsequences: false)
+        var index = 0
+        while index < records.count {
+            let parts = records[index].split(separator: "\t", maxSplits: 2, omittingEmptySubsequences: false)
+            index += 1
+            guard parts.count == 3 else { continue }
 
             // Binary files show "-" for additions/deletions
             let additions = Int(parts[0]) ?? 0
             let deletions = Int(parts[1]) ?? 0
-            let filePath = String(parts[2])
+            var filePath = String(parts[2])
+            if filePath.isEmpty {
+                guard index + 1 < records.count else { break }
+                filePath = String(records[index + 1])
+                index += 2
+            }
 
             stats[filePath] = (additions, deletions)
         }
@@ -553,7 +485,8 @@ final class GitEngine: @unchecked Sendable {
 
     /// Unstage files
     func unstage(files: [String], at path: String) async throws {
-        var args = ["reset", "HEAD", "--"]
+        // Omit explicit HEAD: Git uses the empty tree on an unborn branch.
+        var args = ["reset", "--"]
         args.append(contentsOf: files)
 
         let result = await shellExecutor.execute("git", arguments: args, workingDirectory: path)
@@ -1361,7 +1294,7 @@ final class GitEngine: @unchecked Sendable {
     func listWorktrees(at path: String) async throws -> [Worktree] {
         let result = await shellExecutor.execute(
             "git",
-            arguments: ["worktree", "list", "--porcelain"],
+            arguments: ["worktree", "list", "--porcelain", "-z"],
             workingDirectory: path
         )
 
@@ -1396,7 +1329,10 @@ final class GitEngine: @unchecked Sendable {
             args.append(newBranch)
         }
 
-        args.append(worktreePath)
+        let absolutePath = URL(fileURLWithPath: worktreePath,
+            relativeTo: URL(fileURLWithPath: repoPath, isDirectory: true)).standardizedFileURL.path
+        args.append("--")
+        args.append(absolutePath)
 
         if let branch = branch {
             args.append(branch)
@@ -1410,7 +1346,10 @@ final class GitEngine: @unchecked Sendable {
 
         // Get the new worktree
         let worktrees = try await listWorktrees(at: repoPath)
-        guard let newWorktree = worktrees.first(where: { $0.path == worktreePath }) else {
+        guard let newWorktree = worktrees.first(where: {
+            URL(fileURLWithPath: $0.path).resolvingSymlinksInPath().path ==
+            URL(fileURLWithPath: absolutePath).resolvingSymlinksInPath().path
+        }) else {
             throw GitError.worktreeAddFailed(worktreePath, "Could not find created worktree")
         }
 
@@ -1530,7 +1469,7 @@ final class GitEngine: @unchecked Sendable {
     /// Get repository status using porcelain v2 format with NUL separators
     /// More robust with special characters in filenames and includes branch tracking info
     func getStatusV2(at path: String) async throws -> RepositoryStatus {
-        let result = await shellExecutor.execute(
+        async let statusTask = shellExecutor.execute(
             "git",
             arguments: [
                 "status",
@@ -1541,12 +1480,32 @@ final class GitEngine: @unchecked Sendable {
             ],
             workingDirectory: path
         )
-
+        async let unstagedTask = shellExecutor.execute("git",
+            arguments: ["diff", "--no-ext-diff", "--no-textconv", "--numstat", "-z"], workingDirectory: path)
+        async let stagedTask = shellExecutor.execute("git",
+            arguments: ["diff", "--no-ext-diff", "--no-textconv", "--cached", "--numstat", "-z"], workingDirectory: path)
+        let (result, unstaged, staged) = await (statusTask, unstagedTask, stagedTask)
         guard result.exitCode == 0 else {
             throw GitError.commandFailed("git status", result.stderr)
         }
 
-        return parseStatusV2(result.stdout)
+        guard unstaged.isSuccess, staged.isSuccess else {
+            throw GitError.commandFailed("git diff --numstat", unstaged.stderr + staged.stderr)
+        }
+        var status = parseStatusV2(result.stdout)
+        let stagedStats = parseDiffStats(staged.stdout)
+        let unstagedStats = parseDiffStats(unstaged.stdout)
+        for index in status.staged.indices {
+            let stats = stagedStats[status.staged[index].path] ?? (0, 0)
+            status.staged[index].additions = stats.0
+            status.staged[index].deletions = stats.1
+        }
+        for index in status.unstaged.indices {
+            let stats = unstagedStats[status.unstaged[index].path] ?? (0, 0)
+            status.unstaged[index].additions = stats.0
+            status.unstaged[index].deletions = stats.1
+        }
+        return status
     }
 
     private func parseStatusV2(_ output: String) -> RepositoryStatus {
@@ -1603,11 +1562,13 @@ final class GitEngine: @unchecked Sendable {
                     let xy = String(parts[1])
                     let indexStatus = xy.first ?? "."
                     let filePath = String(parts[9])
-
-                    if indexStatus == "R" {
-                        status.staged.append(FileStatus(path: filePath, status: .renamed))
-                    } else if indexStatus == "C" {
-                        status.staged.append(FileStatus(path: filePath, status: .copied))
+                    let oldPath = i + 1 < entries.count ? String(entries[i + 1]) : nil
+                    if let type = statusTypeFromCharV2(indexStatus) {
+                        status.staged.append(FileStatus(path: filePath, status: type, oldPath: oldPath))
+                    }
+                    if let worktreeStatus = xy.dropFirst().first,
+                       let type = statusTypeFromCharV2(worktreeStatus) {
+                        status.unstaged.append(FileStatus(path: filePath, status: type, oldPath: oldPath))
                     }
                 }
                 // Skip the original path entry that follows
@@ -1649,7 +1610,7 @@ final class GitEngine: @unchecked Sendable {
     private func statusTypeFromCharV2(_ char: Character) -> FileStatusType? {
         switch char {
         case "M": return .modified
-        case "T": return .modified  // Type changed
+        case "T": return .typeChanged
         case "A": return .added
         case "D": return .deleted
         case "R": return .renamed

@@ -1,0 +1,9 @@
+[
+  {
+    "id": "workflow-confirmations-review",
+    "role": "reviewer",
+    "readFiles": ["GitMac/Core/Services/WorkflowEngine.swift", "GitMac/Core/Models/GitWorkflow.swift", "scripts/test-workflow-safety.mjs"],
+    "writeFiles": [],
+    "instruction": "Review only execution exclusivity and waitForConfirmation continuation ownership/cancellation. Identify concrete races in these sources and propose at most 3 regression scenarios. Consider duplicate confirm/cancel before the suspended task resumes, cancellation before/during continuation installation, late cancellation from an old execution and concurrent execute calls. No code edits. Do not claim tests ran or UI is wired; no production caller of execute has been found yet. Preserve existing fail-fast Git behavior."
+  }
+]

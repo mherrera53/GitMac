@@ -1,6 +1,19 @@
 import Foundation
 import Dispatch
 
+/// Explicit fixture instrumentation only. Counts, not paths/content/secrets.
+enum PerformanceProbe {
+    static var isEnabled: Bool { CommandLine.arguments.contains("--performance-fixture") }
+    static func record(_ stage: String, counts: [String: Int] = [:]) {
+        guard isEnabled else { return }
+        let event: [String: Any] = ["gitmacPerformance": stage, "counts": counts,
+                                    "uptime": ProcessInfo.processInfo.systemUptime]
+        guard var data = try? JSONSerialization.data(withJSONObject: event, options: .sortedKeys) else { return }
+        data.append(10)
+        FileHandle.standardOutput.write(data)
+    }
+}
+
 /// Handles memory pressure events and notifies observers to clear caches
 /// Uses DispatchSource to monitor system memory pressure
 @MainActor

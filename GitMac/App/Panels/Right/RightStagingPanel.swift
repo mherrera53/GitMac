@@ -37,7 +37,8 @@ struct RightStagingPanel: View {
                     stash: selectedStash,
                     viewModel: stashDetailVM,
                     selectedFileDiff: $selectedFileDiff,
-                    onClose: { appState.selectStash(nil) }
+                    onClose: { appState.selectStash(nil) },
+                    repositoryPath: appState.currentRepository?.path
                 )
             } else {
                 // Show staging area when no commit/stash is selected (WIP mode)
@@ -109,17 +110,6 @@ struct RightStagingPanel: View {
                     selectedFileDiff = diff
                 }
                 isLoadingDiff = false
-            }
-        }
-        .onChange(of: appState.selectedStash) { _, newStash in
-            if let stash = newStash, let path = appState.currentRepository?.path {
-                Task { await stashDetailVM.loadStashFiles(stashRef: stash.reference, at: path) }
-            }
-        }
-        .task(id: appState.selectedStash?.sha) {
-            // Load stash files when stash is selected (initial load)
-            if let stash = appState.selectedStash, let path = appState.currentRepository?.path {
-                await stashDetailVM.loadStashFiles(stashRef: stash.reference, at: path)
             }
         }
     }

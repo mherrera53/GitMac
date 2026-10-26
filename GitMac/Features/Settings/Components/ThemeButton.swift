@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct ThemeButton: View {
-    @Environment(ThemeManager.self) private var themeManager
     let theme: Theme
     let isSelected: Bool
     let action: () -> Void
@@ -19,12 +18,14 @@ struct ThemeButton: View {
                     )
 
                 Text(theme.displayName)
-                    .foregroundStyle(AppTheme.textPrimary)
                     .font(DesignTokens.Typography.caption)
                     .foregroundStyle(isSelected ? AppTheme.textPrimary : AppTheme.textSecondary)
             }
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(theme.displayName)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .help(theme.description)
     }
 
     private var iconColor: Color {

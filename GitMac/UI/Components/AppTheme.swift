@@ -10,115 +10,121 @@ extension EnvironmentValues {
 // MARK: - Apple HIG Compliant Theme System
 // Following Apple Human Interface Guidelines:
 // https://developer.apple.com/design/human-interface-guidelines/color
-// Always use semantic system colors for UI elements - they adapt automatically
+// System colors adapt automatically; explicit custom palettes override their roles.
 
 /// AppTheme - Sistema de colores siguiendo Apple Human Interface Guidelines
 /// Los colores semánticos de NSColor se adaptan automáticamente a light/dark mode
 @MainActor
 enum AppTheme {
 
+    private static func customColor(_ keyPath: KeyPath<CustomColorScheme, CodableColor>) -> Color? {
+        let manager = ThemeManager.shared
+        guard manager.currentTheme == .custom, let palette = manager.customColors else { return nil }
+        return palette[keyPath: keyPath].color
+    }
+
     // MARK: - Text Colors (Always use NSColor semantic colors)
     // These colors automatically adapt to light/dark appearance
 
     /// Primary text - highest contrast, for main content
     static var textPrimary: Color {
-        Color(nsColor: .labelColor)
+        customColor(\.text) ?? Color(nsColor: .labelColor)
     }
 
     /// Secondary text - for subtitles and less prominent text
     static var textSecondary: Color {
-        Color(nsColor: .secondaryLabelColor)
+        customColor(\.textSecondary) ?? Color(nsColor: .secondaryLabelColor)
     }
 
     /// Muted text - for placeholder and disabled states
     static var textMuted: Color {
-        Color(nsColor: .tertiaryLabelColor)
+        customColor(\.textMuted) ?? Color(nsColor: .tertiaryLabelColor)
     }
 
     /// Quaternary text - least prominent
     static var textQuaternary: Color {
-        Color(nsColor: .quaternaryLabelColor)
+        customColor(\.textMuted)?.opacity(0.5) ?? Color(nsColor: .quaternaryLabelColor)
     }
 
     // MARK: - Background Colors (Always use NSColor semantic colors)
 
     /// Main window background
     static var background: Color {
-        Color(nsColor: .windowBackgroundColor)
+        customColor(\.background) ?? Color(nsColor: .windowBackgroundColor)
     }
 
     /// Secondary background for grouped content
     static var backgroundSecondary: Color {
-        Color(nsColor: .controlBackgroundColor)
+        customColor(\.backgroundSecondary) ?? Color(nsColor: .controlBackgroundColor)
     }
 
     /// Tertiary background for nested content
     static var backgroundTertiary: Color {
-        Color(nsColor: .windowBackgroundColor)
+        customColor(\.backgroundTertiary) ?? Color(nsColor: .windowBackgroundColor)
     }
 
     /// Panel background with transparency
     static var panel: Color {
-        Color(nsColor: .controlBackgroundColor).opacity(0.8)
+        backgroundSecondary.opacity(0.8)
     }
 
     /// Toolbar background
     static var toolbar: Color {
-        Color(nsColor: .windowBackgroundColor)
+        background
     }
 
     /// Sidebar background
     static var sidebar: Color {
-        Color(nsColor: .controlBackgroundColor)
+        backgroundSecondary
     }
 
     /// Text input background
     static var inputBackground: Color {
-        Color(nsColor: .textBackgroundColor)
+        customColor(\.backgroundSecondary) ?? Color(nsColor: .textBackgroundColor)
     }
 
     // MARK: - Accent Colors
 
     /// System accent color (user-configurable in System Preferences)
     static var accent: Color {
-        Color(nsColor: .controlAccentColor)
+        customColor(\.accent) ?? Color(nsColor: .controlAccentColor)
     }
 
     /// Accent hover state
     static var accentHover: Color {
-        Color(nsColor: .controlAccentColor).opacity(0.8)
+        customColor(\.accentHover) ?? Color(nsColor: .controlAccentColor).opacity(0.8)
     }
 
     /// Accent pressed state
     static var accentPressed: Color {
-        Color(nsColor: .controlAccentColor).opacity(0.7)
+        (customColor(\.accent) ?? Color(nsColor: .controlAccentColor)).opacity(0.7)
     }
 
     /// Accent disabled state
     static var accentDisabled: Color {
-        Color(nsColor: .tertiaryLabelColor)
+        customColor(\.textMuted)?.opacity(0.5) ?? Color(nsColor: .tertiaryLabelColor)
     }
 
     // MARK: - Semantic Status Colors (System colors that adapt to appearance)
 
     /// Success color - green
     static var success: Color {
-        Color(nsColor: .systemGreen)
+        customColor(\.success) ?? Color(nsColor: .systemGreen)
     }
 
     /// Warning color - orange
     static var warning: Color {
-        Color(nsColor: .systemOrange)
+        customColor(\.warning) ?? Color(nsColor: .systemOrange)
     }
 
     /// Error color - red
     static var error: Color {
-        Color(nsColor: .systemRed)
+        customColor(\.error) ?? Color(nsColor: .systemRed)
     }
 
     /// Info color - blue
     static var info: Color {
-        Color(nsColor: .systemBlue)
+        customColor(\.info) ?? Color(nsColor: .systemBlue)
     }
 
     // MARK: - Accent Aliases (using system colors)
@@ -139,39 +145,39 @@ enum AppTheme {
 
     /// Hover state background
     static var hover: Color {
-        Color(nsColor: .controlAccentColor).opacity(0.1)
+        (customColor(\.accentHover) ?? Color(nsColor: .controlAccentColor)).opacity(0.1)
     }
 
     /// Selection background
     static var selection: Color {
-        Color(nsColor: .selectedContentBackgroundColor)
+        customColor(\.accent)?.opacity(0.2) ?? Color(nsColor: .selectedContentBackgroundColor)
     }
 
     /// Unemphasized selection (when window is not key)
     static var selectionUnemphasized: Color {
-        Color(nsColor: .unemphasizedSelectedContentBackgroundColor)
+        customColor(\.accent)?.opacity(0.12) ?? Color(nsColor: .unemphasizedSelectedContentBackgroundColor)
     }
 
     /// Border/separator color
     static var border: Color {
-        Color(nsColor: .separatorColor)
+        customColor(\.textMuted)?.opacity(0.3) ?? Color(nsColor: .separatorColor)
     }
 
     /// Grid color for tables
     static var grid: Color {
-        Color(nsColor: .gridColor)
+        customColor(\.textMuted)?.opacity(0.15) ?? Color(nsColor: .gridColor)
     }
 
     // MARK: - Link Colors
 
     /// Link color
     static var link: Color {
-        Color(nsColor: .linkColor)
+        customColor(\.accent) ?? Color(nsColor: .linkColor)
     }
 
     /// Link hover color
     static var linkHover: Color {
-        Color(nsColor: .controlAccentColor)
+        customColor(\.accentHover) ?? Color(nsColor: .controlAccentColor)
     }
 
     // MARK: - Shadow & Overlay Colors
@@ -181,7 +187,7 @@ enum AppTheme {
     }
 
     static var overlay: Color {
-        Color(nsColor: .windowBackgroundColor).opacity(0.8)
+        background.opacity(0.8)
     }
 
     static var overlayLight: Color {
@@ -202,15 +208,41 @@ enum AppTheme {
     /// Button text on colored backgrounds - always white for vibrant system colors
     /// System colors (blue, green, orange, red) are designed to have white text
     static var buttonTextOnColor: Color {
-        Color.white
+        contrastingTextColor(for: accent)
     }
 
     /// Calculate contrasting text color based on background
     /// Returns white for dark backgrounds, labelColor for light backgrounds
     static func contrastingTextColor(for background: Color) -> Color {
-        // For system colors used as backgrounds, white text is recommended
-        // This follows Apple HIG for buttons with colored backgrounds
-        Color.white
+        let luminance = effectiveBackground(background).luminance
+        return (luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05) ? .black : .white
+    }
+
+    /// Preserve the preferred hue, adjusting its shade when button text needs contrast.
+    static func readableTextColor(preferred: Color, on background: Color) -> Color {
+        let surface = effectiveBackground(background)
+        let foreground = CodableColor(preferred).composited(over: surface)
+        func ratio(_ color: CodableColor) -> Double {
+            let a = color.luminance, b = surface.luminance
+            return (max(a, b) + 0.05) / (min(a, b) + 0.05)
+        }
+        if ratio(foreground) >= 4.5 { return preferred }
+        let luminance = surface.luminance
+        let target: Double = (luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05) ? 0 : 1
+        for step in 1...10 {
+            let amount = Double(step) / 10
+            let adjusted = CodableColor(red: foreground.red + (target - foreground.red) * amount,
+                                        green: foreground.green + (target - foreground.green) * amount,
+                                        blue: foreground.blue + (target - foreground.blue) * amount)
+            if ratio(adjusted) >= 4.5 { return adjusted.color }
+        }
+        return target == 0 ? .black : .white
+    }
+
+    private static func effectiveBackground(_ color: Color) -> CodableColor {
+        let native = CodableColor(Color(nsColor: .windowBackgroundColor))
+        let surface = CodableColor(background).composited(over: native)
+        return CodableColor(color).composited(over: surface)
     }
 
     /// Get appropriate text color for a badge/button based on color scheme
@@ -243,65 +275,41 @@ enum AppTheme {
     // These are app-specific semantic colors
 
     static var gitAdded: Color {
-        if ThemeManager.shared.currentTheme == .custom {
-            return Color.Theme(ThemeManager.shared.colors).gitAdded
-        }
-        return Color(nsColor: .systemGreen)
+        customColor(\.gitAdded) ?? Color(nsColor: .systemGreen)
     }
 
     static var gitModified: Color {
-        if ThemeManager.shared.currentTheme == .custom {
-            return Color.Theme(ThemeManager.shared.colors).gitModified
-        }
-        return Color(nsColor: .systemOrange)
+        customColor(\.gitModified) ?? Color(nsColor: .systemOrange)
     }
 
     static var gitDeleted: Color {
-        if ThemeManager.shared.currentTheme == .custom {
-            return Color.Theme(ThemeManager.shared.colors).gitDeleted
-        }
-        return Color(nsColor: .systemRed)
+        customColor(\.gitDeleted) ?? Color(nsColor: .systemRed)
     }
 
     static var gitConflict: Color {
-        if ThemeManager.shared.currentTheme == .custom {
-            return Color.Theme(ThemeManager.shared.colors).gitConflict
-        }
-        return Color(nsColor: .systemPink)
+        customColor(\.gitConflict) ?? Color(nsColor: .systemPink)
     }
 
     static var gitRenamed: Color {
-        if ThemeManager.shared.currentTheme == .custom {
-            return Color.Theme(ThemeManager.shared.colors).branchRemote
-        }
-        return Color(nsColor: .systemBlue)
+        customColor(\.gitRenamed) ?? Color(nsColor: .systemBlue)
     }
 
     static var gitUntracked: Color {
-        Color(nsColor: .tertiaryLabelColor)
+        customColor(\.gitUntracked) ?? Color(nsColor: .tertiaryLabelColor)
     }
 
     // MARK: - Branch Colors (Custom - these can be themed)
 
     static var branchLocal: Color {
-        if ThemeManager.shared.currentTheme == .custom {
-            return Color.Theme(ThemeManager.shared.colors).branchLocal
-        }
-        return Color(nsColor: .systemGreen)
+        customColor(\.branchLocal) ?? Color(nsColor: .systemGreen)
     }
 
     static var branchRemote: Color {
-        if ThemeManager.shared.currentTheme == .custom {
-            return Color.Theme(ThemeManager.shared.colors).branchRemote
-        }
-        return Color(nsColor: .systemBlue)
+        customColor(\.branchRemote) ?? Color(nsColor: .systemBlue)
     }
 
     static var branchCurrent: Color {
-        if ThemeManager.shared.currentTheme == .custom {
-            return Color.Theme(ThemeManager.shared.colors).branchCurrent
-        }
-        return Color(nsColor: .systemOrange)
+        customColor(\.branchCurrent) ?? Color(nsColor: .systemOrange)
     }
 
     // MARK: - Graph Lane Colors (Custom - these can be themed)

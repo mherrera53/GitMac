@@ -227,6 +227,9 @@ private struct ResizerViewRepresentable: NSViewRepresentable {
         if nsView.orientation != orientation {
             nsView.orientation = orientation
         }
+        // Bounds and bindings can change when the window moves or shrinks.
+        // Do not keep the limits captured by the first makeNSView call.
+        setupCallbacks(for: nsView)
     }
 
     private func setupCallbacks(for view: UniversalResizerNSView) {

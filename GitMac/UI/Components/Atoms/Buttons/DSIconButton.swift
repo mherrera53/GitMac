@@ -51,7 +51,8 @@ struct DSIconButton: View {
             ZStack {
                 if isLoading {
                     ProgressView()
-                        .scaleEffect(0.6)
+                        .controlSize(.small)
+                        .tint(foregroundColor)
                 } else {
                     Image(systemName: iconName)
                         .font(.system(size: iconSizeForSize))
@@ -93,55 +94,10 @@ struct DSIconButton: View {
 
     // MARK: - Variant Colors
 
-    private var foregroundColor: Color {
-        if isDisabled {
-            return AppTheme.textMuted
-        }
-
-        switch variant {
-        case .primary:
-            return .white
-        case .secondary:
-            return AppTheme.textPrimary
-        case .danger:
-            return .white
-        case .ghost:
-            return isHovered ? AppTheme.textPrimary : AppTheme.textSecondary
-        case .outline:
-            return AppTheme.accent
-        case .link:
-            return AppTheme.accent
-        }
-    }
-
-    private var backgroundColor: Color {
-        if isDisabled {
-            return AppTheme.backgroundSecondary
-        }
-
-        switch variant {
-        case .primary:
-            return isHovered ? AppTheme.accent.opacity(0.9) : AppTheme.accent
-        case .secondary:
-            return isHovered ? AppTheme.backgroundSecondary.opacity(0.8) : AppTheme.backgroundSecondary
-        case .danger:
-            return isHovered ? AppTheme.error.opacity(0.9) : AppTheme.error
-        case .ghost:
-            return isHovered ? AppTheme.backgroundSecondary.opacity(0.5) : Color.clear
-        case .outline:
-            return isHovered ? AppTheme.accent.opacity(0.1) : Color.clear
-        case .link:
-            return Color.clear
-        }
-    }
-
-    private var borderColor: Color {
-        if isDisabled {
-            return AppTheme.backgroundSecondary
-        }
-
-        return variant == .outline ? AppTheme.accent : Color.clear
-    }
+    private var colors: DSButtonColors { DSButtonColors(variant: variant, isDisabled: isDisabled, isHovered: isHovered) }
+    private var foregroundColor: Color { colors.foreground }
+    private var backgroundColor: Color { colors.background }
+    private var borderColor: Color { colors.border }
 }
 
 // MARK: - Convenience Initializers

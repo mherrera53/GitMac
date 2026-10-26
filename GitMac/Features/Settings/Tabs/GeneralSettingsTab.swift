@@ -10,8 +10,7 @@ struct GeneralSettingsView: View {
     @AppStorage("notificationSounds") private var notificationSounds = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
+        SettingsPage {
             SettingsSection(title: "Appearance") {
                 // Theme selector with icons
                 HStack(spacing: DesignTokens.Spacing.md) {
@@ -41,6 +40,8 @@ struct GeneralSettingsView: View {
                         }
                     }
                 }
+                .accessibilityIdentifier("theme-customize")
+                .accessibilityValue(themeManager.currentTheme == .custom ? "Custom theme active" : "No custom theme selected")
             }
 
             SettingsSection(title: "Startup") {
@@ -76,9 +77,6 @@ struct GeneralSettingsView: View {
             SettingsSection(title: "Notifications") {
                 DSToggle("Play sounds for notifications", isOn: $notificationSounds)
             }
-            }
         }
-        .padding()
-        .background(AppTheme.background)
     }
 }

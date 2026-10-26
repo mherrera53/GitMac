@@ -38,6 +38,7 @@ fastlane/
 
 # Ruby scripts (automation)
 *.rb
+!scripts/*.rb
 
 # Frameworks (external)
 Frameworks/
@@ -51,6 +52,9 @@ Frameworks/
 *.sh
 !scripts/*.sh
 *.py
+!scripts/*.py
+__pycache__/
+!docs/roadmap/2026-10-20/tools/map-source-graph.py
 
 # Work in progress documentation
 GHOSTTY_*.md
@@ -59,6 +63,30 @@ IMPLEMENTATION_SUMMARY.md
 INSTRUCCIONES_PARA_COMPLETAR.md
 
 # UI Tests
-GitMacUITests/
+GitMacUITests/*
+!GitMacUITests/*.swift
 build_output/
 build_output/
+
+# Generated local audit evidence; source plans and runners remain versioned.
+graphify-out/
+docs/roadmap/**/mapping/
+docs/roadmap/**/evidence/
+docs/roadmap/**/implementation/*-captures*/
+docs/roadmap/**/implementation/*-contacts*/
+docs/roadmap/**/implementation/*.log
+docs/roadmap/**/implementation/*.trace/
+docs/roadmap/**/implementation/*.png
+docs/roadmap/**/implementation/*.mp4
+docs/roadmap/**/implementation/*.mov
+docs/roadmap/**/implementation/*.json
+docs/roadmap/**/implementation/changes.csv
+!docs/roadmap/**/implementation/task-state.json
+!docs/roadmap/**/implementation/specific-plan-2026-10-25.json
+!docs/roadmap/**/implementation/local-agent-execution.json
+docs/roadmap/**/implementation/local-agents/*-packet.json
+docs/roadmap/**/implementation/local-agents/*-raw.json
+docs/roadmap/**/implementation/local-agents/*-proposal.json
+docs/roadmap/**/implementation/local-agents/*-manifest.json
+docs/roadmap/**/implementation/local-agents/*-unload.json
+docs/roadmap/**/implementation/local-agents/*-failure.json

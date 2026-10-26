@@ -193,22 +193,26 @@ actor CloudPatchService {
             throw CloudPatchError.noPatchContent
         }
         
-        // Write patch to temp file
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("cloudpatch-\(patch.id).diff")
-        try patchFile.content.write(to: tempURL, atomically: true, encoding: .utf8)
-        
+        // Remote IDs and repository paths are data, never shell syntax or paths
+        // inside the temporary directory. Keep patch contents private to this user.
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("gitmac-cloudpatch-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: false,
+                                                attributes: [.posixPermissions: 0o700])
         defer {
-            try? FileManager.default.removeItem(at: tempURL)
+            try? FileManager.default.removeItem(at: temporaryDirectory)
         }
+        let tempURL = temporaryDirectory.appendingPathComponent("patch.diff")
+        try patchFile.content.write(to: tempURL, atomically: true, encoding: .utf8)
         
         // Apply the patch
         let result = await shell.execute(
-            "bash",
-            arguments: ["-c", "cd '\(repoPath)' && git apply '\(tempURL.path)'"],
+            "git",
+            arguments: ["apply", "--", tempURL.path],
             workingDirectory: repoPath
         )
         
-        if !result.output.isEmpty && result.output.contains("error") {
+        if !result.isSuccess {
             throw CloudPatchError.applyFailed(result.output)
         }
     }

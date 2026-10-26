@@ -32,7 +32,9 @@ class WorkflowEngine {
     var totalSteps: Int = 0
     var statusMessage: String = ""
     var pendingConfirmation: String? = nil
+    private(set) var pendingConfirmationID: UUID?
     private var confirmationContinuation: CheckedContinuation<Bool, Never>?
+    private var executionID: UUID?
 
     private let userDefaultsKey = "com.gitmac.workflows"
 
@@ -79,12 +81,22 @@ class WorkflowEngine {
         saveWorkflows()
     }
 
-    func confirmPending() {
-        confirmationContinuation?.resume(returning: true)
+    func confirmPending(id: UUID) {
+        guard pendingConfirmationID == id else { return }
+        resolvePendingConfirmation(true)
     }
 
-    func cancelPending() {
-        confirmationContinuation?.resume(returning: false)
+    func cancelPending(id: UUID) {
+        guard pendingConfirmationID == id else { return }
+        resolvePendingConfirmation(false)
+    }
+
+    private func resolvePendingConfirmation(_ confirmed: Bool) {
+        guard let continuation = confirmationContinuation else { return }
+        confirmationContinuation = nil
+        pendingConfirmation = nil
+        pendingConfirmationID = nil
+        continuation.resume(returning: confirmed)
     }
 
     // MARK: - Trigger Matching
@@ -127,10 +139,18 @@ class WorkflowEngine {
     // MARK: - Execution
 
     func execute(_ workflow: GitWorkflow, context: WorkflowContext) async throws {
+        guard !isExecuting else {
+            throw WorkflowError.stepFailed("Another workflow is already executing.")
+        }
+        try Task.checkCancellation()
+        let executionID = UUID()
+        self.executionID = executionID
         isExecuting = true
         totalSteps = workflow.steps.count
         currentStep = 0
         defer {
+            self.executionID = nil
+            resolvePendingConfirmation(false)
             isExecuting = false
             statusMessage = ""
             currentStep = 0
@@ -143,10 +163,13 @@ class WorkflowEngine {
             switch step {
             case .fetch(let remote):
                 statusMessage = "Fetching \(remote)..."
-                _ = await ShellExecutor.shared.execute(
+                let fetchResult = await ShellExecutor.shared.execute(
                     "git", arguments: ["fetch", remote, "--quiet"],
                     workingDirectory: context.repoPath
                 )
+                if !fetchResult.isSuccess {
+                    throw WorkflowError.stepFailed("Fetch failed: \(fetchResult.stderr)")
+                }
 
             case .createBranch(let strategy):
                 statusMessage = "Creating branch..."
@@ -155,18 +178,24 @@ class WorkflowEngine {
 
             case .checkout(let branch):
                 statusMessage = "Checking out \(branch)..."
-                _ = await ShellExecutor.shared.execute(
+                let checkoutResult = await ShellExecutor.shared.execute(
                     "git", arguments: ["checkout", branch],
                     workingDirectory: context.repoPath
                 )
+                if !checkoutResult.isSuccess {
+                    throw WorkflowError.stepFailed("Checkout failed: \(checkoutResult.stderr)")
+                }
 
             case .checkoutMain:
                 let mainBranch = WorkspaceSettingsManager.shared.getMainBranch(for: context.repoPath)
                 statusMessage = "Checking out \(mainBranch)..."
-                _ = await ShellExecutor.shared.execute(
+                let checkoutResult = await ShellExecutor.shared.execute(
                     "git", arguments: ["checkout", mainBranch],
                     workingDirectory: context.repoPath
                 )
+                if !checkoutResult.isSuccess {
+                    throw WorkflowError.stepFailed("Checkout main failed: \(checkoutResult.stderr)")
+                }
 
             case .pull(let rebase):
                 statusMessage = "Pulling..."
@@ -188,11 +217,7 @@ class WorkflowEngine {
                     workingDirectory: context.repoPath
                 )
                 if !rebaseResult.isSuccess {
-                    _ = await ShellExecutor.shared.execute(
-                        "git", arguments: ["rebase", "--abort"],
-                        workingDirectory: context.repoPath
-                    )
-                    throw WorkflowError.stepFailed("Rebase on \(mainBranch) failed (aborted). Resolve conflicts manually.")
+                    throw WorkflowError.stepFailed("Rebase on \(mainBranch) failed: \(rebaseResult.stderr). Resolve conflicts, then continue or abort the rebase explicitly.")
                 }
 
             case .createTag(let strategy):
@@ -228,18 +253,25 @@ class WorkflowEngine {
 
             case .stageAll:
                 statusMessage = "Staging files..."
-                _ = await ShellExecutor.shared.execute(
+                let stageResult = await ShellExecutor.shared.execute(
                     "git", arguments: ["add", "-A"],
                     workingDirectory: context.repoPath
                 )
+                if !stageResult.isSuccess {
+                    throw WorkflowError.stepFailed("Stage all failed: \(stageResult.stderr)")
+                }
 
             case .stageFiles(let patterns):
                 statusMessage = "Staging files..."
                 for pattern in patterns {
-                    _ = await ShellExecutor.shared.execute(
-                        "git", arguments: ["add", pattern],
+                    try Task.checkCancellation()
+                    let stageResult = await ShellExecutor.shared.execute(
+                        "git", arguments: ["add", "--", pattern],
                         workingDirectory: context.repoPath
                     )
+                    if !stageResult.isSuccess {
+                        throw WorkflowError.stepFailed("Stage files failed: \(stageResult.stderr)")
+                    }
                 }
 
             case .commit(let strategy):
@@ -263,13 +295,22 @@ class WorkflowEngine {
                         "git", arguments: ["rev-parse", "--abbrev-ref", "HEAD"],
                         workingDirectory: context.repoPath
                     )
+                    if !branchResult.isSuccess {
+                        throw WorkflowError.stepFailed("Cannot determine branch for push: \(branchResult.stderr)")
+                    }
                     let branchName = branchResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !branchName.isEmpty, branchName != "HEAD" else {
+                        throw WorkflowError.stepFailed("Create or check out a branch before setting its upstream.")
+                    }
                     args.append(contentsOf: ["origin", branchName])
                 }
-                _ = await ShellExecutor.shared.execute(
+                let pushResult = await ShellExecutor.shared.execute(
                     "git", arguments: args,
                     workingDirectory: context.repoPath
                 )
+                if !pushResult.isSuccess {
+                    throw WorkflowError.stepFailed("Push failed: \(pushResult.stderr)")
+                }
 
             case .openPR(_, _):
                 statusMessage = "Opening PR..."
@@ -295,18 +336,31 @@ class WorkflowEngine {
 
             case .waitForConfirmation(let message):
                 statusMessage = message
-                pendingConfirmation = message
-                let confirmed = await withCheckedContinuation { continuation in
-                    self.confirmationContinuation = continuation
+                let confirmed = await withTaskCancellationHandler {
+                    await withCheckedContinuation { continuation in
+                        guard !Task.isCancelled else {
+                            continuation.resume(returning: false)
+                            return
+                        }
+                        pendingConfirmation = message
+                        pendingConfirmationID = UUID()
+                        confirmationContinuation = continuation
+                    }
+                } onCancel: {
+                    Task { @MainActor [weak self] in
+                        guard let self, self.executionID == executionID else { return }
+                        self.resolvePendingConfirmation(false)
+                    }
                 }
-                pendingConfirmation = nil
-                confirmationContinuation = nil
+                try Task.checkCancellation()
                 if !confirmed {
                     throw WorkflowError.stepFailed("User cancelled at: \(message)")
                 }
             }
+            try Task.checkCancellation()
         }
 
+        try Task.checkCancellation()
         NotificationManager.shared.success("Workflow '\(workflow.name)' completed")
     }
 

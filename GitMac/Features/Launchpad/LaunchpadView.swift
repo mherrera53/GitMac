@@ -33,7 +33,7 @@ struct LaunchpadView: View {
 
     private var headerView: some View {
         HStack {
-            Image(systemName: "rocket.fill")
+            Image(systemName: "paperplane.fill")
                 .font(DesignTokens.Typography.subheadline)
                 .foregroundStyle(AppTheme.accent)
 

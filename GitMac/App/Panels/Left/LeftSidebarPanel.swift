@@ -13,6 +13,8 @@ struct LeftSidebarPanel: View {
     @Environment(AppState.self) var appState
     @State private var selectedNavigator: SidebarNavigator = .branches
     @State private var branchSearchText = ""
+    @State private var showConflictResolver = false
+    @State private var showConflictAnalysis = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -68,6 +70,35 @@ struct LeftSidebarPanel: View {
         .onReceive(NotificationCenter.default.publisher(for: .showTags)) { _ in selectedNavigator = .tags }
         .onReceive(NotificationCenter.default.publisher(for: .showWorktrees)) { _ in selectedNavigator = .worktrees }
         .onReceive(NotificationCenter.default.publisher(for: .showConflicts)) { _ in selectedNavigator = .conflicts }
+        .sheet(isPresented: $showConflictResolver) {
+            GeometryReader { geometry in
+                ConflictResolverView()
+                    .environment(appState)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+            }
+            .frame(minWidth: 700, idealWidth: 960, minHeight: 420, idealHeight: 640)
+        }
+        .sheet(isPresented: $showConflictAnalysis) {
+            GeometryReader { geometry in
+                VStack(spacing: 0) {
+                    HStack {
+                        Text("Potential conflict analysis").font(.headline)
+                        Spacer()
+                        Button("Close") { showConflictAnalysis = false }.keyboardShortcut(.cancelAction)
+                            .accessibilityIdentifier("conflict-analysis-close")
+                    }.padding(12)
+                    ConflictPreventionView().environment(appState)
+                    Spacer(minLength: 0)
+                }
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .background(AppTheme.background)
+            }
+            .frame(minWidth: 600, idealWidth: 800, minHeight: 360, idealHeight: 560)
+        }
+        .onChange(of: appState.currentRepository?.path) { _, _ in
+            showConflictResolver = false
+            showConflictAnalysis = false
+        }
         // Configure PR tracker when repository changes
         .task(id: appState.currentRepository?.path) {
             if let path = appState.currentRepository?.path {
@@ -205,7 +236,19 @@ struct LeftSidebarPanel: View {
             GitHooksSidebarSection()
 
         case .conflicts:
-            ConflictPreventionView()
+            VStack(alignment: .leading, spacing: 8) {
+                Button("Resolve Conflicts…", systemImage: "exclamationmark.triangle") { showConflictResolver = true }
+                    .disabled(appState.currentRepository == nil)
+                    .accessibilityIdentifier("open-conflict-resolver")
+                    .accessibilityLabel("Resolve current Git conflicts")
+                Text("Read Git's actual unmerged index and preserve local resolutions.")
+                    .font(.caption).foregroundStyle(AppTheme.textSecondary)
+                Button("Analyze Branches…", systemImage: "exclamationmark.shield") { showConflictAnalysis = true }
+                    .disabled(appState.currentRepository == nil)
+                    .accessibilityIdentifier("open-conflict-analysis")
+                Text("Estimate potential overlaps before integrating. This is advisory.")
+                    .font(.caption).foregroundStyle(AppTheme.textSecondary)
+            }
         }
     }
 }

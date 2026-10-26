@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-25T22:58:33.067Z",
+  "currentMode": "Ejecución reanudada por solicitud del usuario con agentes locales; inferencias pesadas en serie y revisión antes de integrar.",
+  "scope": "Infrastructure and first T30.03 leaf only",
+  "localOnly": true,
+  "roles": [
+    "implementer",
+    "test-designer",
+    "reviewer"
+  ],
+  "sourceAudit": [
+    {
+      "file": "GitMac/Core/Services/WorkflowEngine.swift",
+      "sha256": "0563837d4759c67e3ac3ecabe655aa6f541ae4e4aedd8073cec7cef173821d3b",
+      "anchors": [
+        {
+          "needle": "let fetchResult",
+          "line": 146
+        },
+        {
+          "needle": "let checkoutResult",
+          "line": 161
+        },
+        {
+          "needle": "Rebase on",
+          "line": 200
+        },
+        {
+          "needle": "let stageResult",
+          "line": 236
+        },
+        {
+          "needle": "Cannot determine branch",
+          "line": 279
+        },
+        {
+          "needle": "let pushResult",
+          "line": 287
+        }
+      ]
+    },
+    {
+      "file": "scripts/local-agents.mjs",
+      "sha256": "f957595022f7a5b119bfe6a53ce8ba6a3cbb3e28f87fe1b148006588c660aacb",
+      "anchors": []
+    },
+    {
+      "file": "scripts/test-local-agents.mjs",
+      "sha256": "10de7ee4f5ca9b5e1423218ebdec3bda2456baeef564be7ce3d91841ad4ab9a5",
+      "anchors": []
+    },
+    {
+      "file": "scripts/test-workflow-safety.mjs",
+      "sha256": "2a8c6501dde9700377bf7b1126be35036a8071527c548374da05cf29823577af",
+      "anchors": []
+    }
+  ],
+  "checks": {
+    "localAgentSafety": 16,
+    "workflowPositive": 37,
+    "workflowPreviousFailures": 22,
+    "signedDebugBuild": true
+  },
+  "evidence": [
+    "local-agent-review-adjudication.json",
+    "gates/local-agents-workflows.md",
+    "workflow-safety-after.log",
+    "workflow-safety-negative-final.log",
+    "local-agent-workflow-debug.log"
+  ],
+  "productComplete": false,
+  "memoryBudgetCertified": false
+}

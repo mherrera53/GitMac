@@ -7,11 +7,35 @@ struct StashDetailPanel: View {
     @ObservedObject var viewModel: StashDetailViewModel
     @Binding var selectedFileDiff: FileDiff?
     let onClose: () -> Void
-    @Environment(AppState.self) var appState
+    var repositoryPath: String? = nil
+    @State private var showDropConfirmation = false
 
     private var stashColor: Color { AppTheme.info }
 
     var body: some View {
+        // Do not export the changing intrinsic size of the loading/header/file
+        // branches to the native inspector's SplitViewChildController.
+        GeometryReader { geometry in
+            panelContent
+                .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
+        }
+        .task(id: [repositoryPath ?? "", stash.sha]) {
+            if let path = repositoryPath {
+                await viewModel.loadStashFiles(stashRef: stash.reference, at: path)
+            }
+        }
+        .confirmationDialog("Delete this saved stash?", isPresented: $showDropConfirmation, titleVisibility: .visible) {
+            Button("Delete Saved Stash", role: .destructive) {
+                NotificationCenter.default.post(name: .dropStash, object: stash.index)
+                onClose()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes \(stash.reference) from the saved stash list. Viewing a stash does not require deleting it. Do not rely on Undo to recover this entry.")
+        }
+    }
+
+    private var panelContent: some View {
         VStack(spacing: 0) {
             // Stash header
             VStack(alignment: .leading, spacing: 8) {
@@ -46,6 +70,8 @@ struct StashDetailPanel: View {
                             Image(systemName: "arrow.triangle.branch")
                                 .font(.system(size: 10))
                             Text(branch)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
                         }
                         .font(.system(size: 12))
                         .foregroundStyle(AppTheme.textSecondary)
@@ -104,7 +130,7 @@ struct StashDetailPanel: View {
                                     file: file,
                                     onSelect: { loadStashFileDiff(file) },
                                     onApply: {
-                                        if let path = appState.currentRepository?.path {
+                                        if let path = repositoryPath {
                                             Task { await viewModel.applyStashFile(stash: stash, file: file, at: path) }
                                         }
                                     }
@@ -125,7 +151,19 @@ struct StashDetailPanel: View {
             Spacer()
 
             // Actions
-            HStack(spacing: 8) {
+            ViewThatFits(in: .horizontal) {
+                stashActionButtons.fixedSize(horizontal: true, vertical: false)
+                stashActionButtons.labelStyle(.iconOnly)
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("stash-actions")
+            .padding(12)
+            .background(AppTheme.backgroundSecondary)
+        }
+    }
+
+    private var stashActionButtons: some View {
+        HStack(spacing: 8) {
                 Button {
                     NotificationCenter.default.post(name: .applyStash, object: stash.index)
                     onClose()
@@ -134,6 +172,10 @@ struct StashDetailPanel: View {
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.bordered)
+                .help("Apply changes and keep the saved stash entry")
+                .accessibilityLabel("Apply stash and keep saved entry")
+                .accessibilityIdentifier("stash-apply")
+                .frame(minWidth: 28, minHeight: 28)
 
                 Button {
                     NotificationCenter.default.post(name: .popStashAtIndex, object: stash.index)
@@ -143,31 +185,29 @@ struct StashDetailPanel: View {
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.bordered)
+                .help("Apply changes, then remove the saved entry if successful")
+                .accessibilityLabel("Pop stash")
+                .accessibilityIdentifier("stash-pop")
+                .frame(minWidth: 28, minHeight: 28)
 
                 Spacer()
 
                 Button(role: .destructive) {
-                    NotificationCenter.default.post(name: .dropStash, object: stash.index)
-                    onClose()
+                    showDropConfirmation = true
                 } label: {
                     Label("Drop", systemImage: "trash")
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.bordered)
+                .help("Delete the saved stash entry — confirmation required")
+                .accessibilityLabel("Delete saved stash")
+                .accessibilityIdentifier("stash-drop")
+                .frame(minWidth: 28, minHeight: 28)
             }
-            .padding(12)
-            .background(AppTheme.backgroundSecondary)
-        }
-        .task {
-            // Load files when panel appears
-            if let path = appState.currentRepository?.path {
-                await viewModel.loadStashFiles(stashRef: stash.reference, at: path)
-            }
-        }
     }
 
     private func loadStashFileDiff(_ file: StashFile) {
-        guard let path = appState.currentRepository?.path else { return }
+        guard let path = repositoryPath else { return }
         Task {
             if let diff = await viewModel.getDiff(for: file, stash: stash, at: path) {
                 selectedFileDiff = diff

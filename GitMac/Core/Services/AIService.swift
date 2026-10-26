@@ -6,6 +6,19 @@ actor AIService {
 
     private let keychainManager = KeychainManager.shared
     private var preferencesLoaded = false
+    private let localSession: URLSession
+    private let localURLOverride: URL?
+
+    init(localSession: URLSession? = nil, provider: AIProvider? = nil,
+         model: String? = nil, localURL: URL? = nil) {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.urlCache = nil
+        self.localSession = localSession ?? URLSession(configuration: configuration,
+            delegate: LocalAIRedirectGuard(), delegateQueue: nil)
+        self.localURLOverride = localURL
+        if let provider { currentProvider = provider; preferencesLoaded = true }
+        if let model { currentModel = model }
+    }
 
     // MARK: - Ollama Configuration
 
@@ -208,21 +221,8 @@ actor AIService {
         UserDefaults.standard.set(provider.rawValue, forKey: "ai.preferredProvider")
         UserDefaults.standard.set(model, forKey: "ai.preferredModel")
 
-        // Start or stop Ollama based on selected provider
-        await MainActor.run {
-            if provider == .ollama {
-                Task {
-                    await OllamaProcessManager.shared.startIfNeeded()
-                }
-            }
-        }
-
-        // Pre-load MLX model when selected
-        if provider == .mlx {
-            Task {
-                try? await MLXProvider.shared.loadModel(model)
-            }
-        }
+        // Selecting a provider only saves preferences. No engine startup,
+        // model download or model loading until an explicit generation request.
 
         // Also try keychain for non-Ollama/MLX providers (backup)
         if let kcProvider = KeychainManager.AIProvider(rawValue: provider.rawValue) {
@@ -283,7 +283,8 @@ actor AIService {
             }
 
             return models.compactMap { model -> AIModel? in
-                guard let name = model["name"] as? String else { return nil }
+                guard let name = model["name"] as? String,
+                      LocalAIRequestPolicy.isLocalWeights(model) else { return nil }
                 // Clean up model name for display
                 let displayName = name.components(separatedBy: ":").first ?? name
                 return AIModel(id: name, name: displayName.capitalized, provider: .ollama)
@@ -308,48 +309,6 @@ actor AIService {
             }
         }
         return providers
-    }
-
-    /// Find the best matching Ollama model from available models
-    /// Handles cases like: deepseek-coder-v2 -> deepseek-coder:6.7b
-    private func findBestModelMatch(requested: String, available: [AIModel]) -> String {
-        // Exact match
-        if let exact = available.first(where: { $0.id == requested }) {
-            return exact.id
-        }
-
-        // Match with tag suffix (llama3.2 matches llama3.2:latest)
-        if let withTag = available.first(where: { $0.id.hasPrefix(requested + ":") }) {
-            return withTag.id
-        }
-
-        // Extract base name without version suffix (-v2, -v3, etc.) and tag
-        let requestedBase = requested
-            .replacingOccurrences(of: #"-v\d+$"#, with: "", options: .regularExpression)
-            .components(separatedBy: ":").first ?? requested
-
-        // Try to match base name
-        if let baseMatch = available.first(where: { model in
-            let availableBase = model.id
-                .replacingOccurrences(of: #"-v\d+$"#, with: "", options: .regularExpression)
-                .components(separatedBy: ":").first ?? model.id
-            return availableBase == requestedBase ||
-                   availableBase.contains(requestedBase) ||
-                   requestedBase.contains(availableBase)
-        }) {
-            return baseMatch.id
-        }
-
-        // Fuzzy match - look for common keywords
-        let keywords = requestedBase.components(separatedBy: "-")
-        for keyword in keywords where keyword.count > 3 {
-            if let fuzzyMatch = available.first(where: { $0.id.lowercased().contains(keyword.lowercased()) }) {
-                return fuzzyMatch.id
-            }
-        }
-
-        // Fallback to first available
-        return available.first?.id ?? requested
     }
 
     // MARK: - Commit Message Generation
@@ -709,73 +668,27 @@ actor AIService {
     }
 
     private func sendOllamaQuick(_ message: String, maxTokens: Int) async throws -> String {
-        guard let url = URL(string: "\(AIService.ollamaBaseURL)/api/generate") else {
-            throw AIError.connectionError("Invalid Ollama URL")
-        }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 30
-
-        // Use configured model or default
-        var model = currentModel.isEmpty ? "llama3.2" : currentModel
-
-        // Validate model exists and find best match
-        let availableModels = await fetchOllamaModels()
-        if !availableModels.isEmpty {
-            model = findBestModelMatch(requested: model, available: availableModels)
-        }
-
-        let body: [String: Any] = [
-            "model": model,
-            "prompt": message,
-            "stream": false,
-            "options": [
-                "num_predict": maxTokens,
-                "temperature": 0.3
-            ]
-        ]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw AIError.connectionError("Invalid response from Ollama")
-        }
-
-        if httpResponse.statusCode == 404 {
-            let modelNames = availableModels.map { $0.id }.joined(separator: ", ")
-            throw AIError.connectionError("Model '\(model)' not found. Available models: \(modelNames.isEmpty ? "none - run 'ollama pull llama3.2'" : modelNames)")
-        }
-
-        if httpResponse.statusCode != 200 {
-            // Try to parse error message from response
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let error = json["error"] as? String {
-                throw AIError.connectionError("Ollama error: \(error)")
-            }
-            throw AIError.connectionError("Ollama returned status \(httpResponse.statusCode). Make sure Ollama is running.")
-        }
-
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let text = json["response"] as? String else {
-            throw AIError.invalidResponse
-        }
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        try await sendLocalOllama(message, maxTokens: maxTokens, temperature: 0.3, timeout: 30)
     }
 
     // MARK: - MLX (Native Apple Silicon)
 
     private func sendMLXMessage(_ message: String, maxTokens: Int, temperature: Float) async throws -> String {
-        let mlx = MLXProvider.shared
-
-        // Lazy-load the model if not already loaded
-        if await !mlx.isModelLoaded {
-            let modelId = currentModel.isEmpty ? MLXProvider.defaultModelId : currentModel
-            try await mlx.loadModel(modelId)
+        guard await LocalInferenceGate.shared.acquire() else {
+            throw AIError.requestFailed("Another local AI request is running. Wait or cancel it before retrying.")
         }
-
-        return try await mlx.generate(prompt: message, maxTokens: maxTokens, temperature: temperature)
+        do {
+            try Task.checkCancellation()
+            try LocalAIRequestPolicy.validatePrompt(message)
+            let result = try await MLXProvider.shared.generate(prompt: message,
+                maxTokens: min(max(maxTokens, 1), 1024), temperature: temperature,
+                modelID: currentModel.isEmpty ? MLXProvider.defaultModelId : currentModel)
+            await LocalInferenceGate.shared.release()
+            return result
+        } catch {
+            await LocalInferenceGate.shared.release()
+            throw error
+        }
     }
 
     private func sendOpenAIQuick(_ message: String, apiKey: String, maxTokens: Int) async throws -> String {
@@ -1227,59 +1140,55 @@ actor AIService {
     }
 
     private func sendOllamaMessage(_ message: String) async throws -> String {
-        guard let url = URL(string: "\(AIService.ollamaBaseURL)/api/generate") else {
-            throw AIError.connectionError("Invalid Ollama URL")
+        try await sendLocalOllama(message, maxTokens: 1000, temperature: 0.7, timeout: 60)
+    }
+
+    private func sendLocalOllama(_ message: String, maxTokens: Int,
+                                 temperature: Double, timeout: TimeInterval) async throws -> String {
+        try LocalAIRequestPolicy.validatePrompt(message)
+        let base = localURLOverride?.absoluteString ?? Self.ollamaBaseURL
+        let model = currentModel
+        guard !model.isEmpty else { throw AIError.requestFailed("Choose a local model in Settings first.") }
+        let showURL = try LocalAIRequestPolicy.endpoint(base: base, path: "api/show")
+        let generateURL = try LocalAIRequestPolicy.endpoint(base: base, path: "api/generate")
+        guard await LocalInferenceGate.shared.acquire() else {
+            throw AIError.requestFailed("Another local AI request is running. Wait or cancel it before retrying.")
         }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 60 // Longer timeout for full messages
-
-        // Use configured model or default
-        var model = currentModel.isEmpty ? "llama3.2" : currentModel
-
-        // Validate model exists and find best match
-        let availableModels = await fetchOllamaModels()
-        if !availableModels.isEmpty {
-            model = findBestModelMatch(requested: model, available: availableModels)
-        }
-
-        let body: [String: Any] = [
-            "model": model,
-            "prompt": message,
-            "stream": false,
-            "options": [
-                "num_predict": 1000,
-                "temperature": 0.7
-            ]
-        ]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw AIError.connectionError("Invalid response from Ollama")
-        }
-
-        if httpResponse.statusCode == 404 {
-            let modelNames = availableModels.map { $0.id }.joined(separator: ", ")
-            throw AIError.connectionError("Model '\(model)' not found. Available models: \(modelNames.isEmpty ? "none - run 'ollama pull llama3.2'" : modelNames)")
-        }
-
-        if httpResponse.statusCode != 200 {
-            // Try to parse error message from response
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let error = json["error"] as? String {
-                throw AIError.connectionError("Ollama error: \(error)")
+        do {
+            try Task.checkCancellation()
+            // Send only the model name to preflight. Never a diff or prompt.
+            var preflight = URLRequest(url: showURL)
+            preflight.httpMethod = "POST"
+            preflight.timeoutInterval = 5
+            preflight.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            preflight.httpBody = try JSONSerialization.data(withJSONObject: ["model": model])
+            let (metadata, metadataResponse) = try await localSession.data(for: preflight)
+            guard (metadataResponse as? HTTPURLResponse)?.statusCode == 200,
+                  let info = try JSONSerialization.jsonObject(with: metadata) as? [String: Any],
+                  LocalAIRequestPolicy.isLocalWeights(info) else {
+                throw AIError.requestFailed("The selected model is missing, cloud-backed, or cannot be verified as local weights. No prompt was sent. Choose an installed local model.")
             }
-            throw AIError.connectionError("Ollama returned status \(httpResponse.statusCode). Make sure Ollama is running.")
+            try Task.checkCancellation()
+            var request = URLRequest(url: generateURL)
+            request.httpMethod = "POST"
+            request.timeoutInterval = timeout
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject:
+                LocalAIRequestPolicy.body(model: model, prompt: message, maxTokens: maxTokens, temperature: temperature))
+            let (data, response) = try await localSession.data(for: request)
+            try Task.checkCancellation()
+            guard (response as? HTTPURLResponse)?.statusCode == 200,
+                  let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  json["done"] as? Bool == true, json["error"] == nil,
+                  let text = json["response"] as? String, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw AIError.requestFailed("Local generation did not complete. Retry the same action; Git was not changed.")
+            }
+            await LocalInferenceGate.shared.release()
+            return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch {
+            await LocalInferenceGate.shared.release()
+            throw error
         }
-
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let text = json["response"] as? String else {
-            throw AIError.invalidResponse
-        }
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func sendOpenAIMessage(_ message: String, apiKey: String) async throws -> String {
@@ -1401,6 +1310,60 @@ actor AIService {
 }
 
 // MARK: - Supporting Types
+
+/// A single heavyweight local request across every AIService instance.
+actor LocalInferenceGate {
+    static let shared = LocalInferenceGate()
+    private var held = false
+    func acquire() -> Bool {
+        guard !held else { return false }
+        held = true
+        return true
+    }
+    func release() { held = false }
+}
+
+enum LocalAIRequestPolicy {
+    static func endpoint(base: String, path: String) throws -> URL {
+        guard let components = URLComponents(string: base),
+              ["http", "https"].contains(components.scheme?.lowercased() ?? ""),
+              ["localhost", "127.0.0.1", "::1", "[::1]"].contains(components.host?.lowercased() ?? ""),
+              components.user == nil, components.password == nil,
+              components.query == nil, components.fragment == nil,
+              components.path.isEmpty || components.path == "/",
+              let url = components.url else {
+            throw AIError.connectionError("Local AI requires a loopback URL without credentials, query or base path. No prompt was sent.")
+        }
+        return url.appendingPathComponent(path)
+    }
+
+    static func isLocalWeights(_ metadata: [String: Any]) -> Bool {
+        guard metadata["remote_host"] == nil, metadata["remote_model"] == nil,
+              let details = metadata["details"] as? [String: Any],
+              let format = details["format"] as? String else { return false }
+        return ["gguf", "safetensors"].contains(format)
+    }
+
+    static func validatePrompt(_ prompt: String) throws {
+        guard prompt.utf8.count <= 12_000 else {
+            throw AIError.requestFailed("The local request exceeds 12 KB. Select a smaller diff or scope; content was not silently truncated or sent elsewhere.")
+        }
+    }
+
+    static func body(model: String, prompt: String, maxTokens: Int, temperature: Double) -> [String: Any] {
+        ["model": model, "prompt": prompt, "stream": false, "keep_alive": 0,
+         "options": ["num_ctx": 4096, "num_predict": min(max(maxTokens, 1), 1024), "temperature": temperature]]
+    }
+}
+
+/// Never follow a redirect from a nominally local inference server.
+private final class LocalAIRedirectGuard: NSObject, URLSessionTaskDelegate {
+    func urlSession(_ session: URLSession, task: URLSessionTask,
+                    willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        completionHandler(nil)
+    }
+}
 
 enum CommitStyle: String, CaseIterable, Identifiable {
     var id: String { rawValue }

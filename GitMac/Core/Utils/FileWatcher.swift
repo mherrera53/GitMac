@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import CoreServices
 
 /// Watches for file system changes in a directory
 class FileWatcher: ObservableObject {
@@ -7,6 +8,11 @@ class FileWatcher: ObservableObject {
 
     private var source: DispatchSourceFileSystemObject?
     private var fileDescriptor: Int32 = -1
+    private var parentSource: DispatchSourceFileSystemObject?
+    private var parentDescriptor: Int32 = -1
+    private var parentPath: String?
+    private var generation = UUID()
+    private var parentGeneration = UUID()
     private let path: String
     private var isWatching = false
 
@@ -21,10 +27,21 @@ class FileWatcher: ObservableObject {
     /// Start watching for changes
     func start() {
         guard !isWatching else { return }
+        isWatching = true
+        updateParentWatch()
+        rearmFileIfNeeded(emit: false)
+    }
 
+    private func rearmFileIfNeeded(emit: Bool) {
+        guard isWatching, !stillTargetsPath(fileDescriptor, path: path) else { return }
+        let wasPresent = fileDescriptor >= 0
+        source?.cancel()
+        source = nil
+        fileDescriptor = -1
+        generation = UUID()
         fileDescriptor = open(path, O_EVTONLY)
         guard fileDescriptor >= 0 else {
-            Logger.debug("FileWatcher: Failed to open \(path)")
+            if emit && wasPresent { lastChange = Date() }
             return
         }
 
@@ -44,25 +61,80 @@ class FileWatcher: ObservableObject {
             queue: .main
         )
 
+        let request = generation
         source?.setEventHandler { [weak self] in
-            self?.handleChange()
+            guard let self, self.isWatching, self.generation == request else { return }
+            self.lastChange = Date()
+            self.updateParentWatch()
+            self.rearmFileIfNeeded(emit: false)
         }
 
-        source?.setCancelHandler { [weak self] in
-            guard let self = self, self.fileDescriptor >= 0 else { return }
-            close(self.fileDescriptor)
-            self.fileDescriptor = -1
+        let ownedDescriptor = fileDescriptor
+        source?.setCancelHandler {
+            // The old source owns only its original fd, even after restart or
+            // owner deinitialization. Never close a replacement descriptor.
+            close(ownedDescriptor)
         }
 
         source?.resume()
-        isWatching = true
+        if emit { lastChange = Date() }
+    }
+
+    private func stillTargetsPath(_ descriptor: Int32, path: String) -> Bool {
+        var opened = stat()
+        var current = stat()
+        return descriptor >= 0 && fstat(descriptor, &opened) == 0
+            && fstatat(AT_FDCWD, path, &current, 0) == 0
+            && opened.st_dev == current.st_dev && opened.st_ino == current.st_ino
+    }
+
+    /// Git writes HEAD/index through lock+rename. Watching only their old inode
+    /// loses future changes. Follow the nearest existing parent without polling,
+    /// then descend as missing logs/refs directories are created.
+    private func updateParentWatch() {
+        var directory = URL(fileURLWithPath: path).deletingLastPathComponent()
+        var isDirectory: ObjCBool = false
+        while directory.path != "/" {
+            if FileManager.default.fileExists(atPath: directory.path, isDirectory: &isDirectory), isDirectory.boolValue { break }
+            directory.deleteLastPathComponent()
+        }
+        if parentPath == directory.path, stillTargetsPath(parentDescriptor, path: directory.path) { return }
+        parentSource?.cancel()
+        parentSource = nil
+        parentDescriptor = -1
+        parentPath = nil
+        parentGeneration = UUID()
+        // A missing volume must not turn into a watcher for the whole filesystem.
+        guard directory.path != "/" else { return }
+        let descriptor = open(directory.path, O_EVTONLY)
+        guard descriptor >= 0 else { return }
+        parentDescriptor = descriptor
+        parentPath = directory.path
+        let request = parentGeneration
+        let parent = DispatchSource.makeFileSystemObjectSource(fileDescriptor: descriptor,
+            eventMask: [.write, .delete, .rename, .revoke, .attrib], queue: .main)
+        parent.setCancelHandler { close(descriptor) }
+        parent.setEventHandler { [weak self] in
+            guard let self, self.isWatching, self.parentGeneration == request else { return }
+            self.updateParentWatch()
+            self.rearmFileIfNeeded(emit: true)
+        }
+        parentSource = parent
+        parent.resume()
     }
 
     /// Stop watching
     func stop() {
+        isWatching = false
+        generation = UUID()
+        parentGeneration = UUID()
         source?.cancel()
         source = nil
-        isWatching = false
+        fileDescriptor = -1
+        parentSource?.cancel()
+        parentSource = nil
+        parentDescriptor = -1
+        parentPath = nil
     }
 
     /// Restart watching (useful after the watched directory changes)
@@ -71,9 +143,6 @@ class FileWatcher: ObservableObject {
         start()
     }
 
-    private func handleChange() {
-        lastChange = Date()
-    }
 }
 
 // MARK: - Repository Change Signal
@@ -113,6 +182,7 @@ class GitRepositoryWatcher: ObservableObject {
     private let repositoryPath: String
     private let debounceInterval: TimeInterval
     private var isRunning = false
+    private var observesActivity = false
 
     init(repositoryPath: String, debounceInterval: TimeInterval = 0.2) {
         self.repositoryPath = repositoryPath
@@ -145,7 +215,7 @@ class GitRepositoryWatcher: ObservableObject {
         NotificationCenter.default.publisher(for: .appDidBecomeActiveAgain)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                guard let self, !self.isRunning else { return }
+                guard let self, self.observesActivity, !self.isRunning else { return }
                 self.resumeAll()
                 // Emit a full signal so UI catches up on any changes that happened while suspended
                 self.emitSignal(.full)
@@ -176,13 +246,16 @@ class GitRepositoryWatcher: ObservableObject {
     }
 
     private func setupWatchers() {
-        let gitDir = (repositoryPath as NSString).appendingPathComponent(".git")
+        guard let scope = try? RepositoryFileLocations(repositoryPath: repositoryPath) else { return }
+        let gitDir = scope.gitDirectory.path
+        let commonDir = scope.commonGitDirectory.path
         let fm = FileManager.default
 
         // Watch HEAD file -> .head signal
         let headPath = (gitDir as NSString).appendingPathComponent("HEAD")
         headWatcher = FileWatcher(path: headPath)
         headWatcher?.$lastChange
+            .dropFirst()
             .debounce(for: .milliseconds(Int(debounceInterval * 1000)), scheduler: RunLoop.main)
             .sink { [weak self] _ in
                 self?.emitSignal(.head)
@@ -194,6 +267,7 @@ class GitRepositoryWatcher: ObservableObject {
         let indexPath = (gitDir as NSString).appendingPathComponent("index")
         indexWatcher = FileWatcher(path: indexPath)
         indexWatcher?.$lastChange
+            .dropFirst()
             .debounce(for: .milliseconds(Int(debounceInterval * 1000)), scheduler: RunLoop.main)
             .sink { [weak self] _ in
                 self?.emitSignal(.status)
@@ -201,21 +275,21 @@ class GitRepositoryWatcher: ObservableObject {
             .store(in: &cancellables)
 
         // Watch stash reflog -> .stash signal
-        let stashLogPath = (gitDir as NSString).appendingPathComponent("logs/refs/stash")
-        if fm.fileExists(atPath: stashLogPath) {
-            stashWatcher = FileWatcher(path: stashLogPath)
-            stashWatcher?.$lastChange
-                .debounce(for: .milliseconds(Int(debounceInterval * 1000)), scheduler: RunLoop.main)
-                .sink { [weak self] _ in
-                    self?.emitSignal(.stash)
-                }
-                .store(in: &cancellables)
-        }
+        let stashLogPath = (commonDir as NSString).appendingPathComponent("logs/refs/stash")
+        stashWatcher = FileWatcher(path: stashLogPath)
+        stashWatcher?.$lastChange
+            .dropFirst()
+            .debounce(for: .milliseconds(Int(debounceInterval * 1000)), scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.emitSignal(.stash)
+            }
+            .store(in: &cancellables)
 
         // Watch config file -> .config signal
-        let configPath = (gitDir as NSString).appendingPathComponent("config")
+        let configPath = (commonDir as NSString).appendingPathComponent("config")
         configWatcher = FileWatcher(path: configPath)
         configWatcher?.$lastChange
+            .dropFirst()
             .debounce(for: .milliseconds(Int(debounceInterval * 1000)), scheduler: RunLoop.main)
             .sink { [weak self] _ in
                 self?.emitSignal(.config)
@@ -223,7 +297,7 @@ class GitRepositoryWatcher: ObservableObject {
             .store(in: &cancellables)
 
         // Watch refs directory for branch/tag changes -> .refs signal
-        let refsPath = (gitDir as NSString).appendingPathComponent("refs")
+        let refsPath = (commonDir as NSString).appendingPathComponent("refs")
         if fm.fileExists(atPath: refsPath) {
             refsWatcher = RecursiveDirectoryWatcher(
                 paths: [refsPath],
@@ -272,6 +346,7 @@ class GitRepositoryWatcher: ObservableObject {
 
     /// Start all watchers
     func startAll() {
+        observesActivity = true
         headWatcher?.start()
         indexWatcher?.start()
         stashWatcher?.start()
@@ -283,6 +358,7 @@ class GitRepositoryWatcher: ObservableObject {
 
     /// Stop all watchers
     func stopAll() {
+        observesActivity = false
         headWatcher?.stop()
         indexWatcher?.stop()
         stashWatcher?.stop()
@@ -327,6 +403,7 @@ class RecursiveDirectoryWatcher {
     }
 
     func start() {
+        guard eventStream == nil else { return }
         var context = FSEventStreamContext(
             version: 0,
             info: Unmanaged.passUnretained(self).toOpaque(),

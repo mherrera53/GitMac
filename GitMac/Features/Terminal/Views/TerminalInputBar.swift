@@ -16,10 +16,12 @@ struct AIInputBar: View {
     let workingDirectory: String
     let onSubmit: (String) -> Void
 
-    @State private var inlineSuggestions: [String] = []
+    @StateObject private var suggestions = TerminalSuggestionController()
+    @State private var hidesSuggestions = false
+    @State private var contextTask: Task<Void, Never>?
+    @State private var contextGeneration = UUID()
+    @State private var cachedContextPath = ""
     @State private var selectedIndex: Int = 0
-    @State private var isLoadingAI = false
-    private let aiDebouncer = Debouncer(delay: 0.25)
 
     @State private var cachedBranches: [String] = []
     @State private var cachedFiles: [String] = []
@@ -101,10 +103,10 @@ struct AIInputBar: View {
 
     private var allSuggestions: [String] {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty, !trimmed.contains("\n") else { return [] }
+        guard !hidesSuggestions, !trimmed.isEmpty, !trimmed.contains("\n") else { return [] }
         var suggestions: [String] = []
         let trimmedLower = trimmed.lowercased()
-        for s in inlineSuggestions where s.lowercased().hasPrefix(trimmedLower) && s.count > trimmed.count {
+        for s in self.suggestions.results {
             suggestions.append(s)
         }
         for s in findDynamicCompletions(trimmed) where !suggestions.contains(s) {
@@ -113,8 +115,8 @@ struct AIInputBar: View {
         if let s = Self.completions[trimmedLower], s.count > trimmed.count, !suggestions.contains(s) {
             suggestions.append(s)
         }
-        for (k, v) in Self.completions where k.hasPrefix(trimmedLower) && v.count > trimmed.count && !suggestions.contains(v) {
-            suggestions.append(v)
+        for key in Self.completions.keys.sorted() where key.hasPrefix(trimmedLower) {
+            if let value = Self.completions[key], value.count > trimmed.count, !suggestions.contains(value) { suggestions.append(value) }
         }
         return Array(suggestions.uniqued().prefix(5))
     }
@@ -154,7 +156,7 @@ struct AIInputBar: View {
                             Text(" ⇥").font(.system(size: 9)).foregroundStyle(AppTheme.textMuted.opacity(0.4))
                         }.padding(.top, 6)
                     }
-                    if isLoadingAI && ghostText.isEmpty {
+                    if suggestions.isLoading && ghostText.isEmpty {
                         HStack(spacing: 0) {
                             Text(text).font(.system(size: 13, design: .monospaced)).opacity(0)
                             Text("...").font(.system(size: 13, design: .monospaced)).foregroundStyle(AppTheme.textMuted.opacity(0.3))
@@ -163,12 +165,27 @@ struct AIInputBar: View {
                     if text.isEmpty {
                         Text("Enter command...").font(.system(size: 13, design: .monospaced)).foregroundStyle(AppTheme.textMuted.opacity(0.4)).padding(.top, 6)
                     }
-                    AITextEditor(text: $text, isFocused: isFocused, onSubmit: { onSubmit(text) }, onTab: applyInlineSuggestion, onArrowUp: { navigateSuggestion(up: true) }, onArrowDown: { navigateSuggestion(up: false) }, onEscape: clearSuggestions).frame(height: dynamicHeight)
+                    AITextEditor(text: $text, isFocused: isFocused, onSubmit: { suggestions.cancel(); onSubmit(text) }, onTab: applyInlineSuggestion, onArrowUp: { navigateSuggestion(up: true) }, onArrowDown: { navigateSuggestion(up: false) }, onEscape: clearSuggestions).frame(height: dynamicHeight)
                 }
-                if allSuggestions.count > 1 { suggestionsDropdown }
+                if allSuggestions.count > 1 || !suggestions.results.isEmpty { suggestionsDropdown }
+                if let error = suggestions.error {
+                    Text(error).font(.caption).foregroundStyle(AppTheme.error).textSelection(.enabled)
+                }
             }
+            Button {
+                hidesSuggestions = false
+                suggestions.request(input: text, directory: workingDirectory)
+            } label: {
+                Label(suggestions.isLoading ? "Generating…" : "Suggest command", systemImage: "sparkles")
+                    .labelStyle(.iconOnly)
+            }
+            .buttonStyle(.borderless)
+            .disabled(suggestions.isLoading || text.trimmingCharacters(in: .whitespacesAndNewlines).count < 2)
+            .help("Request an AI suggestion. Review it before running the command.")
+            .accessibilityIdentifier("terminal-request-suggestion")
+            .padding(.bottom, 6)
             if isMultiline {
-                Button { onSubmit(text) } label: {
+                Button { suggestions.cancel(); onSubmit(text) } label: {
                     Image(systemName: "paperplane.fill").font(.system(size: 12)).foregroundStyle(AppTheme.accent)
                 }.buttonStyle(.plain).padding(.bottom, 6)
             }
@@ -176,9 +193,17 @@ struct AIInputBar: View {
         .padding(.horizontal, 12).padding(.vertical, 6)
         .background(AppTheme.backgroundSecondary)
         .overlay(Rectangle().fill(AppTheme.border.opacity(0.3)).frame(height: 1), alignment: .top)
-        .onChange(of: text) { _, v in fetchInlineSuggestion(v) }
+        .onChange(of: text) { _, value in
+            hidesSuggestions = false
+            selectedIndex = 0
+            suggestions.update(input: value, directory: workingDirectory)
+        }
         .onAppear { loadContextCache() }
-        .onChange(of: workingDirectory) { _, _ in loadContextCache() }
+        .onChange(of: workingDirectory) { _, value in
+            suggestions.update(input: text, directory: value)
+            clearContextCache()
+            loadContextCache()
+        }
         .onDisappear { clearContextCache() }
     }
 
@@ -189,7 +214,11 @@ struct AIInputBar: View {
         cachedDirs.removeAll()
         cachedStagedFiles.removeAll()
         cachedModifiedFiles.removeAll()
-        inlineSuggestions.removeAll()
+        suggestions.cancel()
+        contextTask?.cancel()
+        contextTask = nil
+        contextGeneration = UUID()
+        cachedContextPath = ""
     }
 
     private var suggestionsDropdown: some View {
@@ -197,7 +226,7 @@ struct AIInputBar: View {
             ForEach(Array(allSuggestions.enumerated()), id: \.offset) { idx, sug in
                 Button { selectedIndex = idx; applyInlineSuggestion() } label: {
                     HStack(spacing: 8) {
-                        Image(systemName: idx == selectedIndex ? "chevron.right" : "").font(.system(size: 8, weight: .bold)).foregroundStyle(AppTheme.accent).frame(width: 10)
+                        Image(systemName: "chevron.right").font(.system(size: 8, weight: .bold)).foregroundStyle(AppTheme.accent).opacity(idx == selectedIndex ? 1 : 0).frame(width: 10)
                         Text(sug).font(.system(size: 12, design: .monospaced)).foregroundStyle(idx == selectedIndex ? AppTheme.accent : AppTheme.textSecondary).lineLimit(1)
                         Spacer()
                         if idx == selectedIndex { Text("⇥ Tab").font(.system(size: 9)).foregroundStyle(AppTheme.textMuted.opacity(0.5)) }
@@ -211,56 +240,46 @@ struct AIInputBar: View {
         let c = allSuggestions.count; guard c > 0 else { return }
         selectedIndex = up ? (selectedIndex > 0 ? selectedIndex - 1 : c - 1) : (selectedIndex + 1) % c
     }
-    private func clearSuggestions() { inlineSuggestions = []; selectedIndex = 0 }
-    private func applyInlineSuggestion() { if let s = bestSuggestion, !ghostText.isEmpty { text = s; clearSuggestions() } }
+    private func clearSuggestions() { suggestions.cancel(); selectedIndex = 0; hidesSuggestions = true }
+    private func applyInlineSuggestion() { if let value = bestSuggestion { text = value; clearSuggestions() } }
 
     private func loadContextCache() {
-        guard Date().timeIntervalSince(lastCacheUpdate) > 5 else { return }
-        Task {
-            async let b = loadGitBranches(); async let f = loadFiles(); async let d = loadDirectories(); async let st = loadGitStatus()
-            let (br, fi, di, status) = await (b, f, d, st)
-            await MainActor.run { cachedBranches = br; cachedFiles = fi; cachedDirs = di; cachedStagedFiles = status.staged; cachedModifiedFiles = status.modified; lastCacheUpdate = Date() }
+        let path = (workingDirectory as NSString).expandingTildeInPath
+        guard path != cachedContextPath || Date().timeIntervalSince(lastCacheUpdate) > 5 else { return }
+        contextTask?.cancel()
+        let generation = UUID()
+        contextGeneration = generation
+        contextTask = Task { @MainActor in
+            let engine = GitEngine()
+            async let status = try? engine.getStatus(at: path)
+            async let branchResult = ShellExecutor.shared.execute("git",
+                arguments: ["for-each-ref", "--format=%(refname:short)", "refs/heads/"], workingDirectory: path)
+            let entries = await Task.detached(priority: .utility) {
+                let root = URL(fileURLWithPath: path, isDirectory: true)
+                let names = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isDirectoryKey],
+                    options: [.skipsSubdirectoryDescendants, .skipsHiddenFiles])
+                var files: [String] = [], directories: [String] = []
+                var inspected = 0
+                while let url = names?.nextObject() as? URL, inspected < 200 {
+                    guard !Task.isCancelled else { break }
+                    inspected += 1
+                    files.append(url.lastPathComponent)
+                    if (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+                        directories.append(url.lastPathComponent)
+                    }
+                }
+                return (Array(files.sorted().prefix(50)), Array(directories.sorted().prefix(30)))
+            }.value
+            let (loadedStatus, branches) = await (status, branchResult)
+            guard !Task.isCancelled, generation == contextGeneration else { return }
+            cachedFiles = entries.0
+            cachedDirs = entries.1
+            cachedBranches = branches.isSuccess ? Array(branches.stdout.split(separator: "\n").prefix(200).map(String.init)) : []
+            cachedStagedFiles = Array((loadedStatus?.staged.map(\.path) ?? []).prefix(200))
+            cachedModifiedFiles = Array((loadedStatus?.unstaged.map(\.path) ?? []).prefix(200))
+            cachedContextPath = path
+            lastCacheUpdate = Date()
         }
-    }
-
-    private func loadGitStatus() async -> (staged: [String], modified: [String]) {
-        guard !workingDirectory.isEmpty else { return ([], []) }
-        let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/git"); p.arguments = ["status", "--porcelain"]; p.currentDirectoryURL = URL(fileURLWithPath: workingDirectory)
-        let pipe = Pipe(); p.standardOutput = pipe; p.standardError = FileHandle.nullDevice
-        do {
-            try p.run(); p.waitUntilExit()
-            let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            var staged: [String] = [], modified: [String] = []
-            for line in output.components(separatedBy: .newlines) where line.count > 3 {
-                let idx = line.prefix(1), wt = String(line.dropFirst(1).prefix(1)), fn = String(line.dropFirst(3))
-                if ["A","M","R","D"].contains(String(idx)) { staged.append(fn) }
-                if wt == "M" || wt == "?" { modified.append(fn) }
-            }
-            return (staged, modified)
-        } catch { return ([], []) }
-    }
-
-    private func loadGitBranches() async -> [String] {
-        guard !workingDirectory.isEmpty else { return [] }
-        let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/git"); p.arguments = ["branch", "--format=%(refname:short)"]; p.currentDirectoryURL = URL(fileURLWithPath: workingDirectory)
-        let pipe = Pipe(); p.standardOutput = pipe; p.standardError = FileHandle.nullDevice
-        do { try p.run(); p.waitUntilExit(); return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?.components(separatedBy: .newlines).filter { !$0.isEmpty } ?? [] } catch { return [] }
-    }
-
-    private func loadFiles() async -> [String] {
-        guard !workingDirectory.isEmpty else { return [] }
-        return (try? FileManager.default.contentsOfDirectory(atPath: workingDirectory).filter { !$0.hasPrefix(".") }.prefix(50).sorted().map { String($0) }) ?? []
-    }
-
-    private func loadDirectories() async -> [String] {
-        guard !workingDirectory.isEmpty else { return [] }
-        let fm = FileManager.default
-        var dirs: [String] = []
-        for item in (try? fm.contentsOfDirectory(atPath: workingDirectory)) ?? [] where !item.hasPrefix(".") {
-            var isDir: ObjCBool = false
-            if fm.fileExists(atPath: (workingDirectory as NSString).appendingPathComponent(item), isDirectory: &isDir), isDir.boolValue { dirs.append(item) }
-        }
-        return Array(dirs.sorted().prefix(30))
     }
 
     private func findDynamicCompletions(_ input: String) -> [String] {
@@ -268,27 +287,27 @@ struct AIInputBar: View {
         if ["git checkout ", "git switch ", "git merge ", "git rebase "].contains(where: { lower.hasPrefix($0) }) {
             let pre = input.components(separatedBy: " ").dropLast().joined(separator: " ") + " "
             let partial = String(input.dropFirst(pre.count))
-            for b in cachedBranches.filter({ $0.lowercased().hasPrefix(partial.lowercased()) }).prefix(3) { results.append(pre + b) }
+            for b in cachedBranches.filter({ $0.lowercased().hasPrefix(partial.lowercased()) }).prefix(3) { results.append(pre + TerminalShell.quoteArgument(b)) }
         }
         if lower.hasPrefix("git checkout -b ") || lower.hasPrefix("git switch -c ") {
             let pre = input.components(separatedBy: " ").dropLast().joined(separator: " ") + " "
             let partial = String(input.dropFirst(pre.count)).lowercased()
             for bp in ["feature/", "fix/", "hotfix/", "bugfix/", "chore/", "refactor/", "docs/", "test/"] where bp.hasPrefix(partial) { results.append(pre + bp); if results.count >= 3 { break } }
         }
-        if lower.hasPrefix("cd ") { for d in cachedDirs.filter({ $0.lowercased().hasPrefix(String(input.dropFirst(3)).lowercased()) }).prefix(3) { results.append("cd " + d) } }
+        if lower.hasPrefix("cd ") { for d in cachedDirs.filter({ $0.lowercased().hasPrefix(String(input.dropFirst(3)).lowercased()) }).prefix(3) { results.append("cd -- " + TerminalShell.quoteArgument(d)) } }
         for cmd in ["cat ", "vim ", "nano ", "code ", "less ", "head ", "tail ", "open "] where lower.hasPrefix(cmd) {
-            for f in cachedFiles.filter({ $0.lowercased().hasPrefix(String(input.dropFirst(cmd.count)).lowercased()) }).prefix(3) { results.append(cmd + f) }
+            for f in cachedFiles.filter({ $0.lowercased().hasPrefix(String(input.dropFirst(cmd.count)).lowercased()) }).prefix(3) { results.append(cmd + TerminalShell.quoteArgument(f)) }
         }
         if lower.hasPrefix("git add ") && !lower.hasSuffix(".") && !lower.hasSuffix("--all") {
             let partial = String(input.dropFirst(8))
-            if !partial.isEmpty && partial != "." { for f in cachedFiles.filter({ $0.lowercased().hasPrefix(partial.lowercased()) }).prefix(3) { results.append("git add " + f) } }
+            if !partial.isEmpty && partial != "." { for f in cachedFiles.filter({ $0.lowercased().hasPrefix(partial.lowercased()) }).prefix(3) { results.append("git add -- " + TerminalShell.quoteArgument(f)) } }
         }
         if lower.hasPrefix("git commit -m \"") && !input.hasSuffix("\"\"") {
             let after = String(input.dropFirst("git commit -m \"".count)); let sType = inferCommitType()
             var types = ["feat: ", "fix: ", "docs: ", "style: ", "refactor: ", "test: ", "chore: "]
             if let i = types.firstIndex(of: sType + ": ") { types.remove(at: i); types.insert(sType + ": ", at: 0) }
             if after.isEmpty || after == "\"" {
-                if !cachedStagedFiles.isEmpty { results.append("git commit -m \"\(sType): update \(cachedStagedFiles.prefix(3).map { ($0 as NSString).lastPathComponent }.joined(separator: ", "))\"") }
+                if !cachedStagedFiles.isEmpty { results.append("git commit -m " + TerminalShell.quoteArgument("\(sType): update \(cachedStagedFiles.prefix(3).map { ($0 as NSString).lastPathComponent }.joined(separator: ", "))")) }
                 for t in types.prefix(3) { results.append("git commit -m \"\(t)\"") }
             } else { for t in types where t.hasPrefix(after.lowercased()) { results.append("git commit -m \"\(t)\"") } }
         }
@@ -306,45 +325,97 @@ struct AIInputBar: View {
         return "feat"
     }
 
-    private func fetchInlineSuggestion(_ input: String) {
-        let t = input.trimmingCharacters(in: .whitespacesAndNewlines); selectedIndex = 0
-        guard t.count >= 2, !t.contains("\n") else { inlineSuggestions = []; return }
-        if allSuggestions.count >= 2 { return }
-        aiDebouncer.debounce { [t] in
-            Task { @MainActor in
-                isLoadingAI = true
-                let s = await fetchFromAI(input: t)
-                if !s.isEmpty { inlineSuggestions = s.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty && $0.lowercased().hasPrefix(t.lowercased()) }.prefix(3).map { String($0) } }
-                isLoadingAI = false
+}
+
+// MARK: - Terminal command contracts
+
+/// AI is requested explicitly; typing, switching repositories and dismissal only invalidate it.
+@MainActor final class TerminalSuggestionController: ObservableObject {
+    typealias Provider = (String, String) async throws -> [String]
+    @Published private(set) var results: [String] = []
+    @Published private(set) var isLoading = false
+    @Published private(set) var error: String?
+    private let provider: Provider
+    private var task: Task<Void, Never>?
+    private var generation = UUID()
+    private var input = ""
+    private var directory = ""
+
+    init(provider: @escaping Provider) { self.provider = provider }
+
+    convenience init() {
+        self.init(provider: { input, directory in
+            let values = try await AIService.shared.suggestTerminalCommands(input: input, repoPath: directory)
+            return values.map(\.command)
+        })
+    }
+
+    func update(input: String, directory: String) {
+        guard self.input != input || self.directory != directory else { return }
+        cancel()
+        self.input = input
+        self.directory = directory
+    }
+
+    func cancel() {
+        generation = UUID()
+        task?.cancel()
+        task = nil
+        results = []
+        isLoading = false
+        error = nil
+    }
+
+    func request(input: String, directory: String) {
+        update(input: input, directory: directory)
+        guard !isLoading else { return }
+        let prompt = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard prompt.count >= 2 else { return }
+        guard prompt.utf8.count <= 4096, !prompt.contains("\0"), !prompt.contains("\n") else {
+            error = "Use a single command or question up to 4 KB for a suggestion."
+            return
+        }
+        let request = UUID()
+        generation = request
+        isLoading = true
+        error = nil
+        task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                if generation == request { isLoading = false; task = nil }
+            }
+            do {
+                let values = try await provider(prompt, (directory as NSString).expandingTildeInPath)
+                guard !Task.isCancelled, generation == request else { return }
+                results = Array(values.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty && !$0.contains("\n") && !$0.contains("\0") && $0.utf8.count <= 4096 }
+                    .prefix(3))
+                if results.isEmpty { error = "No command suggestion was returned. Try a more specific request." }
+            } catch {
+                guard !Task.isCancelled, generation == request else { return }
+                self.error = error.localizedDescription
             }
         }
     }
+}
 
-    private func fetchFromAI(input: String) async -> String {
-        if await AIService.shared.hasAPIKey(for: .ollama), let r = try? await fetchOllamaSuggestion(input: input), !r.isEmpty { return r }
-        if let s = try? await AIService.shared.suggestTerminalCommands(input: input, repoPath: workingDirectory).first { return s.command }
-        return ""
+enum TerminalShell {
+    static func quoteArgument(_ value: String) -> String {
+        "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
-    private func fetchOllamaSuggestion(input: String) async throws -> String {
-        guard let url = URL(string: "\(AIService.ollamaBaseURL)/api/generate") else { return "" }
-        var req = URLRequest(url: url); req.httpMethod = "POST"; req.setValue("application/json", forHTTPHeaderField: "Content-Type"); req.timeoutInterval = 3
-        let model = await AIService.shared.getCurrentModel().isEmpty ? "llama3.2" : await AIService.shared.getCurrentModel()
-        req.httpBody = try JSONSerialization.data(withJSONObject: ["model": model, "prompt": buildSmartPrompt(for: input), "stream": false, "options": ["num_predict": 60, "temperature": 0.1]])
-        let (data, resp) = try await URLSession.shared.data(for: req)
-        guard let hr = resp as? HTTPURLResponse, hr.statusCode == 200, let j = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let txt = j["response"] as? String else { return "" }
-        let c = txt.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "\n").first?.replacingOccurrences(of: "`", with: "").trimmingCharacters(in: .whitespaces) ?? ""
-        return c.lowercased().hasPrefix(input.lowercased()) ? c : ""
-    }
-
-    private func buildSmartPrompt(for input: String) -> String {
-        let lower = input.lowercased(); var ctx = ""
-        if ["checkout", "switch", "merge", "rebase", "branch"].contains(where: { lower.contains($0) }) && !cachedBranches.isEmpty { ctx += "Branches: \(cachedBranches.prefix(10).joined(separator: ", "))\n" }
-        if ["cat ", "vim ", "nano ", "code ", "open ", "git add ", "less "].contains(where: { lower.hasPrefix($0) }) && !cachedFiles.isEmpty { ctx += "Files: \(cachedFiles.prefix(15).joined(separator: ", "))\n" }
-        if lower.hasPrefix("cd ") && !cachedDirs.isEmpty { ctx += "Dirs: \(cachedDirs.prefix(10).joined(separator: ", "))\n" }
-        if lower.contains("commit") && lower.contains("-m") { ctx += "Conventional: feat:, fix:, docs:, style:, refactor:, test:, chore:\n"; if !cachedStagedFiles.isEmpty { ctx += "Staged: \(cachedStagedFiles.prefix(10).joined(separator: ", "))\n" } }
-        return ctx.isEmpty ? "Complete terminal command (ONLY command):\n\(input)" : "Complete using context:\n\(ctx)Input: \(input)"
+    static func changeDirectoryCommand(_ path: String) -> String? {
+        guard path.hasPrefix("/"), !path.contains("\0") else { return nil }
+        return "cd -- " + quoteArgument(path) + "\n"
     }
 }
 
-// Shared types (AITextEditor, Debouncer, extensions) are in TerminalSharedTypes.swift
+enum TerminalViewport {
+    static func pixelSize(_ size: CGSize, scale: CGFloat) -> (width: UInt32, height: UInt32)? {
+        guard size.width.isFinite, size.height.isFinite, scale.isFinite, scale > 0,
+              size.width > 0, size.height > 0 else { return nil }
+        let width = (size.width * scale).rounded(.up), height = (size.height * scale).rounded(.up)
+        guard width.isFinite, height.isFinite, width <= CGFloat(UInt32.max), height <= CGFloat(UInt32.max) else { return nil }
+        return (UInt32(width), UInt32(height))
+    }
+}

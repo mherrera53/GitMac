@@ -41,6 +41,8 @@ struct ContentView: View {
 
     var body: some View {
         attachGitListeners(to: mainLayout)
+            .frame(minWidth: DesignTokens.Layout.Window.minWidth, minHeight: DesignTokens.Layout.Window.minHeight)
+            .background(WindowScreenFittingView().allowsHitTesting(false).accessibilityHidden(true))
             .background(AppTheme.background)
             .withToastNotifications()
             .sheet(isPresented: $showCloneSheet) {
@@ -326,43 +328,39 @@ struct MainLayout: View {
 
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var showInspector: Bool = true
+    @State private var availableSize: CGSize = .zero
+    @State private var inspectorCollapsedForSpace = false
+    @State private var sidebarCollapsedForSpace = false
     @Binding var toolbarDisplayMode: ContentView.ToolbarDisplayMode
 
     /// Toolbar color scheme that follows theme settings properly
     /// - .light theme → light color scheme
-    /// - .dark or .custom theme → dark color scheme
+    /// - .dark theme → dark; custom follows its background
     /// - .system theme → nil (follows system appearance)
     private var toolbarColorScheme: SwiftUI.ColorScheme? {
         switch ThemeManager.shared.currentTheme {
         case .light:
             return .light
-        case .dark, .custom:
+        case .dark:
             return .dark
+        case .custom:
+            return ThemeManager.shared.colors.background.isLight ? .light : .dark
         case .system:
             return nil
         }
     }
 
     private var toolbarConfigurationMenu: some View {
-        Group {
-            if #available(macOS 14.0, *) {
-                ControlGroup {
-                    ForEach(ContentView.ToolbarDisplayMode.allCases, id: \.self) { mode in
-                        Button(mode.rawValue) {
-                             toolbarDisplayMode = mode // Update binding
-                        }
-                    }
-                } label: {
-                    Text("Toolbar Display")
-                }
-            } else {
-                Text("Toolbar Display")
-                ForEach(ContentView.ToolbarDisplayMode.allCases, id: \.self) { mode in
-                    Button(mode.rawValue) {
-                         toolbarDisplayMode = mode
-                    }
+        // The deployment target is macOS 14: no legacy availability branch is
+        // needed, and avoiding it keeps ContentBuilder compatible with that OS.
+        ControlGroup {
+            ForEach(ContentView.ToolbarDisplayMode.allCases, id: \.self) { mode in
+                Button(mode.rawValue) {
+                    toolbarDisplayMode = mode
                 }
             }
+        } label: {
+            Text("Toolbar Display")
         }
     }
 
@@ -404,7 +402,8 @@ struct MainLayout: View {
             } else {
                 // Has tabs or panel is visible - show full UnifiedBottomPanel
                 // UnifiedBottomPanel handles its own height (28px collapsed, panelHeight expanded)
-                UnifiedBottomPanel(panelManager: bottomPanelManager)
+                UnifiedBottomPanel(panelManager: bottomPanelManager,
+                    maximumHeight: DesignTokens.Layout.Responsive.bottomPanelLimit(availableHeight: availableSize.height))
                     .transition(.move(edge: .bottom))
             }
         }
@@ -420,24 +419,60 @@ struct MainLayout: View {
     }
 
     var body: some View {
+        GeometryReader { geometry in
+            splitLayout
+                .onChange(of: geometry.size, initial: true) { _, size in
+                    let previousWidth = availableSize.width
+                    availableSize = size
+                    // Changing only the terminal/window height must not undo a
+                    // user's explicit choice to reopen a compact-width panel.
+                    guard previousWidth != size.width else { return }
+                    let panels = DesignTokens.Layout.Responsive.Panels(
+                        sidebarVisible: columnVisibility != .detailOnly,
+                        inspectorVisible: showInspector,
+                        sidebarCollapsedForSpace: sidebarCollapsedForSpace,
+                        inspectorCollapsedForSpace: inspectorCollapsedForSpace).fitting(width: size.width)
+                    showInspector = panels.inspectorVisible
+                    columnVisibility = panels.sidebarVisible ? .all : .detailOnly
+                    sidebarCollapsedForSpace = panels.sidebarCollapsedForSpace
+                    inspectorCollapsedForSpace = panels.inspectorCollapsedForSpace
+                }
+        }
+    }
+
+    private var splitLayout: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             // Left Panel - Branches/Remotes/Tags
-            LeftSidebarPanel()
+            GeometryReader { geometry in
+                LeftSidebarPanel()
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+            }
                 .navigationSplitViewColumnWidth(min: DesignTokens.Layout.Sidebar.minWidth, ideal: DesignTokens.Layout.Sidebar.idealWidth, max: DesignTokens.Layout.Sidebar.maxWidth)
                 .background(AppTheme.sidebar)
         } detail: {
             // Center content - expands when inspector is hidden
-            centerColumn
+            // The whole column must keep a stable native minimum when the
+            // graph/loading/file viewer branches replace one another.
+            GeometryReader { geometry in
+                centerColumn
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+            }
         }
         .navigationSplitViewStyle(.prominentDetail)
         .inspector(isPresented: $showInspector) {
             // Right Panel - Staging/Commit (proper inspector behavior)
-            RightStagingPanel(
-                selectedFileDiff: $selectedFileDiff,
-                isLoadingDiff: $isLoadingDiff,
-                stagingVM: stagingVM,
-                selectedStagingFile: $selectedStagingFile
-            )
+            // Bound all inspector modes, not only the stash child. Switching
+            // staging/commit/stash must not change SplitViewChildController's
+            // minimum-size contract during an AppKit constraint update.
+            GeometryReader { geometry in
+                RightStagingPanel(
+                    selectedFileDiff: $selectedFileDiff,
+                    isLoadingDiff: $isLoadingDiff,
+                    stagingVM: stagingVM,
+                    selectedStagingFile: $selectedStagingFile
+                )
+                .frame(width: geometry.size.width, height: geometry.size.height)
+            }
                 .inspectorColumnWidth(min: DesignTokens.Layout.StagingPanel.minWidth, ideal: DesignTokens.Layout.StagingPanel.idealWidth, max: DesignTokens.Layout.StagingPanel.maxWidth)
                 .background(AppTheme.background)
         }
@@ -452,7 +487,9 @@ struct MainLayout: View {
                         PullToolbarButton()
                         FetchToolbarButton()
                         PushToolbarButton()
+                    }
 
+                    if availableSize.width >= DesignTokens.Layout.Responsive.compactToolbarWidth {
                         // CI/CD Status Badge
                         CICDToolbarBadge(repoPath: appState.currentRepository?.path)
 
@@ -477,7 +514,6 @@ struct MainLayout: View {
                         .help("Terminal")
 
                         Divider().frame(height: 20)
-                    }
 
                     // Integrations
                     XcodeToolbarButton(icon: "person.2.fill", color: AppTheme.accentPurple) {
@@ -499,19 +535,27 @@ struct MainLayout: View {
                         bottomPanelManager.openTab(type: .linear)
                     }
                     .help("Linear")
+                    } else {
+                        compactActionsMenu
+                    }
                 }
             }
 
             // Right side - only Settings and Inspector toggle
             ToolbarItemGroup(placement: .primaryAction) {
+                GitHelpButton(topicID: "basics")
                 if #available(macOS 14.0, *) {
                     SettingsLink {
-                        Image(systemName: "gearshape.fill")
+                        Image(systemName: "gearshape")
                             .renderingMode(.template)
                             .foregroundStyle(AppTheme.textSecondary)
+                            .frame(minWidth: 28, minHeight: 28)
+                            .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
-                    .help("Settings")
+                    .buttonStyle(.borderless)
+                    .help("Application Settings (⌘,)")
+                    .accessibilityLabel("Open application settings")
+                    .accessibilityIdentifier("application-settings")
                 } else {
                     XcodeToolbarButton(icon: "gearshape.fill", color: AppTheme.textSecondary) {
                         NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
@@ -521,22 +565,91 @@ struct MainLayout: View {
 
                 XcodeToolbarButton(icon: "sidebar.trailing", color: showInspector ? AppTheme.accent : AppTheme.textSecondary) {
                     withAnimation {
+                        inspectorCollapsedForSpace = false
+                        if !showInspector && availableSize.width < DesignTokens.Layout.Responsive.inspectorWidth {
+                            sidebarCollapsedForSpace = false
+                            columnVisibility = .detailOnly
+                        }
                         showInspector.toggle()
                     }
                 }
                 .help("Toggle Inspector")
+                .accessibilityLabel("Toggle Inspector")
+                .accessibilityIdentifier("inspector-toggle")
             }
         }
         .toolbarBackground(AppTheme.background, for: .windowToolbar)
         .toolbarColorScheme(toolbarColorScheme, for: .windowToolbar)
         .preferredColorScheme(toolbarColorScheme)
         .id(themeRefreshTrigger)
+        .onReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
+            sidebarCollapsedForSpace = false
+            if columnVisibility == .all { columnVisibility = .detailOnly }
+            else {
+                if availableSize.width < DesignTokens.Layout.Responsive.inspectorWidth { showInspector = false }
+                columnVisibility = .all
+            }
+        }
         .onChange(of: appState.activeTabId) { _, _ in
             // Clear diff when switching repositories
             selectedFileDiff = nil
             selectedStagingFile = nil
         }
     }
+
+    private var compactActionsMenu: some View {
+        Menu {
+            Button("New Branch", systemImage: "arrow.triangle.branch") { NotificationCenter.default.post(name: .newBranch, object: nil) }
+            Button("Stash", systemImage: "tray.and.arrow.down") { NotificationCenter.default.post(name: .stash, object: nil) }
+            Button("Pop Stash", systemImage: "tray.and.arrow.up") { NotificationCenter.default.post(name: .popStash, object: nil) }
+            Button("Terminal", systemImage: "terminal") { bottomPanelManager.openTab(type: .terminal) }
+            Divider()
+            Button("CI/CD") { NotificationCenter.default.post(name: .showCICD, object: nil) }
+            Button("Team Activity") { bottomPanelManager.openTab(type: .teamActivity) }
+            Button("Taiga") { bottomPanelManager.openTab(type: .taiga) }
+            Button("Jira") { bottomPanelManager.openTab(type: .jira) }
+            Button("Linear") { bottomPanelManager.openTab(type: .linear) }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+        }
+        .help("More repository actions")
+        .accessibilityLabel("More repository actions")
+    }
+}
+
+/// Fits only the containing window; never the first global application window.
+private struct WindowScreenFittingView: NSViewRepresentable {
+    func makeNSView(context: Context) -> WindowScreenFittingNSView { WindowScreenFittingNSView() }
+    func updateNSView(_ nsView: WindowScreenFittingNSView, context: Context) {}
+}
+
+private final class WindowScreenFittingNSView: NSView {
+    private var isFitting = false
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        NotificationCenter.default.removeObserver(self)
+        guard let window else { return }
+        for name in [NSWindow.didChangeScreenNotification, NSWindow.didChangeBackingPropertiesNotification,
+                     NSWindow.didEndLiveResizeNotification] {
+            NotificationCenter.default.addObserver(self, selector: #selector(fitWindow), name: name, object: window)
+        }
+        NotificationCenter.default.addObserver(self, selector: #selector(fitWindow),
+            name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        DispatchQueue.main.async { [weak self] in self?.fitWindow() }
+    }
+
+    @objc private func fitWindow() {
+        guard !isFitting, let window, !window.inLiveResize,
+              !window.styleMask.contains(.fullScreen), let screen = window.screen ?? NSScreen.screens.first else { return }
+        let fitted = DesignTokens.Layout.Responsive.windowFrame(window.frame, fitting: screen.visibleFrame)
+        guard fitted != window.frame else { return }
+        isFitting = true
+        window.setFrame(fitted, display: true)
+        isFitting = false
+    }
+
+    deinit { NotificationCenter.default.removeObserver(self) }
 }
 
 // MARK: - Collapsed Bottom Panel Bar
@@ -581,6 +694,8 @@ struct CollapsedBottomPanelBar: View {
                     .foregroundStyle(AppTheme.textMuted)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Open terminal")
+            .accessibilityIdentifier("open-terminal")
         }
         .padding(.horizontal, 12)
         .frame(height: 22)

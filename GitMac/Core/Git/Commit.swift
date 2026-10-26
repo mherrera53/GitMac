@@ -2,6 +2,27 @@ import Foundation
 
 /// Represents a Git commit
 struct Commit: Identifiable, Equatable, Hashable {
+    // The formatter owns mutable ICU state. Keep it private behind one lock,
+    // preserving its numeric rounding while avoiding one formatter per row.
+    private final class RelativeDateStorage: @unchecked Sendable {
+        private let lock = NSLock()
+        private let formatter: RelativeDateTimeFormatter
+
+        init() {
+            formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .abbreviated
+            formatter.locale = .autoupdatingCurrent
+            formatter.calendar = .autoupdatingCurrent
+        }
+
+        func string(for date: Date, relativeTo reference: Date) -> String {
+            lock.lock()
+            defer { lock.unlock() }
+            return formatter.localizedString(for: date, relativeTo: reference)
+        }
+    }
+
+    private static let relativeDateStorage = RelativeDateStorage()
     private static let displayDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
@@ -85,9 +106,7 @@ struct Commit: Identifiable, Equatable, Hashable {
     }
 
     var relativeDate: String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: authorDate, relativeTo: Date())
+        Self.relativeDateStorage.string(for: authorDate, relativeTo: Date())
     }
 
     var formattedDate: String {

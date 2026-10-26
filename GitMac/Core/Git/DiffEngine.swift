@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import os.signpost
 
 // MARK: - DiffEngine Configuration
@@ -237,7 +238,7 @@ public actor DiffEngine {
         defer { os_signpost(.end, log: Self.signpostLog, name: "Preflight", signpostID: parseSignpost) }
 
         // Get numstat for additions/deletions
-        var args = ["diff", "--numstat"]
+        var args = ["diff", "--no-ext-diff", "--no-textconv", "--numstat", "-z"]
         if staged {
             args.append("--cached")
         }
@@ -249,7 +250,10 @@ public actor DiffEngine {
         var additions = 0
         var deletions = 0
 
-        if result.exitCode == 0 {
+        guard result.isSuccess else {
+            throw GitError.commandFailed("git diff --numstat", result.stderr)
+        }
+        do {
             let parts = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: "\t")
             if parts.count >= 2 {
                 additions = Int(parts[0]) ?? 0
@@ -299,18 +303,8 @@ public actor DiffEngine {
                     os_signpost(.begin, log: Self.signpostLog, name: "ParseDiff", signpostID: signpost)
                     defer { os_signpost(.end, log: Self.signpostLog, name: "ParseDiff", signpostID: signpost) }
 
-                    // Check cache first
-                    let cacheKey = "\(repoPath):\(file):\(staged)"
-                    if let cached = await self.hunkCache.get(key: cacheKey) {
-                        for hunk in cached {
-                            continuation.yield(hunk)
-                        }
-                        continuation.finish()
-                        return
-                    }
-
                     // Build git diff command
-                    var args = ["diff", "--no-color", "--no-ext-diff", "--unified=\(options.contextLines)"]
+                    var args = ["diff", "--no-color", "--no-ext-diff", "--no-textconv", "--unified=\(options.contextLines)"]
                     if staged {
                         args.append("--cached")
                     }
@@ -336,7 +330,16 @@ public actor DiffEngine {
                         return
                     }
 
-                    // Parse hunks
+                    // A file name is not a snapshot. Include the actual patch and
+                    // materialization mode so edits, index and options cannot
+                    // return an earlier patch from this cache.
+                    let digest = SHA256.hash(data: Data(result.stdout.utf8)).map { String(format: "%02x", $0) }.joined()
+                    let cacheKey = "\(repoPath):\(file):\(staged):\(useLFM):\(digest)"
+                    if let cached = await self.hunkCache.get(key: cacheKey) {
+                        for hunk in cached { continuation.yield(hunk) }
+                        continuation.finish()
+                        return
+                    }
                     let hunks = await self.parseHunksFromOutput(result.stdout, materializeLines: !useLFM)
 
                     // Cache the results
@@ -373,6 +376,9 @@ public actor DiffEngine {
 
         guard let byteRange = hunk.byteRange else {
             return hunk.lines ?? []
+        }
+        guard byteRange.lowerBound >= 0, byteRange.upperBound <= rawDiffData.count else {
+            throw DiffEngineError.parseFailed("Hunk byte range does not belong to this diff snapshot")
         }
 
         // Extract the relevant bytes
@@ -419,19 +425,20 @@ public actor DiffEngine {
         var newLineNum = 0
 
         let lines = output.components(separatedBy: "\n")
+        let byteCount = output.utf8.count
         var lineIndex = 0
         var byteOffset = 0
 
         for line in lines {
             defer {
-                byteOffset += line.utf8.count + 1 // +1 for newline
+                byteOffset = min(byteCount, byteOffset + line.utf8.count + 1)
                 lineIndex += 1
             }
 
             // Skip file headers
-            if line.hasPrefix("diff --git") || line.hasPrefix("index ") ||
+            if currentHeader == nil && (line.hasPrefix("diff --git") || line.hasPrefix("index ") ||
                line.hasPrefix("--- ") || line.hasPrefix("+++ ") ||
-               line.hasPrefix("new file") || line.hasPrefix("deleted file") {
+               line.hasPrefix("new file") || line.hasPrefix("deleted file")) {
                 continue
             }
 
@@ -658,7 +665,7 @@ final class LRUDiffCache<Key: Hashable, Value>: @unchecked Sendable {
     private let lock = NSLock()
 
     init(maxCostBytes: Int) {
-        self.maxCostBytes = maxCostBytes
+        self.maxCostBytes = max(0, maxCostBytes)
     }
 
     func get(key: Key) -> Value? {
@@ -679,13 +686,16 @@ final class LRUDiffCache<Key: Hashable, Value>: @unchecked Sendable {
         defer { lock.unlock() }
 
         // Remove old entry if exists
-        if let existing = cache[key] {
+        if let existing = cache.removeValue(forKey: key) {
             totalCost -= existing.cost
             lruOrder.removeAll { $0 == key }
         }
 
-        // Evict if needed
-        while totalCost + cost > maxCostBytes && !cache.isEmpty {
+        // Account for empty patches too, and never admit an oversized entry or
+        // evict useful entries to make room for something that cannot fit.
+        let cost = max(1, cost)
+        guard cost <= maxCostBytes else { cache.removeValue(forKey: key); return }
+        while (cost > maxCostBytes - totalCost || cache.count >= 1024) && !cache.isEmpty {
             evictLRU()
         }
 

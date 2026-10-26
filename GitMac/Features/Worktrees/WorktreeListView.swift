@@ -1,448 +1,418 @@
 import SwiftUI
+import AppKit
 
 struct WorktreeListView: View {
     @Environment(AppState.self) var appState
     @StateObject private var manager = WorktreeManager.shared
     @State private var showAddSheet = false
-    @State private var selectedWorktree: Worktree?
+    @State private var selectedPath: String?
+    @State private var pendingRemoval: Worktree?
+    @State private var removalRepository: String?
+    @State private var operationError: String?
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             HStack {
-                Text("WORKTREES")
-                    .font(DesignTokens.Typography.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(AppTheme.textSecondary)
-
+                Label("Worktrees", systemImage: "folder.badge.gearshape").font(.headline)
                 Spacer()
-
-                HStack(spacing: DesignTokens.Spacing.sm) {
-                    Button {
-                        Task { await manager.refresh(at: appState.currentRepository?.path) }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(DesignTokens.Typography.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        showAddSheet = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(DesignTokens.Typography.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
-                    .buttonStyle(.plain)
-                }
+                GitHelpButton(topicID: "worktrees")
+                Button {
+                    Task { await manager.refresh(at: appState.currentRepository?.path) }
+                } label: { Image(systemName: "arrow.clockwise").frame(width: 28, height: 28) }
+                .help("Refresh worktrees").accessibilityLabel("Refresh worktrees")
+                Button("New Worktree…", systemImage: "plus") { showAddSheet = true }
+                    .disabled(appState.currentRepository == nil || manager.isLoading)
             }
-            .padding(.horizontal, DesignTokens.Spacing.md)
-            .padding(.vertical, DesignTokens.Spacing.sm)
-            .background(AppTheme.textMuted.opacity(0.1))
+            .padding(12)
 
-            // Worktree list
-            if manager.isLoading {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                        .scaleEffect(0.8)
-                    Spacer()
-                }
-                .padding(.vertical, 20)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("One task, one branch, one folder.").font(.subheadline.weight(.semibold))
+                Text("Open a folder to work there. Closing its tab keeps the folder; Remove deletes it.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12).background(AppTheme.backgroundSecondary)
+
+            if let error = manager.error {
+                Text(error).font(.caption).foregroundStyle(AppTheme.error).textSelection(.enabled).padding(12)
+            }
+            if manager.worktrees.isEmpty && manager.isLoading {
+                ProgressView("Loading worktrees…").frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if manager.worktrees.isEmpty {
-                VStack(spacing: DesignTokens.Spacing.sm) {
-                    Image(systemName: "folder.badge.plus")
-                        .font(DesignTokens.Typography.iconXL)
-                        .foregroundStyle(AppTheme.textSecondary)
-                    Text("No worktrees")
-                        .font(DesignTokens.Typography.caption)
-                        .foregroundStyle(AppTheme.textSecondary)
+                ContentUnavailableView {
+                    Label("No worktrees available", systemImage: "folder")
+                } description: {
+                    Text("Refresh the list or create a separate folder for your next task.")
+                } actions: {
+                    Button("New Worktree…") { showAddSheet = true }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, DesignTokens.Spacing.xl)
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(manager.worktrees) { worktree in
-                            WorktreeRow(
-                                worktree: worktree,
-                                isSelected: selectedWorktree?.id == worktree.id,
-                                onSelect: { selectedWorktree = worktree },
-                                onOpen: { openWorktree(worktree) },
-                                onRemove: { removeWorktree(worktree) },
-                                onLock: { toggleLock(worktree) }
-                            )
+                        ForEach(manager.worktrees, id: \.path) { worktree in
+                            WorktreeRow(worktree: worktree,
+                                isSelected: selectedPath == worktree.path,
+                                isCurrent: worktree.path == appState.currentRepository?.path,
+                                onSelect: { selectedPath = worktree.path },
+                                onOpen: { Task { await appState.openRepository(at: worktree.path) } },
+                                onRemove: {
+                                    removalRepository = appState.currentRepository?.path
+                                    pendingRemoval = worktree
+                                },
+                                onLock: { toggleLock(worktree) })
+                            Divider()
                         }
                     }
                 }
             }
         }
-        .task {
+        .background(AppTheme.background)
+        .task(id: appState.currentRepository?.path) {
+            selectedPath = nil
+            pendingRemoval = nil
             await manager.refresh(at: appState.currentRepository?.path)
         }
-        .onChange(of: appState.currentRepository?.path) { _, newPath in
-            Task { await manager.refresh(at: newPath) }
+        .sheet(isPresented: $showAddSheet) { AddWorktreeSheet() }
+        .confirmationDialog("Remove this worktree folder?", isPresented: Binding(
+            get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } }), titleVisibility: .visible) {
+            if let worktree = pendingRemoval {
+                Button("Remove Folder", role: .destructive) {
+                    let repository = removalRepository
+                    pendingRemoval = nil
+                    Task {
+                        do { try await manager.removeWorktree(worktree, repositoryPath: repository) }
+                        catch { operationError = error.localizedDescription }
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) { pendingRemoval = nil }
+        } message: {
+            Text("Folder: \(pendingRemoval?.path ?? "")\nIts branch remains. Uncommitted files block removal. This does not use the Trash.")
         }
-        .sheet(isPresented: $showAddSheet) {
-            AddWorktreeSheet()
-        }
-    }
-
-    private func openWorktree(_ worktree: Worktree) {
-        Task {
-            await appState.openRepository(at: worktree.path)
-        }
-    }
-
-    private func removeWorktree(_ worktree: Worktree) {
-        guard !worktree.isMain else { return }
-        Task {
-            try? await manager.removeWorktree(worktree)
-        }
+        .alert("Worktree operation failed", isPresented: Binding(
+            get: { operationError != nil }, set: { if !$0 { operationError = nil } })) {
+            Button("OK") { operationError = nil }
+        } message: { Text(operationError ?? "") }
     }
 
     private func toggleLock(_ worktree: Worktree) {
+        let repository = appState.currentRepository?.path
         Task {
-            if worktree.isLocked {
-                try? await manager.unlockWorktree(worktree)
-            } else {
-                try? await manager.lockWorktree(worktree)
-            }
+            do {
+                if worktree.isLocked { try await manager.unlockWorktree(worktree, repositoryPath: repository) }
+                else { try await manager.lockWorktree(worktree, reason: "Protected in GitMac", repositoryPath: repository) }
+            } catch { operationError = error.localizedDescription }
         }
     }
 }
 
-// MARK: - Worktree Row
 struct WorktreeRow: View {
     let worktree: Worktree
     let isSelected: Bool
+    var isCurrent: Bool = false
     let onSelect: () -> Void
     let onOpen: () -> Void
     let onRemove: () -> Void
     let onLock: () -> Void
-    @State private var isHovered = false
+
+    private var canOpen: Bool { !worktree.isBare && !worktree.isPrunable && FileManager.default.fileExists(atPath: worktree.path) }
+    private var canRemove: Bool { !worktree.isMain && !worktree.isLocked && !worktree.isDetached && !isCurrent && canOpen }
 
     var body: some View {
-        HStack(spacing: DesignTokens.Spacing.sm) {
-            // Status icon
-            Image(systemName: worktree.isMain ? "house.fill" : "folder.fill")
-                .font(DesignTokens.Typography.callout)
-                .foregroundStyle(worktree.isMain ? AppTheme.info : AppTheme.accentPurple)
-
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
-                HStack(spacing: DesignTokens.Spacing.xs) {
-                    Text(worktree.name)
-                        .font(DesignTokens.Typography.callout.weight(worktree.isMain ? .semibold : .regular))
-                        .foregroundStyle(AppTheme.textPrimary)
-                        .lineLimit(1)
-
-                    if worktree.isLocked {
-                        Image(systemName: "lock.fill")
-                            .font(DesignTokens.Typography.caption2)
-                            .foregroundStyle(AppTheme.warning)
-                    }
-
-                    if worktree.isMain {
-                        Text("main")
-                            .font(DesignTokens.Typography.caption2.weight(.medium))
-                            .foregroundStyle(AppTheme.info)
-                            .padding(.horizontal, DesignTokens.Spacing.xs)
-                            .padding(.vertical, DesignTokens.Spacing.xxs / 2)
-                            .background(AppTheme.info.opacity(0.2))
-                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.sm))
-                    }
+        HStack(spacing: 10) {
+            Image(systemName: worktree.isMain ? "house" : "folder").foregroundStyle(AppTheme.accent)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(worktree.name).font(.subheadline.weight(.semibold)).lineLimit(1).truncationMode(.middle)
+                    if isCurrent { Text("Current").font(.caption2).foregroundStyle(AppTheme.accent) }
+                    if worktree.isMain { Text("Main folder").font(.caption2).foregroundStyle(.secondary) }
+                    if worktree.isLocked { Image(systemName: "lock.fill").help(worktree.lockedReason ?? "Protected against removal") }
                 }
-
-                HStack(spacing: DesignTokens.Spacing.xs) {
-                    if let branch = worktree.branch {
-                        Image(systemName: "arrow.triangle.branch")
-                            .font(DesignTokens.Typography.caption2)
-                            .foregroundStyle(AppTheme.textSecondary)
-                        Text(branch)
-                            .font(DesignTokens.Typography.caption2)
-                    } else if worktree.isDetached {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(DesignTokens.Typography.caption2)
-                            .foregroundStyle(AppTheme.warning)
-                        Text("detached")
-                            .font(DesignTokens.Typography.caption2)
-                    }
-
-                    Text(worktree.shortSHA)
-                        .font(DesignTokens.Typography.caption2.monospacedDigit())
-                }
-                .foregroundStyle(AppTheme.textSecondary)
-            }
-
-            Spacer()
-
-            // Actions (on hover)
-            if isHovered && !worktree.isMain {
-                HStack(spacing: DesignTokens.Spacing.xs) {
-                    Button(action: onOpen) {
-                        Image(systemName: "arrow.up.forward.square")
-                            .font(DesignTokens.Typography.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Open in new tab")
-
-                    Button(action: onLock) {
-                        Image(systemName: worktree.isLocked ? "lock.open" : "lock")
-                            .font(DesignTokens.Typography.caption)
-                            .foregroundStyle(AppTheme.textSecondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help(worktree.isLocked ? "Unlock" : "Lock")
-
-                    Button(action: onRemove) {
-                        Image(systemName: "trash")
-                            .font(DesignTokens.Typography.caption)
-                            .foregroundStyle(AppTheme.error)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Remove worktree")
+                Text(worktree.isBare ? "Bare repository" : (worktree.branch ?? "Detached revision \(worktree.shortSHA)"))
+                    .font(.caption).foregroundStyle(worktree.isDetached ? AppTheme.warning : AppTheme.textSecondary)
+                    .lineLimit(1).truncationMode(.middle)
+                Text(worktree.path).font(.caption2).foregroundStyle(.secondary)
+                    .lineLimit(1).truncationMode(.middle).help(worktree.path)
+                if worktree.isPrunable {
+                    Text("Folder missing — review stale metadata before cleanup").font(.caption).foregroundStyle(AppTheme.warning)
                 }
             }
+            Spacer(minLength: 0)
+            Button("Open", action: onOpen).disabled(!canOpen)
+                .help("Open this worktree in a repository tab")
+                .accessibilityLabel("Open worktree \(worktree.name)")
+            Menu {
+                Button("Reveal in Finder", systemImage: "folder") {
+                    NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: worktree.path)])
+                }.disabled(!canOpen)
+                Button("Copy Folder Path", systemImage: "doc.on.doc") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(worktree.path, forType: .string)
+                }
+                if !worktree.isMain {
+                    Divider()
+                    Button(worktree.isLocked ? "Unlock Folder" : "Protect Folder", systemImage: worktree.isLocked ? "lock.open" : "lock", action: onLock)
+                        .disabled(!canOpen)
+                    Button("Remove Folder…", systemImage: "trash", role: .destructive, action: onRemove)
+                        .disabled(!canRemove)
+                }
+            } label: { Image(systemName: "ellipsis.circle").frame(width: 28, height: 28) }
+            .menuStyle(.borderlessButton).menuIndicator(.hidden)
+            .help("Worktree actions. Protected, current, main and detached folders cannot be removed here.")
+            .accessibilityLabel("Actions for worktree \(worktree.name)")
         }
-        .padding(.horizontal, DesignTokens.Spacing.md)
-        .padding(.vertical, DesignTokens.Spacing.md)
-        .background(isSelected ? AppTheme.info.opacity(0.2) : (isHovered ? AppTheme.textMuted.opacity(0.1) : Color.clear))
+        .padding(12)
+        .background(isSelected ? AppTheme.accent.opacity(0.1) : Color.clear)
         .contentShape(Rectangle())
-        .onHover { isHovered = $0 }
         .onTapGesture { onSelect() }
-        .onTapGesture(count: 2) { onOpen() }
+        .accessibilityElement(children: .contain)
     }
 }
 
-// MARK: - Add Worktree Sheet
 struct AddWorktreeSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) var appState
     @StateObject private var manager = WorktreeManager.shared
+    var startPoint: String? = nil
 
+    private enum Mode: String, CaseIterable {
+        case newBranch = "New branch"
+        case existing = "Existing branch"
+        case inspect = "Inspect revision"
+    }
+
+    @State private var mode: Mode = .newBranch
     @State private var worktreePath = ""
-    @State private var selectedBranch = ""
-    @State private var createNewBranch = false
+    @State private var selectedRevision = ""
     @State private var newBranchName = ""
-    @State private var isDetached = false
+    @State private var sourceRepository: String?
+    @State private var sourceBranches: [Branch] = []
+    @State private var openAfterCreation = true
+    @State private var isCreating = false
+    @State private var creationError: String?
+
+    private var validationMessage: String? {
+        guard let sourceRepository else { return "Open a repository first." }
+        guard appState.currentRepository?.path == sourceRepository else { return "Repository changed. Close and reopen this dialog." }
+        guard worktreePath.hasPrefix("/"), !worktreePath.contains("\0") else { return "Choose an absolute path for a new folder." }
+        guard !FileManager.default.fileExists(atPath: worktreePath) else { return "That folder already exists. Choose a new destination." }
+        let source = URL(fileURLWithPath: sourceRepository).resolvingSymlinksInPath().path
+        let destination = URL(fileURLWithPath: worktreePath).standardizedFileURL.resolvingSymlinksInPath().path
+        guard destination != source && !destination.hasPrefix(source + "/") else { return "Choose a separate folder outside this repository." }
+        if mode == .newBranch && newBranchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "Name the new branch for this task." }
+        if mode != .newBranch && selectedRevision.isEmpty { return "Choose a branch or revision." }
+        if mode == .existing && manager.hasWorktree(for: selectedRevision) { return "That branch already has a folder. Open its worktree or create a new branch." }
+        return nil
+    }
 
     var body: some View {
-        VStack(spacing: DesignTokens.Spacing.xl) {
-            Text("Add Worktree")
-                .font(DesignTokens.Typography.title3.weight(.semibold))
-                .foregroundStyle(AppTheme.textPrimary)
-
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
-                // Worktree path
-                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                    Text("Worktree Path")
-                        .font(DesignTokens.Typography.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(AppTheme.textSecondary)
-                    HStack {
-                        DSTextField(placeholder: "Path for new worktree", text: $worktreePath)
-                            .padding(DesignTokens.Spacing.md)
-                            .background(AppTheme.textMuted.opacity(0.15))
-                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
-
-                        Button("Browse") {
-                            let panel = NSSavePanel()
-                            panel.canCreateDirectories = true
-                            panel.nameFieldStringValue = "worktree"
-
-                            panel.begin { response in
-                                if response == .OK {
-                                    Task { @MainActor in
-                                        worktreePath = panel.url?.path ?? ""
-                                    }
-                                }
-                            }
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                }
-
-                // Branch options
-                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-                    DSToggle("Create new branch", isOn: $createNewBranch)
-
-                    if createNewBranch {
-                        DSTextField(placeholder: "New branch name", text: $newBranchName)
-                            .padding(DesignTokens.Spacing.md)
-                            .background(AppTheme.textMuted.opacity(0.15))
-                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
-                    } else {
-                        // Select existing branch
-                        Picker("Branch", selection: $selectedBranch) {
-                            Text("Select branch...").tag("")
-                            if let repo = appState.currentRepository {
-                                ForEach(repo.branches.filter { !$0.isRemote }) { branch in
-                                    Text(branch.name).tag(branch.name)
-                                }
-                            }
-                        }
-                    }
-
-                    DSToggle("Detached HEAD", isOn: $isDetached)
-                        .disabled(createNewBranch)
-                }
-            }
-
+        VStack(spacing: 0) {
             HStack {
-                Button("Cancel") { dismiss() }
-                    .buttonStyle(.bordered)
-
+                Label("Create Worktree", systemImage: "folder.badge.plus").font(.headline)
                 Spacer()
+                GitHelpButton(topicID: "worktrees")
+            }.padding(16)
 
-                Button("Create Worktree") {
-                    createWorktree()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Keep your current work in place and start another task in a separate folder.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                    if let sourceRepository {
+                        LabeledContent("Repository", value: URL(fileURLWithPath: sourceRepository).lastPathComponent)
+                            .help(sourceRepository)
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("1. Choose your task").font(.subheadline.weight(.semibold))
+                        Picker("Worktree mode", selection: $mode) {
+                            ForEach(Mode.allCases.filter { startPoint == nil || $0 != .existing }, id: \.self) { Text($0.rawValue).tag($0) }
+                        }.pickerStyle(.segmented)
+                        if mode == .newBranch {
+                            TextField("New branch name, e.g. feature/search", text: $newBranchName).textFieldStyle(.roundedBorder)
+                            Text("Recommended for editing. Your original folder stays on its current branch.")
+                                .font(.caption).foregroundStyle(.secondary)
+                            TextField("Start from branch, tag or commit (HEAD by default)", text: $selectedRevision).textFieldStyle(.roundedBorder)
+                        } else if mode == .existing {
+                            Picker("Branch", selection: $selectedRevision) {
+                                Text("Choose a branch…").tag("")
+                                ForEach(sourceBranches.filter { !$0.isRemote }) { branch in
+                                    Text(branch.name + (manager.hasWorktree(for: branch.name) ? " — already open" : ""))
+                                        .tag(branch.name).disabled(manager.hasWorktree(for: branch.name))
+                                }
+                            }
+                            Text("A branch already open in another worktree cannot be selected twice.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        } else {
+                            TextField("Branch, tag or commit to inspect", text: $selectedRevision).textFieldStyle(.roundedBorder)
+                            Label("Detached HEAD: create a branch before keeping new commits.", systemImage: "exclamationmark.triangle")
+                                .font(.caption).foregroundStyle(AppTheme.warning)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("2. Choose a new folder").font(.subheadline.weight(.semibold))
+                        HStack {
+                            TextField("Absolute folder path", text: $worktreePath).textFieldStyle(.roundedBorder)
+                            Button("Choose…", action: chooseFolder)
+                        }
+                        Text("The folder will be created here. Existing folders are not overwritten.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Toggle("Open the new worktree in a tab", isOn: $openAfterCreation)
+                    if let message = creationError ?? validationMessage {
+                        Label(message, systemImage: creationError == nil ? "info.circle" : "exclamationmark.triangle")
+                            .font(.caption).foregroundStyle(creationError == nil ? AppTheme.textSecondary : AppTheme.error)
+                            .textSelection(.enabled)
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(worktreePath.isEmpty || (!createNewBranch && selectedBranch.isEmpty && !isDetached))
+                .padding(16).disabled(isCreating)
             }
+
+            Divider()
+            HStack {
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(isCreating)
+                Spacer()
+                if isCreating { ProgressView().controlSize(.small) }
+                Button(isCreating ? "Creating…" : "Create Worktree", action: createWorktree)
+                    .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
+                    .disabled(validationMessage != nil || isCreating)
+            }.padding(16)
         }
-        .padding(DesignTokens.Spacing.xl)
-        .frame(width: 450)
-        .background(AppTheme.textMuted.opacity(0.05))
+        .frame(minWidth: 420, idealWidth: 520, maxWidth: 680, minHeight: 340, idealHeight: 520, maxHeight: 700)
+        .background(AppTheme.background)
+        .task {
+            guard sourceRepository == nil, let repository = appState.currentRepository else { return }
+            sourceRepository = repository.path
+            sourceBranches = repository.branches
+            selectedRevision = startPoint ?? repository.currentBranch?.name ?? "HEAD"
+            worktreePath = URL(fileURLWithPath: repository.path).deletingLastPathComponent()
+                .appendingPathComponent(repository.name + "-worktree").path
+            await manager.refresh(at: repository.path)
+        }
+        .onChange(of: mode) { _, mode in
+            creationError = nil
+            if mode == .existing { selectedRevision = sourceBranches.first { !$0.isRemote && !manager.hasWorktree(for: $0.name) }?.name ?? "" }
+            else if selectedRevision.isEmpty { selectedRevision = startPoint ?? "HEAD" }
+        }
+    }
+
+    private func chooseFolder() {
+        let panel = NSSavePanel()
+        panel.title = "Choose a new worktree folder"
+        panel.prompt = "Use This Location"
+        panel.canCreateDirectories = true
+        if let sourceRepository { panel.directoryURL = URL(fileURLWithPath: sourceRepository).deletingLastPathComponent() }
+        panel.nameFieldStringValue = URL(fileURLWithPath: worktreePath).lastPathComponent
+        panel.begin { response in
+            if response == .OK, let url = panel.url { worktreePath = url.path; creationError = nil }
+        }
     }
 
     private func createWorktree() {
-        Task {
-            _ = try? await manager.addWorktree(
-                path: worktreePath,
-                branch: createNewBranch ? nil : (selectedBranch.isEmpty ? nil : selectedBranch),
-                newBranch: createNewBranch ? newBranchName : nil,
-                detach: isDetached
-            )
-            dismiss()
+        guard validationMessage == nil, !isCreating, let repository = sourceRepository else { return }
+        isCreating = true
+        creationError = nil
+        Task { @MainActor in
+            defer { isCreating = false }
+            do {
+                let created = try await manager.addWorktree(path: worktreePath,
+                    branch: selectedRevision.isEmpty ? nil : selectedRevision,
+                    newBranch: mode == .newBranch ? newBranchName : nil,
+                    detach: mode == .inspect, repositoryPath: repository)
+                if openAfterCreation { await appState.openRepository(at: created.path) }
+                dismiss()
+            } catch {
+                creationError = error.localizedDescription + "\nChoose another branch or destination and retry. Nothing was forced."
+            }
         }
     }
 }
 
-// MARK: - Create Worktree From Commit Sheet
 struct CreateWorktreeFromCommitSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(AppState.self) var appState
-    @StateObject private var manager = WorktreeManager.shared
-
     let commitSHA: String
+    var body: some View { AddWorktreeSheet(startPoint: commitSHA) }
+}
 
-    @State private var worktreePath = ""
-    @State private var createNewBranch = false
-    @State private var newBranchName = ""
-
-    private var shortSHA: String { String(commitSHA.prefix(7)) }
-
+/// Native, keyboard-accessible contextual help. All text is bundled in code.
+struct GitHelpButton: View {
+    let topicID: String
+    @State private var isPresented = false
     var body: some View {
-        VStack(spacing: DesignTokens.Spacing.xl) {
-            // Header
-            HStack(spacing: DesignTokens.Spacing.md) {
-                Image(systemName: "folder.badge.plus")
-                    .font(.system(size: 28))
-                    .foregroundStyle(AppTheme.accentPurple)
-
-                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
-                    Text("Create Worktree")
-                        .font(DesignTokens.Typography.title3.weight(.semibold))
-                        .foregroundStyle(AppTheme.textPrimary)
-                    Text("from commit \(shortSHA)")
-                        .font(DesignTokens.Typography.caption)
-                        .foregroundStyle(AppTheme.textSecondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
-                // Worktree path
-                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                    Text("Worktree Path")
-                        .font(DesignTokens.Typography.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(AppTheme.textSecondary)
-                    HStack {
-                        DSTextField(placeholder: "Path for new worktree", text: $worktreePath)
-                            .padding(DesignTokens.Spacing.md)
-                            .background(AppTheme.textMuted.opacity(0.15))
-                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
-
-                        Button("Browse") {
-                            let panel = NSSavePanel()
-                            panel.canCreateDirectories = true
-                            panel.nameFieldStringValue = "worktree-\(shortSHA)"
-
-                            panel.begin { response in
-                                if response == .OK {
-                                    Task { @MainActor in
-                                        worktreePath = panel.url?.path ?? ""
-                                    }
-                                }
-                            }
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                }
-
-                // Branch options
-                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-                    DSToggle("Create new branch at this commit", isOn: $createNewBranch)
-
-                    if createNewBranch {
-                        DSTextField(placeholder: "New branch name", text: $newBranchName)
-                            .padding(DesignTokens.Spacing.md)
-                            .background(AppTheme.textMuted.opacity(0.15))
-                            .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.md))
-                    } else {
-                        HStack(spacing: DesignTokens.Spacing.xs) {
-                            Image(systemName: "exclamationmark.triangle")
-                                .font(DesignTokens.Typography.caption)
-                                .foregroundStyle(AppTheme.warning)
-                            Text("Worktree will be in detached HEAD state")
-                                .font(DesignTokens.Typography.caption)
-                                .foregroundStyle(AppTheme.textSecondary)
-                        }
-                        .padding(.vertical, DesignTokens.Spacing.xs)
-                    }
-                }
-            }
-
-            HStack {
-                Button("Cancel") { dismiss() }
-                    .buttonStyle(.bordered)
-
-                Spacer()
-
-                Button("Create Worktree") {
-                    createWorktree()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(worktreePath.isEmpty || (createNewBranch && newBranchName.isEmpty))
-            }
+        Button { isPresented = true } label: {
+            Image(systemName: "questionmark.circle").frame(width: 28, height: 28)
         }
-        .padding(DesignTokens.Spacing.xl)
-        .frame(width: 450)
-        .background(AppTheme.background)
+        .buttonStyle(.borderless)
+        .help("Explain this workflow — no commands will be executed")
+        .accessibilityLabel("Help for \(GitHelpTopic.all.first { $0.id == topicID }?.title ?? "Git")")
+        .sheet(isPresented: $isPresented) { GitHelpSheet(initialTopicID: topicID) }
+    }
+}
+
+struct GitHelpSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    var initialTopicID = "basics"
+    @State private var query = ""
+
+    private var topics: [GitHelpTopic] {
+        let matching = GitHelpTopic.matching(query)
+        return matching.filter { $0.id == initialTopicID } + matching.filter { $0.id != initialTopicID }
     }
 
-    private func createWorktree() {
-        Task {
-            if createNewBranch && !newBranchName.isEmpty {
-                // Create worktree with new branch at commit
-                _ = try? await manager.addWorktree(
-                    path: worktreePath,
-                    branch: commitSHA,
-                    newBranch: newBranchName,
-                    detach: false
-                )
-            } else {
-                // Create detached worktree at commit
-                _ = try? await manager.addWorktreeFromCommit(
-                    path: worktreePath,
-                    commitSHA: commitSHA
-                )
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Guía de Git").font(.headline)
+                    Text("Qué hace cada acción, cuándo usarla y qué revisar antes.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("Cerrar") { dismiss() }.keyboardShortcut(.cancelAction)
+            }.padding(16)
+            TextField("Buscar: stash, ramas, deshacer, worktrees…", text: $query)
+                .textFieldStyle(.roundedBorder).padding(.horizontal, 16)
+                .accessibilityLabel("Buscar ayuda de Git")
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    if topics.isEmpty {
+                        Text("No hay resultados. Prueba el nombre del comando o una palabra más corta.")
+                            .foregroundStyle(.secondary).padding()
+                    }
+                    ForEach(topics) { topic in
+                        GitHelpCard(topic: topic, initiallyExpanded: topic.id == initialTopicID)
+                    }
+                    Link("Catálogo completo de comandos de Git ↗", destination: URL(string: "https://git-scm.com/docs/git")!)
+                        .padding(.vertical, 8)
+                    Text("La ayuda funciona sin conexión. Solo los enlaces a documentación necesitan internet. Leer aquí nunca ejecuta comandos.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }.padding(16)
             }
-            dismiss()
         }
+        .frame(minWidth: 460, idealWidth: 640, maxWidth: 800, minHeight: 320, idealHeight: 520, maxHeight: 700)
+    }
+}
+
+private struct GitHelpCard: View {
+    let topic: GitHelpTopic
+    @State private var isExpanded: Bool
+    init(topic: GitHelpTopic, initiallyExpanded: Bool) {
+        self.topic = topic
+        _isExpanded = State(initialValue: initiallyExpanded)
+    }
+    var body: some View {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(topic.guidance).textSelection(.enabled)
+                Label(topic.risk, systemImage: "info.circle")
+                    .font(.callout).foregroundStyle(.secondary)
+                Link("Documentación oficial ↗", destination: topic.documentationURL)
+            }.padding(.top, 8)
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(topic.title).font(.subheadline.weight(.semibold))
+                Text(topic.summary).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .padding(12)
+        .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
     }
 }

@@ -1,11 +1,12 @@
 import Foundation
+import MLX
 import MLXLLM
 import MLXLMCommon
 import MLXLMHuggingFace
 import MLXLMTransformers
 
 /// Native Apple Silicon AI provider using MLX framework.
-/// Fully on-demand: model loads only when needed, auto-unloads after inactivity.
+/// On-demand: weights load only for an explicit request and are released after it.
 actor MLXProvider {
     static let shared = MLXProvider()
 
@@ -14,8 +15,7 @@ actor MLXProvider {
     private(set) var currentModelName: String?
 
     private var modelContainer: ModelContainer?
-    private var unloadTask: Task<Void, Never>?
-    private static let idleTimeout: UInt64 = 3 * 60 * 1_000_000_000 // 3 minutes
+    private var isGenerating = false
 
     // MARK: - Available Models (small, efficient for on-device)
 
@@ -44,7 +44,7 @@ actor MLXProvider {
     /// Load an MLX model by HuggingFace ID.
     /// Downloads the model on first use, then caches it locally.
     func loadModel(_ modelId: String, progressHandler: (@Sendable (Progress) -> Void)? = nil) async throws {
-        guard !isLoading else { return }
+        guard !isLoading else { throw MLXProviderError.busy }
 
         // Skip if already loaded with this model
         if isModelLoaded, currentModelName == modelId {
@@ -53,6 +53,7 @@ actor MLXProvider {
 
         isLoading = true
         defer { isLoading = false }
+        Memory.cacheLimit = 16 * 1024 * 1024
 
         // Unload previous model
         modelContainer = nil
@@ -75,41 +76,37 @@ actor MLXProvider {
 
     /// Unload the current model to free GPU/RAM
     func unloadModel() {
-        unloadTask?.cancel()
-        unloadTask = nil
         modelContainer = nil
         isModelLoaded = false
         currentModelName = nil
-    }
-
-    /// Reset the idle timer -- called after every generation
-    private func resetIdleTimer() {
-        unloadTask?.cancel()
-        unloadTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: MLXProvider.idleTimeout)
-            guard !Task.isCancelled else { return }
-            await self?.unloadModel()
-        }
+        Memory.clearCache()
     }
 
     /// Ensure model is loaded, loading on-demand if needed
-    private func ensureLoaded() async throws {
-        if isModelLoaded { return }
-        let modelId = UserDefaults.standard.string(forKey: "ai.mlxModel") ?? Self.defaultModelId
-        try await loadModel(modelId)
+    private func ensureLoaded(modelID: String?) async throws {
+        let chosen = modelID ?? UserDefaults.standard.string(forKey: "ai.mlxModel") ?? Self.defaultModelId
+        try await loadModel(chosen)
     }
 
     // MARK: - Text Generation
 
-    /// Generate a complete response -- loads model on-demand, auto-unloads after idle
-    func generate(prompt: String, maxTokens: Int = 512, temperature: Float = 0.3) async throws -> String {
-        try await ensureLoaded()
+    /// The helper owns model/context references; they leave scope before cleanup.
+    func generate(prompt: String, maxTokens: Int = 512, temperature: Float = 0.3,
+                  modelID: String? = nil) async throws -> String {
+        guard !isGenerating else { throw MLXProviderError.busy }
+        isGenerating = true
+        defer { isGenerating = false; unloadModel() }
+        try Task.checkCancellation()
+        try await ensureLoaded(modelID: modelID)
+        try Task.checkCancellation()
+        return try await generateLoaded(prompt: prompt, maxTokens: maxTokens, temperature: temperature)
+    }
+
+    private func generateLoaded(prompt: String, maxTokens: Int, temperature: Float) async throws -> String {
 
         guard let container = modelContainer else {
             throw MLXProviderError.modelNotLoaded
         }
-
-        defer { resetIdleTimer() }
 
         let output: String = try await container.perform { context in
             let input = try await context.processor.prepare(input: .init(prompt: prompt))
@@ -120,6 +117,7 @@ actor MLXProvider {
             )
             var result = ""
             for await generation in stream {
+                try Task.checkCancellation()
                 if case .chunk(let text) = generation {
                     result += text
                 }
@@ -161,9 +159,12 @@ actor MLXProvider {
         case modelNotLoaded
         case modelNotFound(String)
         case notAppleSilicon
+        case busy
 
         var errorDescription: String? {
             switch self {
+            case .busy:
+                return "Another local model request is running. Wait or cancel it before retrying."
             case .modelNotLoaded:
                 return "No MLX model loaded. Select a model in Settings to download and load it."
             case .modelNotFound(let id):

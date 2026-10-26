@@ -12,11 +12,12 @@ class ThemeManager {
     var customColors: CustomColorScheme?
     var appearance: NSAppearance?
     
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
     private let themeKey = "selectedTheme"
     private let customColorsKey = "customColors"
     
-    private init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         loadSavedTheme()
         DispatchQueue.main.async { [weak self] in
             self?.applyTheme()
@@ -41,7 +42,11 @@ class ThemeManager {
         case .dark:
             appearance = NSAppearance(named: .darkAqua)
         case .custom:
-            appearance = nil
+            if let customColors {
+                appearance = NSAppearance(named: customColors.background.isLight ? .aqua : .darkAqua)
+            } else {
+                appearance = nil
+            }
         }
 
         NSApplication.shared.appearance = appearance
@@ -58,13 +63,16 @@ class ThemeManager {
         saveCustomColors()
         saveTheme()
         applyTheme()
+        NotificationCenter.default.post(name: .themeDidChange, object: Theme.custom)
     }
     
     func resetToDefault() {
         currentTheme = .system
         customColors = nil
+        defaults.removeObject(forKey: customColorsKey)
         saveTheme()
         applyTheme()
+        NotificationCenter.default.post(name: .themeDidChange, object: Theme.system)
     }
     
     // MARK: - Persistence
@@ -153,7 +161,10 @@ class ThemeManager {
             success: themeData.colors.success,
             warning: themeData.colors.warning,
             error: themeData.colors.error,
-            info: themeData.colors.info
+            info: themeData.colors.info,
+            diffAddition: themeData.colors.diffAddition,
+            diffDeletion: themeData.colors.diffDeletion,
+            diffChange: themeData.colors.diffChange
         )
 
         setCustomColors(customScheme)
@@ -308,24 +319,12 @@ struct ColorScheme: Codable {
     }
     
     init(custom: CustomColorScheme) {
-        // Detectar si el tema es claro u oscuro basado en la luminancia del fondo
-        let isLightTheme = custom.background.isLight
-
-        // Si el tema es claro, asegurar que los textos sean oscuros
-        // Si el tema es oscuro, asegurar que los textos sean claros
-        let adaptedText = isLightTheme ?
-            CodableColor(hex: "#000000") : CodableColor(hex: "#FFFFFF")
-        let adaptedTextSecondary = isLightTheme ?
-            CodableColor(hex: "#666666") : CodableColor(hex: "#CCCCCC")
-        let adaptedTextMuted = isLightTheme ?
-            CodableColor(hex: "#999999") : CodableColor(hex: "#999999")
-
         self.background = custom.background
         self.backgroundSecondary = custom.backgroundSecondary
         self.backgroundTertiary = custom.backgroundTertiary
-        self.text = adaptedText
-        self.textSecondary = adaptedTextSecondary
-        self.textMuted = adaptedTextMuted
+        self.text = custom.text
+        self.textSecondary = custom.textSecondary
+        self.textMuted = custom.textMuted
         self.accent = custom.accent
         self.accentHover = custom.accentHover
         self.gitAdded = custom.gitAdded
@@ -347,13 +346,9 @@ struct ColorScheme: Codable {
         self.error = custom.error
         self.info = custom.info
 
-        // Use theme-appropriate diff colors or fallback to semantic colors
-        self.diffAddition = isLightTheme ?
-            CodableColor(hex: "#34C759") : CodableColor(hex: "#34C759")  // macOS green
-        self.diffDeletion = isLightTheme ?
-            CodableColor(hex: "#FF3B30") : CodableColor(hex: "#FF3B30")  // macOS red
-        self.diffChange = isLightTheme ?
-            CodableColor(hex: "#007AFF") : CodableColor(hex: "#007AFF")  // macOS blue
+        self.diffAddition = custom.diffAddition ?? custom.gitAdded
+        self.diffDeletion = custom.diffDeletion ?? custom.gitDeleted
+        self.diffChange = custom.diffChange ?? custom.gitModified
     }
 
     init(background: CodableColor, backgroundSecondary: CodableColor, backgroundTertiary: CodableColor,
@@ -526,6 +521,10 @@ struct CustomColorScheme: Codable, Equatable {
     var warning: CodableColor
     var error: CodableColor
     var info: CodableColor
+    // Optional for compatibility with palettes saved before diff customization.
+    var diffAddition: CodableColor? = nil
+    var diffDeletion: CodableColor? = nil
+    var diffChange: CodableColor? = nil
     
     static let `default` = CustomColorScheme(
         background: CodableColor(hex: "#FFFFFF"),
@@ -564,6 +563,19 @@ struct CodableColor: Codable, Equatable {
     let green: Double
     let blue: Double
     let alpha: Double
+
+    init(red: Double, green: Double, blue: Double, alpha: Double = 1) {
+        self.red = red
+        self.green = green
+        self.blue = blue
+        self.alpha = alpha
+    }
+
+    func composited(over background: CodableColor) -> CodableColor {
+        CodableColor(red: red * alpha + background.red * (1 - alpha),
+                     green: green * alpha + background.green * (1 - alpha),
+                     blue: blue * alpha + background.blue * (1 - alpha))
+    }
     
     init(_ color: Color) {
         // Convert to NSColor using the sRGB color space
@@ -811,7 +823,7 @@ struct ThemePalette: Identifiable {
         // MARK: - Light Themes
         ThemePalette(
             name: "GitHub Light",
-            description: "Clean and professional light theme - AAA contrast",
+            description: "Clean and professional light palette",
             colors: CustomColorScheme(
                 background: CodableColor(hex: "#ffffff"),
                 backgroundSecondary: CodableColor(hex: "#f6f8fa"),
@@ -843,7 +855,7 @@ struct ThemePalette: Identifiable {
         ),
         ThemePalette(
             name: "Solarized Light",
-            description: "Precision colors optimized for reduced eye strain - AAA",
+            description: "Warm light palette with carefully balanced colors",
             colors: CustomColorScheme(
                 background: CodableColor(hex: "#fdf6e3"),
                 backgroundSecondary: CodableColor(hex: "#eee8d5"),
@@ -877,7 +889,7 @@ struct ThemePalette: Identifiable {
         // MARK: - Dark Themes
         ThemePalette(
             name: "GitHub Dark",
-            description: "Classic GitHub dark theme - Maximum contrast AAA",
+            description: "Classic GitHub dark palette",
             colors: CustomColorScheme(
                 background: CodableColor(hex: "#0d1117"),
                 backgroundSecondary: CodableColor(hex: "#161b22"),
@@ -909,7 +921,7 @@ struct ThemePalette: Identifiable {
         ),
         ThemePalette(
             name: "Dracula",
-            description: "Vibrant dark theme with maximum contrast - AAA",
+            description: "Vibrant dark palette",
             colors: CustomColorScheme(
                 background: CodableColor(hex: "#282a36"),
                 backgroundSecondary: CodableColor(hex: "#21222c"),
@@ -941,7 +953,7 @@ struct ThemePalette: Identifiable {
         ),
         ThemePalette(
             name: "Nord",
-            description: "Arctic theme with pristine contrast - AAA compliant",
+            description: "Arctic inspired dark palette",
             colors: CustomColorScheme(
                 background: CodableColor(hex: "#2e3440"),
                 backgroundSecondary: CodableColor(hex: "#3b4252"),
@@ -973,7 +985,7 @@ struct ThemePalette: Identifiable {
         ),
         ThemePalette(
             name: "One Dark Pro",
-            description: "Atom's iconic theme with perfect readability - AAA",
+            description: "Atom inspired dark palette",
             colors: CustomColorScheme(
                 background: CodableColor(hex: "#282c34"),
                 backgroundSecondary: CodableColor(hex: "#21252b"),
@@ -1005,7 +1017,7 @@ struct ThemePalette: Identifiable {
         ),
         ThemePalette(
             name: "Monokai Pro",
-            description: "Professional Monokai - Absolute maximum contrast AAA",
+            description: "Professional Monokai palette",
             colors: CustomColorScheme(
                 background: CodableColor(hex: "#2d2a2e"),
                 backgroundSecondary: CodableColor(hex: "#221f22"),
@@ -1037,7 +1049,7 @@ struct ThemePalette: Identifiable {
         ),
         ThemePalette(
             name: "Tokyo Night",
-            description: "Clean, elegant dark theme - Maximum contrast AAA",
+            description: "Clean and elegant dark palette",
             colors: CustomColorScheme(
                 background: CodableColor(hex: "#1a1b26"),
                 backgroundSecondary: CodableColor(hex: "#16161e"),
@@ -1069,7 +1081,7 @@ struct ThemePalette: Identifiable {
         ),
         ThemePalette(
             name: "Solarized Dark",
-            description: "Precision dark colors - AAA contrast for comfort",
+            description: "Balanced dark palette",
             colors: CustomColorScheme(
                 background: CodableColor(hex: "#002b36"),
                 backgroundSecondary: CodableColor(hex: "#073642"),
@@ -1141,6 +1153,8 @@ struct CustomThemeEditor: View {
                         }
                         .padding(.vertical, DesignTokens.Spacing.md)
                     }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("theme-preset-list")
                 }
                 .frame(width: DesignTokens.Spacing.xxl * 8)
                 .background(AppTheme.backgroundSecondary)
@@ -1212,6 +1226,8 @@ struct CustomThemeEditor: View {
                     }
                     .frame(maxWidth: .infinity)
                     .background(AppTheme.background)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("theme-color-controls")
 
                     // Footer buttons
                     Divider()
@@ -1235,6 +1251,7 @@ struct CustomThemeEditor: View {
                             themeManager.setCustomColors(customColors)
                             ThemeEditorWindowController.shared.closeWindow()
                         }
+                        .accessibilityIdentifier("theme-apply")
                     }
                     .padding(DesignTokens.Spacing.lg)
                     .background(AppTheme.backgroundSecondary)
@@ -1242,6 +1259,8 @@ struct CustomThemeEditor: View {
             }
         }
         .frame(width: 900, height: 650)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("custom-theme-editor")
     }
 }
 
@@ -1299,6 +1318,9 @@ struct PaletteCard: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(palette.name)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityIdentifier("theme-palette-\(palette.name)")
     }
 }
 
@@ -1416,6 +1438,7 @@ class ThemeEditorWindowController {
         )
 
         window.title = "Customize Theme"
+        window.identifier = NSUserInterfaceItemIdentifier("gitmac.theme-editor")
         window.minSize = NSSize(width: 800, height: 600)
         window.maxSize = NSSize(width: 1200, height: 900)
         window.contentViewController = hostingController

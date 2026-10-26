@@ -1,4 +1,5 @@
 import XCTest
+@testable import GitMac
 
 final class GitMacTests: XCTestCase {
 
@@ -63,66 +64,87 @@ final class GitMacTests: XCTestCase {
 
     func testCommitInitialization() {
         let commit = Commit(
-            hash: "abc123",
-            abbreviatedHash: "abc",
-            subject: "Test commit",
-            body: "Test body",
+            sha: "abc123456789",
+            message: "Test commit\n\nTest body",
             author: "Test Author",
             authorEmail: "test@example.com",
-            date: Date(),
-            parents: ["def456"]
+            authorDate: Date(),
+            committer: "Test Author",
+            committerEmail: "test@example.com",
+            committerDate: Date(),
+            parentSHAs: ["def456"]
         )
 
-        XCTAssertEqual(commit.hash, "abc123")
-        XCTAssertEqual(commit.abbreviatedHash, "abc")
-        XCTAssertEqual(commit.subject, "Test commit")
+        XCTAssertEqual(commit.sha, "abc123456789")
+        XCTAssertEqual(commit.shortSHA, "abc1234")
+        XCTAssertEqual(commit.summary, "Test commit")
+        XCTAssertEqual(commit.body, "Test body")
         XCTAssertEqual(commit.author, "Test Author")
-        XCTAssertEqual(commit.parents.count, 1)
+        XCTAssertEqual(commit.parentSHAs.count, 1)
     }
 
     func testCommitIsMerge() {
         // Merge commit has 2+ parents
         let mergeCommit = Commit(
-            hash: "abc123",
-            abbreviatedHash: "abc",
-            subject: "Merge branch",
-            body: nil,
+            sha: "abc123",
+            message: "Merge branch",
             author: "Test",
             authorEmail: "test@example.com",
-            date: Date(),
-            parents: ["def456", "ghi789"]
+            authorDate: Date(),
+            committer: "Test",
+            committerEmail: "test@example.com",
+            committerDate: Date(),
+            parentSHAs: ["def456", "ghi789"]
         )
-        XCTAssertTrue(mergeCommit.isMerge)
+        XCTAssertTrue(mergeCommit.isMergeCommit)
 
         // Regular commit has 1 parent
         let regularCommit = Commit(
-            hash: "abc123",
-            abbreviatedHash: "abc",
-            subject: "Regular commit",
-            body: nil,
+            sha: "abc123",
+            message: "Regular commit",
             author: "Test",
             authorEmail: "test@example.com",
-            date: Date(),
-            parents: ["def456"]
+            authorDate: Date(),
+            committer: "Test",
+            committerEmail: "test@example.com",
+            committerDate: Date(),
+            parentSHAs: ["def456"]
         )
-        XCTAssertFalse(regularCommit.isMerge)
+        XCTAssertFalse(regularCommit.isMergeCommit)
     }
 
     // MARK: - Branch Model Tests
 
+    func testCommitRelativeDatePreservesNumericAbbreviation() {
+        let reference = Date()
+        let legacy = RelativeDateTimeFormatter()
+        legacy.unitsStyle = .abbreviated
+        for interval: TimeInterval in [-40_000_000, -400_000, -4_000, 4_000, 400_000, 40_000_000] {
+            let date = reference.addingTimeInterval(interval)
+            let commit = Commit(sha: "fixture", message: "Fixture", author: "Fixture",
+                                authorEmail: "fixture@example.invalid", authorDate: date,
+                                committer: "Fixture", committerEmail: "fixture@example.invalid",
+                                committerDate: date, parentSHAs: [])
+            XCTAssertEqual(commit.relativeDate, legacy.localizedString(for: date, relativeTo: reference))
+        }
+    }
+
     func testBranchInitialization() {
         let branch = Branch(
             name: "feature/test",
+            fullName: "refs/heads/feature/test",
             isRemote: false,
-            isCurrent: true,
-            upstream: "origin/feature/test",
-            aheadBehind: (2, 1)
+            isHead: true,
+            targetSHA: "abc123",
+            upstream: UpstreamInfo(name: "origin/feature/test", ahead: 2, behind: 1)
         )
 
         XCTAssertEqual(branch.name, "feature/test")
         XCTAssertFalse(branch.isRemote)
         XCTAssertTrue(branch.isCurrent)
-        XCTAssertEqual(branch.upstream, "origin/feature/test")
+        XCTAssertEqual(branch.upstream?.name, "origin/feature/test")
+        XCTAssertEqual(branch.aheadBehind?.ahead, 2)
+        XCTAssertEqual(branch.aheadBehind?.behind, 1)
     }
 
     // MARK: - Repository Status Count Tests
@@ -141,88 +163,6 @@ final class GitMacTests: XCTestCase {
         XCTAssertEqual(status.stagedCount, 2)
         XCTAssertEqual(status.unstagedCount, 1)
         XCTAssertEqual(status.untrackedCount, 2)
-        XCTAssertEqual(status.totalCount, 5)
+        XCTAssertEqual(status.totalChanges, 5)
     }
-}
-
-// MARK: - Minimal Model Definitions for Tests
-
-struct RepositoryStatus {
-    var staged: [FileStatus] = []
-    var unstaged: [FileStatus] = []
-    var untracked: [String] = []
-    var conflicted: [FileStatus] = []
-
-    var stagedCount: Int { staged.count }
-    var unstagedCount: Int { unstaged.count }
-    var untrackedCount: Int { untracked.count }
-    var totalCount: Int { stagedCount + unstagedCount + untrackedCount }
-}
-
-struct FileStatus: Identifiable, Equatable {
-    let id = UUID()
-    let path: String
-    let status: FileStatusType
-    let oldPath: String?
-    var additions: Int
-    var deletions: Int
-
-    init(path: String, status: FileStatusType, oldPath: String? = nil, additions: Int = 0, deletions: Int = 0) {
-        self.path = path
-        self.status = status
-        self.oldPath = oldPath
-        self.additions = additions
-        self.deletions = deletions
-    }
-
-    var filename: String {
-        URL(fileURLWithPath: path).lastPathComponent
-    }
-
-    var directory: String {
-        URL(fileURLWithPath: path).deletingLastPathComponent().path
-    }
-
-    var fileExtension: String {
-        URL(fileURLWithPath: path).pathExtension.lowercased()
-    }
-
-    var hasChanges: Bool {
-        additions > 0 || deletions > 0
-    }
-}
-
-enum FileStatusType: String {
-    case added = "A"
-    case modified = "M"
-    case deleted = "D"
-    case renamed = "R"
-    case copied = "C"
-    case untracked = "?"
-    case ignored = "!"
-    case typeChanged = "T"
-    case unmerged = "U"
-}
-
-struct Commit: Identifiable {
-    let id = UUID()
-    let hash: String
-    let abbreviatedHash: String
-    let subject: String
-    let body: String?
-    let author: String
-    let authorEmail: String
-    let date: Date
-    let parents: [String]
-
-    var isMerge: Bool { parents.count > 1 }
-}
-
-struct Branch: Identifiable {
-    var id: String { name }
-    let name: String
-    let isRemote: Bool
-    let isCurrent: Bool
-    let upstream: String?
-    let aheadBehind: (Int, Int)?
 }

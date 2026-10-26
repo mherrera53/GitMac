@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-26T04:55:43.117303+00:00",
+  "proposal": "terminal-runtime-review-1792990294974-proposal.json",
+  "model": "qwen3-coder:30b",
+  "digest": "06c1097efce0431c2045fe7b2e5108366e43bee1b4603a7aded8f21689e90bca",
+  "sourceHashes": [
+    {
+      "path": "GitMac/Features/Terminal/Views/TerminalInputBar.swift",
+      "sha256": "4c33c21be622b4a1053a497d42c692367390de61b4861df58b66911bd89bf049"
+    },
+    {
+      "path": "GitMac/Features/BottomPanel/Views/BottomPanelContent.swift",
+      "sha256": "579926a564a9f3d8f676934a6e34deeaddbd67e961cc8cc8c73a0f145d47d15a"
+    },
+    {
+      "path": "GitMac/Features/Terminal/Core/TerminalSharedTypes.swift",
+      "sha256": "cdc24ef04f72e009368ca29bdeaacd6c90e330e520736c2e70edb900e24fa3d8"
+    },
+    {
+      "path": "scripts/test-terminal-command-contracts.mjs",
+      "sha256": "c9cfbd0c9e91dce90dea81d1e3ab081f83695c0ee62d357424bebd5c5a20a59d"
+    }
+  ],
+  "automaticApplication": false,
+  "decisions": [
+    {
+      "finding": 1,
+      "decision": "rejected",
+      "reason": "La inyección del proveedor es un seam explícito del test. El inicializador por defecto está en producción y ambos targets compilan; el modelo no identifica un fallo concreto."
+    },
+    {
+      "finding": 2,
+      "decision": "coverage_limit",
+      "reason": "La integridad del texto se está comprobando con input nativo, quotes y backslashes. hasMarkedText protege composición, pero IME y vida completa del callback siguen sin aprobación integral. La advertencia no demuestra la causa del fallo actual."
+    },
+    {
+      "finding": 3,
+      "decision": "not_proven_product_bug",
+      "reason": "update invalida generación y cancela antes de crear una nueva Task; tres controles negativos detectan resultados obsoletos. Que un proveedor cooperativo haya terminado realmente es una frontera distinta: AIService real y servidor requieren validación propia. No se aplica una refactorización por la advertencia genérica."
+    }
+  ],
+  "liveTerminalApproved": false,
+  "cloudUsed": false,
+  "laterEvidence": [
+    "terminal-native-control-ui.xcresult: pérdida idéntica en campo estándar y terminal",
+    "terminal-input-key-events.log: c/apóstrofo llegan con Command en el fixture",
+    "experiments/terminal-input-buffer: alternativa retirada por no corregir el problema",
+    "terminal-wire-negative.log reproduce cinco fallos por retorno prematuro; la revisión local no detectó este defecto",
+    "terminal-wire-checks.log: ocho comprobaciones del cuerpo real pasan; terminal-wire-ui.xcresult pasa ejecución literal, bytes y cwd"
+  ],
+  "boundedTerminalFixturePassed": true,
+  "laterEvidenceDate": "2026-10-26T05:49:01.699766+00:00"
+}

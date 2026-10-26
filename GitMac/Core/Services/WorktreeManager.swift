@@ -27,6 +27,7 @@ class WorktreeManager: ObservableObject {
 
     private let engine = GitEngine()
     private var cancellables = Set<AnyCancellable>()
+    private var refreshGeneration = UUID()
 
     private init() {
         setupNotificationObservers()
@@ -39,7 +40,7 @@ class WorktreeManager: ObservableObject {
         NotificationCenter.default.publisher(for: .repositoryDidRefresh)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] notification in
-                if let path = notification.object as? String {
+                if let path = notification.object as? String, path == self?.currentRepoPath {
                     Task { await self?.refresh(at: path) }
                 }
             }
@@ -62,22 +63,30 @@ class WorktreeManager: ObservableObject {
 
     /// Refresh worktree list for a repository
     func refresh(at path: String?) async {
+        refreshGeneration = UUID()
+        let request = refreshGeneration
         guard let path = path else {
             worktrees = []
             branchWorktreeMap = [:]
             currentRepoPath = nil
+            isLoading = false
+            error = nil
             return
         }
 
+        if currentRepoPath != path { worktrees = []; branchWorktreeMap = [:] }
         currentRepoPath = path
         isLoading = true
         error = nil
+        defer { if refreshGeneration == request { isLoading = false } }
 
         do {
             let list = try await engine.listWorktrees(at: path)
+            guard !Task.isCancelled, refreshGeneration == request else { return }
             worktrees = list
             rebuildBranchMap()
         } catch {
+            guard !Task.isCancelled, refreshGeneration == request else { return }
             self.error = error.localizedDescription
             worktrees = []
             branchWorktreeMap = [:]
@@ -120,9 +129,10 @@ class WorktreeManager: ObservableObject {
         branch: String? = nil,
         newBranch: String? = nil,
         detach: Bool = false,
-        force: Bool = false
+        force: Bool = false,
+        repositoryPath: String? = nil
     ) async throws -> Worktree {
-        guard let repoPath = currentRepoPath else {
+        guard let repoPath = repositoryPath ?? currentRepoPath else {
             throw WorktreeError.noRepository
         }
 
@@ -139,7 +149,7 @@ class WorktreeManager: ObservableObject {
                 at: repoPath
             )
 
-            await refresh(at: repoPath)
+            if currentRepoPath == repoPath { await refresh(at: repoPath) }
             NotificationCenter.default.post(name: .worktreeDidChange, object: worktree)
             NotificationManager.shared.success("Worktree created", detail: worktree.name)
 
@@ -152,8 +162,8 @@ class WorktreeManager: ObservableObject {
     }
 
     /// Add worktree for a specific commit (detached HEAD)
-    func addWorktreeFromCommit(path: String, commitSHA: String) async throws -> Worktree {
-        guard let repoPath = currentRepoPath else {
+    func addWorktreeFromCommit(path: String, commitSHA: String, repositoryPath: String? = nil) async throws -> Worktree {
+        guard let repoPath = repositoryPath ?? currentRepoPath else {
             throw WorktreeError.noRepository
         }
 
@@ -170,7 +180,7 @@ class WorktreeManager: ObservableObject {
                 at: repoPath
             )
 
-            await refresh(at: repoPath)
+            if currentRepoPath == repoPath { await refresh(at: repoPath) }
             NotificationCenter.default.post(name: .worktreeDidChange, object: worktree)
             NotificationManager.shared.success("Worktree created", detail: "At commit \(String(commitSHA.prefix(7)))")
 
@@ -183,8 +193,8 @@ class WorktreeManager: ObservableObject {
     }
 
     /// Remove a worktree
-    func removeWorktree(_ worktree: Worktree, force: Bool = false) async throws {
-        guard let repoPath = currentRepoPath else {
+    func removeWorktree(_ worktree: Worktree, force: Bool = false, repositoryPath: String? = nil) async throws {
+        guard let repoPath = repositoryPath ?? currentRepoPath else {
             throw WorktreeError.noRepository
         }
 
@@ -196,8 +206,23 @@ class WorktreeManager: ObservableObject {
         defer { isLoading = false }
 
         do {
-            try await engine.removeWorktree(path: worktree.path, force: force, at: repoPath)
-            await refresh(at: repoPath)
+            let registered = try await engine.listWorktrees(at: repoPath)
+            guard let current = registered.first(where: { $0.path == worktree.path }) else {
+                throw GitError.worktreeRemoveFailed(worktree.path, "This folder is no longer registered. Refresh the list.")
+            }
+            guard !current.isMain else { throw WorktreeError.cannotRemoveMain }
+            guard URL(fileURLWithPath: current.path).resolvingSymlinksInPath().path !=
+                    URL(fileURLWithPath: repoPath).resolvingSymlinksInPath().path else {
+                throw WorktreeError.cannotRemoveCurrent
+            }
+            guard !current.isLocked else { throw WorktreeError.locked }
+            guard !current.isDetached else { throw WorktreeError.detachedNeedsBranch }
+            if !force {
+                let status = try await engine.getStatus(at: current.path)
+                guard !status.hasChanges else { throw WorktreeError.uncommitted }
+            }
+            try await engine.removeWorktree(path: current.path, force: force, at: repoPath)
+            if currentRepoPath == repoPath { await refresh(at: repoPath) }
             NotificationCenter.default.post(name: .worktreeDidChange, object: nil)
             NotificationManager.shared.success("Worktree removed", detail: worktree.name)
         } catch {
@@ -208,14 +233,14 @@ class WorktreeManager: ObservableObject {
     }
 
     /// Lock a worktree to prevent removal
-    func lockWorktree(_ worktree: Worktree, reason: String? = nil) async throws {
-        guard let repoPath = currentRepoPath else {
+    func lockWorktree(_ worktree: Worktree, reason: String? = nil, repositoryPath: String? = nil) async throws {
+        guard let repoPath = repositoryPath ?? currentRepoPath else {
             throw WorktreeError.noRepository
         }
 
         do {
             try await engine.lockWorktree(path: worktree.path, reason: reason, at: repoPath)
-            await refresh(at: repoPath)
+            if currentRepoPath == repoPath { await refresh(at: repoPath) }
             NotificationManager.shared.success("Worktree locked", detail: worktree.name)
         } catch {
             self.error = error.localizedDescription
@@ -225,14 +250,14 @@ class WorktreeManager: ObservableObject {
     }
 
     /// Unlock a worktree
-    func unlockWorktree(_ worktree: Worktree) async throws {
-        guard let repoPath = currentRepoPath else {
+    func unlockWorktree(_ worktree: Worktree, repositoryPath: String? = nil) async throws {
+        guard let repoPath = repositoryPath ?? currentRepoPath else {
             throw WorktreeError.noRepository
         }
 
         do {
             try await engine.unlockWorktree(path: worktree.path, at: repoPath)
-            await refresh(at: repoPath)
+            if currentRepoPath == repoPath { await refresh(at: repoPath) }
             NotificationManager.shared.success("Worktree unlocked", detail: worktree.name)
         } catch {
             self.error = error.localizedDescription
@@ -289,9 +314,21 @@ enum WorktreeError: LocalizedError {
     case cannotRemoveMain
     case worktreeExists(String)
     case branchInUse(String)
+    case locked
+    case uncommitted
+    case detachedNeedsBranch
+    case cannotRemoveCurrent
 
     var errorDescription: String? {
         switch self {
+        case .cannotRemoveCurrent:
+            return "Open another worktree before removing the current folder. Closing its tab does not delete files."
+        case .locked:
+            return "Unlock this worktree before removing it. Locking protects the folder from removal."
+        case .uncommitted:
+            return "This worktree has uncommitted or untracked files. Commit or stash them, then retry. No files were removed."
+        case .detachedNeedsBranch:
+            return "Create a branch for this detached revision before removing its worktree, so its commits remain reachable."
         case .noRepository:
             return "No repository is currently open"
         case .cannotRemoveMain:

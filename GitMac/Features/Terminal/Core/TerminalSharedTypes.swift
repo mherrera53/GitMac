@@ -30,8 +30,17 @@ struct AITextEditor: NSViewRepresentable {
         textView.textColor = NSColor(AppTheme.textPrimary)
         textView.insertionPointColor = NSColor(AppTheme.accent)
         textView.isRichText = false
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
+        textView.isAutomaticSpellingCorrectionEnabled = false
+        textView.isAutomaticLinkDetectionEnabled = false
+        textView.isAutomaticDataDetectionEnabled = false
+        textView.isContinuousSpellCheckingEnabled = false
+        textView.isGrammarCheckingEnabled = false
         textView.allowsUndo = true
         textView.isVerticallyResizable = true
+        textView.setAccessibilityIdentifier("terminal-command-input")
         textView.textContainer?.widthTracksTextView = true
 
         scrollView.documentView = textView
@@ -45,7 +54,10 @@ struct AITextEditor: NSViewRepresentable {
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         guard let textView = scrollView.documentView as? NSTextView else { return }
-        if textView.string != text {
+        context.coordinator.parent = self
+        textView.textColor = NSColor(AppTheme.textPrimary)
+        textView.insertionPointColor = NSColor(AppTheme.accent)
+        if textView.string != text && !textView.hasMarkedText() {
             textView.string = text
         }
         if isFocused.wrappedValue {

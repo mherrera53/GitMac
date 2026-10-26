@@ -11,7 +11,8 @@ struct Repository: Identifiable, Equatable {
     }
 
     var gitDirectory: URL {
-        workingDirectory.appendingPathComponent(".git")
+        (try? RepositoryFileLocations(repositoryPath: path).gitDirectory)
+            ?? workingDirectory.appendingPathComponent(".git")
     }
 
     // Current state
@@ -52,6 +53,69 @@ struct Repository: Identifiable, Equatable {
     }
 }
 
+/// Filesystem scope for normal repositories, linked worktrees and bare repos.
+/// IDs survive aliases and same-filesystem renames, not cross-volume copies.
+struct RepositoryFileLocations: Hashable, Sendable {
+    let workingDirectory: URL
+    let gitDirectory: URL
+    let commonGitDirectory: URL
+    let worktreeID: String
+    let commonRepositoryID: String
+
+    init(repositoryPath: String) throws {
+        let fm = FileManager.default
+        let root = URL(fileURLWithPath: repositoryPath).standardizedFileURL.resolvingSymlinksInPath()
+        let marker = root.appendingPathComponent(".git")
+        var directory: ObjCBool = false
+        let git: URL
+        if fm.fileExists(atPath: marker.path, isDirectory: &directory) {
+            if directory.boolValue { git = marker }
+            else {
+                let contents = try Self.readPointer(marker)
+                guard contents.hasPrefix("gitdir: ") else { throw CocoaError(.fileReadCorruptFile) }
+                git = URL(fileURLWithPath: String(contents.dropFirst(8)), relativeTo: root)
+            }
+        } else if fm.fileExists(atPath: root.appendingPathComponent("HEAD").path),
+                  fm.fileExists(atPath: root.appendingPathComponent("objects").path) {
+            git = root
+        } else { throw CocoaError(.fileReadNoSuchFile) }
+        let canonicalGit = git.standardizedFileURL.resolvingSymlinksInPath()
+        let commonPointer = canonicalGit.appendingPathComponent("commondir")
+        let common = fm.fileExists(atPath: commonPointer.path)
+            ? URL(fileURLWithPath: try Self.readPointer(commonPointer), relativeTo: canonicalGit)
+                .standardizedFileURL.resolvingSymlinksInPath()
+            : canonicalGit
+        workingDirectory = root
+        gitDirectory = canonicalGit
+        commonGitDirectory = common
+        worktreeID = try Self.identity(canonicalGit)
+        commonRepositoryID = try Self.identity(common)
+    }
+
+    private static func identity(_ directory: URL) throws -> String {
+        let attributes = try FileManager.default.attributesOfItem(atPath: directory.path)
+        guard attributes[.type] as? FileAttributeType == .typeDirectory,
+              let device = attributes[.systemNumber] as? NSNumber,
+              let inode = attributes[.systemFileNumber] as? NSNumber else { throw CocoaError(.fileReadCorruptFile) }
+        return device.stringValue + ":" + inode.stringValue
+    }
+
+    private static func readPointer(_ file: URL) throws -> String {
+        let attributes = try FileManager.default.attributesOfItem(atPath: file.path)
+        guard attributes[.type] as? FileAttributeType == .typeRegular else { throw CocoaError(.fileReadCorruptFile) }
+        let handle = try FileHandle(forReadingFrom: file)
+        defer { try? handle.close() }
+        let data = try handle.read(upToCount: 16_385) ?? Data()
+        guard data.count <= 16_384, var value = String(data: data, encoding: .utf8), !value.contains("\0") else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        if value.hasSuffix("\n") { value.removeLast() }
+        if value.hasSuffix("\r") { value.removeLast() }
+        guard !value.isEmpty else { throw CocoaError(.fileReadCorruptFile) }
+        return value
+    }
+}
+
 /// Repository status (working directory state)
 struct RepositoryStatus: Equatable {
     var staged: [FileStatus] = []
@@ -60,7 +124,7 @@ struct RepositoryStatus: Equatable {
     var conflicted: [FileStatus] = []
 
     var hasChanges: Bool {
-        !staged.isEmpty || !unstaged.isEmpty || !untracked.isEmpty
+        !staged.isEmpty || !unstaged.isEmpty || !untracked.isEmpty || !conflicted.isEmpty
     }
 
     var isDirty: Bool {

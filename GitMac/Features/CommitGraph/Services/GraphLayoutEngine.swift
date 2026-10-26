@@ -150,7 +150,9 @@ func buildCommitGraph(commits: [Commit], branchHeads: [String: String]) -> [Grap
         // Sweep-line update: deactivate edges that end at this row (parentRow == row)
         // These edges were active up to row - 1, now they terminate here
         for edge in edgesByParentRow[row] ?? [] {
-            if edge.childRow < row {
+            // Adjacent edges were never activated: decrementing them leaves
+            // a negative counter and a phantom lane in subsequent rows.
+            if edge.childRow + 1 < row {
                 activeColumns[edge.parentColumn, default: 0] -= 1
                 if activeColumns[edge.parentColumn] == 0 {
                     activeColumns.removeValue(forKey: edge.parentColumn)

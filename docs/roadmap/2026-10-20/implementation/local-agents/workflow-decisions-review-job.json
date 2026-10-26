@@ -1,0 +1,9 @@
+[
+  {
+    "id": "workflow-decisions-review",
+    "role": "reviewer",
+    "readFiles": ["GitMac/Core/Services/WorkflowEngine.swift", "scripts/test-workflow-confirmations.mjs", "docs/roadmap/2026-10-20/implementation/workflow-decisions-after.log"],
+    "writeFiles": [],
+    "instruction": "Review only the actual current workflow confirmation implementation: decision identity, continuation ownership, task cancellation and execution exclusivity. Return up to three concrete defects, each naming the exact source condition that demonstrates it. Return findings:[] if no concrete defect is found. The test harness explicitly adapts only old APIs for negative controls. Do not infer a UI caller, per-repo storage, completed Gitflow or benchmarks from these isolated tests. Do not propose generic risks unsupported by the supplied code. edits:[] required."
+  }
+]

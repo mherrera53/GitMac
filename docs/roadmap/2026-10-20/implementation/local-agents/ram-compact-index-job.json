@@ -1,0 +1,13 @@
+[
+  {
+    "id": "ram-compact-index-review",
+    "role": "reviewer",
+    "readFiles": [
+      "GitMac/Features/CommitGraph/Models/GraphNode.swift",
+      "GitMac/Features/CommitGraph/ViewModels/GraphViewModel.swift",
+      "Tests/GitMacTests/MinimapLayoutTests.swift"
+    ],
+    "writeFiles": [],
+    "instruction": "Review compact MinimapSHAIndex plus bounded immutable singleParentLanes array interning. No edits and at most THREE concrete findings. 1145 compatibility cases and 75 production tests pass. Look for binary-search ordering/global-index mismatch, COW alias mutation, missing SHA, viewport API dispatch, retaining obsolete nodes, or a provable performance bug. Keys are unique by the builder; sortedPositions stores array offsets but the subscript returns node.index. Unknown keys must return nil. The 64-entry lane cache only interns identical single-parent arrays; it does not truncate lanes or edges. Its Array values are immutable in nodes and use Swift COW. Production uses a detached task and replaces nodes and index together after generation check. Existing arrays/hash dictionary baseline caused 158844056 lifetime peak in signed app at taller real window; memory of this revision has NOT been measured yet. Do not claim approval, tests executed or measured savings. For a bug give exact function, concrete input or state sequence, and a falsifiable check. Do not invent calls or conflate full SHA index with drawing sample."
+  }
+]

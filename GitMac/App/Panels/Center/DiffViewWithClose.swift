@@ -27,5 +27,7 @@ struct DiffViewWithClose: View {
             onDiscardHunk: onDiscardHunk,
             onUnstageHunk: onUnstageHunk
         )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("file-diff-viewer")
     }
 }

@@ -55,6 +55,7 @@ struct TerminalPanelContent: View {
 struct GhosttyWithAIInput: View {
     @Environment(AppState.self) var appState
     @State private var inputText = ""
+    @State private var terminalError: String?
     @StateObject private var ghosttyConnector = GhosttyConnector()
     @FocusState private var isInputFocused: Bool
 
@@ -65,6 +66,13 @@ struct GhosttyWithAIInput: View {
             GhosttyOutputView(connector: ghosttyConnector, repoPath: appState.currentRepository?.path)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
+            if let terminalError {
+                HStack {
+                    Text(terminalError).font(.caption).foregroundStyle(AppTheme.error)
+                    Spacer()
+                    Button("Use repository folder") { changeRepositoryDirectory(appState.currentRepository?.path) }
+                }.padding(.horizontal, 12)
+            }
             // AI-powered multiline input bar
             AIInputBar(
                 text: $inputText,
@@ -80,9 +88,7 @@ struct GhosttyWithAIInput: View {
             isInputFocused = true
         }
         .onChange(of: appState.currentRepository?.path) { _, newPath in
-            if let path = newPath {
-                ghosttyConnector.sendText("cd \(path)\n")
-            }
+            changeRepositoryDirectory(newPath)
         }
         #else
         Text("Ghostty not available")
@@ -93,9 +99,21 @@ struct GhosttyWithAIInput: View {
 
     private func sendCommand(_ command: String) {
         guard !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        Logger.debug("[Terminal] Sending command: \(command)")
-        ghosttyConnector.sendText(command + "\n")
+        guard ghosttyConnector.sendText(command + "\n") else {
+            terminalError = "Terminal is not ready. Your command is still in the input."
+            return
+        }
+        terminalError = nil
         inputText = ""
+    }
+
+    private func changeRepositoryDirectory(_ path: String?) {
+        guard let command = TerminalShell.changeDirectoryCommand(path ?? NSHomeDirectory()),
+              ghosttyConnector.sendText(command) else {
+            terminalError = "Could not change the terminal folder. Retry when the shell is ready."
+            return
+        }
+        terminalError = nil
     }
 }
 
@@ -105,7 +123,7 @@ struct GhosttyWithAIInput: View {
 class GhosttyPureNSView: NSView {
     init(repoPath: String?) { super.init(frame: .zero) }
     required init?(coder: NSCoder) { fatalError() }
-    func sendText(_ text: String) {}
+    func sendText(_ text: String) -> Bool { false }
 }
 #endif
 
@@ -115,9 +133,9 @@ class GhosttyPureNSView: NSView {
 class GhosttyConnector: ObservableObject {
     weak var ghosttyView: GhosttyPureNSView?
 
-    func sendText(_ text: String) {
+    @discardableResult func sendText(_ text: String) -> Bool {
         Logger.debug("[Connector] sendText called, view: \(ghosttyView != nil ? "exists" : "nil")")
-        ghosttyView?.sendText(text)
+        return ghosttyView?.sendText(text) ?? false
     }
 }
 
@@ -213,10 +231,10 @@ class GhosttyPureNSView: NSView {
 
     // MARK: - Public API for external input
 
-    func sendText(_ text: String) {
-        guard let surface = surface else {
+    func sendText(_ text: String) -> Bool {
+        guard let surface = surface, !text.contains("\0"), !ghostty_surface_process_exited(surface) else {
             Logger.debug("[Ghostty] sendText failed: surface is nil")
-            return
+            return false
         }
 
         // Split text and newlines - send newlines as Enter key
@@ -241,6 +259,7 @@ class GhosttyPureNSView: NSView {
                 remaining = ""
             }
         }
+        return true
     }
 
     func sendEnter() {
@@ -305,10 +324,20 @@ class GhosttyPureNSView: NSView {
 
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
-        if let surface = surface, newSize.width > 0 && newSize.height > 0 {
-            ghostty_surface_set_size(surface, UInt32(newSize.width), UInt32(newSize.height))
-            ghostty_surface_draw(surface)
-        }
+        updateSurfaceSize()
+    }
+
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        updateSurfaceSize()
+    }
+
+    private func updateSurfaceSize() {
+        let scale = window?.backingScaleFactor ?? 1
+        guard let surface, let pixels = TerminalViewport.pixelSize(bounds.size, scale: scale) else { return }
+        ghostty_surface_set_content_scale(surface, Double(scale), Double(scale))
+        ghostty_surface_set_size(surface, pixels.width, pixels.height)
+        ghostty_surface_draw(surface)
     }
 
     // MARK: - Keyboard
@@ -439,14 +468,21 @@ class GhosttyPureNSView: NSView {
             showError("Failed to create config")
             return
         }
-        ghostty_config_load_default_files(config)
+        if !PerformanceProbe.isEnabled { ghostty_config_load_default_files(config) }
         ghostty_config_finalize(config)
 
         // Runtime config with callbacks
         var runtimeConfig = ghostty_runtime_config_s()
         runtimeConfig.userdata = Unmanaged.passUnretained(self).toOpaque()
         runtimeConfig.supports_selection_clipboard = false
-        runtimeConfig.wakeup_cb = { _ in }
+        runtimeConfig.wakeup_cb = { userdata in
+            guard let userdata else { return }
+            let view = Unmanaged<GhosttyPureNSView>.fromOpaque(userdata).takeUnretainedValue()
+            DispatchQueue.main.async { [weak view] in
+                guard let app = view?.app else { return }
+                ghostty_app_tick(app)
+            }
+        }
         runtimeConfig.action_cb = { _, _, _ in false }
 
         // Create app
@@ -466,9 +502,14 @@ class GhosttyPureNSView: NSView {
         surfaceConfig.scale_factor = Double(window?.backingScaleFactor ?? 2.0)
         surfaceConfig.font_size = 13.0
 
-        if let path = repoPath {
-            surfaceConfig.working_directory = UnsafePointer(strdup(path))
+        let directoryCString = repoPath.map { strdup($0) }
+        let fixtureShell = PerformanceProbe.isEnabled ? strdup("/bin/zsh -f") : nil
+        defer {
+            if let value = directoryCString { free(value) }
+            if let fixtureShell { free(fixtureShell) }
         }
+        if let value = directoryCString { surfaceConfig.working_directory = UnsafePointer(value) }
+        if let fixtureShell { surfaceConfig.command = UnsafePointer(fixtureShell) }
 
         // Create surface
         surface = ghostty_surface_new(app, &surfaceConfig)
@@ -480,9 +521,7 @@ class GhosttyPureNSView: NSView {
         Logger.debug("✅ Ghostty terminal ready")
 
         // Set size and focus
-        if frame.width > 0 && frame.height > 0 {
-            ghostty_surface_set_size(surface, UInt32(frame.width), UInt32(frame.height))
-        }
+        updateSurfaceSize()
         ghostty_surface_set_focus(surface, true)
         ghostty_surface_draw(surface)
 

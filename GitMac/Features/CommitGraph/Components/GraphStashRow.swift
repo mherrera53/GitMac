@@ -8,7 +8,6 @@ struct GraphStashRow: View {
     var settings: GraphSettings? = nil
 
     private var H: CGFloat { settings?.rowHeight ?? 44 }
-    private var W: CGFloat { (settings?.effectiveLaneWidth ?? 28) * zoomLevel }  // Match GraphRow's dynamic lane width
     private var boxSize: CGFloat { 16 * zoomLevel }
     private var LW: CGFloat { GraphSettings.lineWidth * zoomLevel }
     private var zoomLevel: CGFloat { settings?.zoomLevel ?? 1.0 }
@@ -24,8 +23,7 @@ struct GraphStashRow: View {
 
     // Use same coordinate system as GraphRow
     private func x(_ lane: Int) -> CGFloat {
-        let padding: CGFloat = 12 * zoomLevel
-        return CGFloat(lane) * W + W / 2 + padding
+        GraphGeometry.laneX(lane, laneWidth: settings?.effectiveLaneWidth ?? GraphSettings.baseLaneWidth, zoom: zoomLevel)
     }
 
     // Human-friendly stash description
@@ -51,7 +49,7 @@ struct GraphStashRow: View {
 
             // Graph area - aligned with main graph
             ZStack {
-                Canvas { ctx, size in
+                GraphCanvas(role: .stash) { ctx, size in
                     let cy = size.height / 2
                     let mainLaneX = x(0)  // Main branch is always lane 0
                     let stashLaneX = x(1)  // Stash appears at lane 1
@@ -91,7 +89,7 @@ struct GraphStashRow: View {
                 // Box icon - positioned at lane 1
                 Image(systemName: "shippingbox.fill")
                     .font(.system(size: 8 * zoomLevel, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppTheme.contrastingTextColor(for: stashColor))
                     .offset(x: x(1) - (graphColumnWidth / 2))
             }
 
@@ -142,6 +140,8 @@ struct GraphStashRow: View {
             }
         }
         .frame(height: H)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("graph-stash-\(stash.stash.sha)")
         .background(isSelected ? AppTheme.accent.opacity(0.1) : (isHovered ? AppTheme.textSecondary.opacity(0.05) : Color.clear))
         .contextMenu {
             Button {

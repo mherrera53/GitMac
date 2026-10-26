@@ -1,0 +1,21 @@
+[
+  {
+    "id": "workflow-confirmations-implementer",
+    "role": "implementer",
+    "readFiles": [
+      "GitMac/Core/Services/WorkflowEngine.swift",
+      "GitMac/Core/Models/GitWorkflow.swift",
+      "scripts/test-workflow-confirmations.mjs"
+    ],
+    "writeFiles": [
+      "GitMac/Core/Services/WorkflowEngine.swift"
+    ],
+    "editAnchors": [
+      "    private var confirmationContinuation: CheckedContinuation<Bool, Never>?",
+      "    func confirmPending() {\n        confirmationContinuation?.resume(returning: true)\n    }\n\n    func cancelPending() {\n        confirmationContinuation?.resume(returning: false)\n    }\n\n",
+      "    func execute(_ workflow: GitWorkflow, context: WorkflowContext) async throws {\n        isExecuting = true\n        totalSteps = workflow.steps.count\n        currentStep = 0\n        defer {\n            isExecuting = false\n            statusMessage = \"\"\n            currentStep = 0\n        }\n\n",
+      "            case .waitForConfirmation(let message):\n                statusMessage = message\n                pendingConfirmation = message\n                let confirmed = await withCheckedContinuation { continuation in\n                    self.confirmationContinuation = continuation\n                }\n                pendingConfirmation = nil\n                confirmationContinuation = nil\n                if !confirmed {\n                    throw WorkflowError.stepFailed(\"User cancelled at: \\(message)\")\n                }\n            }\n"
+    ],
+    "instruction": "Fix only workflow confirmation ownership/cancellation/exclusivity at these anchors. Add execution UUID. Reject execute while isExecuting before changing state. Consume and clear continuation/pendingConfirmation BEFORE resume via one helper. Use withTaskCancellationHandler plus a MainActor Task in onCancel guarded against execution UUID mismatch. Check Task.isCancelled before installing continuation. Preserve CancellationError via checkCancellation after wait. Clear execution UUID and remaining continuation in defer. Preserve all other Git behavior, persistence, API. No UI changes, no autoapproval. Before tests currently double-confirm/cancel SIGTRAP, cancel-wait hangs, exclusivity fails: four of six scenarios fail. Return minimal exact edits and no invented test results."
+  }
+]

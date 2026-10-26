@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import { evaluateFootprint } from './check-memory-budget.mjs';
+const sample = (physical = 100_000_000, peak = physical) => ({ unit: 'byte', 'bytes per unit': 1,
+  samples: [{ processes: [{ pid: 42, footprint: physical, auxiliary: { phys_footprint: physical, phys_footprint_peak: peak } }] }] });
+assert.equal(evaluateFootprint(sample(), 42).passed, true);
+assert.equal(evaluateFootprint(sample(150_000_000), 42).passed, true);
+assert.equal(evaluateFootprint(sample(150_000_001), 42).passed, false);
+assert.equal(evaluateFootprint(sample(10_000_000, 160_000_000), 42).passed, false);
+assert.equal(evaluateFootprint(sample(), 41).passed, false);
+assert.equal(evaluateFootprint({ unit: 'byte', 'bytes per unit': 1, samples: [] }, 42).passed, false);
+const badUnit = sample(); badUnit.unit = 'MiB';
+assert.equal(evaluateFootprint(badUnit, 42).passed, false);
+const missingPeak = sample(); delete missingPeak.samples[0].processes[0].auxiliary.phys_footprint_peak;
+assert.equal(evaluateFootprint(missingPeak, 42).passed, false);
+const error = sample(); error.samples[0].errors = ['Permission denied'];
+assert.equal(evaluateFootprint(error, 42).passed, false);
+const missing = sample(); missing.samples.push({ processes: [] });
+assert.equal(evaluateFootprint(missing, 42).passed, false);
+const compressed = sample(242_435_464, 690_128_336); compressed.samples[0].processes[0].rss = 18_640 * 1024;
+assert.equal(evaluateFootprint(compressed, 42).passed, false);
+console.log('11 memory-budget checks passed; compressed memory, peaks and missing observations cannot produce a false green');

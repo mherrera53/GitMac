@@ -1,139 +1,194 @@
 import Foundation
 import Security
-import CommonCrypto
 import CryptoKit
+import IOKit
+import LocalAuthentication
 
-/// Manages secure storage of credentials
-/// Uses encrypted file storage to avoid keychain password prompts on unsigned apps
-actor KeychainManager {
-    static let shared = KeychainManager()
+enum CredentialStorageError: LocalizedError {
+    case keychain(OSStatus)
+    case invalidData
+    case verificationFailed
+    case legacyKeyUnavailable
+    case unsafeLegacyFile
+    case legacyChanged
+    case migrationRequiresApproval
 
-    private let service = "com.gitmac.credentials"
+    var errorDescription: String? {
+        switch self {
+        case .keychain(let status): return "Credential access failed (Keychain status \(status)). Unlock your keychain and retry."
+        case .invalidData: return "Credential storage is corrupt; the original data has been preserved."
+        case .verificationFailed: return "Credential persistence could not be verified; retry before signing out."
+        case .legacyKeyUnavailable: return "The original Mac identity is unavailable; credential migration was not attempted."
+        case .unsafeLegacyFile: return "Legacy credential storage is not a regular file or exceeds its size limit."
+        case .legacyChanged: return "Legacy credentials changed during migration; the original file was preserved."
+        case .migrationRequiresApproval: return "Legacy credentials require an approved migration. Enable GITMAC_MIGRATE_CREDENTIALS=1 for a verified migration; the original file is unchanged."
+        }
+    }
+}
 
-    // In-memory cache
-    private var cache: [String: String] = [:]
-    private var cacheLoaded = false
+protocol CredentialStore: Sendable {
+    func read() throws -> Data?
+    func write(_ data: Data) throws
+}
 
-    // File-based encrypted storage
-    private let storageURL: URL
-    private let encryptionKey: SymmetricKey
+/// Uses macOS Keychain Services, never an application-derived encryption key.
+/// Each instance targets exactly one service/account; it never enumerates items.
+struct SecurityCredentialStore: CredentialStore {
+    let service: String
+    private let account = "credential-store.v1"
 
-    private init() {
-        // Setup storage directory
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let appDir = appSupport.appendingPathComponent("GitMac", isDirectory: true)
-        try? FileManager.default.createDirectory(at: appDir, withIntermediateDirectories: true)
-        storageURL = appDir.appendingPathComponent(".credentials.enc")
-
-        // Generate or load encryption key based on machine ID
-        encryptionKey = Self.deriveKey()
-
-        // Load existing data
-        cache = Self.loadCache(from: storageURL, key: encryptionKey)
-        cacheLoaded = true
+    private func query() -> [String: Any] {
+        let context = LAContext()
+        context.interactionNotAllowed = true
+        return [kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service, kSecAttrAccount as String: account,
+                kSecUseAuthenticationContext as String: context]
     }
 
-    /// Derive a key from machine-specific identifier
-    private static func deriveKey() -> SymmetricKey {
-        // Use hardware UUID as base for key derivation
+    func read() throws -> Data? {
+        var query = query()
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess else { throw CredentialStorageError.keychain(status) }
+        guard let data = result as? Data else { throw CredentialStorageError.invalidData }
+        return data
+    }
+
+    func write(_ data: Data) throws {
+        let query = query()
+        let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        if status == errSecItemNotFound {
+            var addition = query
+            addition[kSecValueData as String] = data
+            // The default macOS login keychain handles encryption and access
+            // control. No iCloud synchronization or broad access ACL is enabled.
+            let added = SecItemAdd(addition as CFDictionary, nil)
+            guard added == errSecSuccess else { throw CredentialStorageError.keychain(added) }
+        } else if status != errSecSuccess {
+            throw CredentialStorageError.keychain(status)
+        }
+    }
+}
+
+/// Manages secure storage of credentials
+/// Migration is lazy, verified and retryable; no credentials are loaded in init.
+actor KeychainManager {
+    static let shared = KeychainManager()
+    private let store: any CredentialStore
+    private let storageURL: URL
+    private let legacyKey: @Sendable () throws -> SymmetricKey
+    private let removeLegacy: @Sendable (URL) throws -> Void
+    private let migrationEnabled: Bool
+
+    private init() {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        storageURL = appSupport.appendingPathComponent("GitMac/.credentials.enc")
+        store = SecurityCredentialStore(service: "com.gitmac.credentials")
+        legacyKey = Self.deriveLegacyKey
+        removeLegacy = { try FileManager.default.removeItem(at: $0) }
+        migrationEnabled = ProcessInfo.processInfo.environment["GITMAC_MIGRATE_CREDENTIALS"] == "1"
+    }
+
+    init(store: any CredentialStore, legacyURL: URL,
+         legacyKey: @escaping @Sendable () throws -> SymmetricKey,
+         migrationEnabled: Bool = true,
+         removeLegacy: @escaping @Sendable (URL) throws -> Void = { try FileManager.default.removeItem(at: $0) }) {
+        self.store = store
+        storageURL = legacyURL
+        self.legacyKey = legacyKey
+        self.removeLegacy = removeLegacy
+        self.migrationEnabled = migrationEnabled
+    }
+
+    /// Compatibility only: this key is never used for new persistence.
+    private static func deriveLegacyKey() throws -> SymmetricKey {
         let platformExpert = IOServiceGetMatchingService(
             kIOMainPortDefault,
             IOServiceMatching("IOPlatformExpertDevice")
         )
+        guard platformExpert != 0 else { throw CredentialStorageError.legacyKeyUnavailable }
         defer { IOObjectRelease(platformExpert) }
-
-        var serialNumber = "GitMac-Default-Key-2024"
-        if let serialNumberAsCFString = IORegistryEntryCreateCFProperty(
+        guard let uuid = IORegistryEntryCreateCFProperty(
             platformExpert,
             kIOPlatformUUIDKey as CFString,
             kCFAllocatorDefault, 0
-        )?.takeUnretainedValue() as? String {
-            serialNumber = serialNumberAsCFString
-        }
-
-        // Derive key using SHA256
-        let keyData = SHA256.hash(data: Data(serialNumber.utf8))
-        return SymmetricKey(data: keyData)
+        )?.takeRetainedValue() as? String, !uuid.isEmpty else { throw CredentialStorageError.legacyKeyUnavailable }
+        return SymmetricKey(data: SHA256.hash(data: Data(uuid.utf8)))
     }
 
-    // MARK: - Encrypted File Storage
-
-    private static func loadCache(from url: URL, key: SymmetricKey) -> [String: String] {
-        guard FileManager.default.fileExists(atPath: url.path),
-              let encryptedData = try? Data(contentsOf: url) else {
-            return [:]
+    private func decode(_ data: Data) throws -> [String: String] {
+        guard let values = try? JSONDecoder().decode([String: String].self, from: data) else {
+            throw CredentialStorageError.invalidData
         }
-
-        guard let decrypted = decrypt(encryptedData, key: key),
-              let dict = try? JSONDecoder().decode([String: String].self, from: decrypted) else {
-            return [:]
-        }
-
-        return dict
+        return values
     }
 
-    private func loadFromFile() {
-        cache = Self.loadCache(from: storageURL, key: encryptionKey)
-        cacheLoaded = true
-    }
-
-    private func saveToFile() {
-        guard let jsonData = try? JSONEncoder().encode(cache),
-              let encrypted = Self.encrypt(jsonData, key: encryptionKey) else {
-            return
-        }
-
-        try? encrypted.write(to: storageURL, options: [.atomic, .completeFileProtection])
-    }
-
-    private static func encrypt(_ data: Data, key: SymmetricKey) -> Data? {
-        do {
-            let sealedBox = try AES.GCM.seal(data, using: key)
-            return sealedBox.combined
-        } catch {
-            return nil
+    private func persist(_ values: [String: String]) throws {
+        let data = try JSONEncoder().encode(values)
+        try store.write(data)
+        guard let saved = try store.read(), try decode(saved) == values else {
+            throw CredentialStorageError.verificationFailed
         }
     }
 
-    private static func decrypt(_ data: Data, key: SymmetricKey) -> Data? {
-        do {
-            let sealedBox = try AES.GCM.SealedBox(combined: data)
-            return try AES.GCM.open(sealedBox, using: key)
-        } catch {
-            return nil
+    private func values() throws -> [String: String] {
+        let current = try store.read().map { try decode($0) } ?? [:]
+        let attributes: [FileAttributeKey: Any]
+        do { attributes = try FileManager.default.attributesOfItem(atPath: storageURL.path) }
+        catch let error as NSError where error.domain == NSCocoaErrorDomain
+            && [NSFileNoSuchFileError, NSFileReadNoSuchFileError].contains(error.code) {
+            return current
         }
+        guard migrationEnabled else { throw CredentialStorageError.migrationRequiresApproval }
+        guard attributes[.type] as? FileAttributeType == .typeRegular,
+              ((attributes[.size] as? NSNumber)?.intValue ?? Int.max) <= 1024 * 1024 else {
+            throw CredentialStorageError.unsafeLegacyFile
+        }
+        let encrypted = try Data(contentsOf: storageURL)
+        let key = try legacyKey()
+        let legacy: [String: String]
+        do { legacy = try decode(AES.GCM.open(AES.GCM.SealedBox(combined: encrypted), using: key)) }
+        catch { throw CredentialStorageError.invalidData }
+        // Existing Keychain values win if a previous attempt persisted but was
+        // interrupted before deleting the legacy file. Never overwrite newer data.
+        let merged = legacy.merging(current) { _, current in current }
+        try persist(merged)
+        guard try Data(contentsOf: storageURL) == encrypted else { throw CredentialStorageError.legacyChanged }
+        try removeLegacy(storageURL)
+        return merged
     }
 
     // MARK: - Public API
 
-    /// Preload cache (already loaded in init, but kept for compatibility)
-    func preloadCache() {
-        if !cacheLoaded {
-            loadFromFile()
-            cacheLoaded = true
-        }
-    }
+    /// Retained for launch compatibility. Access happens in throwing operations,
+    /// not at launch, and secrets are not retained in an application-wide cache.
+    func preloadCache() {}
 
     /// Save a string value
     func save(key: String, value: String) throws {
-        cache[key] = value
-        saveToFile()
+        var updated = try values()
+        updated[key] = value
+        try persist(updated)
     }
 
     /// Get a string value
     func get(key: String) throws -> String? {
-        return cache[key]
+        try values()[key]
     }
 
     /// Delete a value
     func delete(key: String) throws {
-        cache.removeValue(forKey: key)
-        saveToFile()
+        var updated = try values()
+        updated.removeValue(forKey: key)
+        try persist(updated)
     }
 
     /// Check if a key exists
     func exists(key: String) -> Bool {
-        return cache[key] != nil
+        (try? get(key: key)) != nil
     }
 
     // MARK: - GitHub Credentials

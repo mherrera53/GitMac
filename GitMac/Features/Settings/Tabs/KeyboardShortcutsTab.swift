@@ -2,7 +2,7 @@ import SwiftUI
 
 struct KeyboardShortcutsView: View {
     var body: some View {
-        Form {
+        SettingsPage {
             SettingsSection(title: "Repository") {
                 SimpleShortcutRow(action: "Open Repository", shortcut: "Command+O")
                 SimpleShortcutRow(action: "Clone Repository", shortcut: "Shift+Command+N")
@@ -28,8 +28,6 @@ struct KeyboardShortcutsView: View {
                 SimpleShortcutRow(action: "Pop Stash", shortcut: "Shift+Option+Command+S")
             }
         }
-        .padding()
-        .background(AppTheme.background)
     }
 }
 

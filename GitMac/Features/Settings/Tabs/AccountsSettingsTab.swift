@@ -95,7 +95,6 @@ struct AccountsSettingsView: View {
                                 HStack {
                                     Image(systemName: "arrow.up.forward.app")
                                     Text("Sign in with GitHub")
-                                        .foregroundStyle(AppTheme.textPrimary)
                                 }
                                 .frame(maxWidth: .infinity)
                             }

@@ -1,0 +1,42 @@
+{
+  "sourceProposal": "conflict-preservation-tests-1792981783729-proposal.json",
+  "model": "qwen3-coder:30b",
+  "digest": "06c1097efce0431c2045fe7b2e5108366e43bee1b4603a7aded8f21689e90bca",
+  "applicationAutomatic": false,
+  "scope": "Test design on the earlier source hashes recorded in the proposal; not review or approval of the current implementation",
+  "adjudication": [
+    {
+      "item": 1,
+      "decision": "partially useful",
+      "reason": "Separar snapshot del archivo local y versiones del índice. Un conflicto externo puede conservar contenido local válido; sustituirlo ciegamente por el índice sería incorrecto."
+    },
+    {
+      "item": 2,
+      "decision": "implemented and behaviorally tested",
+      "evidence": "conflict-current-negative.log; conflict-empty-choice-after.log; ls-files --unmerged es oracle antes y después de staging"
+    },
+    {
+      "item": 3,
+      "decision": "implemented and behaviorally tested",
+      "evidence": "conflict-current-negative.log reproduce CRLF y elecciones vacías; conflict-empty-choice-after.log pasa"
+    },
+    {
+      "item": 4,
+      "decision": "implemented and behaviorally tested",
+      "evidence": "El bloqueo de índice impide escribir primero; copy receipts y staging errors no publican éxito."
+    },
+    {
+      "item": 5,
+      "decision": "partial",
+      "reason": "Guardas de generación/repositorio implementadas; matriz multiventana integral sigue abierta."
+    },
+    {
+      "item": 6,
+      "decision": "clarified",
+      "reason": "El archivo de trabajo es el contenido editable; índice, HEAD e identidad del worktree invalidan snapshots obsoletos."
+    }
+  ],
+  "modelUnloadedEvidence": "conflict-preservation-tests-1792981783729-unload.json",
+  "cloudUsed": false,
+  "currentCandidateApproved": false
+}

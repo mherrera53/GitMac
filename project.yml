@@ -1,52 +1,131 @@
+# Source of truth for application and hosted tests. Regenerate only via the checked script.
+---
 name: GitMac
-
 options:
-  bundleIdPrefix: com.gitmac
+  minimumXcodeGenVersion: 2.44.0
+  settingPresets: none
   deploymentTarget:
-    macOS: "14.0"
-
-targets:
-  GitMac:
-    type: application
-    platform: macOS
-    sources:
-      - GitMac
-    dependencies:
-      - package: KeychainAccess
-      - package: Splash
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gitmac.app
-        SWIFT_VERSION: "5.9"
-        MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "1"
-
-  GitMacTests:
-    type: bundle.unit-test
-    platform: macOS
-    sources:
-      - Tests/GitMacTests
-    dependencies:
-      - target: GitMac
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gitmac.GitMacTests
-        INFOPLIST_FILE: Tests/GitMacTests/Info.plist
-
-  GitMacUITests:
-    type: bundle.ui-testing
-    platform: macOS
-    sources:
-      - Tests/GitMacUITests
-    dependencies:
-      - target: GitMac
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gitmac.GitMacUITests
-        TEST_TARGET_NAME: GitMac
-        INFOPLIST_FILE: Tests/GitMacUITests/Info.plist
-        SWIFT_VERSION: "5.9"
-
+    macOS: '14.0'
+  createIntermediateGroups: true
+configs:
+  Debug: debug
+  Release: release
+settings:
+  configs:
+    Debug:
+      ALWAYS_SEARCH_USER_PATHS: 'NO'
+      ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: 'YES'
+      CLANG_ANALYZER_NONNULL: 'YES'
+      CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION: YES_AGGRESSIVE
+      CLANG_CXX_LANGUAGE_STANDARD: gnu++20
+      CLANG_ENABLE_MODULES: 'YES'
+      CLANG_ENABLE_OBJC_ARC: 'YES'
+      CLANG_ENABLE_OBJC_WEAK: 'YES'
+      CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING: 'YES'
+      CLANG_WARN_BOOL_CONVERSION: 'YES'
+      CLANG_WARN_COMMA: 'YES'
+      CLANG_WARN_CONSTANT_CONVERSION: 'YES'
+      CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS: 'YES'
+      CLANG_WARN_DIRECT_OBJC_ISA_USAGE: YES_ERROR
+      CLANG_WARN_DOCUMENTATION_COMMENTS: 'YES'
+      CLANG_WARN_EMPTY_BODY: 'YES'
+      CLANG_WARN_ENUM_CONVERSION: 'YES'
+      CLANG_WARN_INFINITE_RECURSION: 'YES'
+      CLANG_WARN_INT_CONVERSION: 'YES'
+      CLANG_WARN_NON_LITERAL_NULL_CONVERSION: 'YES'
+      CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF: 'YES'
+      CLANG_WARN_OBJC_LITERAL_CONVERSION: 'YES'
+      CLANG_WARN_OBJC_ROOT_CLASS: YES_ERROR
+      CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER: 'YES'
+      CLANG_WARN_RANGE_LOOP_ANALYSIS: 'YES'
+      CLANG_WARN_STRICT_PROTOTYPES: 'YES'
+      CLANG_WARN_SUSPICIOUS_MOVE: 'YES'
+      CLANG_WARN_UNGUARDED_AVAILABILITY: YES_AGGRESSIVE
+      CLANG_WARN_UNREACHABLE_CODE: 'YES'
+      CLANG_WARN__DUPLICATE_METHOD_MATCH: 'YES'
+      COPY_PHASE_STRIP: 'NO'
+      DEAD_CODE_STRIPPING: 'YES'
+      DEBUG_INFORMATION_FORMAT: dwarf
+      ENABLE_STRICT_OBJC_MSGSEND: 'YES'
+      ENABLE_TESTABILITY: 'YES'
+      ENABLE_USER_SCRIPT_SANDBOXING: 'YES'
+      GCC_C_LANGUAGE_STANDARD: gnu17
+      GCC_DYNAMIC_NO_PIC: 'NO'
+      GCC_NO_COMMON_BLOCKS: 'YES'
+      GCC_OPTIMIZATION_LEVEL: '0'
+      GCC_PREPROCESSOR_DEFINITIONS:
+      - DEBUG=1
+      - "$(inherited)"
+      GCC_WARN_64_TO_32_BIT_CONVERSION: 'YES'
+      GCC_WARN_ABOUT_RETURN_TYPE: YES_ERROR
+      GCC_WARN_UNDECLARED_SELECTOR: 'YES'
+      GCC_WARN_UNINITIALIZED_AUTOS: YES_AGGRESSIVE
+      GCC_WARN_UNUSED_FUNCTION: 'YES'
+      GCC_WARN_UNUSED_VARIABLE: 'YES'
+      MACOSX_DEPLOYMENT_TARGET: '14.0'
+      MTL_ENABLE_DEBUG_INFO: INCLUDE_SOURCE
+      MTL_FAST_MATH: 'YES'
+      ONLY_ACTIVE_ARCH: 'YES'
+      SDKROOT: macosx
+      STRING_CATALOG_GENERATE_SYMBOLS: 'YES'
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG GHOSTTY_AVAILABLE $(inherited)
+      SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+    Release:
+      ALWAYS_SEARCH_USER_PATHS: 'NO'
+      ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: 'YES'
+      CLANG_ANALYZER_NONNULL: 'YES'
+      CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION: YES_AGGRESSIVE
+      CLANG_CXX_LANGUAGE_STANDARD: gnu++20
+      CLANG_ENABLE_MODULES: 'YES'
+      CLANG_ENABLE_OBJC_ARC: 'YES'
+      CLANG_ENABLE_OBJC_WEAK: 'YES'
+      CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING: 'YES'
+      CLANG_WARN_BOOL_CONVERSION: 'YES'
+      CLANG_WARN_COMMA: 'YES'
+      CLANG_WARN_CONSTANT_CONVERSION: 'YES'
+      CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS: 'YES'
+      CLANG_WARN_DIRECT_OBJC_ISA_USAGE: YES_ERROR
+      CLANG_WARN_DOCUMENTATION_COMMENTS: 'YES'
+      CLANG_WARN_EMPTY_BODY: 'YES'
+      CLANG_WARN_ENUM_CONVERSION: 'YES'
+      CLANG_WARN_INFINITE_RECURSION: 'YES'
+      CLANG_WARN_INT_CONVERSION: 'YES'
+      CLANG_WARN_NON_LITERAL_NULL_CONVERSION: 'YES'
+      CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF: 'YES'
+      CLANG_WARN_OBJC_LITERAL_CONVERSION: 'YES'
+      CLANG_WARN_OBJC_ROOT_CLASS: YES_ERROR
+      CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER: 'YES'
+      CLANG_WARN_RANGE_LOOP_ANALYSIS: 'YES'
+      CLANG_WARN_STRICT_PROTOTYPES: 'YES'
+      CLANG_WARN_SUSPICIOUS_MOVE: 'YES'
+      CLANG_WARN_UNGUARDED_AVAILABILITY: YES_AGGRESSIVE
+      CLANG_WARN_UNREACHABLE_CODE: 'YES'
+      CLANG_WARN__DUPLICATE_METHOD_MATCH: 'YES'
+      COPY_PHASE_STRIP: 'YES'
+      DEAD_CODE_STRIPPING: 'YES'
+      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+      DEPLOYMENT_POSTPROCESSING: 'YES'
+      ENABLE_NS_ASSERTIONS: 'NO'
+      ENABLE_STRICT_OBJC_MSGSEND: 'YES'
+      ENABLE_TESTABILITY: 'NO'
+      ENABLE_USER_SCRIPT_SANDBOXING: 'YES'
+      GCC_C_LANGUAGE_STANDARD: gnu17
+      GCC_NO_COMMON_BLOCKS: 'YES'
+      GCC_WARN_64_TO_32_BIT_CONVERSION: 'YES'
+      GCC_WARN_ABOUT_RETURN_TYPE: YES_ERROR
+      GCC_WARN_UNDECLARED_SELECTOR: 'YES'
+      GCC_WARN_UNINITIALIZED_AUTOS: YES_AGGRESSIVE
+      GCC_WARN_UNUSED_FUNCTION: 'YES'
+      GCC_WARN_UNUSED_VARIABLE: 'YES'
+      INSTALL_PATH[sdk=macosx*]: ''
+      MACOSX_DEPLOYMENT_TARGET: '14.0'
+      MTL_ENABLE_DEBUG_INFO: 'NO'
+      MTL_FAST_MATH: 'YES'
+      SDKROOT: macosx
+      STRING_CATALOG_GENERATE_SYMBOLS: 'YES'
+      STRIP_INSTALLED_PRODUCT: 'YES'
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: GHOSTTY_AVAILABLE $(inherited)
+      SWIFT_COMPILATION_MODE: wholemodule
 packages:
   KeychainAccess:
     url: https://github.com/kishikawakatsumi/KeychainAccess.git
@@ -54,18 +133,1074 @@ packages:
   Splash:
     url: https://github.com/JohnSundell/Splash.git
     from: 0.16.0
-  SwiftTerm:
-    url: https://github.com/migueldeicaza/SwiftTerm.git
-    from: 1.0.0
-
+  DifferenceKit:
+    url: https://github.com/ra1028/DifferenceKit
+    from: 1.3.0
+  CodeEditSourceEditor:
+    url: https://github.com/CodeEditApp/CodeEditSourceEditor.git
+    from: 0.9.0
+  mlx-swift-lm:
+    url: https://github.com/ml-explore/mlx-swift-lm
+    from: 3.31.3
+  swift-huggingface-mlx:
+    url: https://github.com/DePasqualeOrg/swift-huggingface-mlx
+    from: 0.1.0
+  swift-transformers-mlx:
+    url: https://github.com/DePasqualeOrg/swift-transformers-mlx
+    from: 0.1.0
+targets:
+  GitMac:
+    type: application
+    platform: macOS
+    sources:
+    - path: GitMac/UI/Components/ComponentCatalog.swift
+      buildPhase: sources
+    - path: GitMac/Core/PluginSystem/IntegrationPlugin.swift
+      buildPhase: sources
+    - path: GitMac/Core/PluginSystem/IntegrationViewModel.swift
+      buildPhase: sources
+    - path: GitMac/Core/PluginSystem/PluginRegistry.swift
+      buildPhase: sources
+    - path: GitMac/Features/Jira/JiraViewModel.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Buttons/DSTabButton.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Buttons/DSButton.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Buttons/DSToolbarButton.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Buttons/DSIconButton.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Buttons/DSLinkButton.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Buttons/DSCloseButton.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Feedback/DSTooltip.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Feedback/DSSpinner.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Feedback/DSProgressBar.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Feedback/DSSkeletonBox.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Display/DSText.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Display/DSAvatar.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Display/DSBadge.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Display/DSDivider.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Display/DSIcon.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Cards/CardStyle.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Display/DSSpacer.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Molecules/Forms/DSFilterMenu.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Molecules/Forms/DSLabeledField.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Molecules/Forms/DSSearchBar.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Molecules/Forms/DSActionBar.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Molecules/Lists/DSDraggableItem.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Molecules/Lists/DSExpandableItem.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Molecules/Lists/DSListItem.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Molecules/Lists/DSDropZone.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Molecules/Display/DSStatusBadge.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Molecules/Display/DSLoadingState.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Molecules/Display/DSHeader.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Molecules/Display/DSErrorState.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Molecules/Display/DSEmptyState.swift
+      buildPhase: sources
+    - path: GitMac/Features/Notion/NotionPlugin.swift
+      buildPhase: sources
+    - path: GitMac/Features/Linear/LinearPlugin.swift
+      buildPhase: sources
+    - path: GitMac/Features/Jira/JiraPlugin.swift
+      buildPhase: sources
+    - path: GitMac/Features/Planner/PlannerPlugin.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Inputs/DSTextEditor.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Inputs/DSSecureField.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Inputs/DSSearchField.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Inputs/DSToggle.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Inputs/DSTextField.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Atoms/Inputs/DSPicker.swift
+      buildPhase: sources
+    - path: GitMac/Features/BottomPanel/Views/RepositoryActivityPanel.swift
+      buildPhase: sources
+    - path: GitMac/Features/BottomPanel/Views/ContributionGraphView.swift
+      buildPhase: sources
+    - path: GitMac/Features/BottomPanel/ViewModels/RepositoryActivityViewModel.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/AI/AIServiceExtensions.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/AI/MLXProvider.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/AI/PromptTemplateManager.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/CloudSyncService.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/PresenceService.swift
+      buildPhase: sources
+    - path: GitMac/Features/CodeReview/CodeReviewService.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Enhanced/TerminalBlocksView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Enhanced/TerminalSessionSharingService.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Enhanced/TerminalWorkflowsView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Enhanced/SecretRedactionService.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Core/TerminalCompletions.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Core/TerminalContext.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Core/TerminalSuggestionEngine.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Views/TerminalInputBar.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Core/TerminalSharedTypes.swift
+      buildPhase: sources
+    - path: GitMac/App/Sheets/CloneRepositorySheet.swift
+      buildPhase: sources
+    - path: GitMac/App/Sheets/CreateBranchSheet.swift
+      buildPhase: sources
+    - path: GitMac/App/Sheets/MergeBranchSheet.swift
+      buildPhase: sources
+    - path: GitMac/App/Sheets/InitRepositorySheet.swift
+      buildPhase: sources
+    - path: GitMac/App/Sheets/GroupSheets.swift
+      buildPhase: sources
+    - path: GitMac/UI/Utilities/VisualEffectBlur.swift
+      buildPhase: sources
+    - path: GitMac/UI/Utilities/ModalCoordinator.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Xcode/XcodeToolbarButton.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Xcode/XcodeSidebarNavigator.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Xcode/XcodeBottomBarTab.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/KeyboardShortcuts.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Commit/CommitMessageArea.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/FileTree/GenericFileTreeView.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/FileTree/TreeExpansionState.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/FileTree/FileTreeProtocols.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Layout/PanelHeader.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Layout/FileListSection.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Layout/Separator.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Layout/SectionHeader.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Navigation/RepositoryTabsView.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Terminal/AITerminalInputView.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Diff/DiffToolbar.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Diff/DiffStatsView.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Diff/DiffHunkView.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Diff/DiffLineView.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Rows/BranchRow.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Rows/IssueRow.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Rows/BaseRow.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Rows/ListRow.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Rows/RowProtocols.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Rows/FileRow.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Utilities/AnimationExtensions.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Utilities/ViewModifiers.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Utilities/StateManagement.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Utilities/GestureHandlers.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Common/UniversalResizer.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Icons/FileTypeIcon.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Icons/StatusIcon.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/AppTheme.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/UnifiedFileContextMenu.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Organisms/Integration/DSGenericIntegrationPanel+Examples.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/ContextMenus.swift
+      buildPhase: sources
+    - path: GitMac/UI/Theme/DesignTokens.swift
+      buildPhase: sources
+    - path: GitMac/UI/Organisms/Lists/DSInfiniteList.swift
+      buildPhase: sources
+    - path: GitMac/UI/Organisms/Lists/DSVirtualizedList.swift
+      buildPhase: sources
+    - path: GitMac/UI/Organisms/Lists/DSGroupedList.swift
+      buildPhase: sources
+    - path: GitMac/UI/Organisms/Lists/DSDraggableList.swift
+      buildPhase: sources
+    - path: GitMac/UI/Organisms/Integration/DSLoginPrompt.swift
+      buildPhase: sources
+    - path: GitMac/UI/Organisms/Integration/DSIntegrationPanel.swift
+      buildPhase: sources
+    - path: GitMac/UI/Organisms/Integration/DSSettingsSheet.swift
+      buildPhase: sources
+    - path: GitMac/UI/Organisms/Panels/DSTabPanel.swift
+      buildPhase: sources
+    - path: GitMac/UI/Organisms/Panels/DSResizablePanel.swift
+      buildPhase: sources
+    - path: GitMac/UI/Organisms/Panels/DSCollapsiblePanel.swift
+      buildPhase: sources
+    - path: GitMac/UI/Organisms/Panels/DSPanel.swift
+      buildPhase: sources
+    - path: GitMac/UI/Organisms/DSTabContainer.swift
+      buildPhase: sources
+    - path: GitMac/UI/Organisms/DSSheet.swift
+      buildPhase: sources
+    - path: GitMac/Features/Workflows/WorkflowsView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/MinimapView.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/ExternalToolsManager.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/RemoteOperationTracker.swift
+      buildPhase: sources
+    - path: GitMac/Features/Search/SearchView.swift
+      buildPhase: sources
+    - path: GitMac/Core/StoreKit/StoreManager.swift
+      buildPhase: sources
+    - path: GitMac/Core/Utils/CacheWithTTL.swift
+      buildPhase: sources
+    - path: GitMac/Core/Utils/KeychainManager.swift
+      buildPhase: sources
+    - path: GitMac/Core/Utils/ShellExecutor.swift
+      buildPhase: sources
+    - path: GitMac/Core/Utils/FileWatcher.swift
+      buildPhase: sources
+    - path: GitMac/Core/Models/GitHook.swift
+      buildPhase: sources
+    - path: GitMac/Core/Models/GitSubmodule.swift
+      buildPhase: sources
+    - path: GitMac/Core/Models/GitWorkflow.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Tabs/WorkflowSettingsTab.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/WorkflowEngine.swift
+      buildPhase: sources
+    - path: GitMac/App/Sheets/RepoStandardsSheet.swift
+      buildPhase: sources
+    - path: GitMac/Features/PullRequests/AIQuickReviewSheet.swift
+      buildPhase: sources
+    - path: GitMac/App/Sheets/SyncWizardSheet.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/RepoHealthService.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/GitHooksService.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/GitService.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/BranchPRTracker.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/GitHubSyncManager.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/AIService.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/GitHubService.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/WorkspaceSettings.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/MicrosoftPlannerService.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/GitSubmoduleService.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/GitHubOAuth.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/LinearService.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/JiraService.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/NotionService.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/UndoManager.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/AvatarService.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/MicrosoftOAuth.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/TaigaService.swift
+      buildPhase: sources
+    - path: GitMac/Core/Git/Stash.swift
+      buildPhase: sources
+    - path: GitMac/Core/Git/Remote.swift
+      buildPhase: sources
+    - path: GitMac/Core/Git/Branch.swift
+      buildPhase: sources
+    - path: GitMac/Core/Git/PatchManipulator.swift
+      buildPhase: sources
+    - path: GitMac/Core/Git/Commit.swift
+      buildPhase: sources
+    - path: GitMac/Core/Git/Repository.swift
+      buildPhase: sources
+    - path: GitMac/Core/Git/Worktree.swift
+      buildPhase: sources
+    - path: GitMac/Core/Git/GitEngine.swift
+      buildPhase: sources
+    - path: GitMac/Core/Git/RepositoryContext.swift
+      buildPhase: sources
+    - path: GitMac/Core/Git/Tag.swift
+      buildPhase: sources
+    - path: GitMac/App/GitMacApp.swift
+      buildPhase: sources
+    - path: GitMac/App/Components/SidebarSection.swift
+      buildPhase: sources
+    - path: GitMac/App/Components/OperationProgressOverlay.swift
+      buildPhase: sources
+    - path: GitMac/App/Components/ActionButton.swift
+      buildPhase: sources
+    - path: GitMac/App/ContentView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Search/FuzzyFileFinder.swift
+      buildPhase: sources
+    - path: GitMac/Features/GitHub/GitHubIntegration.swift
+      buildPhase: sources
+    - path: GitMac/Features/Reset/ResetView.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/NotificationManager.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/AutoFetchService.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/PreCommitGuard.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/CommitMessageHistory.swift
+      buildPhase: sources
+    - path: GitMac/Features/Insights/InsightsView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Tabs/AISettingsTab.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Tabs/GeneralSettingsTab.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Tabs/GitSettingsTab.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Tabs/IntegrationsSettingsTab.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Tabs/SubscriptionSettingsTab.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Tabs/KeyboardShortcutsTab.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Tabs/WorkspaceSettingsTab.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Tabs/AccountsSettingsTab.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/SettingsView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Components/SettingsSection.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Components/ThemeButton.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Components/IntegrationViews/PlannerSettingsViews.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Components/IntegrationViews/NotionSettingsViews.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Components/IntegrationViews/TaigaSettingsViews.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Components/IntegrationViews/AWSSettingsViews.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Components/IntegrationViews/JiraSettingsViews.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/Components/IntegrationViews/LinearSettingsViews.swift
+      buildPhase: sources
+    - path: GitMac/Features/Settings/SubscriptionView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Staging/StagingAreaView.swift
+      buildPhase: sources
+    - path: GitMac/Features/CloudPatches/CloudPatchService.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/CommitGraphView.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Search/SearchSyntaxParser.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Search/SearchQuery.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/FileChangesIndicator.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/GraphMinimapView.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/RepositorySelectorButton.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/BranchPanelView.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/PushFetchButtons.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/BranchSelectorButton.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/CommitDetailPanel.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Services/GitHubPRService.swift
+      buildPhase: sources
+    - path: GitMac/Features/Taiga/TaigaContentView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Taiga/TaigaViewModel.swift
+      buildPhase: sources
+    - path: GitMac/Features/Taiga/TaigaTicketsPanel.swift
+      buildPhase: sources
+    - path: GitMac/Features/Taiga/TaigaPlugin.swift
+      buildPhase: sources
+    - path: GitMac/Features/Taiga/Views/TaigaSharedViews.swift
+      buildPhase: sources
+    - path: GitMac/Features/Taiga/Views/TaigaLoginPrompt.swift
+      buildPhase: sources
+    - path: GitMac/Features/CherryPick/CherryPickView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Markdown/MermaidDiagramView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Markdown/MarkdownView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Planner/PlannerTasksPanel.swift
+      buildPhase: sources
+    - path: GitMac/Features/Bisect/BisectView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Linear/LinearContentView.swift
+      buildPhase: sources
+    - path: GitMac/Features/BottomPanel/Models/BottomPanelTab.swift
+      buildPhase: sources
+    - path: GitMac/Features/BottomPanel/Models/BottomPanelType.swift
+      buildPhase: sources
+    - path: GitMac/Features/BottomPanel/Views/BottomPanelResizer.swift
+      buildPhase: sources
+    - path: GitMac/Features/BottomPanel/Views/UnifiedBottomPanel.swift
+      buildPhase: sources
+    - path: GitMac/Features/BottomPanel/Views/BottomPanelContent.swift
+      buildPhase: sources
+    - path: GitMac/Features/BottomPanel/Views/BottomPanelTabBar.swift
+      buildPhase: sources
+    - path: GitMac/Features/BottomPanel/BottomPanelManager.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/MinimalTerminalView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/GhosttyTerminalView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/GhosttyDirect.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/GhosttyNativeView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/TerminalView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Enhanced/TerminalAIService.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Enhanced/GhosttyEnhancedTerminalView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Enhanced/AICommandSuggestions.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Enhanced/TerminalCommandPalette.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Enhanced/GhosttyEnhancedViewModel.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Enhanced/TerminalNLInputView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Enhanced/TerminalNLTranslationService.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/EmbeddedTerminalView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Views/WarpAIInputBar.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/Views/EnhancedTerminalPanel.swift
+      buildPhase: sources
+    - path: GitMac/Features/FileViewer/FileContentView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/Renderers/DiffParser.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/Renderers/DiffMinimap.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/Renderers/DiffScrollViews.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/Renderers/DiffLineContextMenu.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/Renderers/DiffSyntaxHighlighter.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/Renderers/LargeFileDiffRenderer.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/Renderers/DiffLineRenderers.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/Renderers/BinaryFileRenderers.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/KaleidoscopeSplitDiffView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/TiledDiffView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/KaleidoscopeFileList.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/WordLevelDiff.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/DiffView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/AlignedDiffView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/LightweightDiffView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/Components/EnhancedDiffToolbar.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/ConnectionRibbonsView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/KaleidoscopeDiffView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/DiffSearchEngine.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/DiffBreadcrumb.swift
+      buildPhase: sources
+    - path: GitMac/Features/Repositories/RepositoryHierarchicalNavigator.swift
+      buildPhase: sources
+    - path: GitMac/Features/GitFlow/GitFlowManager.swift
+      buildPhase: sources
+    - path: GitMac/Features/Tags/TagListView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Launchpad/LaunchpadView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Remotes/RemoteListView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Jira/JiraPanelGeneric.swift
+      buildPhase: sources
+    - path: GitMac/Features/Jira/JiraSettingsContent.swift
+      buildPhase: sources
+    - path: GitMac/Features/Jira/JiraContentView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Stash/StashListView.swift
+      buildPhase: sources
+    - path: GitMac/Features/DeepLinking/DeepLinkService.swift
+      buildPhase: sources
+    - path: GitMac/Features/Worktrees/WorktreeListView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Submodules/SubmoduleView.swift
+      buildPhase: sources
+    - path: GitMac/Features/History/HistoryView.swift
+      buildPhase: sources
+    - path: GitMac/Features/GitHooks/GitHooksView.swift
+      buildPhase: sources
+    - path: GitMac/Features/LFS/LFSManager.swift
+      buildPhase: sources
+    - path: GitMac/Features/Branches/BranchListView.swift
+      buildPhase: sources
+    - path: GitMac/Features/PullRequests/PRListView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Profiles/GitProfilesService.swift
+      buildPhase: sources
+    - path: GitMac/Features/Issues/IssueListView.swift
+      buildPhase: sources
+    - path: GitMac/Features/MergeConflict/ConflictResolverView.swift
+      buildPhase: sources
+    - path: GitMac/Features/RepoGroups/RepoGroupsService.swift
+      buildPhase: sources
+    - path: GitMac/Features/ConflictPrevention/ConflictPreventionService.swift
+      buildPhase: sources
+    - path: GitMac/Features/ConflictPrevention/ConflictPreventionView.swift
+      buildPhase: sources
+    - path: GitMac/Features/PullRequests/PullSheet.swift
+      buildPhase: sources
+    - path: GitMac/UI/Theme/ThemeManager.swift
+      buildPhase: sources
+    - path: GitMac/Features/Reflog/ReflogView.swift
+      buildPhase: sources
+    - path: GitMac/Features/CICD/AWSCodeBuildService.swift
+      buildPhase: sources
+    - path: GitMac/Features/Remotes/RemoteManagementView.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/KeyboardShortcutManager.swift
+      buildPhase: sources
+    - path: GitMac/Core/Utils/SyntaxHighlighter.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommandPalette/CommandPalette.swift
+      buildPhase: sources
+    - path: GitMac/Features/FileViewer/FileBrowserView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Blame/FileAnnotationView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Rebase/InteractiveRebaseView.swift
+      buildPhase: sources
+    - path: GitMac/Core/Utils/IntegrationHelpers.swift
+      buildPhase: sources
+    - path: GitMac/Features/Revert/RevertView.swift
+      buildPhase: sources
+    - path: GitMac/Core/Git/GitOperationHandler.swift
+      buildPhase: sources
+    - path: GitMac/Services/FeatureManager.swift
+      buildPhase: sources
+    - path: GitMac/Services/LicenseValidator.swift
+      buildPhase: sources
+    - path: GitMac/Features/Taiga/Views/TaigaUserStoriesView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Taiga/Views/TaigaEpicsView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Taiga/Views/TaigaTasksView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Taiga/Views/TaigaIssuesView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Analytics/AnalyticsDashboard.swift
+      buildPhase: sources
+    - path: GitMac/Features/Analytics/AnalyticsViewModel.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Utilities/LayoutHelpers.swift
+      buildPhase: sources
+    - path: GitMac/Features/Linear/LinearPanel.swift
+      buildPhase: sources
+    - path: GitMac/Features/Notion/NotionPanel.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/SplitDiffView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Branches/BranchComparisonView.swift
+      buildPhase: sources
+    - path: GitMac/App/Models/CommitFile.swift
+      buildPhase: sources
+    - path: GitMac/App/ViewModels/CommitDetailViewModel.swift
+      buildPhase: sources
+    - path: GitMac/Core/Git/DiffEngine.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Organisms/Integration/DSGenericIntegrationPanel.swift
+      buildPhase: sources
+    - path: GitMac/Features/Notion/NotionContentView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/Components/EnhancedSplitDiffView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/DiffPreferences.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/LargeDiffView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/DiffCache.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/DiffStatusBar.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/DiffSearchAndNavigation.swift
+      buildPhase: sources
+    - path: GitMac/App/Welcome/WelcomeView.swift
+      buildPhase: sources
+    - path: GitMac/App/Models/StagingFile.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Center/TerminalPanel.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Center/CenterPanel.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Center/DiffViewWithClose.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Left/LeftSidebarPanel.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Right/RightStagingPanel.swift
+      buildPhase: sources
+    - path: GitMac/App/ViewModels/StagingViewModel.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Right/StashComponents.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Left/SidebarComponents.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Left/GitHooksComponents.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Left/SubmoduleComponents.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Left/WorktreeComponents.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Left/CICDComponents.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Right/RightCommitDetailPanel.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Right/StashDetailPanel.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Right/StagingAreaPanel.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Right/CommitComponents.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Right/StagingComponents.swift
+      buildPhase: sources
+    - path: GitMac/Features/Jira/JiraPanel.swift
+      buildPhase: sources
+    - path: GitMac/Core/Utils/MemoryPressureHandler.swift
+      buildPhase: sources
+    - path: GitMac/Core/Utils/AppActivityManager.swift
+      buildPhase: sources
+    - path: GitMac/Features/Editor/CodeEditorView.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/BranchStateManager.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/AI/BranchNamingSuggestionService.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Models/GraphTransferables.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Models/GraphSettings.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Models/GraphNode.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Models/StashNode.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Models/TimelineItem.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Models/GraphNotifications.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/ViewModels/GraphViewModel.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/GhostBranchesOverlay.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/BranchBadge.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/StashBadge.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/UncommittedChangesRow.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/GraphStashRow.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/GraphRow.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/CommitContextMenu.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Services/GraphLayoutEngine.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/BranchProtectionService.swift
+      buildPhase: sources
+    - path: GitMac/Features/Branches/StaleBranchCleanupView.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/CommitComparisonPanel.swift
+      buildPhase: sources
+    - path: GitMac/App/Models/FileChange.swift
+      buildPhase: sources
+    - path: GitMac/App/Models/StagingViewMode.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Left/RecentRepositoriesList.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Team/TeamActivityPanel.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Team/TeamActivityViewModel.swift
+      buildPhase: sources
+    - path: GitMac/App/Panels/Team/TeamComponents.swift
+      buildPhase: sources
+    - path: GitMac/App/Toolbars/CompactRepoTab.swift
+      buildPhase: sources
+    - path: GitMac/App/Toolbars/RepositoryTabBar.swift
+      buildPhase: sources
+    - path: GitMac/App/Toolbars/ToolbarComponents.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/WorktreeManager.swift
+      buildPhase: sources
+    - path: GitMac/Core/Utils/Logger.swift
+      buildPhase: sources
+    - path: GitMac/Features/CommitGraph/Components/WorktreeBadge.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/DiffEngineView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/DiffEnhancements.swift
+      buildPhase: sources
+    - path: GitMac/Features/Diff/DiffOptions.swift
+      buildPhase: sources
+    - path: GitMac/Features/Jira/Views/JiraIssuesListView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Jira/Views/JiraLoginPromptView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Jira/Views/JiraSettingsSheet.swift
+      buildPhase: sources
+    - path: GitMac/Features/Security/GPGSSHManagementView.swift
+      buildPhase: sources
+    - path: GitMac/Features/Submodules/SubmoduleManager.swift
+      buildPhase: sources
+    - path: GitMac/Services/ProAPIClient.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/AvatarImageView.swift
+      buildPhase: sources
+    - path: GitMac/UI/Components/Xcode/PushToolbarButton.swift
+      buildPhase: sources
+    - path: GitMac/App/Subscription/PaywallView.swift
+      buildPhase: sources
+    - path: GitMac/Core/Services/SubscriptionService.swift
+      buildPhase: sources
+    - path: GitMac/Features/Terminal/TerminalIntegration.swift
+      buildPhase: sources
+    - path: GitMac/Assets.xcassets
+      buildPhase: resources
+    - path: GitMac/BUILD_FIX.md
+      buildPhase: resources
+    - path: GitMac/FASE3_PROGRESS.md
+      buildPhase: resources
+    - path: GitMac/INTEGRATION_CHECKLIST.md
+      buildPhase: resources
+    - path: GitMac/QUICK_START.md
+      buildPhase: resources
+    - path: GitMac/IMPLEMENTATION_ROADMAP.md
+      buildPhase: resources
+    - path: GitMac/INTEGRATION_GUIDE.md
+      buildPhase: resources
+    - path: GitMac/REMOTE_STATUS_INTEGRATION.md
+      buildPhase: resources
+    - path: GitMac/FIX_BUILD_NOW.md
+      buildPhase: resources
+    - path: GitMac/WARNING_FIXES.md
+      buildPhase: resources
+    - path: GitMac/REVIEW_GUIDE.md
+      buildPhase: resources
+    dependencies:
+    - package: KeychainAccess
+      product: KeychainAccess
+    - package: Splash
+      product: Splash
+    - package: DifferenceKit
+      product: DifferenceKit
+    - package: CodeEditSourceEditor
+      product: CodeEditSourceEditor
+    - package: mlx-swift-lm
+      product: MLXLLM
+    - package: mlx-swift-lm
+      product: MLXLMCommon
+    - package: swift-huggingface-mlx
+      product: MLXLMHuggingFace
+    - package: swift-transformers-mlx
+      product: MLXLMTransformers
+    settings:
+      configs:
+        Debug:
+          ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+          ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+          CODE_SIGN_ENTITLEMENTS: GitMac/GitMac.entitlements
+          CODE_SIGN_IDENTITY: "-"
+          CODE_SIGN_STYLE: Manual
+          COMBINE_HIDPI_IMAGES: 'YES'
+          CURRENT_PROJECT_VERSION: '1'
+          DEVELOPMENT_ASSET_PATHS: ''
+          ENABLE_APP_SANDBOX: 'NO'
+          ENABLE_OUTGOING_NETWORK_CONNECTIONS: 'YES'
+          ENABLE_PREVIEWS: 'YES'
+          ENABLE_USER_SELECTED_FILES: readwrite
+          FRAMEWORK_SEARCH_PATHS:
+          - "$(inherited)"
+          - "$(PROJECT_DIR)/Frameworks"
+          GENERATE_INFOPLIST_FILE: 'YES'
+          HEADER_SEARCH_PATHS:
+          - "$(inherited)"
+          - "$(PROJECT_DIR)/Frameworks/GhosttyKit.xcframework/macos-arm64_x86_64/Headers"
+          INFOPLIST_FILE: GitMac/Info.plist
+          INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+          INFOPLIST_KEY_NSHumanReadableCopyright: ''
+          LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+          LIBRARY_SEARCH_PATHS:
+          - "$(inherited)"
+          - "$(PROJECT_DIR)/Frameworks/GhosttyKit.xcframework/macos-arm64_x86_64"
+          - "$(SRCROOT)/GitMac/Features/BottomPanel/Views"
+          - "$(SRCROOT)/GitMac/Features/BottomPanel/ViewModels"
+          - "$(SRCROOT)/GitMac/Core/Services/AI"
+          - "$(SRCROOT)/GitMac/Features/Analytics"
+          - "$(SRCROOT)/GitMac/Core/Services"
+          - "$(SRCROOT)/GitMac/Features/CodeReview"
+          MARKETING_VERSION: '1.0'
+          OTHER_LDFLAGS:
+          - "$(inherited)"
+          - "-lc++"
+          - "-lghostty"
+          - "-framework"
+          - Metal
+          - "-framework"
+          - CoreText
+          - "-framework"
+          - Carbon
+          - "-framework"
+          - IOKit
+          PRODUCT_BUNDLE_IDENTIFIER: com.gitmac.app
+          PRODUCT_NAME: "$(TARGET_NAME)"
+          PROVISIONING_PROFILE_SPECIFIER: ''
+          SWIFT_EMIT_LOC_STRINGS: 'YES'
+          SWIFT_OBJC_BRIDGING_HEADER: GitMac/GitMac-Bridging-Header.h
+          SWIFT_VERSION: '6.0'
+        Release:
+          ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+          ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+          CODE_SIGN_ENTITLEMENTS: GitMac/GitMac.entitlements
+          CODE_SIGN_IDENTITY: "-"
+          CODE_SIGN_STYLE: Manual
+          COMBINE_HIDPI_IMAGES: 'YES'
+          CURRENT_PROJECT_VERSION: '1'
+          DEVELOPMENT_ASSET_PATHS: ''
+          ENABLE_APP_SANDBOX: 'NO'
+          ENABLE_OUTGOING_NETWORK_CONNECTIONS: 'YES'
+          ENABLE_PREVIEWS: 'YES'
+          ENABLE_USER_SELECTED_FILES: readwrite
+          FRAMEWORK_SEARCH_PATHS:
+          - "$(inherited)"
+          - "$(PROJECT_DIR)/Frameworks"
+          GENERATE_INFOPLIST_FILE: 'YES'
+          HEADER_SEARCH_PATHS:
+          - "$(inherited)"
+          - "$(PROJECT_DIR)/Frameworks/GhosttyKit.xcframework/macos-arm64_x86_64/Headers"
+          INFOPLIST_FILE: GitMac/Info.plist
+          INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+          INFOPLIST_KEY_NSHumanReadableCopyright: ''
+          LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+          LIBRARY_SEARCH_PATHS:
+          - "$(inherited)"
+          - "$(PROJECT_DIR)/Frameworks/GhosttyKit.xcframework/macos-arm64_x86_64"
+          - "$(SRCROOT)/GitMac/Features/BottomPanel/Views"
+          - "$(SRCROOT)/GitMac/Features/BottomPanel/ViewModels"
+          - "$(SRCROOT)/GitMac/Core/Services/AI"
+          - "$(SRCROOT)/GitMac/Features/Analytics"
+          - "$(SRCROOT)/GitMac/Core/Services"
+          - "$(SRCROOT)/GitMac/Features/CodeReview"
+          MARKETING_VERSION: '1.0'
+          OTHER_LDFLAGS:
+          - "$(inherited)"
+          - "-lc++"
+          - "-lghostty"
+          - "-framework"
+          - Metal
+          - "-framework"
+          - CoreText
+          - "-framework"
+          - Carbon
+          - "-framework"
+          - IOKit
+          PRODUCT_BUNDLE_IDENTIFIER: com.gitmac.app
+          PRODUCT_NAME: "$(TARGET_NAME)"
+          PROVISIONING_PROFILE_SPECIFIER: ''
+          SWIFT_EMIT_LOC_STRINGS: 'YES'
+          SWIFT_OBJC_BRIDGING_HEADER: GitMac/GitMac-Bridging-Header.h
+          SWIFT_VERSION: '6.0'
+  GitMacUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+    - path: GitMacUITests/GitMacComprehensiveScreenshots.swift
+      buildPhase: sources
+    - path: GitMacUITests/SnapshotHelper.swift
+      buildPhase: sources
+    - path: GitMacUITests/GitMacScreenshotTests.swift
+      buildPhase: sources
+    - path: GitMacUITests/GitMacUITests.swift
+      buildPhase: sources
+    - path: GitMacUITests/GitMacUITestsLaunchTests.swift
+      buildPhase: sources
+    dependencies:
+    - target: GitMac
+    settings:
+      configs:
+        Debug:
+          ALWAYS_SEARCH_USER_PATHS: 'NO'
+          ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: 'YES'
+          CLANG_CXX_LANGUAGE_STANDARD: gnu++20
+          CLANG_ENABLE_MODULES: 'YES'
+          CLANG_ENABLE_OBJC_ARC: 'YES'
+          CODE_SIGN_STYLE: Automatic
+          CURRENT_PROJECT_VERSION: '1'
+          DEVELOPMENT_TEAM: ''
+          GENERATE_INFOPLIST_FILE: 'YES'
+          INFOPLIST_FILE: GitMacUITests/Info.plist
+          LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+          - "@loader_path/../Frameworks"
+          MACOSX_DEPLOYMENT_TARGET: '14.0'
+          MARKETING_VERSION: '1.0'
+          PRODUCT_BUNDLE_IDENTIFIER: com.mherrera.GitMac.UITests
+          PRODUCT_NAME: "$(TARGET_NAME)"
+          SWIFT_EMIT_LOC_STRINGS: 'NO'
+          SWIFT_VERSION: '5.0'
+          TEST_TARGET_NAME: GitMac
+        Release:
+          ALWAYS_SEARCH_USER_PATHS: 'NO'
+          ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: 'YES'
+          CLANG_CXX_LANGUAGE_STANDARD: gnu++20
+          CLANG_ENABLE_MODULES: 'YES'
+          CLANG_ENABLE_OBJC_ARC: 'YES'
+          CODE_SIGN_STYLE: Automatic
+          CURRENT_PROJECT_VERSION: '1'
+          DEVELOPMENT_TEAM: ''
+          GENERATE_INFOPLIST_FILE: 'YES'
+          INFOPLIST_FILE: GitMacUITests/Info.plist
+          LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+          - "@loader_path/../Frameworks"
+          MACOSX_DEPLOYMENT_TARGET: '14.0'
+          MARKETING_VERSION: '1.0'
+          PRODUCT_BUNDLE_IDENTIFIER: com.mherrera.GitMac.UITests
+          PRODUCT_NAME: "$(TARGET_NAME)"
+          SWIFT_EMIT_LOC_STRINGS: 'NO'
+          SWIFT_VERSION: '5.0'
+          TEST_TARGET_NAME: GitMac
+  GitMacTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+    - path: Tests/GitMacTests
+      excludes:
+      - Info.plist
+      buildPhase: sources
+    dependencies:
+    - target: GitMac
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gitmac.GitMacTests
+        PRODUCT_NAME: "$(TARGET_NAME)"
+        PRODUCT_MODULE_NAME: GitMacTests
+        HEADER_SEARCH_PATHS:
+        - "$(inherited)"
+        - "$(PROJECT_DIR)/Frameworks/GhosttyKit.xcframework/macos-arm64_x86_64/Headers"
+        FRAMEWORK_SEARCH_PATHS:
+        - "$(inherited)"
+        - "$(PROJECT_DIR)/Frameworks"
+        GENERATE_INFOPLIST_FILE: 'YES'
+        INFOPLIST_FILE: Tests/GitMacTests/Info.plist
+        SWIFT_VERSION: '5.0'
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/GitMac.app/Contents/MacOS/GitMac"
+        BUNDLE_LOADER: "$(TEST_HOST)"
 schemes:
   GitMac:
     build:
       targets:
         GitMac: all
-        GitMacTests: [test]
-        GitMacUITests: [test]
+        GitMacTests:
+        - test
+        GitMacUITests:
+        - test
     test:
+      config: Debug
       targets:
-        - GitMacTests
-        - GitMacUITests
+      - GitMacTests
+      gatherCoverageData: true
+  GitMacUI:
+    build:
+      targets:
+        GitMac: all
+        GitMacUITests:
+        - test
+    test:
+      config: Debug
+      targets:
+      - GitMacUITests

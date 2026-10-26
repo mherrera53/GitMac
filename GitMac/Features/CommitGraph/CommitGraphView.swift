@@ -20,18 +20,21 @@ struct CommitGraphView: View {
     @State private var lastSelectedId: String?
     @State private var hoveredId: String?
     @State private var hoveredBranch: String?
-    @State private var showSettings = false
     @State private var themeRefreshTrigger = UUID()
     @State private var showBranchPanel = false
-    @AppStorage("graphShowMinimap") private var showMinimap = false
+    @AppStorage("graphShowMinimap") private var showMinimap = true
     @State private var showDetailPanel = false
     @State private var selectedFileDiff: FileDiff? = nil
     @State private var dismissedOperationIds: Set<UUID> = []
 
     // Minimap visible range tracking
-    @State private var visibleMinIndex: Int = Int.max
-    @State private var visibleMaxIndex: Int = 0
-    @State private var scrollToIndex: Int? = nil
+    @State private var graphScrollOffset: CGFloat = 0
+    @State private var graphViewportHeight: CGFloat = 0
+    @State private var scrollToID: String?
+    @State private var minimapSeekTask: Task<Void, Never>?
+    @State private var minimapSeekID = UUID()
+    @State private var isSeekingMinimap = false
+    @State private var minimapSeekError: String?
 
     // Commit comparison mode - state managed in appState
     @State private var showStaleBranchCleanup = false
@@ -99,6 +102,17 @@ struct CommitGraphView: View {
             .onAppear {
                 zoomBaseLevel = settings.zoomLevel
             }
+            .onChange(of: vm.historySnapshotID) { _, _ in
+                minimapSeekTask?.cancel()
+                minimapSeekID = UUID()
+                isSeekingMinimap = false
+                scrollToID = nil
+            }
+            .onDisappear { minimapSeekTask?.cancel() }
+            .alert("Could not navigate to commit", isPresented: Binding(
+                get: { minimapSeekError != nil }, set: { if !$0 { minimapSeekError = nil } })) {
+                Button("OK") { minimapSeekError = nil }
+            } message: { Text(minimapSeekError ?? "") }
     }
 
     @ViewBuilder
@@ -148,10 +162,16 @@ struct CommitGraphView: View {
     @ViewBuilder
     private var minimapPanel: some View {
         GraphMinimapView(
-            minimapNodes: vm.minimapNodes,
-            loadedCount: vm.timelineItems.count,
-            visibleRange: visibleMinIndex...max(visibleMaxIndex, visibleMinIndex),
-            onSeek: { index in handleMinimapSeek(index) }
+            minimapNodes: vm.minimapDrawingNodes,
+            totalCount: vm.totalCommitCount,
+            maxLane: vm.minimapMaxLane,
+            loadedCount: vm.nodes.count,
+            visibleRange: minimapVisibleRange,
+            selectedIndex: lastSelectedId.flatMap { vm.minimapIndexBySHA[$0] },
+            isLoading: vm.isLoadingMinimap || isSeekingMinimap,
+            errorMessage: vm.minimapError,
+            onSeek: { index in handleMinimapSeek(index) },
+            onRetry: { Task { await vm.reloadMinimap() } }
         )
         .transition(.move(edge: .trailing))
     }
@@ -170,29 +190,44 @@ struct CommitGraphView: View {
     }
 
     private func handleItemAppear(_ item: TimelineItem) {
-        guard let index = vm.timelineItems.firstIndex(where: { $0.id == item.id }) else { return }
-        if index < visibleMinIndex { visibleMinIndex = index }
-        if index > visibleMaxIndex { visibleMaxIndex = index }
-        if index >= vm.timelineItems.count - 10, vm.hasMore, !vm.isLoading {
+        if vm.timelineItems.suffix(10).contains(where: { $0.id == item.id }), vm.hasMore, !vm.isLoading {
             Task { await vm.loadMore() }
         }
     }
 
     private func handleMinimapSeek(_ index: Int) {
-        if index >= vm.timelineItems.count {
-            Task {
-                await vm.loadUpTo(index: index)
-                if index < vm.timelineItems.count {
-                    scrollToIndex = index
-                }
+        guard vm.minimapNodes.indices.contains(index) else { return }
+        let sha = vm.minimapNodes[index].sha
+        let snapshot = vm.historySnapshotID
+        minimapSeekTask?.cancel()
+        let request = UUID()
+        minimapSeekID = request
+        isSeekingMinimap = true
+        minimapSeekTask = Task { @MainActor in
+            defer { if minimapSeekID == request { isSeekingMinimap = false } }
+            while vm.isLoading {
+                do { try await Task.sleep(nanoseconds: 30_000_000) } catch { return }
             }
-        } else {
-            scrollToIndex = index
-            if case .commit(let node) = vm.timelineItems[index] {
-                selectedIds = [node.commit.sha]
-                lastSelectedId = node.commit.sha
+            guard !Task.isCancelled, vm.historySnapshotID == snapshot else { return }
+            await vm.loadUpTo(index: index)
+            guard !Task.isCancelled, vm.historySnapshotID == snapshot else { return }
+            guard let commit = vm.commitsBySHA[sha] else {
+                minimapSeekError = vm.lastError ?? "The selected revision is no longer available. Refresh the history and retry."
+                return
             }
+            settings.searchText = ""
+            settings.filterAuthor = ""
+            selectedIds = [sha]
+            lastSelectedId = sha
+            appState.selectCommit(commit)
+            appState.selectStash(nil)
+            scrollToID = sha
         }
+    }
+
+    private var minimapVisibleRange: ClosedRange<Int>? {
+        MinimapLayout.visibleRange(timeline: filteredTimelineItems, indices: vm.minimapIndexBySHA,
+            offset: max(0, -graphScrollOffset), height: graphViewportHeight, rowHeight: settings.rowHeight)
     }
 
     // MARK: - Remote Status
@@ -282,243 +317,90 @@ struct CommitGraphView: View {
     // MARK: - Graph Toolbar
 
     private var graphToolbar: some View {
-        return HStack(spacing: DesignTokens.Spacing.md) {
-            // Search field using DS component
-            DSSearchField(
-                placeholder: "Search commits (message, author, SHA)...",
-                text: $settings.searchText
-            )
-            .frame(maxWidth: 400)
+        HStack(spacing: 8) {
+            DSSearchField(placeholder: "Search commits…", text: $settings.searchText)
+                .frame(minWidth: 80, maxWidth: 400)
+                .accessibilityLabel("Search commits by message, author or SHA")
+            Spacer(minLength: 0)
 
-            // Filter by author
-            if !settings.filterAuthor.isEmpty {
-                HStack(spacing: DesignTokens.Spacing.xs) {
-                    Image(systemName: "person.fill")
-                        .font(DesignTokens.Typography.caption2)
-                        .foregroundStyle(AppTheme.textSecondary)
-                    Text(settings.filterAuthor)
-                        .font(DesignTokens.Typography.caption)
-                        .fontWeight(.medium)
-                    Button {
-                        settings.filterAuthor = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(AppTheme.error)
+            if settings.availableWidth >= 760 {
+                HStack(spacing: 0) {
+                    Button { settings.zoomOut() } label: {
+                        Image(systemName: "minus.magnifyingglass").frame(width: 28, height: 28)
                     }
-                    .buttonStyle(.plain)
+                    .disabled(settings.zoomLevel <= GraphSettings.zoomMin)
+                    .help("Zoom out").accessibilityLabel("Zoom out graph")
+                    Button { settings.resetZoom() } label: {
+                        Text("\(settings.zoomPercentage)%").monospacedDigit().frame(width: 42, height: 28)
+                    }
+                    .help("Reset zoom to 100%").accessibilityLabel("Reset graph zoom")
+                    Button { settings.zoomIn() } label: {
+                        Image(systemName: "plus.magnifyingglass").frame(width: 28, height: 28)
+                    }
+                    .disabled(settings.zoomLevel >= GraphSettings.zoomMax)
+                    .help("Zoom in").accessibilityLabel("Zoom in graph")
                 }
-                .padding(.horizontal, DesignTokens.Spacing.sm)
-                .padding(.vertical, DesignTokens.Spacing.xs)
-                .background(AppTheme.info.opacity(0.2))
-                .foregroundStyle(AppTheme.info)
-                .clipShape(.rect(cornerRadius: DesignTokens.CornerRadius.xl))
+                .buttonStyle(.borderless)
             }
 
-            Spacer()
-
-            // CI/CD Status Badge
-            CICDToolbarBadge(repoPath: appState.currentRepository?.path)
-
-            Spacer()
-
-            // Toggle buttons for visibility using DS
-            HStack(spacing: DesignTokens.Spacing.xs) {
-                Button(action: {
-                    settings.showBranches.toggle()
-                }) {
-                    Image(systemName: settings.showBranches ? "point.3.connected.trianglepath.dotted" : "arrow.triangle.branch")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(settings.showBranches ? AppTheme.accent : AppTheme.textSecondary)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.plain)
-                .help("Toggle branch labels visibility")
-
-                Button(action: {
-                    settings.showTags.toggle()
-                }) {
-                    Image(systemName: settings.showTags ? "tag.circle.fill" : "tag.circle")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(settings.showTags ? AppTheme.warning : AppTheme.textSecondary)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.plain)
-                .help("Toggle tag labels visibility")
-
-                Button(action: {
-                    settings.showStashes.toggle()
-                }) {
-                    Image(systemName: settings.showStashes ? "archivebox.circle.fill" : "archivebox.circle")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(settings.showStashes ? AppTheme.warning : AppTheme.textSecondary)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.plain)
-                .help("Toggle stash labels visibility")
+            Button { showMinimap.toggle() } label: {
+                Image(systemName: "map")
+                    .foregroundStyle(showMinimap ? AppTheme.accent : AppTheme.textSecondary)
+                    .frame(width: 28, height: 28)
             }
+            .buttonStyle(.borderless)
+            .help("Show or hide full local-history minimap")
+            .accessibilityLabel("History minimap")
+            .accessibilityValue(showMinimap ? "Shown" : "Hidden")
 
-            Divider()
-                .frame(height: DesignTokens.Spacing.lg)
-
-            // Panel toggles
-            HStack(spacing: DesignTokens.Spacing.xs) {
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showBranchPanel.toggle()
-                    }
-                }) {
-                    Image(systemName: "sidebar.left")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(showBranchPanel ? AppTheme.accent : AppTheme.textSecondary)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.plain)
-                .help("Toggle branch panel")
-
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showMinimap.toggle()
-                    }
-                }) {
-                    Image(systemName: "map")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(showMinimap ? AppTheme.accent : AppTheme.textSecondary)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.plain)
-                .help("Toggle minimap")
-
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showDetailPanel.toggle()
-                    }
-                }) {
-                    Image(systemName: "sidebar.right")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(showDetailPanel ? AppTheme.accent : AppTheme.textSecondary)
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.plain)
-                .help("Toggle detail panel")
-            }
-
-            Divider()
-                .frame(height: DesignTokens.Spacing.lg)
-
-            // Zoom controls
-            HStack(spacing: 2) {
-                Button(action: { settings.zoomOut() }) {
-                    Image(systemName: "minus.magnifyingglass")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(settings.zoomLevel <= GraphSettings.zoomMin ? AppTheme.textMuted : AppTheme.textSecondary)
-                }
-                .buttonStyle(.plain)
-                .disabled(settings.zoomLevel <= GraphSettings.zoomMin)
-                .help("Zoom out")
-
-                Button(action: { settings.resetZoom() }) {
-                    Text("\(settings.zoomPercentage)%")
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundStyle(settings.zoomLevel == 1.0 ? AppTheme.textMuted : AppTheme.accent)
-                        .frame(width: 36)
-                }
-                .buttonStyle(.plain)
-                .help("Reset zoom to 100%")
-
-                Button(action: { settings.zoomIn() }) {
-                    Image(systemName: "plus.magnifyingglass")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(settings.zoomLevel >= GraphSettings.zoomMax ? AppTheme.textMuted : AppTheme.textSecondary)
-                }
-                .buttonStyle(.plain)
-                .disabled(settings.zoomLevel >= GraphSettings.zoomMax)
-                .help("Zoom in")
-            }
-
-            Divider()
-                .frame(height: DesignTokens.Spacing.lg)
-
-            // Display options
             Menu {
-                Button(action: { settings.showAvatars.toggle() }) {
-                    HStack {
-                        Text("Show Avatars")
-                        Spacer()
-                        if settings.showAvatars {
-                            Image(systemName: "checkmark")
-                        }
-                    }
+                Section("Panels") {
+                    Toggle("History Minimap", isOn: $showMinimap)
+                    Toggle("Branch Panel", isOn: $showBranchPanel)
+                    Toggle("Commit Details", isOn: $showDetailPanel)
                 }
-                Button(action: { settings.compactMode.toggle() }) {
-                    HStack {
-                        Text("Compact Mode")
-                        Spacer()
-                        if settings.compactMode {
-                            Image(systemName: "checkmark")
-                        }
-                    }
+                Section("Display") {
+                    Toggle("Branch Labels", isOn: $settings.showBranches)
+                    Toggle("Tag Labels", isOn: $settings.showTags)
+                    Toggle("Stashes", isOn: $settings.showStashes)
+                    Toggle("Avatars", isOn: $settings.showAvatars)
+                    Toggle("Compact Rows", isOn: $settings.compactMode)
+                    Toggle("Dim Merge Commits", isOn: $settings.dimMergeCommits)
                 }
-                Button(action: { settings.dimMergeCommits.toggle() }) {
-                    HStack {
-                        Text("Dim Merge Commits")
-                        Spacer()
-                        if settings.dimMergeCommits {
-                            Image(systemName: "checkmark")
-                        }
-                    }
+                Menu("Columns") {
+                    Toggle("Branch / Tag", isOn: $settings.showBranchColumn)
+                    Toggle("Author", isOn: $settings.showAuthorColumn)
+                    Toggle("Date / Time", isOn: $settings.showDateColumn)
+                    Toggle("SHA", isOn: $settings.showSHAColumn)
                 }
-
-                Divider()
-
                 Menu("Zoom") {
                     Button("Zoom In") { settings.zoomIn() }
                         .disabled(settings.zoomLevel >= GraphSettings.zoomMax)
                     Button("Zoom Out") { settings.zoomOut() }
                         .disabled(settings.zoomLevel <= GraphSettings.zoomMin)
                     Button("Reset Zoom (100%)") { settings.resetZoom() }
-                        .disabled(settings.zoomLevel == 1.0)
                 }
-
-                Divider()
-
-                Menu("Columns") {
-                    Button(action: { settings.showAuthorColumn.toggle() }) {
-                        HStack {
-                            Text("Author")
-                            Spacer()
-                            if settings.showAuthorColumn {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                    Button(action: { settings.showDateColumn.toggle() }) {
-                        HStack {
-                            Text("Date/Time")
-                            Spacer()
-                            if settings.showDateColumn {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                    Button(action: { settings.showSHAColumn.toggle() }) {
-                        HStack {
-                            Text("SHA")
-                            Spacer()
-                            if settings.showSHAColumn {
-                                Image(systemName: "checkmark")
-                            }
-                        }
+                if !settings.filterAuthor.isEmpty || !settings.searchText.isEmpty {
+                    Button("Clear Search and Author Filter") {
+                        settings.searchText = ""
+                        settings.filterAuthor = ""
                     }
                 }
             } label: {
-                Image(systemName: "slider.horizontal.3")
+                Label("Graph Options", systemImage: "slider.horizontal.3")
+                    .labelStyle(.iconOnly)
+                    .frame(width: 28, height: 28)
             }
-            .tint(AppTheme.textSecondary)
-            .help("Display Options")
             .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .help("Graph display, panels, columns and zoom")
+            .accessibilityLabel("Graph display options")
+            .accessibilityIdentifier("graph-display-options")
+            GitHelpButton(topicID: "graph")
         }
-        .padding(.horizontal, DesignTokens.Spacing.sm)
-        .padding(.vertical, DesignTokens.Spacing.xs)
+        .font(.system(size: 11))
+        .padding(.horizontal, 8)
+        .frame(height: 36)
         .background(AppTheme.backgroundSecondary)
     }
 
@@ -629,6 +511,11 @@ struct CommitGraphView: View {
 
     // MARK: - Graph Content
 
+    private var showsWorkingCopyConnection: Bool {
+        vm.hasUncommittedChanges && !vm.nodes.isEmpty
+            && settings.searchText.isEmpty && settings.filterAuthor.isEmpty
+    }
+
     @ViewBuilder
     private var graphContent: some View {
         if vm.isLoading && vm.nodes.isEmpty {
@@ -656,13 +543,21 @@ struct CommitGraphView: View {
                     }
                 }
                 .padding(.horizontal, DesignTokens.Spacing.md)
+                .background(GeometryReader { geometry in
+                    Color.clear.preference(key: GraphScrollOffsetKey.self,
+                        value: geometry.frame(in: .named("commitGraphScroll")).minY)
+                })
             }
-            .onChange(of: scrollToIndex) { _, newIndex in
-                if let targetIndex = newIndex, targetIndex < vm.timelineItems.count {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        proxy.scrollTo(vm.timelineItems[targetIndex].id, anchor: .center)
-                    }
-                    scrollToIndex = nil
+            .coordinateSpace(name: "commitGraphScroll")
+            .background(GeometryReader { geometry in
+                Color.clear.preference(key: GraphViewportHeightKey.self, value: geometry.size.height)
+            })
+            .onPreferenceChange(GraphScrollOffsetKey.self) { graphScrollOffset = $0 }
+            .onPreferenceChange(GraphViewportHeightKey.self) { graphViewportHeight = $0 }
+            .onChange(of: scrollToID) { _, id in
+                if let id {
+                    proxy.scrollTo(id, anchor: .center)
+                    scrollToID = nil
                 }
             }
         }
@@ -688,7 +583,9 @@ struct CommitGraphView: View {
                 unstagedCount: unstaged,
                 isSelected: selectedIds.contains("uncommitted-changes"),
                 isHovered: hoveredId == "uncommitted-changes",
-                settings: settings
+                settings: settings,
+                connectToHistory: showsWorkingCopyConnection,
+                conflictedCount: vm.conflictedCount
             )
             .onHover { h in hoveredId = h ? "uncommitted-changes" : nil }
             .onTapGesture {
@@ -705,6 +602,7 @@ struct CommitGraphView: View {
                     isSelected: selectedIds.contains(node.commit.sha),
                     isHovered: hoveredId == node.commit.sha,
                     settings: settings,
+                    hasWorkingCopyChild: showsWorkingCopyConnection && node.commit.sha == vm.nodes.first?.commit.sha,
                     onHoverBranch: { branch in
                         hoveredBranch = branch
                     },
@@ -771,19 +669,7 @@ struct CommitGraphView: View {
             }
         }
 
-        // Filter by branch/tag visibility
-        if let label = node.branchLabel {
-            let isTag = label.hasPrefix("v") || label.contains(".")
-            let isBranch = !isTag
-
-            if isTag && !settings.showTags {
-                return false
-            }
-            if isBranch && !settings.showBranches {
-                return false
-            }
-        }
-
+        // Label visibility must not remove commits or change seek identity.
         return true
     }
 
@@ -850,6 +736,16 @@ struct CommitGraphView: View {
             return nil
         }
     }
+}
+
+private struct GraphScrollOffsetKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
+private struct GraphViewportHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
 // MARK: - File Changes Indicator

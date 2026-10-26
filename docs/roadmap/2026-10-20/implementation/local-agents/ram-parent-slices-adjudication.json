@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-26T06:30:00.149970+00:00",
+  "proposal": "ram-parent-slices-review-1792995958921-proposal.json",
+  "model": "qwen3-coder:30b",
+  "digest": "06c1097efce0431c2045fe7b2e5108366e43bee1b4603a7aded8f21689e90bca",
+  "automaticApplication": false,
+  "cloudUsed": false,
+  "decisions": [
+    {
+      "finding": 1,
+      "decision": "not_reproduced",
+      "reason": "Known parent lane is initialized only while negative; lanes[parentIndex] then remains stable. Duplicate first-row ownership and 120 DAGs plus 1000 parser fuzz cases agree with the old implementation."
+    },
+    {
+      "finding": 2,
+      "decision": "rejected_by_source_and_fixture",
+      "reason": "missingParentLanes[parent] is assigned only if nil, exactly retaining the first assigned lane. The explicit a missing / b missing fixture and 1145 comparisons pass."
+    },
+    {
+      "finding": 3,
+      "decision": "not_reproduced",
+      "reason": "All unique SHAs are indexed before lane assignment, so later rows are already known. Bool slots preserve the original occupancy rule. 80 production DAGs also compare lanes/parents to buildCommitGraph."
+    }
+  ],
+  "limits": [
+    "The proposal supplied no reproducible mismatch, made no edits and did not run tests.",
+    "The test script was expanded after this review; source hashes in the packet remain the actual reviewed versions.",
+    "Product memory evidence is independent, not approved by this model."
+  ]
+}

@@ -1,4 +1,4 @@
-name: Release
+name: Release Candidate
 
 on:
   push:
@@ -9,10 +9,10 @@ on:
       version:
         description: 'Version to release (e.g., 1.0.0)'
         required: true
-        default: '1.0.0'
+        default: '4.1.0'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -20,9 +20,11 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, upstream verified
       with:
         submodules: recursive
+        persist-credentials: false
+        fetch-depth: 0
 
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
@@ -37,9 +39,26 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Resolve release version
+      env:
+        RELEASE_EVENT: ${{ github.event_name }}
+        RELEASE_VERSION: ${{ github.event.inputs.version }}
+      run: |
+        set -euo pipefail
+        if [ "$RELEASE_EVENT" == "push" ]; then
+          VERSION=${GITHUB_REF#refs/tags/v}
+        else
+          VERSION="$RELEASE_VERSION"
+        fi
+        if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || [ "$VERSION" != "$(cat VERSION)" ]; then
+          echo "Release version must match VERSION and use major.minor.patch" >&2
+          exit 1
+        fi
+        echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
     - name: Build Release
       run: |
-        xcodebuild -project GitMac.xcodeproj \
+        bash scripts/verify-xcodebuild.sh build /tmp/build.log -project GitMac.xcodeproj \
           -scheme GitMac \
           -configuration Release \
           -destination 'platform=macOS,arch=arm64' \
@@ -50,15 +69,8 @@ jobs:
           CODE_SIGN_IDENTITY="-" \
           CODE_SIGN_STYLE=Manual \
           DEVELOPMENT_TEAM="" \
-          SWIFT_STRICT_CONCURRENCY=minimal 2>&1 | tee /tmp/build.log | tail -50
-
-        # Check for Swift compilation errors only
-        if grep "error:" /tmp/build.log | grep -v "SwiftLint\|linker command\|codesign" | grep -q ".swift:"; then
-          echo "[X] Swift compilation errors:"
-          grep "error:" /tmp/build.log | grep ".swift:" | grep -v "SwiftLint"
-          exit 1
-        fi
-        echo "[OK] Build completed successfully"
+          MARKETING_VERSION="$VERSION" \
+          CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"
 
         # Verificar que el .app existe
         if [ ! -d "build/DerivedData/Build/Products/Release/GitMac.app" ]; then
@@ -71,17 +83,8 @@ jobs:
 
     - name: Package application
       run: |
-        set -e  # Exit on error
-
-        # Get version from tag or input
-        if [ "${{ github.event_name }}" == "push" ]; then
-          VERSION=${GITHUB_REF#refs/tags/v}
-        else
-          VERSION="${{ github.event.inputs.version }}"
-        fi
-
+        set -euo pipefail
         echo "📦 Packaging version: $VERSION"
-        echo "VERSION=$VERSION" >> $GITHUB_ENV
 
         # Create release directory
         mkdir -p build/release
@@ -110,6 +113,10 @@ jobs:
         cat > build/release/RELEASE_NOTES.md <<EOF
         # GitMac v${{ env.VERSION }}
 
+        CI build artifact with an ad-hoc signature. Public release archives are
+        signed with Developer ID, notarized and uploaded from the release Mac.
+        This workflow does not publish or overwrite GitHub Release assets.
+
         ## Installation
 
         1. Download \`GitMac-v${{ env.VERSION }}-macOS.zip\`
@@ -119,7 +126,7 @@ jobs:
         ## Requirements
 
         - macOS 14.0 or later
-        - Apple Silicon (M1/M2/M3) or Intel Mac
+        - Apple silicon Mac (arm64); this artifact does not include Intel binaries
 
         ## Features
 
@@ -137,23 +144,10 @@ jobs:
         EOF
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4, upstream verified
       with:
         name: GitMac-${{ env.VERSION }}
         path: |
           build/release/GitMac-v${{ env.VERSION }}-macOS.zip
           build/release/GitMac-v${{ env.VERSION }}-macOS.zip.sha256
           build/release/RELEASE_NOTES.md
-
-    - name: Create GitHub Release
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          build/release/GitMac-v${{ env.VERSION }}-macOS.zip
-          build/release/GitMac-v${{ env.VERSION }}-macOS.zip.sha256
-        body_path: build/release/RELEASE_NOTES.md
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -27,7 +27,7 @@ struct AITerminalInputView: View {
                                         .fill(index == enhancedViewModel.selectedSuggestionIndex ? AppTheme.accent.opacity(0.2) : Color.clear)
                                         .frame(width: 24, height: 24)
 
-                                    Image(systemName: suggestion.category == "Git" ? "git.branch" : "terminal")
+                                    Image(systemName: suggestion.category == "Git" ? "arrow.triangle.branch" : "terminal")
                                         .font(.system(size: 10))
                                         .foregroundStyle(index == enhancedViewModel.selectedSuggestionIndex ? AppTheme.accent : AppTheme.textSecondary)
                                 }
@@ -98,7 +98,7 @@ struct AITerminalInputView: View {
                     // Git Branch Pill (if applicable)
                     if let _ = enhancedViewModel.currentRepoPath {
                         HStack(spacing: 6) {
-                            Image(systemName: "git.branch")
+                            Image(systemName: "arrow.triangle.branch")
                                 .font(.system(size: 10))
                             Text("main")
                                 .font(.system(size: 12, weight: .semibold))

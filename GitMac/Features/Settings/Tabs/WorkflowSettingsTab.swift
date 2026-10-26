@@ -9,9 +9,6 @@ struct WorkflowSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
             HStack {
-                Text("Workflows")
-                    .font(DesignTokens.Typography.title2)
-                    .fontWeight(.semibold)
                 Spacer()
                 DSButton("Reset Defaults", variant: .ghost, size: .sm) {
                     engine.resetToDefaults()

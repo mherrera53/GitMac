@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 // MARK: - Graph Row
 struct GraphRow: View {
@@ -6,11 +7,11 @@ struct GraphRow: View {
     let isSelected: Bool
     let isHovered: Bool
     let settings: GraphSettings
+    var hasWorkingCopyChild = false
     let onHoverBranch: ((String?) -> Void)?
     var onDropBranch: ((String, BranchTransferable) -> Void)? = nil
 
     private var H: CGFloat { settings.rowHeight }
-    private var W: CGFloat { settings.effectiveLaneWidth * settings.zoomLevel }  // Dynamic lane spacing (compressed when many branches)
     private var R: CGFloat { settings.nodeRadius }
     private var LW: CGFloat { GraphSettings.lineWidth * settings.zoomLevel }  // Scaled line width
 
@@ -38,7 +39,7 @@ struct GraphRow: View {
 
             // Graph - Canvas for lines, overlay for avatar
             ZStack {
-                Canvas { ctx, size in
+                GraphCanvas { ctx, size in
                     let cy = size.height / 2
                     let myX = x(node.lane)
                     let c = color(node.lane)
@@ -56,9 +57,9 @@ struct GraphRow: View {
                     }
 
                     // 3) My vertical line (draw on top of curves)
-                    if node.lineFromTop && node.lineToBottom {
+                    if (node.lineFromTop || hasWorkingCopyChild) && node.lineToBottom {
                         drawLine(ctx, from: CGPoint(x: myX, y: 0), to: CGPoint(x: myX, y: size.height), color: c)
-                    } else if node.lineFromTop {
+                    } else if node.lineFromTop || hasWorkingCopyChild {
                         drawLine(ctx, from: CGPoint(x: myX, y: 0), to: CGPoint(x: myX, y: cy), color: c)
                     } else if node.lineToBottom {
                         drawLine(ctx, from: CGPoint(x: myX, y: cy), to: CGPoint(x: myX, y: size.height), color: c)
@@ -199,12 +200,11 @@ struct GraphRow: View {
     }
 
     func x(_ lane: Int) -> CGFloat {
-        let padding: CGFloat = 12 * settings.zoomLevel  // Left padding scaled with zoom
-        return CGFloat(lane) * W + W / 2 + padding
+        GraphGeometry.laneX(lane, laneWidth: settings.effectiveLaneWidth, zoom: settings.zoomLevel)
     }
     func color(_ lane: Int) -> Color { Color.branchColor(lane) }
 
-    func drawLine(_ ctx: GraphicsContext, from: CGPoint, to: CGPoint, color: Color) {
+    func drawLine(_ ctx: GraphDrawingContext, from: CGPoint, to: CGPoint, color: Color) {
         var p = Path()
         p.move(to: from)
         p.addLine(to: to)
@@ -213,7 +213,7 @@ struct GraphRow: View {
         ctx.stroke(p, with: .color(color), style: StrokeStyle(lineWidth: LW, lineCap: .round))
     }
 
-    func drawBezierCurve(_ ctx: GraphicsContext, from: CGPoint, to: CGPoint, color: Color) {
+    func drawBezierCurve(_ ctx: GraphDrawingContext, from: CGPoint, to: CGPoint, color: Color) {
         var p = Path()
         p.move(to: from)
 
@@ -229,5 +229,124 @@ struct GraphRow: View {
         // Draw with shadow for depth
         ctx.stroke(p, with: .color(color.opacity(0.3)), style: StrokeStyle(lineWidth: LW + 2, lineCap: .round, lineJoin: .round))
         ctx.stroke(p, with: .color(color), style: StrokeStyle(lineWidth: LW, lineCap: .round, lineJoin: .round))
+    }
+}
+
+// MARK: - Shared graph drawing
+
+struct GraphPaint {
+    let value: Color
+    static func color(_ value: Color) -> GraphPaint { GraphPaint(value: value) }
+}
+
+enum GraphDrawingRole: String { case commit, stash, wip, minimap }
+
+/// The same paths/styles can be drawn by either backend for a controlled comparison.
+@MainActor
+enum GraphDrawingContext {
+    case canvas(GraphicsContext)
+    case native(CGContext)
+
+    func fill(_ path: Path, with paint: GraphPaint) {
+        switch self {
+        case .canvas(let context): context.fill(path, with: .color(paint.value))
+        case .native(let context):
+            context.saveGState()
+            defer { context.restoreGState() }
+            context.setFillColor(NSColor(paint.value).cgColor)
+            context.beginPath()
+            context.addPath(path.cgPath)
+            context.fillPath()
+        }
+    }
+
+    func stroke(_ path: Path, with paint: GraphPaint, lineWidth: CGFloat) {
+        stroke(path, with: paint, style: StrokeStyle(lineWidth: lineWidth))
+    }
+
+    func stroke(_ path: Path, with paint: GraphPaint, style: StrokeStyle) {
+        switch self {
+        case .canvas(let context): context.stroke(path, with: .color(paint.value), style: style)
+        case .native(let context):
+            context.saveGState()
+            defer { context.restoreGState() }
+            context.setStrokeColor(NSColor(paint.value).cgColor)
+            context.setLineWidth(style.lineWidth)
+            context.setLineCap(style.lineCap)
+            context.setLineJoin(style.lineJoin)
+            context.setMiterLimit(style.miterLimit)
+            context.setLineDash(phase: style.dashPhase, lengths: style.dash)
+            context.beginPath()
+            context.addPath(path.cgPath)
+            context.strokePath()
+        }
+    }
+}
+
+/// Decorative vector surface. Interaction remains in the surrounding SwiftUI row/minimap.
+@MainActor
+struct GraphCanvas: View {
+    var role: GraphDrawingRole = .commit
+    let renderer: (GraphDrawingContext, CGSize) -> Void
+    private static var recordedBackends: Set<String> = []
+
+    static func recordDrawing(_ backend: String, role: GraphDrawingRole, size: CGSize) {
+        guard PerformanceProbe.isEnabled, size.width.isFinite, size.height.isFinite,
+              size.width >= 1, size.height >= 1, size.width < 1_000_000, size.height < 1_000_000 else { return }
+        let stage = "graph-\(backend)-\(role.rawValue)-drawn"
+        guard recordedBackends.insert(stage).inserted else { return }
+        PerformanceProbe.record(stage, counts: ["width": Int(size.width), "height": Int(size.height)])
+    }
+
+    var body: some View {
+        if CommandLine.arguments.contains("--performance-fixture") && CommandLine.arguments.contains("--canvas-graph-control") {
+            Canvas { context, size in
+                renderer(.canvas(context), size)
+                Self.recordDrawing("canvas", role: role, size: size)
+            }
+        } else {
+            NativeGraphCanvas(role: role, renderer: renderer)
+                .allowsHitTesting(false)
+        }
+    }
+}
+
+@MainActor
+private struct NativeGraphCanvas: NSViewRepresentable {
+    let role: GraphDrawingRole
+    let renderer: (GraphDrawingContext, CGSize) -> Void
+
+    func makeNSView(context: Context) -> NativeGraphDrawingView {
+        let view = NativeGraphDrawingView(frame: .zero)
+        view.setAccessibilityElement(false)
+        return view
+    }
+
+    func updateNSView(_ view: NativeGraphDrawingView, context: Context) {
+        view.role = role
+        view.renderer = renderer
+        view.needsDisplay = true
+    }
+
+    static func dismantleNSView(_ view: NativeGraphDrawingView, coordinator: ()) {
+        view.renderer = nil
+    }
+}
+
+@MainActor
+final class NativeGraphDrawingView: NSView {
+    var role: GraphDrawingRole = .commit
+    var renderer: ((GraphDrawingContext, CGSize) -> Void)?
+    override var isFlipped: Bool { true }
+    override var intrinsicContentSize: NSSize { NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric) }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard let renderer, let context = NSGraphicsContext.current?.cgContext else { return }
+        context.saveGState()
+        defer { context.restoreGState() }
+        context.clip(to: bounds)
+        renderer(.native(context), bounds.size)
+        GraphCanvas.recordDrawing("native", role: role, size: bounds.size)
     }
 }

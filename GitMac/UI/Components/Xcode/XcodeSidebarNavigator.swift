@@ -69,7 +69,7 @@ enum SidebarNavigator: String, CaseIterable, Identifiable {
         case .cicd:
             return "Show CI/CD Pipelines"
         case .conflicts:
-            return "Show Conflict Detector"
+            return "Show Conflicts and Resolver"
         }
     }
 
@@ -106,6 +106,8 @@ struct XcodeSidebarNavigatorButton: View {
         }
         .buttonStyle(.plain)
         .help(navigator.tooltip)
+        .accessibilityLabel(navigator.rawValue)
+        .accessibilityIdentifier("navigator-\(navigator.rawValue.lowercased())")
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) {
                 isHovered = hovering
@@ -146,6 +148,7 @@ struct XcodeSidebarNavigatorBar: View {
             .padding(.horizontal, 2)
         }
         .scrollIndicators(.hidden)
+        .accessibilityIdentifier("repository-navigators")
         .frame(height: 28)
         .background(.thinMaterial)
         .overlay(alignment: .bottom) {

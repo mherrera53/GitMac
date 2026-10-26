@@ -1,0 +1,9 @@
+[
+  {
+    "id": "workflow-confirmations-final-review",
+    "role": "reviewer",
+    "readFiles": ["GitMac/Core/Services/WorkflowEngine.swift", "scripts/test-workflow-confirmations.mjs", "docs/roadmap/2026-10-20/implementation/workflow-confirmations-after.log", "docs/roadmap/2026-10-20/implementation/workflow-confirmations-negative.log"],
+    "writeFiles": [],
+    "instruction": "Independently review the final continuation/exclusivity fix only. The parent rejected the implementer's cancellation anchor: it returned Void instead of Bool, read actor-isolated state in onCancel, checked UUID outside the queued MainActor Task and omitted cancellation-before-installation handling. Check the actual current code for these issues, continuation double resume, old execution callbacks and cleanup. Six real engine scenarios pass; original code fails four including two SIGTRAP. Do not claim full T30 completion, UI wiring, per-repo persistence, Gitflow, soak or performance approval. Return at most three concrete findings with exact method/condition, not generic caveats, and edits:[]."
+  }
+]

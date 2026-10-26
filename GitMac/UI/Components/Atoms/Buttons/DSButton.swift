@@ -18,6 +18,43 @@ enum DSButtonSize {
     case sm, md, lg
 }
 
+/// Shared color policy for text and icon buttons.
+@MainActor
+struct DSButtonColors {
+    let variant: DSButtonVariant
+    let isDisabled: Bool
+    let isHovered: Bool
+
+    var foreground: Color {
+        if isDisabled { return AppTheme.textMuted }
+        let preferred: Color
+        switch variant {
+        case .primary, .danger: return AppTheme.contrastingTextColor(for: background)
+        case .secondary: preferred = AppTheme.textPrimary
+        case .ghost: preferred = isHovered ? AppTheme.textPrimary : AppTheme.textSecondary
+        case .outline, .link: preferred = AppTheme.accent
+        }
+        return AppTheme.readableTextColor(preferred: preferred, on: background)
+    }
+
+    var background: Color {
+        if isDisabled { return AppTheme.backgroundSecondary }
+        switch variant {
+        case .primary: return isHovered ? AppTheme.accentHover : AppTheme.accent
+        case .secondary: return isHovered ? AppTheme.backgroundSecondary.opacity(0.8) : AppTheme.backgroundSecondary
+        case .danger: return isHovered ? AppTheme.error.opacity(0.9) : AppTheme.error
+        case .ghost: return isHovered ? AppTheme.backgroundSecondary.opacity(0.5) : .clear
+        case .outline: return isHovered ? AppTheme.accent.opacity(0.1) : .clear
+        case .link: return .clear
+        }
+    }
+
+    var border: Color {
+        if isDisabled { return AppTheme.backgroundSecondary }
+        return variant == .outline ? AppTheme.accent : .clear
+    }
+}
+
 /// Base button component with async support and loading states
 struct DSButton<Label: View>: View {
     let variant: DSButtonVariant
@@ -52,12 +89,13 @@ struct DSButton<Label: View>: View {
                 isLoading = false
             }
         } label: {
-            HStack(spacing: DesignTokens.Spacing.sm) {
+            ZStack {
+                label().opacity(isLoading ? 0 : 1)
                 if isLoading {
                     ProgressView()
-                        .scaleEffect(0.7)
-                } else {
-                    label()
+                        .controlSize(.small)
+                        .tint(foregroundColor)
+                        .accessibilityHidden(true)
                 }
             }
             .font(fontForSize)
@@ -115,55 +153,10 @@ struct DSButton<Label: View>: View {
 
     // MARK: - Variant Colors
 
-    private var foregroundColor: Color {
-        if isDisabled {
-            return AppTheme.textMuted
-        }
-
-        switch variant {
-        case .primary:
-            return .white
-        case .secondary:
-            return AppTheme.textPrimary
-        case .danger:
-            return .white
-        case .ghost:
-            return isHovered ? AppTheme.textPrimary : AppTheme.textSecondary
-        case .outline:
-            return AppTheme.accent
-        case .link:
-            return AppTheme.accent
-        }
-    }
-
-    private var backgroundColor: Color {
-        if isDisabled {
-            return AppTheme.backgroundSecondary
-        }
-
-        switch variant {
-        case .primary:
-            return isHovered ? AppTheme.accent.opacity(0.9) : AppTheme.accent
-        case .secondary:
-            return isHovered ? AppTheme.backgroundSecondary.opacity(0.8) : AppTheme.backgroundSecondary
-        case .danger:
-            return isHovered ? AppTheme.error.opacity(0.9) : AppTheme.error
-        case .ghost:
-            return isHovered ? AppTheme.backgroundSecondary.opacity(0.5) : Color.clear
-        case .outline:
-            return isHovered ? AppTheme.accent.opacity(0.1) : Color.clear
-        case .link:
-            return Color.clear
-        }
-    }
-
-    private var borderColor: Color {
-        if isDisabled {
-            return AppTheme.backgroundSecondary
-        }
-
-        return variant == .outline ? AppTheme.accent : Color.clear
-    }
+    private var colors: DSButtonColors { DSButtonColors(variant: variant, isDisabled: isDisabled, isHovered: isHovered) }
+    private var foregroundColor: Color { colors.foreground }
+    private var backgroundColor: Color { colors.background }
+    private var borderColor: Color { colors.border }
 }
 
 // MARK: - Convenience Initializers

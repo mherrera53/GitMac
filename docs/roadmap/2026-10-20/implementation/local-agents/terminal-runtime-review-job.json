@@ -1,0 +1,14 @@
+[
+  {
+    "id": "terminal-runtime-review",
+    "role": "reviewer",
+    "readFiles": [
+      "GitMac/Features/Terminal/Views/TerminalInputBar.swift",
+      "GitMac/Features/BottomPanel/Views/BottomPanelContent.swift",
+      "GitMac/Features/Terminal/Core/TerminalSharedTypes.swift",
+      "scripts/test-terminal-command-contracts.mjs"
+    ],
+    "writeFiles": [],
+    "instruction": "Review only the currently used GhosttyWithAIInput -> AIInputBar -> AITextEditor path. Read all supplied sources. Return no edits and at most THREE concrete actionable findings with function, mechanism and a test. 35 contract checks pass; stale/path/pixel negative controls produce 3/6/5 failures. A signed live UI test typed printf and tee into the native input and submitted, but expected fixture file bytes were not observed. It did not distinguish missing file from wrong bytes. A video shows the initial shell prompt and a cleared custom input. The next test asserts the exact native input first and records actual file bytes. Inspect lost input, quote/IME behavior, callback lifetime, event loop and suggestion cancellation; do not invent C API contracts or claim any UI test passed. The old BlockTerminalView and AITerminalInputView are not the live path. Default AI transport is AIService and must only be requested explicitly. Keep findings bounded to provable source behavior; identify uncertainty rather than guessing."
+  }
+]

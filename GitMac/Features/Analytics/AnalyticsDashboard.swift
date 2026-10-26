@@ -196,42 +196,18 @@ struct AnalyticsDashboard: View {
                 .font(.headline)
                 .foregroundStyle(AppTheme.textPrimary)
             
-            if #available(macOS 14.0, *) {
-                Chart(viewModel.languageBreakdown) { item in
-                    SectorMark(
-                        angle: .value("Lines", item.lines),
-                        innerRadius: .ratio(0.5),
-                        angularInset: 2
-                    )
-                    .foregroundStyle(by: .value("Language", item.language))
-                    .clipShape(.rect(cornerRadius: 4))
-                }
-                .chartLegend(position: .trailing)
-                .frame(height: 200)
-            } else {
-                // Fallback bar representation
-                VStack(spacing: DesignTokens.Spacing.sm) {
-                    ForEach(viewModel.languageBreakdown.prefix(5)) { lang in
-                        HStack {
-                            Text(lang.language)
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.textPrimary)
-                            
-                            GeometryReader { geo in
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(lang.color)
-                                    .frame(width: geo.size.width * lang.percentage)
-                            }
-                            .frame(height: 12)
-                            
-                            Text("\(Int(lang.percentage * 100))%")
-                                .font(.caption2)
-                                .foregroundStyle(AppTheme.textMuted)
-                        }
-                    }
-                }
-                .frame(height: 200)
+            // SectorMark is supported by the app's macOS 14 deployment target.
+            Chart(viewModel.languageBreakdown) { item in
+                SectorMark(
+                    angle: .value("Lines", item.lines),
+                    innerRadius: .ratio(0.5),
+                    angularInset: 2
+                )
+                .foregroundStyle(by: .value("Language", item.language))
+                .clipShape(.rect(cornerRadius: 4))
             }
+            .chartLegend(position: .trailing)
+            .frame(height: 200)
         }
         .padding()
         .background(AppTheme.backgroundSecondary)

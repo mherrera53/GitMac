@@ -14,9 +14,15 @@ struct WorktreeSidebarSection: View {
     @Environment(AppState.self) var appState
     @StateObject private var manager = WorktreeManager.shared
     @State private var showAddSheet = false
+    @State private var showManager = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Worktrees").font(.caption.weight(.semibold))
+                Spacer()
+                GitHelpButton(topicID: "worktrees")
+            }.padding(.horizontal, 8)
             if manager.isLoading {
                 HStack {
                     Spacer()
@@ -26,7 +32,7 @@ struct WorktreeSidebarSection: View {
                 }
                 .padding(.vertical, 8)
             } else {
-                ForEach(manager.worktrees) { worktree in
+                ForEach(manager.worktrees, id: \.path) { worktree in
                     WorktreeSidebarRow(worktree: worktree)
                 }
 
@@ -54,15 +60,19 @@ struct WorktreeSidebarSection: View {
                 }
                 .buttonStyle(.plain)
             }
+            Button("Manage Worktrees…", systemImage: "slider.horizontal.3") { showManager = true }
+                .buttonStyle(.borderless).padding(8)
+                .help("Open folders, protect worktrees and review removal safely")
         }
-        .task {
+        .task(id: appState.currentRepository?.path) {
             await manager.refresh(at: appState.currentRepository?.path)
-        }
-        .onChange(of: appState.currentRepository?.path) { _, newPath in
-            Task { await manager.refresh(at: newPath) }
         }
         .sheet(isPresented: $showAddSheet) {
             AddWorktreeSheet()
+        }
+        .sheet(isPresented: $showManager) {
+            WorktreeListView()
+                .frame(minWidth: 480, idealWidth: 680, maxWidth: 900, minHeight: 340, idealHeight: 520, maxHeight: 700)
         }
     }
 }
@@ -74,16 +84,23 @@ struct WorktreeSidebarRow: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 8) {
+        Button {
+            Task { await appState.openRepository(at: worktree.path) }
+        } label: {
+          HStack(spacing: 8) {
             Image(systemName: worktree.isMain ? "house.fill" : "folder.fill")
                 .font(.system(size: 11))
                 .foregroundStyle(worktree.isMain ? AppTheme.accent : AppTheme.accent)
 
-            Text(worktree.name)
+            VStack(alignment: .leading, spacing: 2) {
+              Text(worktree.name)
                 .font(.system(size: 11))
                 .foregroundStyle(worktree.isMain ? AppTheme.textPrimary : AppTheme.textSecondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
+              Text(worktree.branch ?? (worktree.isBare ? "Bare repository" : "Detached \(worktree.shortSHA)"))
+                  .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+            }
 
             if worktree.isLocked {
                 Image(systemName: "lock.fill")
@@ -96,12 +113,12 @@ struct WorktreeSidebarRow: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
         .background(isHovered ? AppTheme.hover : Color.clear)
-        .onHover { isHovered = $0 }
-        .onTapGesture(count: 2) {
-            // Open worktree in new tab
-            Task {
-                await appState.openRepository(at: worktree.path)
-            }
+          .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .disabled(worktree.isPrunable || worktree.isBare)
+        .help("Open worktree folder: \(worktree.path)")
+        .accessibilityLabel("Open \(worktree.name), \(worktree.branch ?? "detached revision")")
+        .onHover { isHovered = $0 }
     }
 }

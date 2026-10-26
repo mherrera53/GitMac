@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct AISettingsView: View {
-    @Environment(ThemeManager.self) private var themeManager
     @StateObject private var ollamaManager = OllamaProcessManager.shared
     @State private var selectedProvider: AIService.AIProvider = .anthropic
     @State private var selectedModel = "claude-3-haiku-20240307"
@@ -20,8 +19,7 @@ struct AISettingsView: View {
     private let aiService = AIService.shared
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
+        SettingsPage {
             SettingsSection(title: "API Keys") {
                 ForEach(AIService.AIProvider.allCases) { provider in
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
@@ -77,7 +75,7 @@ struct AISettingsView: View {
                                         .foregroundStyle(AppTheme.textSecondary)
                                 }
 
-                                Text("Models run directly on GPU. First use downloads the model (~300MB-2GB).")
+                                Text("On demand only: selecting a model does not load it. The first AI request may download GB of weights; weights are released after generation. Active inference exceeds the 150 MB app budget.")
                                     .font(DesignTokens.Typography.caption)
                                     .foregroundStyle(AppTheme.textSecondary)
                             }
@@ -218,8 +216,12 @@ struct AISettingsView: View {
                         }
 
                         DSButton("Set as Default", variant: .primary, size: .sm) {
-                            try? await aiService.setProvider(selectedProvider, model: selectedModel)
-                            successMessage = "Default provider updated"
+                            do {
+                                try await aiService.setProvider(selectedProvider, model: selectedModel)
+                                successMessage = "Default saved. No model was loaded."
+                            } catch {
+                                successMessage = "Not saved: \(error.localizedDescription)"
+                            }
                             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                                 successMessage = nil
                             }
@@ -324,10 +326,7 @@ struct AISettingsView: View {
                     }
                 }
             }
-            }
         }
-        .padding()
-        .background(AppTheme.background)
         .task {
             await loadConfiguredProviders()
         }
@@ -415,7 +414,6 @@ struct AISettingsView: View {
 // MARK: - Feature Row
 
 struct FeatureRow: View {
-    @Environment(ThemeManager.self) private var themeManager
     let icon: String
     let title: String
     let description: String

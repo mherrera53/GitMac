@@ -1,0 +1,111 @@
+{
+  "T01": {
+    "state": "verificada",
+    "acceptanceVerified": true,
+    "evidence": "implementation/baseline-reference.json; implementation/PLAN.md; mapping/files.csv; equipo, HEAD, cambios previos, escenarios y unidades registrados; sin métricas inventadas"
+  },
+  "T02": {
+    "state": "en_curso",
+    "evidence": "implementation/metal-toolchain-install.log; implementation/debug-fixed.log; CoreDevice/CoreSimulator siguen incompatibles"
+  },
+  "T03": {
+    "state": "en_curso",
+    "evidence": "implementation/ui-foundation-project.json verifica 394 fuentes/11 recursos y determinismo sin modificar el original; ScreenshotEngine reparado, build-for-testing firmado pasa; dos UI tests pasan en bundle aislado; SPM y ejecución hospedada pendientes"
+  },
+  "T04": {
+    "state": "en_curso",
+    "evidence": "scripts/test-xcodebuild-gate.mjs; scripts/verify-xcodebuild.sh; CI local comprobada, ejecución alojada pendiente"
+  },
+  "T05": {
+    "state": "verificada",
+    "acceptanceVerified": true,
+    "evidence": "implementation/gates/diff-core.md; implementation/credentials-tests-final.log; implementation/production-model-mutation.log; todas las suites Tests/GitMacTests importan producción y el control negativo detecta mutación real"
+  },
+  "T06": {
+    "state": "en_curso",
+    "evidence": "implementation/gates/ui-test-foundation.md; aislamiento Git tanto al crear fixtures como al lanzar cada app/runner, con identidad sintética y config privada; test-ui-test-foundation comprueba ambos límites; F01/F02/F03/F08/F09/F13/F14 y sesión acotada tienen pruebas; F04/F06/F07/F11/F12/F15 integrales pendientes"
+  },
+  "T07": {
+    "state": "verificada",
+    "acceptanceVerified": true,
+    "evidence": "implementation/gates/threat-model.md; implementation/threat-model.md: 16 fronteras con entrada/activo/amenaza/control/prueba/responsable y riesgos residuales explícitos; checker positivo y negativo; no certifica los controles aún pendientes"
+  },
+  "T08": {
+    "state": "en_curso",
+    "evidence": "implementation/regressions-xcode-toolchain.log; argv/cwd/exitCode corregidos en applyPatch; threat model TM03/TM04 registrado; catálogo F01–F15 integral pendiente"
+  },
+  "T09": {
+    "state": "verificada",
+    "acceptanceVerified": true,
+    "evidence": "implementation/gates/status.md; implementation/git-integration-before.log; implementation/git-integration-after.log; implementation/status-debug.log; los dos puntos de entrada usan un parser NUL único con XY/oldPath/stats preservados"
+  },
+  "T10": {
+    "state": "verificada",
+    "acceptanceVerified": true,
+    "evidence": "implementation/gates/processes.md; implementation/contracts-git-process-current.log; implementation/credentials-debug-final.log; F13 pasa sobre executor real unificado"
+  },
+  "T11": {
+    "state": "en_curso",
+    "evidence": "implementation/gates/repository-watchers.md; RepositoryFileLocations distingue gitdir/common y device:inode con Git real; falta adopción integral de ventana/operación/locks"
+  },
+  "T12": {
+    "state": "en_curso",
+    "evidence": "implementation/gates/session-isolation.md; AppState/GitService conservan tab/ruta/generación, invalidan cierre y aíslan watcher/cachés; 13 checks positivos y control anterior con 6 fallos; fixture configura ramas y dos UI tests pasan; otros servicios y recursos multiventana pendientes"
+  },
+  "T13": {
+    "state": "en_curso",
+    "evidence": "implementation/credential-migration.md; implementation/credentials-tests-final.log; Keychain real y fallos sintéticos verificados; faltan cuentas/entornos, UI de aprobación y flujo firmado"
+  },
+  "T17": {
+    "state": "en_curso",
+    "evidence": "implementation/gates/responsive.md; ajuste al visibleFrame del monitor contenedor; falta validación visual y resto de navegación/multiventana/restauración"
+  },
+  "T19": {
+    "state": "en_curso",
+    "evidence": "implementation/theme-audit-2026-10-25.md; 92 checks del motor y 999 de botones; conflict-theme-final-ui.xcresult: siete tests pasan y 126 capturas en nueve presets. Nueve Accounts pasan en píxeles; el modelo local orientó a caption con contraste insuficiente en los nueve. conflict-caption-primary-after.log pasa nueve después de corrección local; 16 observaciones visuales restantes rechazadas. Interfaces/estados secundarios, monitor integrado, AX y VoiceOver siguen pendientes."
+  },
+  "T20": {
+    "state": "en_curso",
+    "evidence": "GraphViewModel: filas de commits contiguas; scope de minimap alineado a HEAD; múltiples refs y topología de consulta pendientes"
+  },
+  "T21": {
+    "state": "en_curso",
+    "evidence": "implementation/navigation-worktrees-help.md; minimapa por SHA, muestras <=4096, fixture 100k y lotes/cursor pasan; falta p95/footprint del producto y alcance integral de refs; ram-2026-10-26.md: construcción con menos metadatos temporales, 1145 comparaciones y cuatro mediciones Release pasan; p95 y todas las refs siguen abiertos"
+  },
+  "T16": {
+    "state": "en_curso",
+    "evidence": "implementation/terminal-runtime-audit.md; terminal-wire-ui.xcresult pasa ejecución real, texto literal, bytes, cwd e input vacío; terminal-wire-ui-candidate.json fija fuentes/binarios. Ocho checks del writer y 35 contratos pasan; controles negativos detectan retorno prematuro (cinco fallos), estado obsoleto, quoting y escala. Guía offline conserva su evidencia; atajos, IME, clipboard, ownership de sesiones y todos los comandos siguen pendientes."
+  },
+  "T29": {
+    "state": "en_curso",
+    "evidence": "implementation/gates/worktree-help.md; crear/abrir/proteger/retirar con guardas y Git real aislado; faltan UI, aislamiento completo, submodules y LFS/auth"
+  },
+  "T34": {
+    "state": "en_curso",
+    "evidence": "implementation/gates/memory-ai-demand.md; retiro de precarga, cloud preflight, loopback, modelo exacto, lease y límites con pruebas del AIService real; pendiente GPU real, cancelación del servidor y memoria Terminal activa usa solicitud explícita y AIService compartido; 35 contratos prueban invalidación de input/repositorio y límites con seam de proveedor. apple-ml-source-review.md contrasta releases/pins y distingue MLX del modelo del sistema; no aprueba inferencia ni memoria de pesos reales."
+  },
+  "T36": {
+    "state": "en_curso",
+    "evidence": "implementation/ram-2026-10-26.md; release6-memory-summary.json: build 6 firmado c9712a30788159b47ec301890d3e15ce0d829c9fa302dc91d47c0dc07d8da574 en ventana real, cuatro picos 98829392/107398248/148456600/148341888 pasan 150000000; builds 2/3 fallaron y se conservaron. Sin modelos/builds/auditorías concurrentes. Matriz de todos los flujos, navegación acumulada, multiventana, inferencia/p95/resistencia siguen pendientes."
+  },
+  "T24": {
+    "state": "en_curso",
+    "evidence": "implementation/gates/diff-core.md; caché/parser/materialización corregidos y probados; UI, binarios/grandes y memoria pendientes"
+  },
+  "T38": {
+    "state": "en_curso",
+    "evidence": "CI preserva fallos y release valida versión sin interpolación; pins/SBOM/provenance pendientes"
+  },
+  "T39": {
+    "state": "en_curso",
+    "evidence": "implementation/gates/distribution.md; implementation/distribution-final.log; Developer ID, Apple Accepted, stapling y Gatekeeper pasan; faltan Mac limpio, matriz, lanzamiento/upgrade/rollback; gates/installed-app-replacement.md: reemplazo condicionado autorizado, installed-app-backup.json acredita copia verificada de /Applications/GitMac.app; candidata actual no instalada ni notarizada"
+  },
+  "T30": {
+    "state": "en_curso",
+    "evidence": "implementation/gates/local-agents-workflows.md; gates/workflow-confirmations.md; 37 checks Git pasan frente a 22 fallos anteriores; workflow-decisions-after.log: siete escenarios pasan frente a cinco fallos originales, incluidos dos SIGTRAP; un UUID por pregunta rechaza decisiones tardías; workflow-decision-build.log: Debug firmado compila. Avances T30.03/T30.04; persistencia/herencia por repo, UI de ejecución, Gitflow y firmas siguen pendientes"
+  },
+  "T26": {
+    "state": "en_curso",
+    "evidence": "implementation/conflict-preservation-audit.md; 43 checks del núcleo pasan frente a 16 fallos de comportamiento originales. conflict-theme-final-ui.xcresult y terminal-caption-final-ui.xcresult comprueban el flujo real aceptar ambas → staging → merge de dos padres conservando nota local y mostrando Resolved/recuperación. Otros casos del último bundle fallaron y no aprueban todo el candidato. Binarios, delete/rename, worktrees, ACL/xattrs y carreras externas completas pendientes."
+  }
+}

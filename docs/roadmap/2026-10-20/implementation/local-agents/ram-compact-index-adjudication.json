@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-26T07:14:54.115413+00:00",
+  "proposal": "ram-compact-index-review-1792998238320-proposal.json",
+  "model": "qwen3-coder:30b",
+  "digest": "06c1097efce0431c2045fe7b2e5108366e43bee1b4603a7aded8f21689e90bca",
+  "automaticApplication": false,
+  "cloudUsed": false,
+  "decisions": [
+    {
+      "finding": 1,
+      "decision": "rejected_factually_wrong",
+      "reason": "Actual code initializes upper to sortedPositions.count, not count - 1 as alleged. Empty, unknown and all 5000 reverse-ordered keys pass. Rank mutation causes three assertions in two tests."
+    },
+    {
+      "finding": 2,
+      "decision": "intentional_bounded_cache",
+      "reason": "indices.contains(lane) guards the 64-slot cache. Larger lanes retain their exact arrays; there is no out-of-bounds access or geometry truncation. Existing 1145 comparisons and 80 graph DAGs pass."
+    },
+    {
+      "finding": 3,
+      "decision": "not_a_bug_or_required_optimization",
+      "reason": "Different multi-parent arrays are deliberately retained. Unbounded interning would add another growing table. Compatibility and parent-order tests remain authoritative."
+    }
+  ],
+  "limits": [
+    "Model provided no concrete failing input and did not run tests.",
+    "No claim of memory compliance from review; signed build 3 still failed 150MB and is not deployed."
+  ]
+}

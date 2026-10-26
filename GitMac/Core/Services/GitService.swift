@@ -31,6 +31,27 @@ class GitService: ObservableObject {
 
     // Flag to prevent watcher interference during manual operations
     private var isManualOperationInProgress = false
+    private var activeGeneration = UUID()
+
+    /// Read without changing the selected repository, watcher or caches.
+    func readRepository(at path: String) async throws -> Repository {
+        try await engine.openRepository(at: path)
+    }
+
+    /// The window owns selection. Merely loading an inactive tab cannot select it.
+    func activateRepository(_ repository: Repository?) {
+        guard currentRepository?.path != repository?.path else {
+            currentRepository = repository
+            return
+        }
+        activeGeneration = UUID()
+        repositoryWatcher?.stopAll()
+        repositoryWatcher = nil
+        cancellables.removeAll()
+        invalidateCache()
+        currentRepository = repository
+        if let path = repository?.path { setupWatcher(for: path) }
+    }
 
     // MARK: - Repository Operations
 
@@ -39,11 +60,11 @@ class GitService: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        let repo = try await engine.openRepository(at: path)
-        currentRepository = repo
-
-        // Setup file watcher
-        setupWatcher(for: path)
+        let request = UUID()
+        activeGeneration = request
+        let repo = try await readRepository(at: path)
+        guard !Task.isCancelled, activeGeneration == request else { return repo }
+        activateRepository(repo)
 
         return repo
     }
@@ -77,11 +98,14 @@ class GitService: ObservableObject {
     /// Refresh the current repository
     func refresh() async throws {
         guard let path = currentRepository?.path else { return }
+        let request = activeGeneration
 
         isLoading = true
         defer { isLoading = false }
 
-        currentRepository = try await engine.openRepository(at: path)
+        let repository = try await readRepository(at: path)
+        guard !Task.isCancelled, activeGeneration == request else { return }
+        currentRepository = repository
         invalidateCache()
 
         // Notify views to refresh
@@ -92,10 +116,12 @@ class GitService: ObservableObject {
     /// Use after commit to update push button state without full reload
     func refreshBranchStatus() async throws {
         guard var repo = currentRepository else { return }
+        let request = activeGeneration
         let path = repo.path
 
         // Reload only branches to get fresh ahead/behind counts
         let branches = try await engine.getBranches(at: path)
+        guard !Task.isCancelled, activeGeneration == request else { return }
         repo.branches = branches
         currentRepository = repo
 
@@ -119,16 +145,18 @@ class GitService: ObservableObject {
     func getBranches() async throws -> [Branch] {
         if let cached = branchesCache.get() { return cached }
         guard let path = currentRepository?.path else { return [] }
+        let request = activeGeneration
         let branches = try await engine.getBranches(at: path)
-        branchesCache.set(branches)
+        if !Task.isCancelled, activeGeneration == request { branchesCache.set(branches) }
         return branches
     }
 
     func getRemoteBranches() async throws -> [Branch] {
         if let cached = remoteBranchesCache.get() { return cached }
         guard let path = currentRepository?.path else { return [] }
+        let request = activeGeneration
         let branches = try await engine.getRemoteBranches(at: path)
-        remoteBranchesCache.set(branches)
+        if !Task.isCancelled, activeGeneration == request { remoteBranchesCache.set(branches) }
         return branches
     }
 
@@ -793,8 +821,10 @@ class GitService: ObservableObject {
 
     private func refreshStatus() async throws {
         guard var repo = currentRepository else { return }
+        let request = activeGeneration
 
         let status = try await engine.getStatus(at: repo.path)
+        guard !Task.isCancelled, activeGeneration == request else { return }
         repo.status = status
         currentRepository = repo // Must reassign to trigger @Published notification
 
@@ -810,16 +840,18 @@ class GitService: ObservableObject {
         repositoryWatcher?.stopAll()
         cancellables.removeAll()
 
-        repositoryWatcher = GitRepositoryWatcher(repositoryPath: path)
+        let watcher = GitRepositoryWatcher(repositoryPath: path)
+        repositoryWatcher = watcher
 
         // Subscribe to differentiated change signals for incremental updates
         repositoryWatcher?.$lastSignal
             .compactMap { $0 }
             .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
-            .sink { [weak self] signal in
+            .sink { [weak self, weak watcher] signal in
                 Task { @MainActor in
-                    await self?.handleChangeSignal(signal)
-                    self?.repositoryWatcher?.acknowledgeChanges()
+                    guard let self, let watcher, self.repositoryWatcher === watcher else { return }
+                    await self.handleChangeSignal(signal)
+                    watcher.acknowledgeChanges()
                 }
             }
             .store(in: &cancellables)
@@ -871,6 +903,7 @@ class GitService: ObservableObject {
     /// Refresh only status without invalidating all caches
     private func refreshStatusOnly() async throws {
         guard var repo = currentRepository else { return }
+        let request = activeGeneration
 
         let signpostID = OSSignpostID(log: serviceLog)
         os_signpost(.begin, log: serviceLog, name: "refresh.status", signpostID: signpostID)
@@ -884,6 +917,7 @@ class GitService: ObservableObject {
             status = try await engine.getStatus(at: repo.path)
         }
 
+        guard !Task.isCancelled, activeGeneration == request else { return }
         repo.status = status
         currentRepository = repo
 

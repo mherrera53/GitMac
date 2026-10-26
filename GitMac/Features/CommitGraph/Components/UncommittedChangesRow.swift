@@ -7,10 +7,21 @@ struct UncommittedChangesRow: View {
     let isSelected: Bool
     let isHovered: Bool
     var settings: GraphSettings? = nil
+    var connectToHistory = true
+    var conflictedCount = 0
+
+    private var statusColor: Color { conflictedCount > 0 ? AppTheme.error : AppTheme.warning }
+    private var statusSummary: String {
+        let changes = "\(stagedCount) staged, \(unstagedCount) unstaged"
+        return conflictedCount > 0 ? changes + ", \(conflictedCount) \(conflictedCount == 1 ? "conflict" : "conflicts")" : changes
+    }
 
     private var H: CGFloat { settings?.rowHeight ?? 44 }
-    private let W: CGFloat = 26
     private var R: CGFloat { settings?.nodeRadius ?? 14 }
+    private var zoom: CGFloat { settings?.zoomLevel ?? 1 }
+    private var nodeX: CGFloat {
+        GraphGeometry.laneX(0, laneWidth: settings?.effectiveLaneWidth ?? GraphSettings.baseLaneWidth, zoom: zoom)
+    }
 
     private var branchColumnWidth: CGFloat {
         settings?.responsiveBranchColumnWidth ?? 140
@@ -27,7 +38,7 @@ struct UncommittedChangesRow: View {
                 HStack {
                     BranchBadge(
                         name: "// WIP",
-                        color: .orange,
+                        color: statusColor,
                         isHead: false,
                         isTag: false
                     )
@@ -39,27 +50,28 @@ struct UncommittedChangesRow: View {
 
             // Graph - dotted node
             ZStack {
-                Canvas { ctx, size in
+                GraphCanvas(role: .wip) { ctx, size in
                     let cy = size.height / 2
-                    let myX: CGFloat = W / 2 + DesignTokens.Spacing.xs + DesignTokens.Spacing.xxs
+                    let myX = nodeX
 
                     // Dotted line to bottom
-                    drawDottedLine(ctx, from: CGPoint(x: myX, y: cy), to: CGPoint(x: myX, y: size.height), color: .orange)
+                    if connectToHistory {
+                        drawDottedLine(ctx, from: CGPoint(x: myX, y: cy), to: CGPoint(x: myX, y: size.height), color: statusColor)
+                    }
 
                     // Dotted circle
                     let nodeRect = CGRect(x: myX - R, y: cy - R, width: R * 2, height: R * 2)
                     // Fill with background to hide line passing through
                     ctx.fill(Circle().path(in: nodeRect), with: .color(AppTheme.background))
-                    ctx.stroke(Circle().path(in: nodeRect), with: .color(.orange), style: StrokeStyle(lineWidth: 2, dash: [5, 6]))
+                    ctx.stroke(Circle().path(in: nodeRect), with: .color(statusColor), style: StrokeStyle(lineWidth: 2 * zoom, dash: [4 * zoom, 3 * zoom]))
                 }
                 .frame(width: graphColumnWidth, height: H)
 
                 // Pencil icon inside node
-                Image(systemName: "pencil")
-                    .font(DesignTokens.Typography.callout)
-                    .fontWeight(.bold)
-                    .foregroundStyle(AppTheme.warning)
-                    .offset(x: -(graphColumnWidth / 2) + W / 2 + 8)
+                Image(systemName: conflictedCount > 0 ? "exclamationmark" : "pencil")
+                    .font(.system(size: 13 * zoom, weight: .semibold))
+                    .foregroundStyle(statusColor)
+                    .offset(x: nodeX - graphColumnWidth / 2)
             }
 
             // Info
@@ -68,8 +80,8 @@ struct UncommittedChangesRow: View {
                     Text("Uncommitted changes")
                         .font(DesignTokens.Typography.callout)
                         .fontWeight(.medium)
-                        .foregroundStyle(AppTheme.warning)
-                    Text("\(stagedCount) staged, \(unstagedCount) unstaged")
+                        .foregroundStyle(statusColor)
+                    Text(statusSummary)
                         .font(DesignTokens.Typography.caption2)
                         .foregroundStyle(AppTheme.textSecondary)
                 }
@@ -79,12 +91,14 @@ struct UncommittedChangesRow: View {
         }
         .frame(height: H)
         .background(isSelected ? AppTheme.accent.opacity(0.1) : (isHovered ? AppTheme.textSecondary.opacity(0.05) : Color.clear))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("graph-working-copy")
     }
 
-    func drawDottedLine(_ ctx: GraphicsContext, from: CGPoint, to: CGPoint, color: Color) {
+    func drawDottedLine(_ ctx: GraphDrawingContext, from: CGPoint, to: CGPoint, color: Color) {
         var p = Path()
         p.move(to: from)
         p.addLine(to: to)
-        ctx.stroke(p, with: .color(color), style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [5, 6]))
+        ctx.stroke(p, with: .color(color), style: StrokeStyle(lineWidth: 2 * zoom, lineCap: .round, dash: [4 * zoom, 3 * zoom]))
     }
 }

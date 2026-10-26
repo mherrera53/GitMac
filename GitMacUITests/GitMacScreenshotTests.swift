@@ -10,24 +10,23 @@ import XCTest
 final class GitMacScreenshotTests: XCTestCase {
 
     var app: XCUIApplication!
+    private var fixture: UITestRepository!
 
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["-AppleInterfaceStyle", "Light"]
+        fixture = try UITestRepository()
+        app.launchArguments = fixture.launchArguments()
+        app.launchEnvironment = fixture.launchEnvironment()
         app.launch()
         sleep(3)
 
-        // Open demo repository
-        app.typeKey("o", modifierFlags: .command)
-        sleep(2)
-        app.typeText("/Users/mario/gitmac-demo-repo")
-        app.typeKey(.return, modifierFlags: [])
-        sleep(4)
+        XCTAssertTrue(app.windows.firstMatch.waitForExistence(timeout: 10))
     }
 
     override func tearDownWithError() throws {
         app.terminate()
+        fixture = nil
     }
 
     private func captureScreenshot(named name: String) {
@@ -76,11 +75,14 @@ final class GitMacScreenshotTests: XCTestCase {
 final class GitMacScreenshotTestsSettings: XCTestCase {
 
     var app: XCUIApplication!
+    private var fixture: UITestRepository!
 
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["-AppleInterfaceStyle", "Light"]
+        fixture = try UITestRepository()
+        app.launchArguments = fixture.launchArguments()
+        app.launchEnvironment = fixture.launchEnvironment()
         app.launch()
         sleep(2)
 
@@ -91,6 +93,7 @@ final class GitMacScreenshotTestsSettings: XCTestCase {
 
     override func tearDownWithError() throws {
         app.terminate()
+        fixture = nil
     }
 
     private func captureScreenshot(named name: String) {
@@ -132,24 +135,23 @@ final class GitMacScreenshotTestsSettings: XCTestCase {
 final class GitMacScreenshotTestsDarkMode: XCTestCase {
 
     var app: XCUIApplication!
+    private var fixture: UITestRepository!
 
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["-AppleInterfaceStyle", "Dark"]
+        fixture = try UITestRepository()
+        app.launchArguments = fixture.launchArguments(style: "Dark")
+        app.launchEnvironment = fixture.launchEnvironment()
         app.launch()
         sleep(3)
 
-        // Open demo repository
-        app.typeKey("o", modifierFlags: .command)
-        sleep(2)
-        app.typeText("/Users/mario/gitmac-demo-repo")
-        app.typeKey(.return, modifierFlags: [])
-        sleep(4)
+        XCTAssertTrue(app.windows.firstMatch.waitForExistence(timeout: 10))
     }
 
     override func tearDownWithError() throws {
         app.terminate()
+        fixture = nil
     }
 
     private func captureScreenshot(named name: String) {
@@ -186,11 +188,14 @@ final class GitMacScreenshotTestsDarkMode: XCTestCase {
 final class GitMacScreenshotTestsSettingsDark: XCTestCase {
 
     var app: XCUIApplication!
+    private var fixture: UITestRepository!
 
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["-AppleInterfaceStyle", "Dark"]
+        fixture = try UITestRepository()
+        app.launchArguments = fixture.launchArguments(style: "Dark")
+        app.launchEnvironment = fixture.launchEnvironment()
         app.launch()
         sleep(2)
 
@@ -200,6 +205,7 @@ final class GitMacScreenshotTestsSettingsDark: XCTestCase {
 
     override func tearDownWithError() throws {
         app.terminate()
+        fixture = nil
     }
 
     private func captureScreenshot(named name: String) {

@@ -6,6 +6,7 @@ struct RepositoryTabsView: View {
     @Environment(AppState.self) var appState
     @StateObject private var groupsService = RepoGroupsService.shared
     @State private var cachedGroupedTabs: [TabGroup] = []
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // Group model to organize tabs
     struct TabGroup: Identifiable {
@@ -58,7 +59,7 @@ struct RepositoryTabsView: View {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(appState.canGoBack ? AppTheme.textSecondary : AppTheme.textMuted.opacity(0.3))
-                        .frame(width: 18, height: 28)
+                        .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
                 .disabled(!appState.canGoBack)
@@ -69,7 +70,7 @@ struct RepositoryTabsView: View {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(appState.canGoForward ? AppTheme.textSecondary : AppTheme.textMuted.opacity(0.3))
-                        .frame(width: 18, height: 28)
+                        .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
                 .disabled(!appState.canGoForward)
@@ -79,31 +80,36 @@ struct RepositoryTabsView: View {
             .padding(.trailing, 4)
 
             // Horizontal Slider for Groups
-            ScrollView(.horizontal) {
+            ScrollViewReader { proxy in
+              ScrollView(.horizontal) {
                 HStack(spacing: 4) { // Spacing between groups
                     ForEach(cachedGroupedTabs) { group in
                         GroupContainer(group: group, appState: appState)
                     }
 
-                    // Add Button
-                    Button(action: {
-                        NotificationCenter.default.post(name: .openRepository, object: nil)
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(AppTheme.textMuted)
-                            .frame(width: 28, height: 28)
-                            .background(AppTheme.backgroundSecondary.opacity(0.3))
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.leading, 4)
-                    .help("Open Repository")
                 }
                 .padding(.horizontal, 4)
             }
             .scrollIndicators(.hidden)
             .frame(maxWidth: .infinity) // Take all available horizontal space
+            .onChange(of: appState.activeTabId, initial: true) { _, id in
+                guard let id else { return }
+                DispatchQueue.main.async {
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
+                        proxy.scrollTo(id, anchor: .center)
+                    }
+                }
+            }
+            }
+
+            Button {
+                NotificationCenter.default.post(name: .openRepository, object: nil)
+            } label: {
+                Image(systemName: "plus").frame(width: 28, height: 28)
+            }
+            .buttonStyle(.borderless)
+            .help("Open Repository")
+            .accessibilityLabel("Open repository")
 
             // Dropdown for recent repos
             TabsOverflowMenu()
@@ -112,7 +118,7 @@ struct RepositoryTabsView: View {
         .onAppear { recomputeGroupedTabs() }
         .onChange(of: appState.openTabs.count) { recomputeGroupedTabs() }
         .onChange(of: appState.openTabs.map(\.id)) { recomputeGroupedTabs() }
-        .onChange(of: groupsService.groups.count) { recomputeGroupedTabs() }
+        .onChange(of: groupsService.groups.map { [$0.id, $0.name, $0.color] + $0.repos }) { recomputeGroupedTabs() }
     }
 }
 
@@ -139,8 +145,11 @@ private struct GroupContainer: View {
                         .frame(width: 3, height: 3)
                     
                     Text(name)
-                        .font(.system(size: 7, weight: .bold))
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(groupColor.opacity(0.8))
+                        .lineLimit(1)
+                        .frame(maxWidth: 90)
+                        .help(name)
                 }
                 .padding(.leading, 4)
                 .padding(.trailing, 1)
@@ -156,6 +165,7 @@ private struct GroupContainer: View {
                         onSelect: { appState.selectTab(tab.id) },
                         onClose: { appState.closeTab(tab.id) }
                     )
+                    .id(tab.id)
                     // Drag & Drop support
                     .onDrag {
                         NSItemProvider(object: tab.id.uuidString as NSString)
@@ -165,7 +175,7 @@ private struct GroupContainer: View {
             }
             .padding(.horizontal, 2)
         }
-        .frame(height: 24)
+        .frame(height: 28)
         // Visual container style for valid groups
         .background(
             RoundedRectangle(cornerRadius: 5)
@@ -179,7 +189,7 @@ private struct GroupContainer: View {
 }
 
 private struct CompactTabPill: View {
-    let tab: RepositoryTab
+    @ObservedObject var tab: RepositoryTab
     let isActive: Bool
     let groupColor: Color?
     let onSelect: () -> Void
@@ -198,8 +208,9 @@ private struct CompactTabPill: View {
     }
 
     var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 4) {
+        HStack(spacing: 0) {
+          Button(action: onSelect) {
+            HStack(spacing: 5) {
                 if let color = tab.repoColor {
                     Circle()
                         .fill(color)
@@ -210,29 +221,35 @@ private struct CompactTabPill: View {
                     .font(.system(size: 11, weight: isActive ? .medium : .regular))
                     .foregroundStyle(isActive ? AppTheme.textPrimary : AppTheme.textSecondary)
                     .lineLimit(1)
-                    .fixedSize()
-
-                if isActive || isHovering {
-                    Button(action: onClose) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(isActive ? AppTheme.textPrimary.opacity(0.7) : AppTheme.textMuted)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.leading, 2)
-                }
+                    .truncationMode(.middle)
+                    .frame(minWidth: 60, maxWidth: 160, alignment: .leading)
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(tabBackground)
-            )
+            .frame(height: 28)
+            .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .help(tab.repository.path)
+          .accessibilityLabel("Repository \(tab.repository.name)")
+          .accessibilityAddTraits(isActive ? [.isSelected] : [])
+
+          Button(action: onClose) {
+              Image(systemName: "xmark")
+                  .font(.system(size: 9, weight: .semibold))
+                  .frame(width: 24, height: 28)
+                  .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .foregroundStyle(AppTheme.textSecondary)
+          .opacity(isActive || isHovering ? 1 : 0.55)
+          .help("Close \(tab.repository.name)")
+          .accessibilityLabel("Close repository \(tab.repository.name)")
         }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Repository \(tab.repository.name)\(isActive ? ", active" : "")")
-        .accessibilityAddTraits(isActive ? [.isSelected] : [])
+        .background(RoundedRectangle(cornerRadius: 5).fill(tabBackground))
+        .overlay(alignment: .bottom) {
+            if isActive { Capsule().fill(groupColor ?? AppTheme.accent).frame(height: 2).padding(.horizontal, 6) }
+        }
+        .accessibilityElement(children: .contain)
         .onHover { isHovering = $0 }
     }
 }
@@ -267,15 +284,29 @@ struct TabDropDelegate: DropDelegate {
 // MARK: - Tabs Overflow Menu
 
 private struct TabsOverflowMenu: View {
+    @Environment(AppState.self) private var appState
     @StateObject private var recentManager = RecentRepositoriesManager.shared
 
     var body: some View {
         Menu {
+            Section("Open Repositories") {
+                ForEach(appState.openTabs) { tab in
+                    Button { appState.selectTab(tab.id) } label: {
+                        if appState.activeTabId == tab.id { Label(tab.repository.name, systemImage: "checkmark") }
+                        else { Text(tab.repository.name) }
+                    }
+                }
+            }
             if !recentManager.recentRepos.isEmpty {
                 Section("Recent") {
                     ForEach(recentManager.recentRepos.prefix(5)) { repo in
                         Button(repo.name) {
-                            NotificationCenter.default.post(name: .openRepository, object: repo.path)
+                            Task {
+                                await appState.openRepository(at: repo.path)
+                                if appState.currentRepository?.path == repo.path {
+                                    recentManager.addRecent(path: repo.path, name: repo.name)
+                                }
+                            }
                         }
                     }
                 }
@@ -291,10 +322,11 @@ private struct TabsOverflowMenu: View {
             Image(systemName: "chevron.down")
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(AppTheme.textMuted)
-                .frame(width: 20, height: 28)
+                .frame(width: 28, height: 28)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
-        .help("More tabs")
+        .help("Open and recent repositories")
+        .accessibilityLabel("Open and recent repositories")
     }
 }
