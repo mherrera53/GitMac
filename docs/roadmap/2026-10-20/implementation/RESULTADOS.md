@@ -1,5 +1,9 @@
 # Cambios implementados y verificación
 
+## Release 4.1.0 entregada
+
+Publicada en [GitHub](https://github.com/mherrera53/GitMac/releases/tag/v4.1.0), código ff3d825 y build 6 firmado/notarizado. ZIP descargado y checksum comprobado. Reinstalada en /Applications/GitMac.app, con respaldo de la versión anterior y arranque normal verificado. Los cinco gates de esta entrega están cerrados en gates/release-4.1.0.md. Esto no cierra los demás criterios del roadmap.
+
 ## Ejecución del 26 de octubre de 2026
 
 [RAM: reducción comprobada](ram-2026-10-26.md): el build 6 firmado conserva todo el índice y pasa 1k (98829392), 10k (107398248) y 100k (148456600/148341888) bytes de pico en la ventana real. Los builds firmados 2/3 fallaron y no se entregaron. Modelos descargados y sin trabajo pesado concurrente. No es una garantía de todos los flujos ni inferencia.

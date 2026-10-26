@@ -34,3 +34,5 @@ No hay herramienta de memoria persistente disponible en esta sesión. Estas regl
 
 - RelativeFormatStyle y RelativeDateTimeFormatter no tienen redondeo idéntico: ram-relative-date-tests.log reprodujo «hace 5 días» frente a «hace 4 días» y «dentro de 2 a» frente a «dentro de 1 a». Se conserva el formatter original compartido bajo NSLock, con locale/calendar autoupdating, en vez de relajar el test. ram-relative-date-preserved.log pasa 12 XCTest.
 - Medir también la candidata de distribución y registrar geometría: el perfil privado de ventana baja no aprobó la ventana real más alta. El build 2 firmado alcanzó 158844056 bytes y el 3 152257664; no se publicaron ni instalaron. No reducir la ventana para hacer pasar el presupuesto.
+
+- Completar el stapling antes de ejecutar la copia destinada a distribución. La copia ya ejecutada dio error 73 al gestionar el ticket y EPERM al intentar crear el archivo reservado. Se extrajo una copia nueva del mismo ZIP enviado, con hashes idénticos, y Apple stapler/validate, codesign y Gatekeeper pasaron. No se alteraron TCC, firmas ni la copia protegida.
