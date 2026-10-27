@@ -7,10 +7,12 @@ import { regressionBaseline } from './regression-baseline.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const unboundedStashControl = process.argv.includes('--unbounded-stash-control');
 const watcherLifecycleControl = process.argv.includes('--watcher-lifecycle-control');
+const stashIndexControl = process.argv.includes('--stash-index-control');
+const stashLiteralControl = process.argv.includes('--stash-literal-control');
 const autostashControl = process.argv.includes('--autostash-control');
 const oauthLegacyControl = process.argv.includes('--oauth-legacy-control');
 const compactIndexControl = process.argv.includes('--compact-index-control');
-if ([unboundedStashControl, watcherLifecycleControl, compactIndexControl, oauthLegacyControl, autostashControl].filter(Boolean).length > 1) throw Error('Run negative controls separately');
+if ([unboundedStashControl, watcherLifecycleControl, compactIndexControl, oauthLegacyControl, autostashControl, stashIndexControl, stashLiteralControl].filter(Boolean).length > 1) throw Error('Run negative controls separately');
 const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'gitmac-production-suites-'));
 const sourceFiles = ['Branch', 'Commit', 'Repository', 'Remote', 'Tag', 'Stash', 'Worktree', 'GitEngine', 'DiffEngine']
   .map(name => `GitMac/Core/Git/${name}.swift`)
@@ -43,7 +45,18 @@ try {
   await fs.copyFile(path.join(root, 'Tests/CoreRegressions/Package.template.swift'), path.join(temporary, 'Package.swift'));
   for (const file of sourceFiles) {
     const destination = path.join(temporary, 'Sources', path.basename(file));
-    if (autostashControl && file.endsWith('/Remote.swift')) {
+    if (stashIndexControl && file.endsWith('/GitEngine.swift')) {
+      const original = await fs.readFile(path.join(root, file), 'utf8');
+      if (original.split('apply.index = true').length !== 3) throw Error('Index restoration mutation boundary changed');
+      await fs.writeFile(destination, original.replaceAll('apply.index = true', 'apply.index = false'));
+      console.log('NEGATIVE CONTROL: staged restoration disabled in disposable source');
+    } else if (stashLiteralControl && file.endsWith('/ShellExecutor.swift')) {
+      const original = await fs.readFile(path.join(root, file), 'utf8');
+      const actual = 'if command == "git", arguments.first == "stash" { variables["GIT_LITERAL_PATHSPECS"] = "0" }';
+      if (original.split(actual).length !== 2) throw Error('Stash environment mutation boundary changed');
+      await fs.writeFile(destination, original.replace(actual, '// Previous global literal policy restored for the negative control.'));
+      console.log('NEGATIVE CONTROL: incompatible stash literal environment restored in disposable source');
+    } else if (autostashControl && file.endsWith('/Remote.swift')) {
       const original = await fs.readFile(path.join(root, file), 'utf8');
       const boundary = 'var autostash: Bool = false';
       if (original.split(boundary).length !== 2) throw Error('Pull default mutation boundary changed');
@@ -76,7 +89,7 @@ try {
     if (file.endsWith('.swift')) await fs.symlink(path.join(root, 'Tests/GitMacTests', file), path.join(temporary, 'Tests', file));
   }
   execFileSync('swift', ['test', '--package-path', temporary, '--scratch-path', path.join(root, 'build/ProductionTests'), '-j', '4',
-    ...(autostashControl ? ['--filter', 'fetchPullPushAndRejectedPushPreserveWorkAndHistories'] : oauthLegacyControl ? ['--filter', 'newCredentialsRemainReadableWithUnapprovedLegacyAndSurviveReopen'] : unboundedStashControl ? ['--filter', 'loadingAndLoadedContentDoNotChangeInspectorMinimumSize']
+    ...((stashIndexControl || stashLiteralControl) ? ['--filter', 'PullRecoveryLifecycleTests'] : autostashControl ? ['--filter', 'fetchPullPushAndRejectedPushPreserveWorkAndHistories'] : oauthLegacyControl ? ['--filter', 'newCredentialsRemainReadableWithUnapprovedLegacyAndSurviveReopen'] : unboundedStashControl ? ['--filter', 'loadingAndLoadedContentDoNotChangeInspectorMinimumSize']
       : watcherLifecycleControl ? ['--filter', 'RepositoryScopeWatcherTests']
       : compactIndexControl ? ['--filter', 'compactSHAIndex'] : [])],
     { env: environment, stdio: 'inherit', timeout: 180000 });

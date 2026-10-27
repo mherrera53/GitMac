@@ -189,6 +189,10 @@ actor ShellExecutor {
                                  control: CommandControl = CommandControl()) async -> ShellResult {
         let duration = timeout ?? (command == "git" ? GitCommandTimeout.infer(from: arguments).seconds : 60)
         var variables = defaultEnvironment
+        // Stash constructs its own :(literal) pathspecs for cleanup. Forcing
+        // literal mode on those child commands can leave saved untracked files
+        // behind even when `git stash push -u` exits successfully.
+        if command == "git", arguments.first == "stash" { variables["GIT_LITERAL_PATHSPECS"] = "0" }
         variables.merge(environment ?? [:]) { _, new in new }
         let processEnvironment = variables
         let signpost = OSSignpostID(log: shellLog)

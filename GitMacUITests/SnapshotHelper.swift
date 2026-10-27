@@ -363,3 +363,73 @@ extension XCTestCase {
         add(attachment)
     }
 }
+
+// Real remote fixture for the recovery button, shared with the private launcher.
+extension UITestRepository {
+    func preparePullRecovery() throws -> (head: String, staged: String, expectedTimeline: String) {
+        try runGit(["restore", "--", "README.md"])
+        let base = (0..<30).map { "line \($0)" }.joined(separator: "\n") + "\n"
+        try base.write(to: repository.appendingPathComponent("Timeline.vue"), atomically: true, encoding: .utf8)
+        try "index base\n".write(to: repository.appendingPathComponent("index.txt"), atomically: true, encoding: .utf8)
+        try runGit(["add", "--", "Timeline.vue", "index.txt"])
+        try runGit(["commit", "--quiet", "-m", "Recovery fixture"])
+        let remote = root.appendingPathComponent("remote.git"), peer = root.appendingPathComponent("peer")
+        try runGit(["init", "--bare", "--quiet", remote.path])
+        try runGit(["-C", remote.path, "symbolic-ref", "HEAD", "refs/heads/main"])
+        try runGit(["remote", "add", "origin", remote.path])
+        try runGit(["push", "--quiet", "-u", "origin", "main"])
+        try runGit(["clone", "--quiet", remote.path, peer.path])
+        let incoming = base.replacingOccurrences(of: "line 0\n", with: "remote first line\n")
+        try incoming.write(to: peer.appendingPathComponent("Timeline.vue"), atomically: true, encoding: .utf8)
+        try runGit(["-C", peer.path, "commit", "--quiet", "-am", "Incoming fixture"])
+        try runGit(["-C", peer.path, "push", "--quiet"])
+        let head = try runGit(["-C", peer.path, "rev-parse", "HEAD"]).trimmingCharacters(in: .whitespacesAndNewlines)
+        try base.replacingOccurrences(of: "line 29\n", with: "local edit\n")
+            .write(to: repository.appendingPathComponent("Timeline.vue"), atomically: true, encoding: .utf8)
+        try "staged edit\n".write(to: repository.appendingPathComponent("index.txt"), atomically: true, encoding: .utf8)
+        try runGit(["add", "--", "index.txt"])
+        let staged = try runGit(["diff", "--cached", "--binary"])
+        try "staged edit\nextra unstaged\n".write(to: repository.appendingPathComponent("index.txt"), atomically: true, encoding: .utf8)
+        try "local note\n".write(to: repository.appendingPathComponent("note.txt"), atomically: true, encoding: .utf8)
+        return (head, staged, incoming.replacingOccurrences(of: "line 29\n", with: "local edit\n"))
+    }
+    func pullRecoveryStagedDiff() throws -> String { try runGit(["diff", "--cached", "--binary"]) }
+    func pullRecoveryBackupExists() throws -> Bool { try runGit(["stash", "list", "--format=%s"]).contains("GitMac before Pull") }
+}
+
+final class PullRecoveryUITests: XCTestCase {
+    @MainActor func testExplicitRecoveryButtonPreservesWorkingAndStagedChanges() throws {
+        continueAfterFailure = false
+        let fixture = try UITestRepository()
+        let expected = try fixture.preparePullRecovery()
+        let oldHead = try fixture.currentHeadOID()
+        let app = XCUIApplication()
+        app.launchArguments = fixture.launchArguments(style: "Dark")
+        app.launchEnvironment = fixture.launchEnvironment()
+        app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.buttons["Repository repository"].waitForExistence(timeout: 15))
+        _ = try activateValidationApplication(app)
+        app.menuBars.menuBarItems["Repository"].click()
+        app.menuBars.menuBarItems["Repository"].menuItems["Pull"].click()
+        let recover = app.buttons["Save changes and Pull"]
+        XCTAssertTrue(recover.waitForExistence(timeout: 15), "Overlapping files need explicit recovery")
+        XCTAssertEqual(try fixture.currentHeadOID(), oldHead, "Rejected pull must not mutate HEAD")
+        XCTAssertEqual(try fixture.pullRecoveryStagedDiff(), expected.staged)
+        let before = XCTAttachment(screenshot: try validationWindowScreenshot(app))
+        before.name = "Readable pull recovery with explicit action"; before.lifetime = .keepAlways; add(before)
+        recover.click()
+        let completed = expectation(for: NSPredicate { _, _ in (try? fixture.currentHeadOID()) == expected.head }, evaluatedWith: nil)
+        wait(for: [completed], timeout: 20)
+        let restored = expectation(for: NSPredicate { _, _ in
+            (try? fixture.pullRecoveryStagedDiff()) == expected.staged
+                && (try? String(contentsOf: fixture.repository.appendingPathComponent("Timeline.vue"), encoding: .utf8)) == expected.expectedTimeline
+        }, evaluatedWith: nil)
+        wait(for: [restored], timeout: 15)
+        XCTAssertEqual(try String(contentsOf: fixture.repository.appendingPathComponent("index.txt"), encoding: .utf8), "staged edit\nextra unstaged\n")
+        XCTAssertEqual(try String(contentsOf: fixture.repository.appendingPathComponent("note.txt"), encoding: .utf8), "local note\n")
+        XCTAssertTrue(try fixture.pullRecoveryBackupExists())
+        let after = XCTAttachment(screenshot: try validationWindowScreenshot(app))
+        after.name = "Pull completed with local edits restored"; after.lifetime = .keepAlways; add(after)
+    }
+}

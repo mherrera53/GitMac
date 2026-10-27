@@ -143,9 +143,8 @@ struct PullOptions {
             args.append("--rebase")
         }
 
-        if autostash {
-            args.append("--autostash")
-        }
+        // Explicitly override pull.autoStash/rebase.autoStash configuration.
+        args.append(autostash ? "--autostash" : "--no-autostash")
 
         return args
     }
@@ -242,4 +241,21 @@ enum RemoteOperationKind: String {
     case pull = "Pulling"
     case push = "Pushing"
     case clone = "Cloning"
+}
+
+struct AutoStashResult: Sendable {
+    let hadLocalChanges: Bool
+    let didStash: Bool
+    let stashApplied: Bool
+    let stashConflict: Bool
+    var backupSHA: String? = nil
+    var message: String {
+        let backup = backupSHA.map { " Backup kept in Stashes (" + String($0.prefix(12)) + ")." } ?? ""
+        if stashConflict {
+            return "Pull updated the branch, but local changes need attention. Review conflicts or restore from the saved stash; do not apply it twice." + backup
+        }
+        if stashApplied { return "Pull completed. Local changes and staged selection restored." + backup }
+        return "Pull completed successfully." + backup
+    }
+    var isFullySuccessful: Bool { !stashConflict }
 }

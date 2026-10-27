@@ -19,7 +19,9 @@ struct PullSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Pull").font(.title2).bold()
 
-            Toggle("Rebase en lugar de merge", isOn: $useRebase)
+            Text("Guarda los cambios locales, actualiza la rama y los restaura conservando la selección staged. La copia permanece en Stashes.")
+                .font(.callout).foregroundStyle(AppTheme.textSecondary)
+            Toggle("Rebase en lugar de merge", isOn: $useRebase).disabled(isRunning)
 
             if isRunning {
                 HStack(spacing: 8) {
@@ -74,10 +76,8 @@ struct PullSheet: View {
 
             HStack {
                 Spacer()
-                Button("Cerrar") {
-                    NSApp.keyWindow?.close()
-                }
-                Button("Pull") {
+                Button("Cerrar") { NSApp.keyWindow?.close() }.disabled(isRunning)
+                Button("Guardar cambios y Pull") {
                     Task { await doPull() }
                 }
                 .buttonStyle(.borderedProminent)
@@ -102,7 +102,7 @@ struct PullSheet: View {
     }
 
     private func doPull() async {
-        guard let repo = appState.currentRepository else { return }
+        guard !isRunning, let repo = appState.currentRepository else { return }
         isRunning = true
         error = nil
         result = nil
@@ -111,6 +111,7 @@ struct PullSheet: View {
 
         do {
             let r = try await appState.gitService.pullWithAutoStash(rebase: useRebase)
+            guard appState.currentRepository?.path == repo.path else { isRunning = false; return }
             result = r
             
             // Track successful pull
@@ -122,51 +123,10 @@ struct PullSheet: View {
                 commitCount: 0 // TODO: Get actual commit count from result
             )
             
-            // Show success notification
-            NotificationManager.shared.success(
-                "Pull completed",
-                detail: r.message
-            )
-            
-        } catch let gitError as GitError {
-            self.error = gitError.localizedDescription
-            
-            // Track failed pull
-            RemoteOperationTracker.shared.recordPull(
-                success: false,
-                branch: branchName,
-                remote: "origin",
-                error: gitError.localizedDescription
-            )
-            
-            // Show error notification with suggested fix if available
-            if let fix = gitError.suggestedFix {
-                NotificationManager.shared.errorWithFix(
-                    "Pull failed",
-                    detail: gitError.localizedDescription,
-                    fixTitle: fix.title,
-                    fixHint: fix.hint
-                ) { [weak appState] in
-                    // Execute the suggested fix
-                    Task {
-                        if let command = fix.command {
-                            // Run the suggested command
-                            if command == "git stash" {
-                                _ = try? await appState?.gitService.stash(message: "Auto-stash before pull")
-                                NotificationManager.shared.success("Changes stashed", detail: "Now try pulling again")
-                            } else if command == "git pull --rebase" {
-                                // Already doing this, just close
-                            }
-                        }
-                    }
-                }
-            } else {
-                NotificationManager.shared.error(
-                    "Pull failed",
-                    detail: gitError.localizedDescription
-                )
-            }
+            if r.isFullySuccessful { NotificationManager.shared.success("Pull completed", detail: r.message) }
+            else { NotificationManager.shared.warning("Local changes need attention", detail: r.message) }
         } catch {
+            guard appState.currentRepository?.path == repo.path else { isRunning = false; return }
             self.error = error.localizedDescription
             
             // Track failed pull

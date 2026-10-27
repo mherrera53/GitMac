@@ -32,6 +32,15 @@ class GitService: ObservableObject {
     // Flag to prevent watcher interference during manual operations
     private var isManualOperationInProgress = false
     private var activeGeneration = UUID()
+    private static var pullingWorktrees: Set<String> = []
+
+    private func beginPull(at path: String) throws -> String {
+        let identity = try RepositoryFileLocations(repositoryPath: path).worktreeID
+        guard Self.pullingWorktrees.insert(identity).inserted else {
+            throw PullRecoveryFailure(message: "A Pull is already running in this worktree. Wait for it to finish.", backupSHA: nil)
+        }
+        return identity
+    }
 
     /// Read without changing the selected repository, watcher or caches.
     func readRepository(at path: String) async throws -> Repository {
@@ -437,6 +446,8 @@ class GitService: ObservableObject {
             throw GitServiceError.noRepository
         }
 
+        let operationID = try beginPull(at: path)
+        defer { Self.pullingWorktrees.remove(operationID) }
         isLoading = true
         defer { isLoading = false }
 
@@ -462,70 +473,23 @@ class GitService: ObservableObject {
             throw GitServiceError.noRepository
         }
 
+        let operationID = try beginPull(at: path)
+        defer { Self.pullingWorktrees.remove(operationID) }
         isLoading = true
         defer { isLoading = false }
 
-        // Check for local changes
-        let status = try await engine.getStatus(at: path)
-        let hasLocalChanges = !status.staged.isEmpty || !status.unstaged.isEmpty
-
-        var didStash = false
-        var stashMessage = ""
-
-        // Stash if there are local changes
-        if hasLocalChanges {
-            stashMessage = "GitMac auto-stash before pull at \(Date().formatted())"
-            var stashOptions = StashOptions()
-            stashOptions.message = stashMessage
-            stashOptions.includeUntracked = true
-
-            if let _ = try await engine.stash(options: stashOptions, at: path) {
-                didStash = true
-            }
-        }
-
-        // Perform pull
-        var pullOptions = PullOptions()
-        pullOptions.rebase = rebase
-
-        // If branch has no tracking, specify the branch name explicitly
-        let trackingBranch = currentRepository?.currentBranch?.trackingBranch
-        if trackingBranch == nil || trackingBranch?.isEmpty == true {
-            pullOptions.branch = currentRepository?.currentBranch?.name
-        }
-
+        let branch = currentRepository?.currentBranch
+        var options = PullOptions()
+        options.rebase = rebase
+        if branch?.trackingBranch?.isEmpty != false { options.branch = branch?.name }
         do {
-            try await engine.pull(options: pullOptions, at: path)
+            let result = try await engine.pullPreservingLocalChanges(options: options, expectedBranch: branch?.name, at: path)
+            if currentRepository?.path == path { try? await refresh() }
+            return result
         } catch {
-            // If pull fails and we stashed, try to restore
-            if didStash {
-                try? await engine.stashPop(at: path)
-            }
+            if currentRepository?.path == path { try? await refresh() }
             throw error
         }
-
-        // Try to re-apply stash if we made one
-        var stashApplied = false
-        var stashConflict = false
-
-        if didStash {
-            do {
-                try await engine.stashPop(at: path)
-                stashApplied = true
-            } catch {
-                // Stash couldn't be applied cleanly (conflicts)
-                stashConflict = true
-            }
-        }
-
-        try await refresh()
-
-        return AutoStashResult(
-            hadLocalChanges: hasLocalChanges,
-            didStash: didStash,
-            stashApplied: stashApplied,
-            stashConflict: stashConflict
-        )
     }
 
     /// Push changes to remote and return the HEAD SHA after push
@@ -1092,48 +1056,5 @@ enum GitServiceError: LocalizedError {
         case .checkoutFailed(let message):
             return "Checkout failed: \(message)"
         }
-    }
-}
-
-// MARK: - Auto Stash Result
-
-/// Result of a pull operation with auto-stash
-struct AutoStashResult {
-    /// Whether there were local changes before pull
-    let hadLocalChanges: Bool
-
-    /// Whether changes were stashed
-    let didStash: Bool
-
-    /// Whether the stash was successfully re-applied after pull
-    let stashApplied: Bool
-
-    /// Whether there was a conflict when trying to re-apply stash
-    let stashConflict: Bool
-
-    /// User-friendly message describing what happened
-    var message: String {
-        if !hadLocalChanges {
-            return "Pull completed successfully"
-        }
-
-        if !didStash {
-            return "Pull completed (no changes to stash)"
-        }
-
-        if stashApplied {
-            return "Pull completed. Your local changes have been re-applied."
-        }
-
-        if stashConflict {
-            return "Pull completed but your local changes could not be re-applied due to conflicts. Your changes are saved in the stash list."
-        }
-
-        return "Pull completed"
-    }
-
-    /// Whether the operation was fully successful (no conflicts)
-    var isFullySuccessful: Bool {
-        return !stashConflict
     }
 }

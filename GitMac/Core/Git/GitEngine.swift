@@ -2107,3 +2107,96 @@ enum GitError: LocalizedError {
         }
     }
 }
+
+/// Explicit recovery only: keep an identifiable backup even after restoration.
+extension GitEngine {
+    func pullPreservingLocalChanges(options: PullOptions = PullOptions(), expectedBranch: String? = nil,
+                                    at path: String) async throws -> AutoStashResult {
+        try Task.checkCancellation()
+        let locations = try RepositoryFileLocations(repositoryPath: path)
+        func operationPending() -> Bool {
+            ["MERGE_HEAD", "rebase-merge", "rebase-apply", "CHERRY_PICK_HEAD", "REVERT_HEAD", "sequencer"].contains {
+                FileManager.default.fileExists(atPath: locations.gitDirectory.appendingPathComponent($0).path)
+            }
+        }
+        func branch() async throws -> String {
+            let result = await ShellExecutor.shared.execute("git", arguments: ["symbolic-ref", "--quiet", "--short", "HEAD"], workingDirectory: path)
+            guard result.isSuccess else { throw PullRecoveryFailure(message: "Select a local branch before pulling.", backupSHA: nil) }
+            return result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        let originalBranch = try await branch()
+        guard expectedBranch == nil || expectedBranch == originalBranch else {
+            throw PullRecoveryFailure(message: "The branch changed. Review it and start Pull again.", backupSHA: nil)
+        }
+        let status = try await getStatus(at: path)
+        guard !operationPending(), !status.hasConflicts else {
+            throw PullRecoveryFailure(message: "Resolve or abort the current Git operation before pulling. Your files have not been stashed.", backupSHA: nil)
+        }
+        let originalHead = try await getHeadSHA(at: path)
+        let hasChanges = status.hasChanges
+        var backupSHA: String?
+        if hasChanges {
+            let marker = "GitMac before Pull " + UUID().uuidString
+            var stashOptions = StashOptions()
+            stashOptions.message = marker
+            stashOptions.includeUntracked = true
+            guard let backup = try await stash(options: stashOptions, at: path), backup.message.contains(marker) else {
+                throw PullRecoveryFailure(message: "Could not verify the backup. Pull was not started. Review the stash list and working files.", backupSHA: nil)
+            }
+            backupSHA = backup.sha
+            let remaining = try await getStatus(at: path)
+            guard !remaining.hasChanges else {
+                throw PullRecoveryFailure(message: "Some local changes could not be saved, possibly inside a submodule. Pull was not started.", backupSHA: backupSHA)
+            }
+        }
+        var safeOptions = options
+        safeOptions.autostash = false
+        do {
+            try Task.checkCancellation()
+            guard try await branch() == originalBranch else {
+                throw PullRecoveryFailure(message: "The branch changed before Pull.", backupSHA: backupSHA)
+            }
+            try await pull(options: safeOptions, at: path)
+        } catch {
+            var restored = false
+            // A failed merge/rebase must not receive another stash application.
+            // Restore only to the untouched original branch and HEAD.
+            if let sha = backupSHA, !Task.isCancelled, !operationPending(),
+               (try? await branch()) == originalBranch,
+               (try? await getHeadSHA(at: path)) == originalHead,
+               let current = try? await getStatus(at: path), !current.hasChanges {
+                var apply = StashApplyOptions(); apply.index = true; apply.stashRef = sha
+                do { try await stashApply(options: apply, at: path); restored = true } catch { }
+            }
+            throw PullRecoveryFailure(message: error.localizedDescription + (restored
+                ? "\nYour local changes and staged selection were restored."
+                : "\nReview the repository before restoring local changes."), backupSHA: backupSHA)
+        }
+        var restored = !hasChanges
+        if let sha = backupSHA, !operationPending(), (try? await branch()) == originalBranch {
+            var apply = StashApplyOptions(); apply.index = true; apply.stashRef = sha
+            do { try await stashApply(options: apply, at: path); restored = true } catch { }
+        }
+        return AutoStashResult(hadLocalChanges: hasChanges, didStash: backupSHA != nil,
+            stashApplied: restored && hasChanges, stashConflict: !restored, backupSHA: backupSHA)
+    }
+}
+
+struct PullRecoveryFailure: LocalizedError {
+    let message: String
+    let backupSHA: String?
+    var errorDescription: String? {
+        message + (backupSHA.map { "\nYour backup remains in Stashes: " + $0 } ?? "")
+    }
+}
+
+/// Keep the classification narrow: network/divergence errors are not stash prompts.
+enum PullRecovery {
+    static func canSaveChanges(after error: Error) -> Bool {
+        guard case let GitError.pullFailed(message) = error else { return false }
+        let lower = message.lowercased()
+        return lower.contains("would be overwritten") || lower.contains("unstaged changes")
+            || lower.contains("index contains uncommitted changes")
+            || lower.contains("please commit or stash") || lower.contains("cannot pull with rebase: you have")
+    }
+}

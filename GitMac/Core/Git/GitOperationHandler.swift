@@ -25,7 +25,9 @@ class GitOperationHandler: ObservableObject {
         onSuccess: (() async -> Void)? = nil,
         tracking: TrackingInfo? = nil,
         shouldRefresh: Bool = true,
-        allowsRetry: Bool = false
+        allowsRetry: Bool = false,
+        showsSuccess: Bool = true,
+        onFailure: ((Error) -> Bool)? = nil
     ) async {
         let repositoryPath = appState?.currentRepository?.path
         let operationKey = repositoryPath ?? "<no-selected-repository>"
@@ -48,7 +50,8 @@ class GitOperationHandler: ObservableObject {
                 return
             }
             await self.execute(operation: operation, message: message, onSuccess: onSuccess,
-                tracking: tracking, shouldRefresh: shouldRefresh, allowsRetry: allowsRetry)
+                tracking: tracking, shouldRefresh: shouldRefresh, allowsRetry: allowsRetry,
+                showsSuccess: showsSuccess, onFailure: onFailure)
         } : nil
         NotificationManager.shared.recordAction(actionName, retry: retry)
         do {
@@ -58,14 +61,15 @@ class GitOperationHandler: ObservableObject {
                 await onSuccess?()
             }
             tracking?.recordSuccess()
-            NotificationManager.shared.success(actionName, detail: "Completed successfully")
+            if showsSuccess { NotificationManager.shared.success(actionName, detail: "Completed successfully") }
         } catch is CancellationError {
             NotificationManager.shared.info("Operation cancelled")
         } catch {
+            tracking?.recordFailure(error)
+            if onFailure?(error) == true { return }
             if appState?.currentRepository?.path == repositoryPath {
                 appState?.errorMessage = "\(actionName) failed: \(error.localizedDescription)"
             }
-            tracking?.recordFailure(error)
             if let retry {
                 NotificationManager.shared.errorWithFix("\(actionName) failed", detail: error.localizedDescription,
                     fixTitle: "Retry \(actionName)", fixHint: "Retry only in the original repository",
@@ -91,17 +95,49 @@ class GitOperationHandler: ObservableObject {
         )
     }
 
-    func handlePull() async {
+    func handlePull(rebase: Bool = false, preservingLocalChanges: Bool = false,
+                    expectedRepository: String? = nil, expectedBranch: String? = nil) async {
         guard let repo = appState?.currentRepository else { return }
         let branchName = repo.currentBranch?.name ?? "unknown"
-
+        guard (expectedRepository == nil || expectedRepository == repo.path),
+              (expectedBranch == nil || expectedBranch == branchName) else {
+            NotificationManager.shared.info("Repository or branch changed", detail: "Return to the original branch and start Pull again.")
+            return
+        }
+        var result: AutoStashResult?
         await execute(
             operation: {
-                try await self.appState?.gitService.pull()
+                guard let service = self.appState?.gitService else { throw GitServiceError.noRepository }
+                if preservingLocalChanges { result = try await service.pullWithAutoStash(rebase: rebase) }
+                else { try await service.pull(rebase: rebase) }
             },
             message: "Pulling changes...",
-            onSuccess: nil,
-            tracking: .pull(branch: branchName, remote: "origin")
+            onSuccess: {
+                if let result {
+                    if result.isFullySuccessful { NotificationManager.shared.success("Pull completed", detail: result.message) }
+                    else { NotificationManager.shared.errorWithFix("Local changes need attention", detail: result.message,
+                        fixTitle: "Open saved backup", fixHint: "Review the stash before applying anything again") {
+                            guard self.appState?.currentRepository?.path == repo.path else {
+                                NotificationManager.shared.info("Repository changed", detail: "Open the original repository to review its backup.")
+                                return
+                            }
+                            NotificationCenter.default.post(name: .showStashes, object: nil)
+                        }
+                    }
+                }
+            },
+            tracking: .pull(branch: branchName, remote: "origin"),
+            showsSuccess: !preservingLocalChanges,
+            onFailure: { error in
+                guard !preservingLocalChanges, PullRecovery.canSaveChanges(after: error) else { return false }
+                NotificationManager.shared.errorWithFix("Pull paused to protect your changes",
+                    detail: "Save your local changes, update this branch, then restore them with their staged selection. A backup will remain in Stashes. You can also commit first.",
+                    fixTitle: "Save changes and Pull", fixHint: "Includes untracked files; keeps a backup if restoration needs attention") {
+                        Task { await self.handlePull(rebase: rebase, preservingLocalChanges: true,
+                            expectedRepository: repo.path, expectedBranch: branchName) }
+                    }
+                return true
+            }
         )
     }
 
