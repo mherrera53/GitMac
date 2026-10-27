@@ -7,13 +7,15 @@ import { regressionBaseline } from './regression-baseline.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const unboundedStashControl = process.argv.includes('--unbounded-stash-control');
 const watcherLifecycleControl = process.argv.includes('--watcher-lifecycle-control');
+const oauthLegacyControl = process.argv.includes('--oauth-legacy-control');
 const compactIndexControl = process.argv.includes('--compact-index-control');
-if ([unboundedStashControl, watcherLifecycleControl, compactIndexControl].filter(Boolean).length > 1) throw Error('Run negative controls separately');
+if ([unboundedStashControl, watcherLifecycleControl, compactIndexControl, oauthLegacyControl].filter(Boolean).length > 1) throw Error('Run negative controls separately');
 const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'gitmac-production-suites-'));
 const sourceFiles = ['Branch', 'Commit', 'Repository', 'Remote', 'Tag', 'Stash', 'Worktree', 'GitEngine', 'DiffEngine']
   .map(name => `GitMac/Core/Git/${name}.swift`)
   .concat(['GitMac/Core/Utils/ShellExecutor.swift', 'GitMac/Core/Utils/Logger.swift',
     'GitMac/Core/Utils/MemoryPressureHandler.swift', 'GitMac/Core/Utils/KeychainManager.swift', 'GitMac/App/Models/CommitFile.swift',
+    'GitMac/Core/Services/GitHubOAuth.swift', 'GitMac/Core/Services/GitHubService.swift',
     'GitMac/Core/Services/AIService.swift', 'Tests/CoreRegressions/LocalAIBackendFixture.swift',
     'GitMac/Core/Utils/FileWatcher.swift', 'GitMac/Core/Utils/AppActivityManager.swift',
     'GitMac/Features/Diff/DiffCache.swift', 'GitMac/Features/Diff/DiffOptions.swift',
@@ -40,7 +42,10 @@ try {
   await fs.copyFile(path.join(root, 'Tests/CoreRegressions/Package.template.swift'), path.join(temporary, 'Package.swift'));
   for (const file of sourceFiles) {
     const destination = path.join(temporary, 'Sources', path.basename(file));
-    if (watcherLifecycleControl && file.endsWith('/FileWatcher.swift')) {
+    if (oauthLegacyControl && file.endsWith('/KeychainManager.swift')) {
+      await fs.writeFile(destination, execFileSync('git', ['show', `v4.1.0:${file}`], { cwd: root, encoding: 'utf8' }));
+      console.log('NEGATIVE CONTROL: released credential storage in disposable module');
+    } else if (watcherLifecycleControl && file.endsWith('/FileWatcher.swift')) {
       const previous = execFileSync('git', ['show', `${regressionBaseline}:${file}`], { cwd: root, encoding: 'utf8' });
       // Old source needs the framework explicitly imported in this headless
       // module. Only the disposable copy is changed, never production source.
@@ -64,7 +69,7 @@ try {
     if (file.endsWith('.swift')) await fs.symlink(path.join(root, 'Tests/GitMacTests', file), path.join(temporary, 'Tests', file));
   }
   execFileSync('swift', ['test', '--package-path', temporary, '--scratch-path', path.join(root, 'build/ProductionTests'), '-j', '4',
-    ...(unboundedStashControl ? ['--filter', 'loadingAndLoadedContentDoNotChangeInspectorMinimumSize']
+    ...(oauthLegacyControl ? ['--filter', 'newCredentialsRemainReadableWithUnapprovedLegacyAndSurviveReopen'] : unboundedStashControl ? ['--filter', 'loadingAndLoadedContentDoNotChangeInspectorMinimumSize']
       : watcherLifecycleControl ? ['--filter', 'RepositoryScopeWatcherTests']
       : compactIndexControl ? ['--filter', 'compactSHAIndex'] : [])],
     { env: environment, stdio: 'inherit', timeout: 180000 });

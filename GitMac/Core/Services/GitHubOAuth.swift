@@ -1,349 +1,220 @@
 import Foundation
 import AppKit
 
-/// GitHub OAuth 2.0 with Device Flow
-/// This allows authentication with GitHub including 2FA support
-/// https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow
+/// GitHub Device Flow. The registered OAuth app must have Device Flow enabled.
 actor GitHubOAuth {
-    // GitHub OAuth App Client ID
-    // To use this feature, register your own OAuth App at:
-    // GitHub Settings > Developer settings > OAuth Apps > New OAuth App
-    // Device Flow doesn't require a client secret
-    private var _clientIdCache: String?
+    private let keychain: KeychainManager
+    private let defaults: UserDefaults
+    private let session: URLSession
+    private let uptime: @Sendable () -> TimeInterval
+    private let pause: @Sendable (TimeInterval) async throws -> Void
+    private var clientIdCache: String?
+    private var currentDeviceCode: String?
+    private var activeClientId: String?
+    private var deadline: TimeInterval = 0
+    private var generation = UUID()
+    private var pollingTask: Task<String, Error>?
 
-    private func loadClientId() async -> String {
-        if let cached = _clientIdCache { return cached }
-        // Try Keychain first
-        if let value = try? await KeychainManager.shared.get(key: "github_oauth_client_id"), !value.isEmpty {
-            _clientIdCache = value
-            return value
+    init(keychain: KeychainManager = .shared, defaults: UserDefaults = .standard,
+         session: URLSession = .shared,
+         uptime: @escaping @Sendable () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
+         pause: @escaping @Sendable (TimeInterval) async throws -> Void = {
+             try await Task.sleep(nanoseconds: UInt64($0 * 1_000_000_000))
+         }) {
+        self.keychain = keychain
+        self.defaults = defaults
+        self.session = session
+        self.uptime = uptime
+        self.pause = pause
+    }
+
+    private func loadClientId() async throws -> String {
+        if let clientIdCache { return clientIdCache }
+        do {
+            if let value = try await keychain.get(key: "github_oauth_client_id"), !value.isEmpty {
+                clientIdCache = value
+                return value
+            }
+        } catch CredentialStorageError.migrationRequiresApproval {
+            // Importing old encrypted secrets is separate from saving a new public Client ID.
         }
-        // Migrate from legacy UserDefaults storage
-        if let legacy = UserDefaults.standard.string(forKey: "GitHubOAuthClientId"),
+        if let legacy = defaults.string(forKey: "GitHubOAuthClientId"),
            !legacy.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             let trimmed = legacy.trimmingCharacters(in: .whitespacesAndNewlines)
-            try? await KeychainManager.shared.save(key: "github_oauth_client_id", value: trimmed)
-            UserDefaults.standard.removeObject(forKey: "GitHubOAuthClientId")
-            _clientIdCache = trimmed
+            try await keychain.save(key: "github_oauth_client_id", value: trimmed)
+            clientIdCache = trimmed
+            defaults.removeObject(forKey: "GitHubOAuthClientId")
             return trimmed
         }
-        _clientIdCache = ""
         return ""
     }
 
-    private func saveClientId(_ value: String) async {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        try? await KeychainManager.shared.save(key: "github_oauth_client_id", value: trimmed)
-        _clientIdCache = trimmed
-        // Migrate: remove legacy UserDefaults entry if present
-        UserDefaults.standard.removeObject(forKey: "GitHubOAuthClientId")
+    func setClientId(_ id: String) async throws {
+        let trimmed = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw OAuthError.noClientId }
+        try await keychain.save(key: "github_oauth_client_id", value: trimmed)
+        clientIdCache = trimmed
+        defaults.removeObject(forKey: "GitHubOAuthClientId")
+        cancelAuthentication()
     }
 
-    // Scopes to request
-    private let scopes = "repo,user,read:org"
+    func getClientId() async throws -> String { try await loadClientId() }
+    var hasClientId: Bool { get async throws { try await !loadClientId().isEmpty } }
 
-    // Endpoints
-    private let deviceCodeURL = "https://github.com/login/device/code"
-    private let tokenURL = "https://github.com/login/oauth/access_token"
-
-    // State
-    private var currentDeviceCode: String?
-    private var pollingTask: Task<String, Error>?
-
-    // MARK: - Device Code Response
-
-    struct DeviceCodeResponse: Codable {
+    struct DeviceCodeResponse: Codable, Sendable {
         let deviceCode: String
         let userCode: String
         let verificationUri: String
         let expiresIn: Int
         let interval: Int
-
         enum CodingKeys: String, CodingKey {
-            case deviceCode = "device_code"
-            case userCode = "user_code"
-            case verificationUri = "verification_uri"
-            case expiresIn = "expires_in"
-            case interval
+            case deviceCode = "device_code", userCode = "user_code", verificationUri = "verification_uri"
+            case expiresIn = "expires_in", interval
         }
     }
-
-    // MARK: - Token Response
-
-    struct TokenResponse: Codable {
-        let accessToken: String
-        let tokenType: String
-        let scope: String
-
-        enum CodingKeys: String, CodingKey {
-            case accessToken = "access_token"
-            case tokenType = "token_type"
-            case scope
-        }
-    }
-
-    // MARK: - Error Response
-
-    struct ErrorResponse: Codable {
-        let error: String
-        let errorDescription: String?
-        let errorUri: String?
-
-        enum CodingKeys: String, CodingKey {
-            case error
-            case errorDescription = "error_description"
-            case errorUri = "error_uri"
-        }
-    }
-
-    // MARK: - Errors
 
     enum OAuthError: LocalizedError {
-        case noClientId
-        case invalidResponse
-        case authorizationPending
-        case slowDown
-        case accessDenied
-        case expiredToken
-        case unsupportedGrantType
-        case incorrectClientCredentials
-        case incorrectDeviceCode
+        case noClientId, invalidResponse, accessDenied, expiredToken, cancelled, deviceFlowDisabled
         case unknown(String)
-        case cancelled
-
         var errorDescription: String? {
             switch self {
-            case .noClientId:
-                return "No GitHub OAuth Client ID configured. Please add your Client ID in Settings."
-            case .invalidResponse:
-                return "Invalid response from GitHub"
-            case .authorizationPending:
-                return "Waiting for authorization..."
-            case .slowDown:
-                return "Too many requests, slowing down..."
-            case .accessDenied:
-                return "Access denied by user"
-            case .expiredToken:
-                return "The device code has expired. Please try again."
-            case .unsupportedGrantType:
-                return "Unsupported grant type"
-            case .incorrectClientCredentials:
-                return "Incorrect client credentials"
-            case .incorrectDeviceCode:
-                return "Incorrect device code"
-            case .unknown(let msg):
-                return "Unknown error: \(msg)"
-            case .cancelled:
-                return "Authentication cancelled"
+            case .noClientId: return "Save your GitHub OAuth App Client ID below before signing in."
+            case .invalidResponse: return "Invalid response from GitHub. Please retry."
+            case .accessDenied: return "GitHub authorization was denied. Please retry if this was unintended."
+            case .expiredToken: return "The GitHub code expired. Start sign-in again to get a new code."
+            case .cancelled: return "Authentication cancelled."
+            case .deviceFlowDisabled: return "Enable Device Flow in your GitHub OAuth App settings, save those settings on GitHub, then try again."
+            case .unknown(let message): return message
             }
         }
     }
 
-    // MARK: - Configuration
-
-    func setClientId(_ id: String) async {
-        await saveClientId(id)
-    }
-
-    func getClientId() async -> String {
-        return await loadClientId()
-    }
-
-    var hasClientId: Bool {
-        get async {
-            let id = await loadClientId()
-            return !id.isEmpty
+    private func parameters(_ data: Data) throws -> [String: String] {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            return json.reduce(into: [:]) { result, pair in
+                if let string = pair.value as? String { result[pair.key] = string }
+                else if let number = pair.value as? NSNumber { result[pair.key] = number.stringValue }
+            }
+        }
+        guard let text = String(data: data, encoding: .utf8) else { throw OAuthError.invalidResponse }
+        return text.split(separator: "&").reduce(into: [:]) { result, pair in
+            let parts = pair.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+            if parts.count == 2 {
+                let key = String(parts[0]).replacingOccurrences(of: "+", with: " ").removingPercentEncoding
+                let value = String(parts[1]).replacingOccurrences(of: "+", with: " ").removingPercentEncoding
+                if let key, let value { result[key] = value }
+            }
         }
     }
 
-    // MARK: - Step 1: Request Device Code
-
-    func requestDeviceCode() async throws -> DeviceCodeResponse {
-        let clientId = await loadClientId()
-        guard !clientId.isEmpty else {
-            throw OAuthError.noClientId
+    private func responseError(_ code: String) -> OAuthError {
+        switch code {
+        case "device_flow_disabled": return .deviceFlowDisabled
+        case "access_denied": return .accessDenied
+        case "expired_token": return .expiredToken
+        case "incorrect_client_credentials": return .unknown("GitHub rejected this Client ID. Check the OAuth App's Client ID and retry.")
+        case "incorrect_device_code": return .unknown("GitHub rejected this device code. Start sign-in again.")
+        default: return .invalidResponse
         }
+    }
 
-        // Security: OAuth device code request sent over HTTPS
-        var request = URLRequest(url: URL(string: deviceCodeURL)!) // codeql[swift/cleartext-transmission]
+    private func post(_ path: String, fields: [String: String]) async throws -> [String: String] {
+        var request = URLRequest(url: URL(string: "https://github.com/login/" + path)!)
         request.httpMethod = "POST"
+        request.timeoutInterval = 30
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-
-        let body = "client_id=\(clientId)&scope=\(scopes)"
-        request.httpBody = body.data(using: .utf8)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw OAuthError.invalidResponse
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-._~"))
+        request.httpBody = fields.sorted { $0.key < $1.key }.map {
+            $0.key.addingPercentEncoding(withAllowedCharacters: allowed)! + "=" + $0.value.addingPercentEncoding(withAllowedCharacters: allowed)!
+        }.joined(separator: "&").data(using: .utf8)
+        let (data, response) = try await session.data(for: request)
+        try Task.checkCancellation()
+        guard let http = response as? HTTPURLResponse else { throw OAuthError.invalidResponse }
+        let values = try parameters(data)
+        if let error = values["error"], !["authorization_pending", "slow_down"].contains(error) {
+            throw responseError(error)
         }
-
-        // Check for error status
-        if httpResponse.statusCode != 200 {
-            if let errorStr = String(data: data, encoding: .utf8) {
-                throw OAuthError.unknown("HTTP \(httpResponse.statusCode): \(errorStr)")
-            }
-            throw OAuthError.invalidResponse
-        }
-
-        // Try JSON first
-        if let deviceCode = try? JSONDecoder().decode(DeviceCodeResponse.self, from: data) {
-            currentDeviceCode = deviceCode.deviceCode
-            return deviceCode
-        }
-
-        // Try form-urlencoded (GitHub sometimes returns this)
-        if let responseStr = String(data: data, encoding: .utf8) {
-            let params = parseFormURLEncoded(responseStr)
-            if let deviceCode = params["device_code"],
-               let userCode = params["user_code"],
-               let verificationUri = params["verification_uri"],
-               let expiresIn = params["expires_in"].flatMap({ Int($0) }),
-               let interval = params["interval"].flatMap({ Int($0) }) {
-                let response = DeviceCodeResponse(
-                    deviceCode: deviceCode,
-                    userCode: userCode,
-                    verificationUri: verificationUri,
-                    expiresIn: expiresIn,
-                    interval: interval
-                )
-                currentDeviceCode = response.deviceCode
-                return response
-            }
-
-            // Check for error in response
-            if let error = params["error"] {
-                throw OAuthError.unknown(error)
-            }
-        }
-
-        throw OAuthError.invalidResponse
+        guard http.statusCode == 200 else { throw OAuthError.unknown("GitHub sign-in failed (HTTP \(http.statusCode)). Please retry.") }
+        return values
     }
 
-    private func parseFormURLEncoded(_ string: String) -> [String: String] {
-        var result: [String: String] = [:]
-        for pair in string.split(separator: "&") {
-            let parts = pair.split(separator: "=", maxSplits: 1)
-            if parts.count == 2 {
-                let key = String(parts[0]).removingPercentEncoding ?? String(parts[0])
-                let value = String(parts[1]).removingPercentEncoding ?? String(parts[1])
-                result[key] = value
-            }
+    func requestDeviceCode() async throws -> DeviceCodeResponse {
+        cancelAuthentication()
+        let attempt = generation
+        let clientId = try await loadClientId()
+        guard generation == attempt else { throw OAuthError.cancelled }
+        guard !clientId.isEmpty else { throw OAuthError.noClientId }
+        let values = try await post("device/code", fields: ["client_id": clientId, "scope": "repo read:user read:org"])
+        guard generation == attempt else { throw OAuthError.cancelled }
+        guard let code = values["device_code"], !code.isEmpty,
+              let user = values["user_code"], !user.isEmpty,
+              values["verification_uri"] == "https://github.com/login/device",
+              let expires = values["expires_in"].flatMap(Int.init), (1...3600).contains(expires),
+              let interval = values["interval"].flatMap(Int.init), interval > 0, interval <= expires else {
+            throw OAuthError.invalidResponse
         }
-        return result
+        currentDeviceCode = code
+        activeClientId = clientId
+        deadline = uptime() + TimeInterval(expires)
+        return DeviceCodeResponse(deviceCode: code, userCode: user, verificationUri: "https://github.com/login/device", expiresIn: expires, interval: interval)
     }
-
-    // MARK: - Step 2: Poll for Access Token
 
     func pollForToken(deviceCode: String, interval: Int) async throws -> String {
-        let clientId = await loadClientId()
-        var currentInterval = interval
-
+        guard currentDeviceCode == deviceCode, let clientId = activeClientId, interval > 0 else { throw OAuthError.cancelled }
+        let attempt = generation
+        var delay = TimeInterval(interval)
         while true {
-            // Wait before polling
-            try await Task.sleep(nanoseconds: UInt64(currentInterval) * 1_000_000_000)
-
-            // Check if cancelled
             try Task.checkCancellation()
-
-            // Make request (uses HTTPS endpoint for secure transmission) // codeql[swift/cleartext-transmission]
-            var request = URLRequest(url: URL(string: tokenURL)!)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Accept")
-            request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-
-            let body = "client_id=\(clientId)&device_code=\(deviceCode)&grant_type=urn:ietf:params:oauth:grant-type:device_code"
-            request.httpBody = body.data(using: .utf8)
-
-            let (data, response) = try await URLSession.shared.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw OAuthError.invalidResponse
-            }
-
-            // Try to decode as token response
-            if httpResponse.statusCode == 200 {
-                // Could be success or error
-                if let tokenResponse = try? JSONDecoder().decode(TokenResponse.self, from: data) {
-                    return tokenResponse.accessToken
-                }
-
-                // Check for error
-                if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
-                    switch errorResponse.error {
-                    case "authorization_pending":
-                        // Keep polling
-                        continue
-                    case "slow_down":
-                        // Increase interval
-                        currentInterval += 5
-                        continue
-                    case "access_denied":
-                        throw OAuthError.accessDenied
-                    case "expired_token":
-                        throw OAuthError.expiredToken
-                    default:
-                        throw OAuthError.unknown(errorResponse.error)
-                    }
-                }
-            }
-
-            // Try to decode error response for non-200
-            if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
-                switch errorResponse.error {
-                case "authorization_pending":
+            guard generation == attempt else { throw OAuthError.cancelled }
+            guard uptime() + delay < deadline else { throw OAuthError.expiredToken }
+            try await pause(delay)
+            try Task.checkCancellation()
+            guard generation == attempt else { throw OAuthError.cancelled }
+            guard uptime() < deadline else { throw OAuthError.expiredToken }
+            let values = try await post("oauth/access_token", fields: ["client_id": clientId, "device_code": deviceCode,
+                "grant_type": "urn:ietf:params:oauth:grant-type:device_code"])
+            guard generation == attempt else { throw OAuthError.cancelled }
+            guard uptime() < deadline else { throw OAuthError.expiredToken }
+            if let error = values["error"] {
+                if error == "authorization_pending" { continue }
+                if error == "slow_down" {
+                    delay = max(delay + 5, Double(values["interval"] ?? "") ?? 0)
                     continue
-                case "slow_down":
-                    currentInterval += 5
-                    continue
-                case "access_denied":
-                    throw OAuthError.accessDenied
-                case "expired_token":
-                    throw OAuthError.expiredToken
-                default:
-                    throw OAuthError.unknown(errorResponse.error)
                 }
+                throw responseError(error)
             }
-
-            throw OAuthError.invalidResponse
+            guard let token = values["access_token"], !token.isEmpty,
+                  values["token_type"]?.lowercased() == "bearer" else { throw OAuthError.invalidResponse }
+            currentDeviceCode = nil
+            activeClientId = nil
+            return token
         }
     }
 
-    // MARK: - Complete Flow
+    func startAuthentication() async throws -> DeviceCodeResponse { try await requestDeviceCode() }
 
-    /// Start the full authentication flow
-    /// Returns the device code response so UI can display the user code
-    func startAuthentication() async throws -> DeviceCodeResponse {
-        let deviceCode = try await requestDeviceCode()
-        return deviceCode
-    }
-
-    /// Wait for user to complete authentication
-    /// Call this after startAuthentication and after user has been shown the code
     func waitForAuthentication(deviceCode: DeviceCodeResponse) async throws -> String {
-        return try await pollForToken(deviceCode: deviceCode.deviceCode, interval: deviceCode.interval)
+        guard pollingTask == nil, currentDeviceCode == deviceCode.deviceCode else { throw OAuthError.cancelled }
+        let attempt = generation
+        let task = Task { try await self.pollForToken(deviceCode: deviceCode.deviceCode, interval: deviceCode.interval) }
+        pollingTask = task
+        defer { if generation == attempt { pollingTask = nil } }
+        return try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
     }
 
-    /// Cancel any ongoing authentication
     func cancelAuthentication() {
+        generation = UUID()
         pollingTask?.cancel()
         pollingTask = nil
         currentDeviceCode = nil
+        activeClientId = nil
     }
 
-    // MARK: - Helper
-
-    /// Open GitHub device verification page in browser
     func openVerificationPage() {
-        if let url = URL(string: "https://github.com/login/device") {
-            NSWorkspace.shared.open(url)
-        }
+        NSWorkspace.shared.open(URL(string: "https://github.com/login/device")!)
     }
 }
 
-// MARK: - Singleton
-
-extension GitHubOAuth {
-    static let shared = GitHubOAuth()
-}
+extension GitHubOAuth { static let shared = GitHubOAuth() }

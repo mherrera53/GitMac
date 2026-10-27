@@ -13,10 +13,17 @@ actor GitHubService {
     }()
 
     private let baseURL = "https://api.github.com"
-    private let keychainManager = KeychainManager.shared
+    private let keychainManager: KeychainManager
+    private let injectedSession: URLSession?
+
+    init(keychainManager: KeychainManager = .shared, session: URLSession? = nil) {
+        self.keychainManager = keychainManager
+        injectedSession = session
+    }
 
     // Configured URLSession with caching (20MB RAM, 200MB disk)
     private lazy var session: URLSession = {
+        if let injectedSession { return injectedSession }
         let config = URLSessionConfiguration.default
 
         // Configure cache
@@ -67,6 +74,30 @@ actor GitHubService {
     /// Set authentication token
     func setToken(_ token: String, username: String? = nil) async throws {
         try await keychainManager.saveGitHubToken(token, username: username)
+    }
+
+    /// Validate without replacing a working account or reusing cached account data.
+    func authenticate(token: String) async throws -> GitHubUser {
+        let token = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !token.isEmpty else { throw GitHubError.unauthorized }
+        var request = URLRequest(url: URL(string: baseURL + "/user")!)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw GitHubError.invalidResponse }
+        guard http.statusCode == 200 else {
+            if http.statusCode == 401 { throw GitHubError.unauthorized }
+            if http.statusCode == 403 { throw GitHubError.forbidden }
+            throw GitHubError.requestFailed(http.statusCode, "Could not verify your GitHub account. Please retry.")
+        }
+        let user = try JSONDecoder().decode(GitHubUser.self, from: data)
+        guard !user.login.isEmpty else { throw GitHubError.invalidResponse }
+        try Task.checkCancellation()
+        try await keychainManager.saveGitHubToken(token, username: user.login)
+        etagCache.removeAll()
+        session.configuration.urlCache?.removeAllCachedResponses()
+        return user
     }
 
     /// Remove authentication

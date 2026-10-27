@@ -9,7 +9,7 @@ struct AccountsSettingsView: View {
     @State private var errorMessage: String?
 
     // OAuth Device Flow state
-    @State private var showOAuthFlow = false
+    @State private var authenticationTask: Task<Void, Never>?
     @State private var deviceCodeResponse: GitHubOAuth.DeviceCodeResponse?
     @State private var isWaitingForAuth = false
     @State private var oauthClientId = ""
@@ -47,9 +47,12 @@ struct AccountsSettingsView: View {
                         Spacer()
 
                         DSButton("Disconnect", variant: .danger, size: .sm) {
-                            try? await githubService.logout()
-                            isGitHubConnected = false
-                            githubUser = nil
+                            do {
+                                try await githubService.logout()
+                                isGitHubConnected = false
+                                githubUser = nil
+                                errorMessage = nil
+                            } catch { errorMessage = error.localizedDescription }
                         }
                     }
                 } else if isWaitingForAuth, let deviceCode = deviceCodeResponse {
@@ -58,9 +61,7 @@ struct AccountsSettingsView: View {
                         userCode: deviceCode.userCode,
                         verificationUri: deviceCode.verificationUri,
                         onCancel: {
-                            Task { await githubOAuth.cancelAuthentication() }
-                            isWaitingForAuth = false
-                            deviceCodeResponse = nil
+                            cancelAuthentication()
                         }
                     )
                 } else {
@@ -89,7 +90,7 @@ struct AccountsSettingsView: View {
                                 .font(DesignTokens.Typography.caption)
                                 .foregroundStyle(AppTheme.textSecondary)
 
-                            DSButton(variant: .primary, isDisabled: isLoading) {
+                            DSButton(variant: .primary, isDisabled: isLoading || !oauthConfigured) {
                                 startOAuthFlow()
                             } label: {
                                 HStack {
@@ -125,11 +126,6 @@ struct AccountsSettingsView: View {
                             }
                         }
 
-                        if let error = errorMessage {
-                            Text(error)
-                                .foregroundStyle(AppTheme.error)
-                                .font(DesignTokens.Typography.caption)
-                        }
                     }
                 }
             }
@@ -149,20 +145,30 @@ struct AccountsSettingsView: View {
                                 .foregroundStyle(AppTheme.textPrimary)
                             Spacer()
                             DSButton("Change", variant: .link, size: .sm) {
+                                cancelAuthentication()
                                 oauthConfigured = false
-                                oauthClientId = ""
+                                oauthClientId = (try? await githubOAuth.getClientId()) ?? ""
                             }
                         }
                     } else {
                         HStack {
                             DSTextField(placeholder: "OAuth Client ID", text: $oauthClientId)
 
-                            DSButton("Save", variant: .primary, size: .sm, isDisabled: oauthClientId.isEmpty) {
-                                await githubOAuth.setClientId(oauthClientId)
-                                oauthConfigured = true
+                            DSButton("Save", variant: .primary, size: .sm, isDisabled: oauthClientId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading) {
+                                isLoading = true
+                                defer { isLoading = false }
+                                do {
+                                    try await githubOAuth.setClientId(oauthClientId)
+                                    oauthConfigured = true
+                                    errorMessage = nil
+                                } catch { errorMessage = error.localizedDescription }
                             }
                         }
                     }
+
+                    Text("In the OAuth App settings on GitHub, enable Device Flow and save the change. Use its Client ID, never its client secret.")
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
 
                     DSButton("Create OAuth App on GitHub", variant: .link, size: .sm) {
                         NSWorkspace.shared.open(URL(string: "https://github.com/settings/developers")!)
@@ -170,10 +176,20 @@ struct AccountsSettingsView: View {
                 }
             }
 
+            if let error = errorMessage {
+                Text(error)
+                    .foregroundStyle(AppTheme.error)
+                    .font(DesignTokens.Typography.caption)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("github-auth-error")
+            }
+
             SettingsSection(title: "Required Scopes") {
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
                     Label("repo - Full control of private repositories", systemImage: "checkmark.circle")
-                    Label("user - Read user profile data", systemImage: "checkmark.circle")
+                    Label("read:user - Read user profile data", systemImage: "checkmark.circle")
                     Label("read:org - Read organization membership", systemImage: "checkmark.circle")
                 }
                 .font(DesignTokens.Typography.caption)
@@ -184,18 +200,30 @@ struct AccountsSettingsView: View {
         .background(AppTheme.background)
         .task {
             await checkGitHubConnection()
-            oauthConfigured = await githubOAuth.hasClientId
+            do { oauthConfigured = try await githubOAuth.hasClientId }
+            catch { errorMessage = error.localizedDescription }
         }
+        .onDisappear { cancelAuthentication() }
+    }
+
+    private func cancelAuthentication() {
+        authenticationTask?.cancel()
+        authenticationTask = nil
+        Task { await githubOAuth.cancelAuthentication() }
+        isWaitingForAuth = false
+        deviceCodeResponse = nil
+        isLoading = false
     }
 
     private func startOAuthFlow() {
         isLoading = true
         errorMessage = nil
 
-        Task {
+        authenticationTask = Task {
             do {
                 // Request device code
                 let response = try await githubOAuth.startAuthentication()
+                try Task.checkCancellation()
                 deviceCodeResponse = response
                 isWaitingForAuth = true
                 isLoading = false
@@ -207,16 +235,21 @@ struct AccountsSettingsView: View {
                 let token = try await githubOAuth.waitForAuthentication(deviceCode: response)
 
                 // Save token and fetch user
-                try await githubService.setToken(token)
-                let user = try await githubService.getCurrentUser()
+                try Task.checkCancellation()
+                let user = try await githubService.authenticate(token: token)
+                try Task.checkCancellation()
 
                 await MainActor.run {
                     githubUser = user
                     isGitHubConnected = true
                     isWaitingForAuth = false
                     deviceCodeResponse = nil
+                    isLoading = false
                 }
+            } catch is CancellationError {
+                return
             } catch let error as GitHubOAuth.OAuthError {
+                guard !Task.isCancelled else { return }
                 await MainActor.run {
                     errorMessage = error.localizedDescription
                     isWaitingForAuth = false
@@ -224,6 +257,7 @@ struct AccountsSettingsView: View {
                     isLoading = false
                 }
             } catch {
+                guard !Task.isCancelled else { return }
                 await MainActor.run {
                     errorMessage = error.localizedDescription
                     isWaitingForAuth = false
@@ -238,14 +272,16 @@ struct AccountsSettingsView: View {
         isLoading = true
         errorMessage = nil
 
-        Task {
+        let token = githubToken
+        authenticationTask = Task {
             do {
-                try await githubService.setToken(githubToken)
-                let user = try await githubService.getCurrentUser()
+                let user = try await githubService.authenticate(token: token)
+                try Task.checkCancellation()
                 githubUser = user
                 isGitHubConnected = true
                 githubToken = ""
             } catch {
+                guard !Task.isCancelled else { return }
                 errorMessage = error.localizedDescription
             }
             isLoading = false

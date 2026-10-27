@@ -21,7 +21,7 @@ enum CredentialStorageError: LocalizedError {
         case .legacyKeyUnavailable: return "The original Mac identity is unavailable; credential migration was not attempted."
         case .unsafeLegacyFile: return "Legacy credential storage is not a regular file or exceeds its size limit."
         case .legacyChanged: return "Legacy credentials changed during migration; the original file was preserved."
-        case .migrationRequiresApproval: return "Legacy credentials require an approved migration. Enable GITMAC_MIGRATE_CREDENTIALS=1 for a verified migration; the original file is unchanged."
+        case .migrationRequiresApproval: return "Saved credentials are from an earlier version. Reconnect this integration to save new credentials securely. Your original data is preserved."
         }
     }
 }
@@ -134,8 +134,33 @@ actor KeychainManager {
         }
     }
 
+    private let deletedKeysKey = "__gitmac_deleted_keys_v1"
+
+    private func currentValues() throws -> [String: String] {
+        try store.read().map { try decode($0) } ?? [:]
+    }
+
+    private func deletedKeys(in values: [String: String]) throws -> Set<String> {
+        guard let encoded = values[deletedKeysKey] else { return [] }
+        guard let data = encoded.data(using: .utf8),
+              let keys = try? JSONDecoder().decode(Set<String>.self, from: data) else {
+            throw CredentialStorageError.invalidData
+        }
+        return keys
+    }
+
+    private func update(_ additions: [String: String], removing keys: [String] = []) throws {
+        var updated = try migrationEnabled ? values() : currentValues()
+        var deleted = try deletedKeys(in: updated)
+        for key in keys { updated.removeValue(forKey: key); deleted.insert(key) }
+        for (key, value) in additions { updated[key] = value; deleted.remove(key) }
+        if deleted.isEmpty { updated.removeValue(forKey: deletedKeysKey) }
+        else { updated[deletedKeysKey] = String(decoding: try JSONEncoder().encode(deleted), as: UTF8.self) }
+        try persist(updated)
+    }
+
     private func values() throws -> [String: String] {
-        let current = try store.read().map { try decode($0) } ?? [:]
+        let current = try currentValues()
         let attributes: [FileAttributeKey: Any]
         do { attributes = try FileManager.default.attributesOfItem(atPath: storageURL.path) }
         catch let error as NSError where error.domain == NSCocoaErrorDomain
@@ -154,7 +179,8 @@ actor KeychainManager {
         catch { throw CredentialStorageError.invalidData }
         // Existing Keychain values win if a previous attempt persisted but was
         // interrupted before deleting the legacy file. Never overwrite newer data.
-        let merged = legacy.merging(current) { _, current in current }
+        let deleted = try deletedKeys(in: current)
+        let merged = legacy.filter { !deleted.contains($0.key) }.merging(current) { _, current in current }
         try persist(merged)
         guard try Data(contentsOf: storageURL) == encrypted else { throw CredentialStorageError.legacyChanged }
         try removeLegacy(storageURL)
@@ -169,21 +195,22 @@ actor KeychainManager {
 
     /// Save a string value
     func save(key: String, value: String) throws {
-        var updated = try values()
-        updated[key] = value
-        try persist(updated)
+        try update([key: value])
     }
 
     /// Get a string value
     func get(key: String) throws -> String? {
-        try values()[key]
+        if !migrationEnabled {
+            let current = try currentValues()
+            if let value = current[key] { return value }
+            if try deletedKeys(in: current).contains(key) { return nil }
+        }
+        return try values()[key]
     }
 
     /// Delete a value
     func delete(key: String) throws {
-        var updated = try values()
-        updated.removeValue(forKey: key)
-        try persist(updated)
+        try update([:], removing: [key])
     }
 
     /// Check if a key exists
@@ -197,10 +224,10 @@ actor KeychainManager {
     private let githubUsernameKey = "github_username"
 
     func saveGitHubToken(_ token: String, username: String? = nil) throws {
-        try save(key: githubTokenKey, value: token)
-        if let username = username {
-            try save(key: githubUsernameKey, value: username)
-        }
+        try Task.checkCancellation()
+        var additions = [githubTokenKey: token]
+        if let username { additions[githubUsernameKey] = username }
+        try update(additions, removing: username == nil ? [githubUsernameKey] : [])
     }
 
     func getGitHubToken() throws -> String? {
@@ -212,8 +239,7 @@ actor KeychainManager {
     }
 
     func deleteGitHubCredentials() throws {
-        try delete(key: githubTokenKey)
-        try delete(key: githubUsernameKey)
+        try update([:], removing: [githubTokenKey, githubUsernameKey])
     }
 
     var hasGitHubCredentials: Bool {

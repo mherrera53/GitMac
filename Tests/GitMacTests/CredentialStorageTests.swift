@@ -245,3 +245,248 @@ struct CredentialStorageTests {
         #expect(try store.read() == nil)
     }
 }
+
+@Suite("GitHub sign-in regression checks", .serialized)
+struct GitHubAuthenticationTests {
+    @Test func newCredentialsRemainReadableWithUnapprovedLegacyAndSurviveReopen() async throws {
+        let fixture = try CredentialFixture(); defer { fixture.cleanup() }
+        try fixture.writeLegacy(["github_token": "old-synthetic", "legacy-only": "keep"])
+        let original = try Data(contentsOf: fixture.legacy)
+        let store = try FixtureCredentialStore()
+        let manager = KeychainManager(store: store, legacyURL: fixture.legacy,
+            legacyKey: { throw CredentialStorageError.legacyKeyUnavailable }, migrationEnabled: false)
+        try await manager.save(key: "github_oauth_client_id", value: "synthetic-client")
+        try await manager.saveGitHubToken("new-synthetic", username: "fixture")
+        try await manager.saveLinearToken("synthetic-linear")
+        #expect(store.writeCount == 3)
+        let reopened = KeychainManager(store: store, legacyURL: fixture.legacy,
+            legacyKey: { throw CredentialStorageError.legacyKeyUnavailable }, migrationEnabled: false)
+        #expect(try await reopened.get(key: "github_oauth_client_id") == "synthetic-client")
+        #expect(try await reopened.getGitHubToken() == "new-synthetic")
+        #expect(try await reopened.getGitHubUsername() == "fixture")
+        #expect(try await reopened.getLinearToken() == "synthetic-linear")
+        #expect(try Data(contentsOf: fixture.legacy) == original)
+    }
+
+    @Test func disconnectDoesNotResurrectLegacyTokenDuringLaterMigration() async throws {
+        let fixture = try CredentialFixture(); defer { fixture.cleanup() }
+        try fixture.writeLegacy(["github_token": "old-synthetic", "github_username": "old-user", "other": "keep"])
+        let key = fixture.key, store = try FixtureCredentialStore()
+        let manager = KeychainManager(store: store, legacyURL: fixture.legacy, legacyKey: { key }, migrationEnabled: false)
+        try await manager.deleteGitHubCredentials()
+        #expect(store.writeCount == 1)
+        #expect(try await manager.getGitHubToken() == nil)
+        let migrated = fixture.manager(store)
+        #expect(try await migrated.getGitHubToken() == nil)
+        #expect(try await migrated.getGitHubUsername() == nil)
+        #expect(try await migrated.get(key: "other") == "keep")
+    }
+
+    @Test func failedClientIDSaveIsVisibleAndDoesNotCacheSuccessOrRemoveLegacyDefaults() async throws {
+        let fixture = try CredentialFixture(); defer { fixture.cleanup() }
+        let name = "GitMac.OAuth.fixture.\(UUID())", defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set("synthetic-legacy-id", forKey: "GitHubOAuthClientId")
+        let store = try FixtureCredentialStore(), manager = fixture.manager(store)
+        store.writeStatus = errSecNotAvailable
+        let oauth = GitHubOAuth(keychain: manager, defaults: defaults)
+        await credentialFailure { try await oauth.setClientId("synthetic-new-id") }
+        #expect(defaults.string(forKey: "GitHubOAuthClientId") == "synthetic-legacy-id")
+        await credentialFailure { _ = try await oauth.getClientId() }
+        store.writeStatus = nil
+        try await oauth.setClientId("  synthetic-new-id  ")
+        #expect(defaults.string(forKey: "GitHubOAuthClientId") == nil)
+        let reopened = GitHubOAuth(keychain: fixture.manager(store), defaults: defaults)
+        #expect(try await reopened.getClientId() == "synthetic-new-id")
+    }
+
+    @Test func deviceFlowEncodesFieldsAndRespectsSlowDown() async throws {
+        let fixture = try OAuthNetworkFixture(); defer { fixture.cleanup() }
+        try await fixture.oauth.setClientId("client&scope=wrong+value")
+        fixture.transport.responses = [OAuthNetworkFixture.device(),
+            (200, "{\"error\":\"authorization_pending\"}"),
+            (200, "{\"error\":\"slow_down\",\"interval\":12}"),
+            (200, "access_token=synthetic%2Btoken&token_type=bearer&scope=read%3Auser")]
+        let code = try await fixture.oauth.startAuthentication()
+        #expect(try await fixture.oauth.waitForAuthentication(deviceCode: code) == "synthetic+token")
+        #expect(fixture.clock.delays == [5, 5, 12])
+        #expect(fixture.transport.requests.count == 4)
+        let body = try #require(fixture.transport.requests.first?.httpBody)
+        #expect(String(decoding: body, as: UTF8.self).contains("client_id=client%26scope%3Dwrong%2Bvalue"))
+        #expect(fixture.transport.requests.allSatisfy { $0.url?.host == "github.com" })
+    }
+
+    @Test(arguments: ["device_flow_disabled", "incorrect_client_credentials", "access_denied"])
+    func actionableGitHubErrors(_ code: String) async throws {
+        let fixture = try OAuthNetworkFixture(); defer { fixture.cleanup() }
+        try await fixture.oauth.setClientId("synthetic-client")
+        fixture.transport.responses = [(400, "{\"error\":\"\(code)\"}")]
+        do { _ = try await fixture.oauth.startAuthentication(); Issue.record("Expected GitHub error") }
+        catch let error as GitHubOAuth.OAuthError {
+            if code == "device_flow_disabled" { #expect(error.localizedDescription.contains("Enable Device Flow")) }
+            else { #expect(!error.localizedDescription.contains("Invalid response")) }
+        }
+        #expect(fixture.transport.requests.count == 1)
+    }
+
+    @Test func expiredAndCancelledCodesNeverProduceTokens() async throws {
+        let fixture = try OAuthNetworkFixture(); defer { fixture.cleanup() }
+        try await fixture.oauth.setClientId("synthetic-client")
+        fixture.transport.responses = [OAuthNetworkFixture.device(expires: 5)]
+        let code = try await fixture.oauth.startAuthentication()
+        do { _ = try await fixture.oauth.waitForAuthentication(deviceCode: code); Issue.record("Expected expiry") }
+        catch let error as GitHubOAuth.OAuthError { #expect(error.localizedDescription.contains("expired")) }
+        await fixture.oauth.cancelAuthentication()
+        do { _ = try await fixture.oauth.waitForAuthentication(deviceCode: code); Issue.record("Expected cancellation") }
+        catch let error as GitHubOAuth.OAuthError { #expect(error.localizedDescription.contains("cancelled")) }
+        #expect(fixture.transport.requests.count == 1)
+    }
+
+    @Test(arguments: [true, false])
+    func cancellationStopsAnActivePollingWait(cancelParent: Bool) async throws {
+        let fixture = try OAuthNetworkFixture(); defer { fixture.cleanup() }
+        let (entered, signal) = AsyncStream<Void>.makeStream()
+        let oauth = GitHubOAuth(keychain: fixture.manager, defaults: fixture.defaults, session: fixture.session,
+            pause: { _ in
+                signal.yield(())
+                try await Task.sleep(nanoseconds: 60_000_000_000)
+            })
+        try await oauth.setClientId("synthetic-client")
+        fixture.transport.responses = [OAuthNetworkFixture.device()]
+        let code = try await oauth.startAuthentication()
+        let task = Task { try await oauth.waitForAuthentication(deviceCode: code) }
+        for await _ in entered { break }
+        if cancelParent { task.cancel() }
+        else { await oauth.cancelAuthentication() }
+        do { _ = try await task.value; Issue.record("Cancellation must end the polling task") }
+        catch is CancellationError { }
+        #expect(fixture.transport.requests.count == 1)
+        signal.finish()
+    }
+
+    @Test func malformedResponseCannotOpenAnotherHostOrTrapOnNegativeInterval() async throws {
+        let fixture = try OAuthNetworkFixture(); defer { fixture.cleanup() }
+        try await fixture.oauth.setClientId("synthetic-client")
+        for response in [OAuthNetworkFixture.device(interval: -1),
+                         (200, OAuthNetworkFixture.device().1.replacingOccurrences(of: "github.com", with: "example.invalid"))] {
+            fixture.transport.responses = [response]
+            do { _ = try await fixture.oauth.startAuthentication(); Issue.record("Expected invalid response") }
+            catch is GitHubOAuth.OAuthError { }
+        }
+    }
+
+    @Test func accountValidationDoesNotOverwriteWorkingCredentialsOn401() async throws {
+        let fixture = try OAuthNetworkFixture(); defer { fixture.cleanup() }
+        try await fixture.manager.saveGitHubToken("synthetic-original", username: "original")
+        let service = GitHubService(keychainManager: fixture.manager, session: fixture.session)
+        fixture.transport.responses = [(401, "{}")]
+        do { _ = try await service.authenticate(token: "synthetic-invalid"); Issue.record("Expected rejection") }
+        catch is GitHubError { }
+        #expect(try await fixture.manager.getGitHubToken() == "synthetic-original")
+        #expect(try await fixture.manager.getGitHubUsername() == "original")
+        fixture.transport.responses = [(200, "{\"id\":1,\"login\":\"new-user\",\"avatar_url\":\"https://example.invalid/avatar\",\"html_url\":\"https://github.com/new-user\"}")]
+        let before = fixture.store.writeCount
+        let user = try await service.authenticate(token: "synthetic-verified")
+        #expect(user.login == "new-user")
+        #expect(fixture.store.writeCount == before + 1)
+        #expect(try await fixture.manager.getGitHubToken() == "synthetic-verified")
+        #expect(try await fixture.manager.getGitHubUsername() == "new-user")
+        #expect(fixture.transport.requests.allSatisfy { $0.value(forHTTPHeaderField: "If-None-Match") == nil })
+    }
+}
+
+private final class OAuthFixtureClock: @unchecked Sendable {
+    private let lock = NSLock()
+    private var elapsed: TimeInterval = 100
+    private var recorded: [TimeInterval] = []
+    var now: TimeInterval { lock.withLock { elapsed } }
+    var delays: [TimeInterval] { lock.withLock { recorded } }
+    func advance(_ delay: TimeInterval) { lock.withLock { elapsed += delay; recorded.append(delay) } }
+}
+
+private final class OAuthFixtureTransport: @unchecked Sendable {
+    private let lock = NSLock()
+    private var queue: [(Int, String)] = []
+    private var captured: [URLRequest] = []
+    var responses: [(Int, String)] {
+        get { lock.withLock { queue } }
+        set { lock.withLock { queue = newValue } }
+    }
+    var requests: [URLRequest] { lock.withLock { captured } }
+    func respond(_ request: URLRequest) throws -> (Int, Data) {
+        try lock.withLock {
+            var capturedRequest = request
+            if capturedRequest.httpBody == nil, let stream = request.httpBodyStream {
+                stream.open()
+                defer { stream.close() }
+                var data = Data(), buffer = [UInt8](repeating: 0, count: 1024)
+                while true {
+                    let count = stream.read(&buffer, maxLength: buffer.count)
+                    if count < 0 { throw stream.streamError ?? URLError(.cannotDecodeRawData) }
+                    if count == 0 { break }
+                    data.append(contentsOf: buffer.prefix(count))
+                }
+                capturedRequest.httpBody = data
+            }
+            captured.append(capturedRequest)
+            guard !queue.isEmpty else { throw URLError(.badServerResponse) }
+            let response = queue.removeFirst()
+            return (response.0, Data(response.1.utf8))
+        }
+    }
+}
+
+private final class OAuthFixtureURLProtocol: URLProtocol, @unchecked Sendable {
+    private static let lock = NSLock()
+    private static var transport: OAuthFixtureTransport?
+    static func install(_ value: OAuthFixtureTransport?) { lock.withLock { transport = value } }
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        do {
+            let transport = try Self.lock.withLock { try #require(Self.transport) }
+            let (status, data) = try transport.respond(request)
+            let url = try #require(request.url)
+            let response = try #require(HTTPURLResponse(url: url, statusCode: status, httpVersion: nil, headerFields: nil))
+            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocol(self, didLoad: data)
+            client?.urlProtocolDidFinishLoading(self)
+        } catch { client?.urlProtocol(self, didFailWithError: error) }
+    }
+    override func stopLoading() {}
+}
+
+private struct OAuthNetworkFixture {
+    let credentials: CredentialFixture
+    let store: FixtureCredentialStore
+    let manager: KeychainManager
+    let session: URLSession
+    let oauth: GitHubOAuth
+    let defaults: UserDefaults
+    let defaultsName: String
+    let clock = OAuthFixtureClock()
+    let transport = OAuthFixtureTransport()
+    init() throws {
+        credentials = try CredentialFixture()
+        store = try FixtureCredentialStore()
+        manager = credentials.manager(store)
+        defaultsName = "GitMac.OAuth.network.\(UUID())"
+        defaults = try #require(UserDefaults(suiteName: defaultsName))
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [OAuthFixtureURLProtocol.self]
+        session = URLSession(configuration: config)
+        OAuthFixtureURLProtocol.install(transport)
+        let clock = clock
+        oauth = GitHubOAuth(keychain: manager, defaults: defaults, session: session,
+                            uptime: { clock.now }, pause: { clock.advance($0); try Task.checkCancellation() })
+    }
+    static func device(expires: Int = 900, interval: Int = 5) -> (Int, String) {
+        (200, "{\"device_code\":\"synthetic-device\",\"user_code\":\"TEST-CODE\",\"verification_uri\":\"https://github.com/login/device\",\"expires_in\":\(expires),\"interval\":\(interval)}")
+    }
+    func cleanup() {
+        session.invalidateAndCancel()
+        OAuthFixtureURLProtocol.install(nil)
+        defaults.removePersistentDomain(forName: defaultsName)
+        credentials.cleanup()
+    }
+}
