@@ -7,9 +7,10 @@ import { regressionBaseline } from './regression-baseline.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const unboundedStashControl = process.argv.includes('--unbounded-stash-control');
 const watcherLifecycleControl = process.argv.includes('--watcher-lifecycle-control');
+const autostashControl = process.argv.includes('--autostash-control');
 const oauthLegacyControl = process.argv.includes('--oauth-legacy-control');
 const compactIndexControl = process.argv.includes('--compact-index-control');
-if ([unboundedStashControl, watcherLifecycleControl, compactIndexControl, oauthLegacyControl].filter(Boolean).length > 1) throw Error('Run negative controls separately');
+if ([unboundedStashControl, watcherLifecycleControl, compactIndexControl, oauthLegacyControl, autostashControl].filter(Boolean).length > 1) throw Error('Run negative controls separately');
 const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'gitmac-production-suites-'));
 const sourceFiles = ['Branch', 'Commit', 'Repository', 'Remote', 'Tag', 'Stash', 'Worktree', 'GitEngine', 'DiffEngine']
   .map(name => `GitMac/Core/Git/${name}.swift`)
@@ -42,7 +43,13 @@ try {
   await fs.copyFile(path.join(root, 'Tests/CoreRegressions/Package.template.swift'), path.join(temporary, 'Package.swift'));
   for (const file of sourceFiles) {
     const destination = path.join(temporary, 'Sources', path.basename(file));
-    if (oauthLegacyControl && file.endsWith('/KeychainManager.swift')) {
+    if (autostashControl && file.endsWith('/Remote.swift')) {
+      const original = await fs.readFile(path.join(root, file), 'utf8');
+      const boundary = 'var autostash: Bool = false';
+      if (original.split(boundary).length !== 2) throw Error('Pull default mutation boundary changed');
+      await fs.writeFile(destination, original.replace(boundary, 'var autostash: Bool = true'));
+      console.log('NEGATIVE CONTROL: implicit pull autostash restored in disposable source');
+    } else if (oauthLegacyControl && file.endsWith('/KeychainManager.swift')) {
       await fs.writeFile(destination, execFileSync('git', ['show', `v4.1.0:${file}`], { cwd: root, encoding: 'utf8' }));
       console.log('NEGATIVE CONTROL: released credential storage in disposable module');
     } else if (watcherLifecycleControl && file.endsWith('/FileWatcher.swift')) {
@@ -69,7 +76,7 @@ try {
     if (file.endsWith('.swift')) await fs.symlink(path.join(root, 'Tests/GitMacTests', file), path.join(temporary, 'Tests', file));
   }
   execFileSync('swift', ['test', '--package-path', temporary, '--scratch-path', path.join(root, 'build/ProductionTests'), '-j', '4',
-    ...(oauthLegacyControl ? ['--filter', 'newCredentialsRemainReadableWithUnapprovedLegacyAndSurviveReopen'] : unboundedStashControl ? ['--filter', 'loadingAndLoadedContentDoNotChangeInspectorMinimumSize']
+    ...(autostashControl ? ['--filter', 'fetchPullPushAndRejectedPushPreserveWorkAndHistories'] : oauthLegacyControl ? ['--filter', 'newCredentialsRemainReadableWithUnapprovedLegacyAndSurviveReopen'] : unboundedStashControl ? ['--filter', 'loadingAndLoadedContentDoNotChangeInspectorMinimumSize']
       : watcherLifecycleControl ? ['--filter', 'RepositoryScopeWatcherTests']
       : compactIndexControl ? ['--filter', 'compactSHAIndex'] : [])],
     { env: environment, stdio: 'inherit', timeout: 180000 });

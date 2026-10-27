@@ -9,6 +9,11 @@ struct WorktreeListView: View {
     @State private var pendingRemoval: Worktree?
     @State private var removalRepository: String?
     @State private var operationError: String?
+    @State private var query = ""
+
+    private var visibleWorktrees: [Worktree] {
+        manager.worktrees.filter { query.isEmpty || [$0.name, $0.branch ?? "", $0.path].contains { $0.localizedStandardContains(query) } }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,7 +26,7 @@ struct WorktreeListView: View {
                 } label: { Image(systemName: "arrow.clockwise").frame(width: 28, height: 28) }
                 .help("Refresh worktrees").accessibilityLabel("Refresh worktrees")
                 Button("New Worktree…", systemImage: "plus") { showAddSheet = true }
-                    .disabled(appState.currentRepository == nil || manager.isLoading)
+                    .disabled(appState.currentRepository == nil || manager.isLoading || manager.isPerformingOperation)
             }
             .padding(12)
 
@@ -33,6 +38,14 @@ struct WorktreeListView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12).background(AppTheme.backgroundSecondary)
 
+            if !manager.worktrees.isEmpty {
+                HStack {
+                    Image(systemName: "magnifyingglass").foregroundStyle(AppTheme.textSecondary)
+                    TextField("Find a worktree, branch or folder", text: $query).textFieldStyle(.plain)
+                        .accessibilityIdentifier("worktree-search")
+                    if !query.isEmpty { Button("Clear") { query = "" }.buttonStyle(.borderless) }
+                }.padding(10)
+            }
             if let error = manager.error {
                 Text(error).font(.caption).foregroundStyle(AppTheme.error).textSelection(.enabled).padding(12)
             }
@@ -49,7 +62,10 @@ struct WorktreeListView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(manager.worktrees, id: \.path) { worktree in
+                        if visibleWorktrees.isEmpty {
+                            ContentUnavailableView.search(text: query)
+                        }
+                        ForEach(visibleWorktrees, id: \.path) { worktree in
                             WorktreeRow(worktree: worktree,
                                 isSelected: selectedPath == worktree.path,
                                 isCurrent: worktree.path == appState.currentRepository?.path,
@@ -59,7 +75,15 @@ struct WorktreeListView: View {
                                     removalRepository = appState.currentRepository?.path
                                     pendingRemoval = worktree
                                 },
-                                onLock: { toggleLock(worktree) })
+                                onLock: { toggleLock(worktree) },
+                                onOpenTerminal: {
+                                    Task {
+                                        await appState.openRepository(at: worktree.path)
+                                        guard appState.currentRepository?.path == worktree.path else { return }
+                                        BottomPanelManager.shared.openTab(type: .terminal)
+                                    }
+                                })
+                                .disabled(manager.isPerformingOperation)
                             Divider()
                         }
                     }
@@ -114,6 +138,7 @@ struct WorktreeRow: View {
     let onOpen: () -> Void
     let onRemove: () -> Void
     let onLock: () -> Void
+    var onOpenTerminal: (() -> Void)? = nil
 
     private var canOpen: Bool { !worktree.isBare && !worktree.isPrunable && FileManager.default.fileExists(atPath: worktree.path) }
     private var canRemove: Bool { !worktree.isMain && !worktree.isLocked && !worktree.isDetached && !isCurrent && canOpen }
@@ -141,7 +166,25 @@ struct WorktreeRow: View {
             Button("Open", action: onOpen).disabled(!canOpen)
                 .help("Open this worktree in a repository tab")
                 .accessibilityLabel("Open worktree \(worktree.name)")
-            Menu {
+            Menu { actionsMenu
+            } label: { Image(systemName: "ellipsis.circle").frame(width: 28, height: 28) }
+            .menuStyle(.borderlessButton).menuIndicator(.hidden)
+            .help("Worktree actions. Protected, current, main and detached folders cannot be removed here.")
+            .accessibilityLabel("Actions for worktree \(worktree.name)")
+        }
+        .padding(12)
+        .background(isSelected ? AppTheme.accent.opacity(0.1) : Color.clear)
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) { if canOpen { onOpen() } }
+        .onTapGesture { onSelect() }
+        .contextMenu { actionsMenu }
+        .accessibilityElement(children: .contain)
+    }
+    @ViewBuilder private var actionsMenu: some View {
+        Button("Open Worktree", systemImage: "arrow.up.forward.square", action: onOpen).disabled(!canOpen)
+        if let onOpenTerminal {
+            Button("Open Terminal Here", systemImage: "terminal", action: onOpenTerminal).disabled(!canOpen)
+        }
                 Button("Reveal in Finder", systemImage: "folder") {
                     NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: worktree.path)])
                 }.disabled(!canOpen)
@@ -156,17 +199,8 @@ struct WorktreeRow: View {
                     Button("Remove Folder…", systemImage: "trash", role: .destructive, action: onRemove)
                         .disabled(!canRemove)
                 }
-            } label: { Image(systemName: "ellipsis.circle").frame(width: 28, height: 28) }
-            .menuStyle(.borderlessButton).menuIndicator(.hidden)
-            .help("Worktree actions. Protected, current, main and detached folders cannot be removed here.")
-            .accessibilityLabel("Actions for worktree \(worktree.name)")
-        }
-        .padding(12)
-        .background(isSelected ? AppTheme.accent.opacity(0.1) : Color.clear)
-        .contentShape(Rectangle())
-        .onTapGesture { onSelect() }
-        .accessibilityElement(children: .contain)
     }
+
 }
 
 struct AddWorktreeSheet: View {

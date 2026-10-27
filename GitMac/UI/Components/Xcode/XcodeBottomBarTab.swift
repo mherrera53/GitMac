@@ -62,6 +62,8 @@ struct XcodeBottomBarTab: View {
                         )
                 }
                 .buttonStyle(PlainButtonStyle())
+                .help("Close " + title)
+                .accessibilityLabel("Close " + title)
                 .onHover { hovering in
                     withAnimation(.easeInOut(duration: 0.15)) {
                         isCloseHovered = hovering
@@ -96,6 +98,8 @@ struct XcodeBottomBarTab: View {
         }
         .accessibilityIdentifier("bottom-panel-tab-\(title.lowercased().replacingOccurrences(of: " ", with: "-"))")
         .accessibilityLabel(title)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityAction { onTap() }
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 

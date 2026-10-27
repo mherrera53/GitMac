@@ -13,7 +13,8 @@ class NotificationManager: ObservableObject {
     @AppStorage("notificationSounds") var soundsEnabled: Bool = false
 
     private let maxNotifications = 5
-    private let defaultDuration: TimeInterval = 5.0
+    private let defaultDuration: TimeInterval = 6.0
+    private var dismissalTasks: [UUID: Task<Void, Never>] = [:]
 
     /// Tracks the last action performed for retry functionality
     struct LastAction {
@@ -28,9 +29,9 @@ class NotificationManager: ObservableObject {
         }
     }
 
-    init() {
-        // Listen to global notifications
-        setupNotificationObservers()
+    init(defaults: UserDefaults = .standard, observeNotifications: Bool = true) {
+        _soundsEnabled = AppStorage(wrappedValue: false, "notificationSounds", store: defaults)
+        if observeNotifications { setupNotificationObservers() }
     }
 
     /// Record an action for potential retry
@@ -65,20 +66,9 @@ class NotificationManager: ObservableObject {
     }
     
     func error(_ message: String, detail: String? = nil) {
-        // If we have a last action, show retry option
-        if let action = lastAction {
-            errorWithFix(
-                message,
-                detail: detail.map { "\($0)\nLast action: \(action.name)" } ?? "Last action: \(action.name)",
-                fixTitle: "Retry \(action.name)",
-                fixHint: "Attempt the action again",
-                fixAction: { [weak self] in
-                    self?.retryLastAction()
-                }
-            )
-        } else {
-            show(detail.map { "\(message)\n\($0)" } ?? message, type: .error, duration: 6.0)
-        }
+        // A previous operation is not evidence that it caused this error.
+        // Recovery must be supplied explicitly by the operation that failed.
+        show(detail.map { "\(message)\n\($0)" } ?? message, type: .error, duration: 8.0)
     }
 
     /// Show error without retry option
@@ -118,12 +108,15 @@ class NotificationManager: ObservableObject {
     }
     
     func dismiss(_ notification: ToastNotification) {
+        dismissalTasks.removeValue(forKey: notification.id)?.cancel()
         withAnimation(.easeOut(duration: 0.2)) {
             notifications.removeAll { $0.id == notification.id }
         }
     }
     
     func dismissAll() {
+        dismissalTasks.values.forEach { $0.cancel() }
+        dismissalTasks.removeAll()
         withAnimation(.easeOut(duration: 0.2)) {
             notifications.removeAll()
         }
@@ -135,7 +128,8 @@ class NotificationManager: ObservableObject {
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             // Remove oldest if at max
             if notifications.count >= maxNotifications {
-                notifications.removeFirst()
+                let removed = notifications.removeFirst()
+                dismissalTasks.removeValue(forKey: removed.id)?.cancel()
             }
 
             notifications.append(notification)
@@ -146,8 +140,12 @@ class NotificationManager: ObservableObject {
             playSound(for: notification.type)
         }
 
-        // Auto-dismiss after duration
-        DispatchQueue.main.asyncAfter(deadline: .now() + notification.duration) { [weak self] in
+        // Recovery actions stay available until acted on or dismissed explicitly.
+        guard !notification.hasAction else { return }
+        let duration = notification.duration.isFinite ? max(1, min(notification.duration, 60)) : defaultDuration
+        dismissalTasks[notification.id] = Task { @MainActor [weak self] in
+            do { try await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000)) }
+            catch { return }
             self?.dismiss(notification)
         }
     }
@@ -244,93 +242,106 @@ enum NotificationType {
         }
     }
     
-    var color: Color {
+    @MainActor var color: Color {
         switch self {
-        case .success: return .green
-        case .error: return .red
-        case .warning: return .orange
-        case .info: return .blue
+        case .success: return AppTheme.success
+        case .error: return AppTheme.error
+        case .warning: return AppTheme.warning
+        case .info: return AppTheme.info
         }
     }
 }
 
 // MARK: - Toast View
 
+@MainActor enum ToastAppearance {
+    /// Flatten custom alpha onto the window surface: content behind a toast must never show through.
+    static var surface: Color {
+        let window = CodableColor(Color(nsColor: .windowBackgroundColor))
+        let base = CodableColor(AppTheme.background).composited(over: window)
+        return CodableColor(AppTheme.backgroundSecondary).composited(over: base).color
+    }
+    static var text: Color { AppTheme.readableTextColor(preferred: AppTheme.textPrimary, on: surface) }
+    static var secondaryText: Color { AppTheme.readableTextColor(preferred: AppTheme.textSecondary, on: surface) }
+    static func status(_ type: NotificationType) -> Color {
+        AppTheme.readableTextColor(preferred: type.color, on: surface)
+    }
+}
+
 struct ToastNotificationView: View {
+    @Environment(ThemeManager.self) private var themeManager
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let notification: ToastNotification
     let onDismiss: () -> Void
-
+    var icon: String? = nil
     @State private var timeRemaining: CGFloat = 1.0
 
-    private var title: String {
-        notification.message.components(separatedBy: "\n").first ?? notification.message
-    }
-
+    private var title: String { notification.message.components(separatedBy: "\n").first ?? notification.message }
     private var subtitle: String? {
-        let parts = notification.message.components(separatedBy: "\n")
-        return parts.count > 1 ? parts.dropFirst().joined(separator: " ") : nil
+        let lines = notification.message.components(separatedBy: "\n")
+        return lines.count > 1 ? lines.dropFirst().joined(separator: "\n") : nil
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Image(systemName: notification.type.icon)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(notification.type.color)
-
-                Text(title)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-
-                if let sub = subtitle {
-                    Text(sub)
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                if notification.hasAction, let actionTitle = notification.actionTitle {
-                    Button {
-                        notification.performAction()
-                        onDismiss()
-                    } label: {
-                        Text(actionTitle)
-                            .font(.system(size: 10, weight: .medium))
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: icon ?? notification.type.icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(ToastAppearance.status(notification.type))
+                    .frame(width: 20, height: 24)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(title).font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(ToastAppearance.text).lineLimit(3)
+                    if let subtitle {
+                        Text(subtitle).font(.system(size: 12))
+                            .foregroundStyle(ToastAppearance.secondaryText).lineLimit(5)
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.mini)
-                    .tint(notification.type.color)
+                    if notification.hasAction, let actionTitle = notification.actionTitle {
+                        Button {
+                            notification.performAction()
+                            onDismiss()
+                        } label: {
+                            Text(actionTitle).font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(ToastAppearance.text)
+                        }
+                        .buttonStyle(.bordered).controlSize(.small)
+                        .help(notification.actionHint ?? actionTitle)
+                        .accessibilityIdentifier("toast-recovery-action")
+                    }
                 }
-
-                Button {
-                    onDismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark").font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(ToastAppearance.secondaryText)
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .frame(width: 16, height: 16)
+                .buttonStyle(.plain).help("Dismiss notification")
+                .accessibilityLabel("Dismiss notification")
+                .accessibilityIdentifier("dismiss-toast")
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-
-            GeometryReader { geo in
-                Rectangle()
-                    .fill(notification.type.color)
-                    .frame(width: geo.size.width * timeRemaining, height: 2)
-                    .animation(.linear(duration: notification.duration), value: timeRemaining)
+            .padding(12)
+            if !notification.hasAction {
+                GeometryReader { geometry in
+                    Rectangle().fill(ToastAppearance.status(notification.type))
+                        .frame(width: geometry.size.width * timeRemaining)
+                }
+                .frame(height: 2).accessibilityHidden(true)
             }
-            .frame(height: 2)
         }
-        .background(notification.type.color.opacity(0.08))
+        .background(ToastAppearance.surface)
+        .clipShape(.rect(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(AppTheme.border, lineWidth: 1))
+        .shadow(color: .black.opacity(0.18), radius: 10, y: 3)
+        .accessibilityElement(children: .contain)
+        .help(notification.message)
         .onAppear {
-            withAnimation(.linear(duration: notification.duration)) {
-                timeRemaining = 0
-            }
+            guard !notification.hasAction else { return }
+            if reduceMotion { timeRemaining = 0 }
+            else { withAnimation(.linear(duration: notification.duration)) { timeRemaining = 0 } }
         }
     }
 }
@@ -347,7 +358,7 @@ struct ToastContainer: View {
     @StateObject private var notificationManager = NotificationManager.shared
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 8) {
             ForEach(notificationManager.notifications) { notification in
                 ToastNotificationView(
                     notification: notification,
@@ -361,13 +372,16 @@ struct ToastContainer: View {
                 ))
             }
         }
+        .frame(maxWidth: 520)
+        .padding(12)
+        .allowsHitTesting(!notificationManager.notifications.isEmpty)
         .animation(.easeInOut(duration: 0.2), value: notificationManager.notifications.count)
     }
 }
 
 extension View {
     func withToastNotifications() -> some View {
-        overlay(alignment: .top) {
+        overlay(alignment: .topTrailing) {
             ToastContainer()
         }
     }

@@ -130,7 +130,9 @@ struct PushOptions {
 /// Pull options
 struct PullOptions {
     var rebase: Bool = false
-    var autostash: Bool = true
+    // Preserve the user's staged selection. Native autostash can restore file
+    // bytes while moving previously staged changes back out of the index.
+    var autostash: Bool = false
     var remote: String = "origin"
     var branch: String?
 

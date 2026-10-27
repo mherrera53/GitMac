@@ -19,8 +19,10 @@ try {
   }
   let actual = layout(current, true);
   if (process.argv.includes('--parent-lane-control')) {
-    if (!actual.includes('parentLanes.append(lane)')) throw Error('Mutation boundary changed');
-    actual = actual.replace('parentLanes.append(lane)', 'parentLanes.append(0)');
+    if (!actual.includes('        return nodes\n')) throw Error('Mutation boundary changed');
+    // Mutate only the current layout output. The reference shares the node
+    // initializer, so mutating that initializer would corrupt both oracles.
+    actual = actual.replace('        return nodes\n', '        return nodes.map { MinimapCommitNode(index: $0.index, lane: $0.lane, isMerge: $0.isMerge, parentIndices: $0.parentIndices, parentLanes: $0.parentLanes.map { _ in 0 }, sha: $0.sha) }\n');
   }
   const source = path.join(temporary, 'Actual.swift');
   await fs.writeFile(source, 'import Foundation\nimport CoreGraphics\n' + actual + layout(previous, false).replace('enum MinimapLayout {', 'enum PreviousMinimapLayout {'));

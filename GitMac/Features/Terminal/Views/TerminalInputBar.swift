@@ -15,6 +15,7 @@ struct AIInputBar: View {
     var isFocused: FocusState<Bool>.Binding
     let workingDirectory: String
     let onSubmit: (String) -> Void
+    var isActive = true
 
     @StateObject private var suggestions = TerminalSuggestionController()
     @State private var hidesSuggestions = false
@@ -63,7 +64,7 @@ struct AIInputBar: View {
         "git rh": "git reset HEAD", "git rhh": "git reset --hard HEAD",
         "git rsh": "git reset --soft HEAD~1",
         "git rem": "git remote -v", "git rema": "git remote add origin ",
-        "git cl": "git clean -fd", "git cln": "git clean -fdn",
+        "git cl": "git clean -nd", "git cln": "git clean -fdn",
         "git t": "git tag", "git ta": "git tag -a ",
         "gh": "gh ", "gh p": "gh pr ", "gh pr": "gh pr list",
         "gh prc": "gh pr create", "gh prv": "gh pr view",
@@ -75,7 +76,7 @@ struct AIInputBar: View {
         "ls": "ls -la", "ll": "ls -la", "la": "ls -la", "lh": "ls -lah", "lt": "ls -lt",
         "cd": "cd ", "cd.": "cd ..", "cd..": "cd ..",
         "mk": "mkdir ", "mkd": "mkdir ", "mkp": "mkdir -p ",
-        "rm": "rm -rf ", "cp": "cp -r ", "mv": "mv ",
+        "rm": "rm ", "cp": "cp -r ", "mv": "mv ",
         "cat": "cat ", "vim": "vim ", "nano": "nano ", "code": "code ",
         "touch": "touch ", "chmod": "chmod ",
         "find": "find . -name \"\"", "grep": "grep -r \"\" .",
@@ -89,7 +90,7 @@ struct AIInputBar: View {
         "docker": "docker ", "docker p": "docker ps", "docker pa": "docker ps -a",
         "docker i": "docker images", "docker b": "docker build -t ", "docker r": "docker run ",
         "docker c": "docker-compose ", "docker cu": "docker-compose up", "docker cd": "docker-compose down",
-        "ps": "ps aux", "kill": "kill -9 ", "top": "htop", "df": "df -h", "du": "du -sh ",
+        "ps": "ps aux", "kill": "kill ", "top": "htop", "df": "df -h", "du": "du -sh ",
         "which": "which ", "whe": "where ",
         "xc": "xcodebuild ", "xcb": "xcodebuild build", "xct": "xcodebuild test", "xcr": "xcodebuild clean",
         "swift": "swift ", "swiftb": "swift build", "swiftt": "swift test", "swiftr": "swift run",
@@ -138,10 +139,13 @@ struct AIInputBar: View {
     private var dynamicHeight: CGFloat { min(120, 28 + CGFloat(max(0, lineCount - 1)) * 18) }
 
     private var inputArea: some View {
+        VStack(alignment: .leading, spacing: 4) {
         HStack(alignment: .bottom, spacing: 8) {
             Text((workingDirectory as NSString).lastPathComponent)
                 .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(AppTheme.textMuted)
+                .foregroundStyle(AppTheme.textSecondary)
+                .lineLimit(1).truncationMode(.middle).frame(maxWidth: 100)
+                .help("Repository context: " + workingDirectory + ". The shell can be in another folder after cd.")
                 .padding(.bottom, 8)
             Text("$")
                 .font(.system(size: 13, weight: .bold, design: .monospaced))
@@ -163,7 +167,7 @@ struct AIInputBar: View {
                         }.padding(.top, 6)
                     }
                     if text.isEmpty {
-                        Text("Enter command...").font(.system(size: 13, design: .monospaced)).foregroundStyle(AppTheme.textMuted.opacity(0.4)).padding(.top, 6)
+                        Text("Type a command, then Run").font(.system(size: 13, design: .monospaced)).foregroundStyle(AppTheme.textSecondary).padding(.top, 6)
                     }
                     AITextEditor(text: $text, isFocused: isFocused, onSubmit: { suggestions.cancel(); onSubmit(text) }, onTab: applyInlineSuggestion, onArrowUp: { navigateSuggestion(up: true) }, onArrowDown: { navigateSuggestion(up: false) }, onEscape: clearSuggestions).frame(height: dynamicHeight)
                 }
@@ -184,11 +188,33 @@ struct AIInputBar: View {
             .help("Request an AI suggestion. Review it before running the command.")
             .accessibilityIdentifier("terminal-request-suggestion")
             .padding(.bottom, 6)
-            if isMultiline {
-                Button { suggestions.cancel(); onSubmit(text) } label: {
-                    Image(systemName: "paperplane.fill").font(.system(size: 12)).foregroundStyle(AppTheme.accent)
-                }.buttonStyle(.plain).padding(.bottom, 6)
+            Button { suggestions.cancel(); onSubmit(text) } label: {
+                Label("Run", systemImage: "arrow.up.circle.fill")
+                    .font(.system(size: 12, weight: .semibold))
             }
+            .buttonStyle(.bordered)
+            .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .help("Run this command in the terminal. Return also runs; Shift–Return inserts a new line.")
+            .accessibilityIdentifier("terminal-run-command")
+            .padding(.bottom, 3)
+        }
+        HStack(spacing: 8) {
+            Menu {
+                Button("Status — what changed") { insertCommand("git status --short --branch") }
+                Button("Diff — changes in files") { insertCommand("git diff") }
+                Button("Staged diff — next commit") { insertCommand("git diff --staged") }
+                Button("History — recent commits") { insertCommand("git log --oneline -10") }
+                Button("Worktrees — folders and branches") { insertCommand("git worktree list") }
+            } label: { Label("Insert command", systemImage: "text.badge.plus") }
+            .menuStyle(.borderlessButton).fixedSize()
+            .help("Insert a read-only Git command to review before running. Does not execute it.")
+            .accessibilityIdentifier("terminal-insert-command")
+            .disabled(!text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            Spacer(minLength: 0)
+            Text("↵ Run · ⇧↵ New line · ⇥ Complete")
+                .font(.system(size: 10)).foregroundStyle(AppTheme.textSecondary)
+                .lineLimit(1).minimumScaleFactor(0.8)
+        }
         }
         .padding(.horizontal, 12).padding(.vertical, 6)
         .background(AppTheme.backgroundSecondary)
@@ -198,13 +224,24 @@ struct AIInputBar: View {
             selectedIndex = 0
             suggestions.update(input: value, directory: workingDirectory)
         }
-        .onAppear { loadContextCache() }
+        .onAppear { if isActive { loadContextCache() } }
+        .onChange(of: isActive) { _, active in
+            if active { loadContextCache() }
+            else { clearContextCache() }
+        }
         .onChange(of: workingDirectory) { _, value in
             suggestions.update(input: text, directory: value)
             clearContextCache()
-            loadContextCache()
+            if isActive { loadContextCache() }
         }
         .onDisappear { clearContextCache() }
+    }
+
+    private func insertCommand(_ command: String) {
+        guard text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        text = command
+        clearSuggestions()
+        isFocused.wrappedValue = true
     }
 
     /// Clear caches to free memory when view disappears

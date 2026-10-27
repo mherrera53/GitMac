@@ -65,6 +65,7 @@ INSTRUCCIONES_PARA_COMPLETAR.md
 # UI Tests
 GitMacUITests/*
 !GitMacUITests/*.swift
+!GitMacUITests/Info.plist
 build_output/
 build_output/
 

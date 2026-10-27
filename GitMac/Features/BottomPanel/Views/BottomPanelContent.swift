@@ -10,13 +10,14 @@ import AppKit
 
 struct BottomPanelContent: View {
     let tab: BottomPanelTab
+    var isActive = true
     @Environment(AppState.self) var appState
 
     var body: some View {
         Group {
             switch tab.type {
             case .terminal:
-                TerminalPanelContent()
+                TerminalPanelContent(isActive: isActive)
             case .taiga:
                 TaigaPanelContent()
             case .planner:
@@ -41,11 +42,12 @@ struct BottomPanelContent: View {
 // MARK: - Panel Content Views
 
 struct TerminalPanelContent: View {
+    var isActive = true
     @Environment(AppState.self) var appState
 
     var body: some View {
         // Ghostty + Custom AI Input
-        GhosttyWithAIInput()
+        GhosttyWithAIInput(isActive: isActive)
             .environment(appState)
     }
 }
@@ -53,9 +55,11 @@ struct TerminalPanelContent: View {
 // MARK: - Ghostty + AI Input View
 
 struct GhosttyWithAIInput: View {
+    var isActive = true
     @Environment(AppState.self) var appState
     @State private var inputText = ""
     @State private var terminalError: String?
+    @State private var terminalContextPath: String?
     @StateObject private var ghosttyConnector = GhosttyConnector()
     @FocusState private var isInputFocused: Bool
 
@@ -63,13 +67,15 @@ struct GhosttyWithAIInput: View {
         #if GHOSTTY_AVAILABLE
         VStack(spacing: 0) {
             // Ghostty output area
-            GhosttyOutputView(connector: ghosttyConnector, repoPath: appState.currentRepository?.path)
+            GhosttyOutputView(connector: ghosttyConnector, repoPath: terminalContextPath ?? appState.currentRepository?.path, isActive: isActive)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             if let terminalError {
                 HStack {
-                    Text(terminalError).font(.caption).foregroundStyle(AppTheme.error)
+                    Text(terminalError).font(.caption).foregroundStyle(AppTheme.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
                     Spacer()
+                    Button("New terminal here") { BottomPanelManager.shared.openTab(type: .terminal) }
                     Button("Use repository folder") { changeRepositoryDirectory(appState.currentRepository?.path) }
                 }.padding(.horizontal, 12)
             }
@@ -77,18 +83,23 @@ struct GhosttyWithAIInput: View {
             AIInputBar(
                 text: $inputText,
                 isFocused: $isInputFocused,
-                workingDirectory: appState.currentRepository?.path ?? "~",
+                workingDirectory: terminalContextPath ?? appState.currentRepository?.path ?? NSHomeDirectory(),
                 onSubmit: { command in
                     sendCommand(command)
-                }
+                },
+                isActive: isActive
             )
         }
         .background(AppTheme.background)
         .onAppear {
-            isInputFocused = true
+            if terminalContextPath == nil { terminalContextPath = appState.currentRepository?.path ?? NSHomeDirectory() }
+            isInputFocused = isActive
         }
+        .onChange(of: isActive) { _, active in isInputFocused = active }
         .onChange(of: appState.currentRepository?.path) { _, newPath in
-            changeRepositoryDirectory(newPath)
+            guard newPath != terminalContextPath else { terminalError = nil; return }
+            // Do not inject cd into a shell that may be running another command.
+            terminalError = "Repository changed. This terminal keeps its folder. Open a new terminal for the new repository, or use its folder here when the shell is ready."
         }
         #else
         Text("Ghostty not available")
@@ -113,6 +124,7 @@ struct GhosttyWithAIInput: View {
             terminalError = "Could not change the terminal folder. Retry when the shell is ready."
             return
         }
+        terminalContextPath = path ?? NSHomeDirectory()
         terminalError = nil
     }
 }
@@ -149,10 +161,12 @@ class GhosttyConnector: ObservableObject {
 struct GhosttyOutputView: NSViewRepresentable {
     @ObservedObject var connector: GhosttyConnector
     let repoPath: String?
+    var isActive = true
 
     func makeNSView(context: Context) -> GhosttyPureNSView {
         let view = GhosttyPureNSView(repoPath: repoPath)
         view.disableKeyboardInput = true // Output only - use custom input bar
+        view.setActive(isActive)
         // Connect the view to the connector
         DispatchQueue.main.async {
             connector.ghosttyView = view
@@ -162,11 +176,14 @@ struct GhosttyOutputView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: GhosttyPureNSView, context: Context) {
+        nsView.setActive(isActive)
         // Ensure connector stays connected
         if connector.ghosttyView == nil {
             connector.ghosttyView = nsView
         }
     }
+
+    static func dismantleNSView(_ nsView: GhosttyPureNSView, coordinator: ()) { nsView.cleanup() }
 }
 #endif
 
@@ -199,6 +216,8 @@ struct GhosttyPureTerminal: NSViewRepresentable {
         // Update if repo changes
     }
 
+    static func dismantleNSView(_ nsView: GhosttyPureNSView, coordinator: Coordinator) { nsView.cleanup() }
+
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
@@ -214,6 +233,7 @@ class GhosttyPureNSView: NSView {
     private var surface: ghostty_surface_t?
     private var config: ghostty_config_t?
     private var hasInitialized = false
+    private var isSessionActive = true
     private let repoPath: String?
 
     // For hybrid mode: disable keyboard input when using external input bar
@@ -227,6 +247,15 @@ class GhosttyPureNSView: NSView {
         super.init(frame: .zero)
         self.wantsLayer = true
         Self.initializeGhosttyOnce()
+    }
+
+    func setActive(_ active: Bool) {
+        let changed = isSessionActive != active
+        isSessionActive = active
+        guard changed, let surface else { return }
+        // libghostty names this API occlusion, but its boolean means visible.
+        ghostty_surface_set_occlusion(surface, active)
+        if active { updateSurfaceSize() }
     }
 
     // MARK: - Public API for external input
@@ -334,7 +363,7 @@ class GhosttyPureNSView: NSView {
 
     private func updateSurfaceSize() {
         let scale = window?.backingScaleFactor ?? 1
-        guard let surface, let pixels = TerminalViewport.pixelSize(bounds.size, scale: scale) else { return }
+        guard isSessionActive, let surface, let pixels = TerminalViewport.pixelSize(bounds.size, scale: scale) else { return }
         ghostty_surface_set_content_scale(surface, Double(scale), Double(scale))
         ghostty_surface_set_size(surface, pixels.width, pixels.height)
         ghostty_surface_draw(surface)
@@ -518,6 +547,7 @@ class GhosttyPureNSView: NSView {
             return
         }
 
+        ghostty_surface_set_occlusion(surface, isSessionActive)
         Logger.debug("✅ Ghostty terminal ready")
 
         // Set size and focus
@@ -526,7 +556,8 @@ class GhosttyPureNSView: NSView {
         ghostty_surface_draw(surface)
 
         DispatchQueue.main.async { [weak self] in
-            self?.window?.makeFirstResponder(self)
+            guard let self, self.isSessionActive else { return }
+            self.window?.makeFirstResponder(self)
         }
     }
 
@@ -587,10 +618,6 @@ class GhosttyPureNSView: NSView {
         }
     }
 
-    override func removeFromSuperview() {
-        cleanup()
-        super.removeFromSuperview()
-    }
 }
 #endif
 

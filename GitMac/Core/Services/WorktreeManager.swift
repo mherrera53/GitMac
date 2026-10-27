@@ -17,6 +17,7 @@ class WorktreeManager: ObservableObject {
 
     @Published private(set) var worktrees: [Worktree] = []
     @Published private(set) var isLoading = false
+    @Published private(set) var isPerformingOperation = false
     @Published private(set) var error: String?
     @Published private(set) var currentRepoPath: String?
 
@@ -136,8 +137,8 @@ class WorktreeManager: ObservableObject {
             throw WorktreeError.noRepository
         }
 
-        isLoading = true
-        defer { isLoading = false }
+        try beginOperation()
+        defer { isPerformingOperation = false }
 
         do {
             let worktree = try await engine.addWorktree(
@@ -167,8 +168,8 @@ class WorktreeManager: ObservableObject {
             throw WorktreeError.noRepository
         }
 
-        isLoading = true
-        defer { isLoading = false }
+        try beginOperation()
+        defer { isPerformingOperation = false }
 
         do {
             let worktree = try await engine.addWorktree(
@@ -202,8 +203,8 @@ class WorktreeManager: ObservableObject {
             throw WorktreeError.cannotRemoveMain
         }
 
-        isLoading = true
-        defer { isLoading = false }
+        try beginOperation()
+        defer { isPerformingOperation = false }
 
         do {
             let registered = try await engine.listWorktrees(at: repoPath)
@@ -238,6 +239,9 @@ class WorktreeManager: ObservableObject {
             throw WorktreeError.noRepository
         }
 
+        try beginOperation()
+        defer { isPerformingOperation = false }
+
         do {
             try await engine.lockWorktree(path: worktree.path, reason: reason, at: repoPath)
             if currentRepoPath == repoPath { await refresh(at: repoPath) }
@@ -254,6 +258,9 @@ class WorktreeManager: ObservableObject {
         guard let repoPath = repositoryPath ?? currentRepoPath else {
             throw WorktreeError.noRepository
         }
+
+        try beginOperation()
+        defer { isPerformingOperation = false }
 
         do {
             try await engine.unlockWorktree(path: worktree.path, at: repoPath)
@@ -272,8 +279,8 @@ class WorktreeManager: ObservableObject {
             throw WorktreeError.noRepository
         }
 
-        isLoading = true
-        defer { isLoading = false }
+        try beginOperation()
+        defer { isPerformingOperation = false }
 
         do {
             let pruned = try await engine.pruneWorktrees(dryRun: dryRun, at: repoPath)
@@ -296,6 +303,11 @@ class WorktreeManager: ObservableObject {
 
     // MARK: - Private Helpers
 
+    private func beginOperation() throws {
+        guard !isPerformingOperation else { throw WorktreeError.busy }
+        isPerformingOperation = true
+    }
+
     private func rebuildBranchMap() {
         var map: [String: String] = [:]
         for worktree in worktrees {
@@ -310,6 +322,7 @@ class WorktreeManager: ObservableObject {
 // MARK: - Worktree Errors
 
 enum WorktreeError: LocalizedError {
+    case busy
     case noRepository
     case cannotRemoveMain
     case worktreeExists(String)
@@ -321,6 +334,7 @@ enum WorktreeError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
+        case .busy: return "A worktree operation is still running. Wait for it to finish, then retry."
         case .cannotRemoveCurrent:
             return "Open another worktree before removing the current folder. Closing its tab does not delete files."
         case .locked:

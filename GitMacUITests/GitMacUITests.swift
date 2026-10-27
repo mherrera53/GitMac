@@ -502,13 +502,15 @@ final class GitMacUITests: XCTestCase {
         }
         input.click()
         func quote(_ value: String) -> String { "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'" }
-        let command = "printf 'terminal fixture\\n' | /usr/bin/tee \(quote(proof.path)); pwd -P > \(quote(cwdProof.path))"
+        let command = "export GITMAC_UI_SESSION_PROOF=still-alive; printf 'terminal fixture\\n' | /usr/bin/tee \(quote(proof.path)); pwd -P > \(quote(cwdProof.path))"
         typeLiteralFixtureText(command, into: input, app: app)
         XCTAssertEqual(input.value as? String, command, "Terminal input must preserve literal quotes and backslashes")
         let suggest = app.buttons["terminal-request-suggestion"]
         XCTAssertTrue(suggest.isHittable)
         XCTAssertTrue(suggest.isEnabled, "Typing must not start AI or disable its explicit request button")
-        app.typeKey(.return, modifierFlags: [])
+        let run = app.buttons["terminal-run-command"]
+        XCTAssertTrue(run.isHittable && run.isEnabled, "Run must remain visible for a single-line command")
+        run.click()
         let executed = expectation(for: NSPredicate { _, _ in
             (try? Data(contentsOf: proof)) == Data("terminal fixture\n".utf8)
                 && (try? Data(contentsOf: cwdProof).isEmpty) == false
@@ -521,6 +523,33 @@ final class GitMacUITests: XCTestCase {
         XCTAssertEqual(actualAttributes[.systemNumber] as? NSNumber, expectedAttributes[.systemNumber] as? NSNumber)
         XCTAssertTrue(input.waitForExistence(timeout: 3))
         XCTAssertEqual(input.value as? String, "", "Input clears only after a ready terminal accepts the command")
+        input.click()
+        let keyboardCommand = "printf 'keyboard fixture\\n' > \(quote(proof.path))"
+        typeLiteralFixtureText(keyboardCommand, into: input, app: app)
+        app.typeKey(.return, modifierFlags: [])
+        let keyboardExecuted = expectation(for: NSPredicate { _, _ in
+            (try? Data(contentsOf: proof)) == Data("keyboard fixture\n".utf8)
+        }, evaluatedWith: nil)
+        wait(for: [keyboardExecuted], timeout: 15)
+        XCTAssertEqual(input.value as? String, "", "Return must retain the same delivery contract as Run")
+        let terminalTabs = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label == %@", "bottom-panel-tab-", "Terminal")).allElementsBoundByIndex
+        let originalTab = try XCTUnwrap(terminalTabs.first { $0.value as? String == "Selected" }, "Locate the active terminal, including restored tabs")
+        let originalIdentifier = originalTab.identifier
+        app.buttons["bottom-panel-add"].click()
+        let newTerminal = app.buttons["panel-type-terminal"]
+        XCTAssertTrue(newTerminal.waitForExistence(timeout: 5))
+        newTerminal.click()
+        XCTAssertTrue(input.waitForExistence(timeout: 10))
+        app.descendants(matching: .any)[originalIdentifier].firstMatch.click()
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+        input.click()
+        let sessionCommand = "printenv GITMAC_UI_SESSION_PROOF > \(quote(proof.path))"
+        typeLiteralFixtureText(sessionCommand, into: input, app: app)
+        app.buttons["terminal-run-command"].click()
+        let sessionPreserved = expectation(for: NSPredicate { _, _ in
+            (try? Data(contentsOf: proof)) == Data("still-alive\n".utf8)
+        }, evaluatedWith: nil)
+        wait(for: [sessionPreserved], timeout: 15)
         let capture = XCTAttachment(screenshot: try validationWindowScreenshot(app))
         capture.name = "Visual-Terminal-Explicit-Demand-And-Command"
         capture.lifetime = .keepAlways

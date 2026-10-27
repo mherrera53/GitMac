@@ -208,42 +208,24 @@ struct ToastView: View {
     let message: String
     let icon: String
     let type: ToastType
+    let onDismiss: () -> Void
 
     enum ToastType {
         case success, error, info, warning
-
-        @MainActor
-        var color: Color {
+        var notificationType: NotificationType {
             switch self {
-            case .success: return AppTheme.accentGreen
-            case .error: return AppTheme.accentRed
-            case .info: return AppTheme.accent
-            case .warning: return AppTheme.accentOrange
+            case .success: return .success
+            case .error: return .error
+            case .info: return .info
+            case .warning: return .warning
             }
         }
     }
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(type.color)
-
-            Text(message)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(AppTheme.textPrimary)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(AppTheme.backgroundSecondary)
-                .shadow(color: AppTheme.shadow.opacity(0.3), radius: 10, x: 0, y: 4)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(type.color.opacity(0.3), lineWidth: 1)
-        )
+        ToastNotificationView(notification: ToastNotification(message: message, type: type.notificationType,
+            duration: type == .error ? 8 : 5), onDismiss: onDismiss, icon: icon)
+            .frame(maxWidth: 520)
     }
 }
 
@@ -255,6 +237,7 @@ class ToastManager: ObservableObject {
 
     @Published var currentToast: (message: String, icon: String, type: ToastView.ToastType)?
     @Published var isShowing = false
+    private var dismissalTask: Task<Void, Never>?
 
     func show(_ message: String, icon: String = "checkmark.circle.fill", type: ToastView.ToastType = .success) {
         currentToast = (message, icon, type)
@@ -262,11 +245,18 @@ class ToastManager: ObservableObject {
             isShowing = true
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-            withAnimation(.easeOut(duration: 0.3)) {
-                self.isShowing = false
-            }
+        dismissalTask?.cancel()
+        dismissalTask = Task { @MainActor [weak self] in
+            do { try await Task.sleep(nanoseconds: type == .error ? 8_000_000_000 : 5_000_000_000) }
+            catch { return }
+            self?.dismiss()
         }
+    }
+
+    func dismiss() {
+        dismissalTask?.cancel()
+        dismissalTask = nil
+        withAnimation(.easeOut(duration: 0.2)) { isShowing = false }
     }
 
     func showError(_ message: String) {
@@ -291,7 +281,7 @@ struct ToastOverlay: ViewModifier {
         content
             .overlay(alignment: .bottom) {
                 if manager.isShowing, let toast = manager.currentToast {
-                    ToastView(message: toast.message, icon: toast.icon, type: toast.type)
+                    ToastView(message: toast.message, icon: toast.icon, type: toast.type, onDismiss: manager.dismiss)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                         .padding(.bottom, 40)
                 }

@@ -10,6 +10,7 @@ class GitOperationHandler: ObservableObject {
     @Published var pendingPushConfirmation: PushConfirmation?
 
     weak var appState: AppState?
+    private static var activeRepositoryPaths: Set<String> = []
 
     init(appState: AppState? = nil) {
         self.appState = appState
@@ -23,49 +24,56 @@ class GitOperationHandler: ObservableObject {
         message: String,
         onSuccess: (() async -> Void)? = nil,
         tracking: TrackingInfo? = nil,
-        shouldRefresh: Bool = true
+        shouldRefresh: Bool = true,
+        allowsRetry: Bool = false
     ) async {
+        let repositoryPath = appState?.currentRepository?.path
+        let operationKey = repositoryPath ?? "<no-selected-repository>"
+        guard !isOperationInProgress, !Self.activeRepositoryPaths.contains(operationKey) else {
+            NotificationManager.shared.info("An operation is already running", detail: "Wait for it to finish before starting another action in this repository.")
+            return
+        }
+        Self.activeRepositoryPaths.insert(operationKey)
         isOperationInProgress = true
         operationMessage = message
-
-        // Extract action name from message (remove "..." suffix)
-        let actionName = message.replacingOccurrences(of: "...", with: "").trimmingCharacters(in: .whitespaces)
-
-        // Record action for retry capability
-        NotificationManager.shared.recordAction(actionName) { [weak self] in
-            guard let self = self else { return }
-            await self.execute(
-                operation: operation,
-                message: message,
-                onSuccess: onSuccess,
-                tracking: tracking,
-                shouldRefresh: shouldRefresh
-            )
+        defer {
+            Self.activeRepositoryPaths.remove(operationKey)
+            isOperationInProgress = false
         }
-
+        let actionName = message.replacingOccurrences(of: "...", with: "").trimmingCharacters(in: .whitespaces)
+        let retry: (() async -> Void)? = allowsRetry ? { [weak self] in
+            guard let self else { return }
+            guard self.appState?.currentRepository?.path == repositoryPath else {
+                NotificationManager.shared.info("Repository changed", detail: "Open the original repository and run the action there.")
+                return
+            }
+            await self.execute(operation: operation, message: message, onSuccess: onSuccess,
+                tracking: tracking, shouldRefresh: shouldRefresh, allowsRetry: allowsRetry)
+        } : nil
+        NotificationManager.shared.recordAction(actionName, retry: retry)
         do {
             try await operation()
-
-            if shouldRefresh {
-                await appState?.refresh()
+            if appState?.currentRepository?.path == repositoryPath {
+                if shouldRefresh { await appState?.refresh() }
+                await onSuccess?()
             }
-
-            await onSuccess?()
             tracking?.recordSuccess()
-
-            // Show success notification with action name
             NotificationManager.shared.success(actionName, detail: "Completed successfully")
-
+        } catch is CancellationError {
+            NotificationManager.shared.info("Operation cancelled")
         } catch {
-            let errorMessage = "\(actionName) failed: \(error.localizedDescription)"
-            appState?.errorMessage = errorMessage
+            if appState?.currentRepository?.path == repositoryPath {
+                appState?.errorMessage = "\(actionName) failed: \(error.localizedDescription)"
+            }
             tracking?.recordFailure(error)
-
-            // Error notification will automatically include retry option since we recorded the action
-            NotificationManager.shared.error("\(actionName) failed", detail: error.localizedDescription)
+            if let retry {
+                NotificationManager.shared.errorWithFix("\(actionName) failed", detail: error.localizedDescription,
+                    fixTitle: "Retry \(actionName)", fixHint: "Retry only in the original repository",
+                    fixAction: { Task { await retry() } })
+            } else {
+                NotificationManager.shared.error("\(actionName) failed", detail: error.localizedDescription)
+            }
         }
-
-        isOperationInProgress = false
     }
 
     // MARK: - Remote Operations
@@ -78,7 +86,8 @@ class GitOperationHandler: ObservableObject {
                 try await self.appState?.gitService.fetch()
             },
             message: "Fetching from remote...",
-            tracking: .fetch(remote: "origin")
+            tracking: .fetch(remote: "origin"),
+            allowsRetry: true
         )
     }
 
@@ -127,7 +136,14 @@ class GitOperationHandler: ObservableObject {
                 branchName: branchName,
                 result: result,
                 onConfirm: { [weak self] in
-                    await self?.executePush(branchName: branchName, force: force)
+                    guard let self else { return }
+                    guard self.appState?.currentRepository?.path == repo.path,
+                          self.appState?.currentRepository?.currentBranch?.name == branchName else {
+                        self.pendingPushConfirmation = nil
+                        NotificationManager.shared.error("Repository or branch changed", detail: "Review the current branch and start Push again.")
+                        return
+                    }
+                    await self.executePush(branchName: branchName, force: force)
                 },
                 onCancel: { [weak self] in
                     self?.pendingPushConfirmation = nil
@@ -142,6 +158,20 @@ class GitOperationHandler: ObservableObject {
 
     /// Execute the actual push operation (called directly or after confirmation)
     func executePush(branchName: String, force: Bool = false) async {
+        guard let repositoryPath = appState?.currentRepository?.path,
+              appState?.currentRepository?.currentBranch?.name == branchName else {
+            NotificationManager.shared.error("Push cancelled", detail: "Select the intended repository and branch, then try again.")
+            return
+        }
+        guard !isOperationInProgress, !Self.activeRepositoryPaths.contains(repositoryPath) else {
+            NotificationManager.shared.info("An operation is already running")
+            return
+        }
+        Self.activeRepositoryPaths.insert(repositoryPath)
+        defer {
+            Self.activeRepositoryPaths.remove(repositoryPath)
+            isOperationInProgress = false
+        }
         isOperationInProgress = true
         operationMessage = "Pushing to remote..."
         pendingPushConfirmation = nil
@@ -150,7 +180,7 @@ class GitOperationHandler: ObservableObject {
             let sha = try await appState?.gitService.push(force: force) ?? ""
             let shortSHA = String(sha.prefix(7))
 
-            await appState?.refresh()
+            if appState?.currentRepository?.path == repositoryPath { await appState?.refresh() }
 
             // Trigger GitHub and CodeBuild refresh after push
             NotificationCenter.default.post(name: .gitPushCompleted, object: branchName)
@@ -165,7 +195,7 @@ class GitOperationHandler: ObservableObject {
             )
         } catch {
             let errorMessage = "Push failed: \(error.localizedDescription)"
-            appState?.errorMessage = errorMessage
+            if appState?.currentRepository?.path == repositoryPath { appState?.errorMessage = errorMessage }
             TrackingInfo.push(branch: branchName, remote: "origin").recordFailure(error)
             NotificationManager.shared.error("Push failed", detail: error.localizedDescription)
         }

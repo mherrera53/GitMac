@@ -42,19 +42,78 @@ enum GraphGeometry {
 struct MinimapCommitNode: Sendable {
     let index: Int
     let lane: Int
-    let isMerge: Bool
+    var isMerge: Bool { parentIndexValues.isMerge }
     let parentIndexValues: MinimapParentIndices
     var parentIndices: [Int] { Array(parentIndexValues) }
     let parentLanes: [Int]    // lane of each parent
-    var sha: String = ""
+    fileprivate var objectID: MinimapObjectID
+    var sha: String {
+        get { objectID.string }
+        set { objectID = MinimapObjectID(newValue) }
+    }
 
     init(index: Int, lane: Int, isMerge: Bool, parentIndices: [Int], parentLanes: [Int], sha: String = "") {
+        self.init(index: index, lane: lane, isMerge: isMerge,
+                  parentIndexValues: MinimapParentIndices(parentIndices), parentLanes: parentLanes, objectID: MinimapObjectID(sha))
+    }
+
+    fileprivate init(index: Int, lane: Int, isMerge: Bool, parentIndexValues: MinimapParentIndices,
+                     parentLanes: [Int], objectID: MinimapObjectID) {
         self.index = index
         self.lane = lane
-        self.isMerge = isMerge
-        self.parentIndexValues = MinimapParentIndices(parentIndices)
+        self.parentIndexValues = parentIndexValues.withMergeFlag(isMerge)
         self.parentLanes = parentLanes
-        self.sha = sha
+        self.objectID = objectID
+    }
+}
+
+/// Common SHA-1 identities use all 160 bits inline, with no per-SHA string
+/// allocation. Other object formats and literal test identities remain exact.
+fileprivate enum MinimapObjectID: Hashable, Comparable, Sendable {
+    case sha1(UInt64, UInt64, UInt32)
+    case literal(String)
+
+    init<S: StringProtocol>(_ value: S) {
+        guard value.utf8.count == 40 else { self = .literal(String(value)); return }
+        var first: UInt64 = 0, second: UInt64 = 0
+        var last: UInt32 = 0
+        var index = 0
+        for byte in value.utf8 {
+            let digit: UInt8
+            switch byte {
+            case 48...57: digit = byte - 48
+            case 97...102: digit = byte - 87
+            default: self = .literal(String(value)); return
+            }
+            if index < 16 { first = (first << 4) | UInt64(digit) }
+            else if index < 32 { second = (second << 4) | UInt64(digit) }
+            else { last = (last << 4) | UInt32(digit) }
+            index += 1
+        }
+        self = .sha1(first, second, last)
+    }
+
+    var string: String {
+        switch self {
+        case .literal(let value): return value
+        case .sha1(let first, let second, let last):
+            let hex = Array("0123456789abcdef".utf8)
+            var bytes = [UInt8](repeating: 48, count: 40)
+            for index in 0..<16 { bytes[index] = hex[Int((first >> ((15 - index) * 4)) & 15)] }
+            for index in 0..<16 { bytes[index + 16] = hex[Int((second >> ((15 - index) * 4)) & 15)] }
+            for index in 0..<8 { bytes[index + 32] = hex[Int((last >> ((7 - index) * 4)) & 15)] }
+            return String(decoding: bytes, as: UTF8.self)
+        }
+    }
+
+    static func < (lhs: Self, rhs: Self) -> Bool {
+        switch (lhs, rhs) {
+        case let (.sha1(a, b, c), .sha1(x, y, z)):
+            if a != x { return a < x }
+            if b != y { return b < y }
+            return c < z
+        default: return lhs.string < rhs.string
+        }
     }
 }
 
@@ -66,6 +125,24 @@ enum MinimapParentIndices: RandomAccessCollection, Sendable {
     case empty
     case single(Int)
     case multiple([Int])
+    case mergeEmpty
+    case mergeSingle(Int)
+    case nonMergeMultiple([Int])
+
+    var isMerge: Bool {
+        switch self {
+        case .mergeEmpty, .mergeSingle, .multiple: return true
+        case .empty, .single, .nonMergeMultiple: return false
+        }
+    }
+
+    func withMergeFlag(_ merge: Bool) -> Self {
+        switch self {
+        case .empty, .mergeEmpty: return merge ? .mergeEmpty : .empty
+        case .single(let value), .mergeSingle(let value): return merge ? .mergeSingle(value) : .single(value)
+        case .multiple(let values), .nonMergeMultiple(let values): return merge ? .multiple(values) : .nonMergeMultiple(values)
+        }
+    }
 
     init(_ values: [Int]) {
         switch values.count {
@@ -78,18 +155,18 @@ enum MinimapParentIndices: RandomAccessCollection, Sendable {
     var startIndex: Int { 0 }
     var endIndex: Int {
         switch self {
-        case .empty: return 0
-        case .single: return 1
-        case .multiple(let values): return values.count
+        case .empty, .mergeEmpty: return 0
+        case .single, .mergeSingle: return 1
+        case .multiple(let values), .nonMergeMultiple(let values): return values.count
         }
     }
     func index(after i: Int) -> Int { i + 1 }
     func index(before i: Int) -> Int { i - 1 }
     subscript(position: Int) -> Int {
         switch self {
-        case .empty: preconditionFailure("Empty parent collection")
-        case .single(let value): precondition(position == 0); return value
-        case .multiple(let values): return values[position]
+        case .empty, .mergeEmpty: preconditionFailure("Empty parent collection")
+        case .single(let value), .mergeSingle(let value): precondition(position == 0); return value
+        case .multiple(let values), .nonMergeMultiple(let values): return values[position]
         }
     }
 }
@@ -102,20 +179,21 @@ struct MinimapSHAIndex: Sendable {
 
     init(nodes: [MinimapCommitNode] = []) {
         self.nodes = nodes
-        sortedPositions = nodes.indices.sorted { nodes[$0].sha < nodes[$1].sha }
+        sortedPositions = nodes.indices.sorted { nodes[$0].objectID < nodes[$1].objectID }
     }
 
     var count: Int { sortedPositions.count }
 
     subscript(sha: String) -> Int? {
+        let target = MinimapObjectID(sha)
         var lower = 0
         var upper = sortedPositions.count
         while lower < upper {
             let middle = lower + (upper - lower) / 2
             let position = sortedPositions[middle]
-            let candidate = nodes[position].sha
-            if candidate == sha { return nodes[position].index }
-            if candidate < sha { lower = middle + 1 } else { upper = middle }
+            let candidate = nodes[position].objectID
+            if candidate == target { return nodes[position].index }
+            if candidate < target { lower = middle + 1 } else { upper = middle }
         }
         return nil
     }
@@ -124,47 +202,59 @@ struct MinimapSHAIndex: Sendable {
 /// Pure lightweight history layout, shared by production and regression tests.
 enum MinimapLayout {
     static func build(log: String) -> [MinimapCommitNode] {
-        // Retain one parent slice per row, rather than a separate array of
-        // fields. Own each SHA once and use integer-indexed lanes instead of
-        // retaining a second full SHA dictionary. No identities are sampled.
+        // A row cannot outnumber input bytes. Use compact dictionary values
+        // when that proves every row fits, with an exact wide-index fallback.
+        if log.utf8.count <= Int(Int32.max) { return build(log: log, indexType: Int32.self) }
+        return build(log: log, indexType: Int.self)
+    }
+
+    private static func build<RowIndex: FixedWidthInteger>(log: String, indexType: RowIndex.Type) -> [MinimapCommitNode] {
         let estimatedRows = log.utf8.count / 82 + 1
-        var rows: [Substring] = []
-        var shas: [String] = []
-        var indices = Dictionary<String, Int>(minimumCapacity: estimatedRows)
-        rows.reserveCapacity(estimatedRows)
-        shas.reserveCapacity(estimatedRows)
+        var indices = Dictionary<MinimapObjectID, RowIndex>(minimumCapacity: estimatedRows)
         var start = log.startIndex
         while start < log.endIndex {
             let end = log[start...].firstIndex(of: "\n") ?? log.endIndex
-            let line = log[start..<end]
-            if let token = line.split(maxSplits: 1, whereSeparator: { $0 == " " || $0 == "\t" }).first {
-                let sha = String(token)
-                if indices[sha] == nil {
-                    indices[sha] = rows.count
-                    shas.append(sha)
-                    rows.append(log[token.endIndex..<end])
-                }
+            if let token = log[start..<end].split(maxSplits: 1, whereSeparator: { $0 == " " || $0 == "\t" }).first {
+                let identity = MinimapObjectID(token)
+                if indices[identity] == nil { indices[identity] = RowIndex(indices.count) }
             }
             start = end == log.endIndex ? end : log.index(after: end)
         }
-        var lanes = Array(repeating: -1, count: rows.count)
-        var missingParentLanes: [String: Int] = [:]
+
+        // Scan in input order without retaining an array of Substrings or a
+        // second array of SHA references. Dictionary keys own each SHA once.
+        // Only the first occurrence of a duplicate SHA defines its row/parents.
+        func records(_ body: (Int, MinimapObjectID, Substring) -> Void) {
+            var ordinal = 0
+            var start = log.startIndex
+            while start < log.endIndex {
+                let end = log[start...].firstIndex(of: "\n") ?? log.endIndex
+                if let token = log[start..<end].split(maxSplits: 1, whereSeparator: { $0 == " " || $0 == "\t" }).first,
+                   let entry = indices.index(forKey: MinimapObjectID(token)), Int(indices[entry].value) == ordinal {
+                    body(ordinal, indices[entry].key, log[token.endIndex..<end])
+                    ordinal += 1
+                }
+                start = end == log.endIndex ? end : log.index(after: end)
+            }
+        }
+        var lanes = Array(repeating: -1, count: indices.count)
+        var missingParentLanes: [MinimapObjectID: Int] = [:]
         var slots: [Bool] = []
         func freeColumn() -> Int {
             if let index = slots.firstIndex(of: false) { return index }
             slots.append(false)
             return slots.count - 1
         }
-        // Match the main graph's reservation rule, without allocating Commits.
-        for (index, row) in rows.enumerated() {
+        records { index, _, row in
             let parents = row.split(whereSeparator: { $0 == " " || $0 == "\t" })
             let lane = lanes[index] >= 0 ? lanes[index] : freeColumn()
             lanes[index] = lane
             slots[lane] = true
             var firstParentLane: Int?
             if let token = parents.first {
-                let parent = String(token)
-                if let parentIndex = indices[parent] {
+                let parent = MinimapObjectID(token)
+                if let value = indices[parent] {
+                    let parentIndex = Int(value)
                     if lanes[parentIndex] < 0 { lanes[parentIndex] = lane }
                     firstParentLane = lanes[parentIndex]
                 } else {
@@ -173,7 +263,9 @@ enum MinimapLayout {
                 }
             }
             for token in parents.dropFirst() {
-                guard let parentIndex = indices[String(token)], lanes[parentIndex] < 0 else { continue }
+                guard let value = indices[MinimapObjectID(token)] else { continue }
+                let parentIndex = Int(value)
+                guard lanes[parentIndex] < 0 else { continue }
                 let parentLane = freeColumn()
                 lanes[parentIndex] = parentLane
                 slots[parentLane] = true
@@ -181,28 +273,38 @@ enum MinimapLayout {
             if firstParentLane != lane { slots[lane] = false }
         }
         var nodes: [MinimapCommitNode] = []
-        nodes.reserveCapacity(rows.count)
-        // Common single-parent lanes share immutable Array storage. This is a
-        // bounded interning cache, not a limit on lanes or parent connections.
+        nodes.reserveCapacity(indices.count)
         var singleParentLanes = Array<[Int]?>(repeating: nil, count: 64)
-        for (index, row) in rows.enumerated() {
+        func parentLane(_ lane: Int) -> [Int] {
+            if singleParentLanes.indices.contains(lane), let cached = singleParentLanes[lane] { return cached }
+            let value = [lane]
+            if singleParentLanes.indices.contains(lane) { singleParentLanes[lane] = value }
+            return value
+        }
+        records { index, identity, row in
             let parents = row.split(whereSeparator: { $0 == " " || $0 == "\t" })
+            if parents.count <= 1 {
+                if let token = parents.first, let value = indices[MinimapObjectID(token)] {
+                    let parent = Int(value)
+                    nodes.append(MinimapCommitNode(index: index, lane: lanes[index], isMerge: false,
+                        parentIndexValues: .single(parent), parentLanes: parentLane(lanes[parent]), objectID: identity))
+                } else {
+                    nodes.append(MinimapCommitNode(index: index, lane: lanes[index], isMerge: false,
+                        parentIndexValues: .empty, parentLanes: [], objectID: identity))
+                }
+                return
+            }
             var parentIndices: [Int] = []
             var parentLanes: [Int] = []
             for token in parents {
-                guard let parentIndex = indices[String(token)] else { continue }
-                let lane = lanes[parentIndex]
+                guard let value = indices[MinimapObjectID(token)] else { continue }
+                let parentIndex = Int(value)
                 parentIndices.append(parentIndex)
-                parentLanes.append(lane)
+                parentLanes.append(lanes[parentIndex])
             }
-            if parentLanes.count == 1, let lane = parentLanes.first,
-               singleParentLanes.indices.contains(lane) {
-                if let shared = singleParentLanes[lane] { parentLanes = shared }
-                else { singleParentLanes[lane] = parentLanes }
-            }
-            nodes.append(MinimapCommitNode(index: index, lane: lanes[index],
-                isMerge: parents.count > 1, parentIndices: parentIndices,
-                parentLanes: parentLanes, sha: shas[index]))
+            if parentLanes.count == 1 { parentLanes = parentLane(parentLanes[0]) }
+            nodes.append(MinimapCommitNode(index: index, lane: lanes[index], isMerge: true,
+                parentIndexValues: MinimapParentIndices(parentIndices), parentLanes: parentLanes, objectID: identity))
         }
         return nodes
     }

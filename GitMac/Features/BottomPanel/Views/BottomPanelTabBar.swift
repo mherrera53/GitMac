@@ -35,6 +35,7 @@ struct BottomPanelTabBar: View {
                                 onCloseTab(tab.id)
                             }
                         )
+                        .accessibilityIdentifier("bottom-panel-tab-\(tab.id.uuidString)")
                     }
                 }
                 .padding(.horizontal, DesignTokens.Spacing.sm)
@@ -55,6 +56,9 @@ struct BottomPanelTabBar: View {
             }
             .buttonStyle(.plain)
             .padding(.horizontal, DesignTokens.Spacing.xs)
+            .help("Open a new terminal or integration panel")
+            .accessibilityLabel("Add panel")
+            .accessibilityIdentifier("bottom-panel-add")
             .popover(isPresented: $showAddMenu, arrowEdge: .bottom) {
                 PanelTypeMenu(
                     openTabs: tabs,
@@ -78,7 +82,9 @@ struct BottomPanelTabBar: View {
             }
             .buttonStyle(.plain)
             .padding(.horizontal, DesignTokens.Spacing.sm)
-            .help("Close Panel")
+            .help("Hide panel — keep terminal sessions running")
+            .accessibilityLabel("Hide panel")
+            .accessibilityIdentifier("bottom-panel-hide")
         }
         .frame(height: DesignTokens.BottomBar.height)
         .background(AppTheme.backgroundSecondary)
@@ -120,6 +126,7 @@ struct PanelTypeMenu: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("panel-type-\(type.rawValue)")
                 .background(
                     Rectangle()
                         .fill(Color.clear)
